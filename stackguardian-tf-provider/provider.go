@@ -32,9 +32,11 @@ func Provider() terraform.ResourceProvider {
 			         the name began with the provider's name and had at least
 				 one underscore. This is not documented anywhere I could find */
 			"stackguardian_tf_provider_workflow": resourceStackGuardianWorkflowAPI(),
+			"stackguardian_tf_provider_stack":    resourceStackGuardianStackAPI(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"stackguardian_tf_provider_workflow": dataSourceStackGuardianAPI(),
+			"stackguardian_tf_provider_stack":    dataSourceStackGuardianAPI(),
 		},
 		ConfigureFunc: configureProvider,
 	}
