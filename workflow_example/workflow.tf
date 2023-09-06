@@ -1,12 +1,12 @@
 terraform {
   required_providers {
-    restapi = {
-      source = "hashicorp.com/edu/restapi"
+    stackguardian = {
+      source = "terraform/provider/stackguardian"
     }
   }
 }
 
-provider "restapi" {
+provider "stackguardian" {
   uri                  = "https://api.app.stackguardian.io/api/v1/orgs/fanda/"
   debug                = true
   write_returns_object = true
@@ -16,12 +16,12 @@ provider "restapi" {
   id_attribute = "ResourceName"
 }
 
-resource "restapi_workflow" "Test" {
+resource "stackguardian_tf_provider_workflow" "Test" {
   path = "/wfgrps/Firstworkflow/wfs/"
   data = jsonencode({
     "ResourceName" : "Test",
     "wfgrpName" : "Firstworkflow",
-    "Description" : "test to send to Firas updated",
+    "Description" : "test to send to Firas updated 3",
     "Tags" : [],
     "EnvironmentVariables" : [],
     "DeploymentPlatformConfig" : [{

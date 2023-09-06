@@ -1,4 +1,4 @@
-module github.com/Mastercard/terraform-provider-restapi
+module github.com/stackguardian
 
 go 1.14
 

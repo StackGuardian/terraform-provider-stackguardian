@@ -1,4 +1,4 @@
-package restapi
+package stackguardian_tf_provider
 
 import (
 	"math"
@@ -123,12 +123,12 @@ func Provider() terraform.ResourceProvider {
 			/* Could only get terraform to recognize this resource if
 			         the name began with the provider's name and had at least
 				 one underscore. This is not documented anywhere I could find */
-			"restapi_workflow":       resourceRestApi(),
-			"restapi_workflow_stack": workflowStackObject(),
+			"stackguardian_tf_provider_workflow":       resourceStackGuardianAPI(),
+			"stackguardian_tf_provider_workflow_stack": workflowStackObject(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"restapi_workflow":       dataSourceRestApi(),
-			"restapi_workflow_stack": dataSourceRestApi(),
+			"stackguardian_tf_provider_workflow":       dataSourceStackGuardianAPI(),
+			"stackguardian_tf_provider_workflow_stack": dataSourceStackGuardianAPI(),
 		},
 		ConfigureFunc: configureProvider,
 	}

@@ -1,4 +1,4 @@
-package restapi
+package stackguardian_tf_provider
 
 import (
 	"fmt"
@@ -9,19 +9,19 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
-func resourceRestApi() *schema.Resource {
+func workflowStackObject() *schema.Resource {
 	// Consider data sensitive if env variables is set to true.
 	is_data_sensitive, _ := strconv.ParseBool(GetEnvOrDefault("API_DATA_IS_SENSITIVE", "false"))
 
 	return &schema.Resource{
-		Create: resourceRestApiCreate,
-		Read:   resourceRestApiRead,
-		Update: resourceRestApiUpdate,
-		Delete: resourceRestApiDelete,
-		Exists: resourceRestApiExists,
+		Create: workflowStackCreate,
+		Read:   workflowStackRead,
+		Update: workflowStackUpdate,
+		Delete: workflowStackDelete,
+		Exists: workflowStackExists,
 
 		Importer: &schema.ResourceImporter{
-			State: resourceRestApiImport,
+			State: workflowStackImport,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -136,7 +136,7 @@ Since there is nothing in the ResourceData structure other
 	view of the API paths to figure out how to read that object
 	from the API
 */
-func resourceRestApiImport(d *schema.ResourceData, meta interface{}) (imported []*schema.ResourceData, err error) {
+func workflowStackImport(d *schema.ResourceData, meta interface{}) (imported []*schema.ResourceData, err error) {
 	input := d.Id()
 
 	hasTrailingSlash := strings.LastIndex(input, "/") == len(input)-1
@@ -185,7 +185,7 @@ func resourceRestApiImport(d *schema.ResourceData, meta interface{}) (imported [
 	return imported, err
 }
 
-func resourceRestApiCreate(d *schema.ResourceData, meta interface{}) error {
+func workflowStackCreate(d *schema.ResourceData, meta interface{}) error {
 	obj, err := make_api_object(d, meta)
 	if err != nil {
 		return err
@@ -203,7 +203,7 @@ func resourceRestApiCreate(d *schema.ResourceData, meta interface{}) error {
 	return err
 }
 
-func resourceRestApiRead(d *schema.ResourceData, meta interface{}) error {
+func workflowStackRead(d *schema.ResourceData, meta interface{}) error {
 	obj, err := make_api_object(d, meta)
 	if err != nil {
 		return err
@@ -220,7 +220,7 @@ func resourceRestApiRead(d *schema.ResourceData, meta interface{}) error {
 	return err
 }
 
-func resourceRestApiUpdate(d *schema.ResourceData, meta interface{}) error {
+func workflowStackUpdate(d *schema.ResourceData, meta interface{}) error {
 	obj, err := make_api_object(d, meta)
 	if err != nil {
 		return err
@@ -245,7 +245,7 @@ func resourceRestApiUpdate(d *schema.ResourceData, meta interface{}) error {
 	return err
 }
 
-func resourceRestApiDelete(d *schema.ResourceData, meta interface{}) error {
+func workflowStackDelete(d *schema.ResourceData, meta interface{}) error {
 	obj, err := make_api_object(d, meta)
 	if err != nil {
 		return err
@@ -262,7 +262,7 @@ func resourceRestApiDelete(d *schema.ResourceData, meta interface{}) error {
 	return err
 }
 
-func resourceRestApiExists(d *schema.ResourceData, meta interface{}) (exists bool, err error) {
+func workflowStackExists(d *schema.ResourceData, meta interface{}) (exists bool, err error) {
 	obj, err := make_api_object(d, meta)
 	if err != nil {
 		return exists, err
@@ -276,92 +276,4 @@ func resourceRestApiExists(d *schema.ResourceData, meta interface{}) (exists boo
 		exists = true
 	}
 	return exists, err
-}
-
-/*
-Simple helper routine to build an api_object struct
-
-	for the various calls terraform will use. Unfortunately,
-	terraform cannot just reuse objects, so each CRUD operation
-	results in a new object created
-*/
-func make_api_object(d *schema.ResourceData, meta interface{}) (*api_object, error) {
-	opts, err := buildApiObjectOpts(d)
-	if err != nil {
-		return nil, err
-	}
-
-	obj, err := NewAPIObject(meta.(*api_client), opts)
-	if err != nil {
-		return nil, err
-	}
-
-	return obj, nil
-}
-
-func buildApiObjectOpts(d *schema.ResourceData) (*apiObjectOpts, error) {
-	opts := &apiObjectOpts{
-		path: d.Get("path").(string),
-	}
-
-	/* Allow user to override provider-level id_attribute */
-	if v, ok := d.GetOk("id_attribute"); ok {
-		opts.id_attribute = v.(string)
-	}
-
-	/* Allow user to specify the ID manually */
-	if v, ok := d.GetOk("object_id"); ok {
-		opts.ResourceName = v.(string)
-	} else {
-		/* If not specified, see if terraform has an ID */
-		opts.ResourceName = d.Id()
-	}
-
-	log.Printf("common.go: make_api_object routine called for id '%s'\n", opts.ResourceName)
-
-	log.Printf("create_path: %s", d.Get("create_path"))
-	if v, ok := d.GetOk("create_path"); ok {
-		opts.post_path = v.(string)
-	}
-	if v, ok := d.GetOk("read_path"); ok {
-		opts.get_path = v.(string)
-	}
-	if v, ok := d.GetOk("update_path"); ok {
-		opts.put_path = v.(string)
-	}
-	if v, ok := d.GetOk("create_method"); ok {
-		opts.create_method = v.(string)
-	}
-	if v, ok := d.GetOk("read_method"); ok {
-		opts.read_method = v.(string)
-	}
-	if v, ok := d.GetOk("update_method"); ok {
-		opts.update_method = v.(string)
-	}
-	if v, ok := d.GetOk("destroy_method"); ok {
-		opts.destroy_method = v.(string)
-	}
-	if v, ok := d.GetOk("destroy_path"); ok {
-		opts.delete_path = v.(string)
-	}
-	if v, ok := d.GetOk("destroy_data"); ok {
-		opts.delete_data = v.(bool)
-	}
-
-	read_search := expandReadSearch(d.Get("read_search").(map[string]interface{}))
-	opts.read_search = read_search
-
-	opts.data = d.Get("data").(string)
-	opts.debug = d.Get("debug").(bool)
-
-	return opts, nil
-}
-
-func expandReadSearch(v map[string]interface{}) (read_search map[string]string) {
-	read_search = make(map[string]string)
-	for key, val := range v {
-		read_search[key] = val.(string)
-	}
-
-	return
 }

@@ -1,4 +1,4 @@
-package restapi
+package stackguardian_tf_provider
 
 import (
 	"bytes"
@@ -59,7 +59,7 @@ type api_client struct {
 	debug                 bool
 }
 
-// Make a new api client for RESTful calls
+// Make a new api client
 func NewAPIClient(opt *apiClientOpt) (*api_client, error) {
 	if opt.debug {
 		log.Printf("api_client.go: Constructing debug api_client\n")
@@ -87,7 +87,7 @@ func NewAPIClient(opt *apiClientOpt) (*api_client, error) {
 		opt.read_method = "GET"
 	}
 	if opt.update_method == "" {
-		opt.update_method = "PUT"
+		opt.update_method = "PATCH"
 	}
 	if opt.destroy_method == "" {
 		opt.destroy_method = "DELETE"

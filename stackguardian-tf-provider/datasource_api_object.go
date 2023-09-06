@@ -1,4 +1,4 @@
-package restapi
+package stackguardian_tf_provider
 
 import (
 	"log"
@@ -6,9 +6,9 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
-func dataSourceRestApi() *schema.Resource {
+func dataSourceStackGuardianAPI() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceRestApiRead,
+		Read: dataSourceStackGuardianAPIRead,
 
 		Schema: map[string]*schema.Schema{
 			"path": &schema.Schema{
@@ -62,7 +62,7 @@ func dataSourceRestApi() *schema.Resource {
 	}
 }
 
-func dataSourceRestApiRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceStackGuardianAPIRead(d *schema.ResourceData, meta interface{}) error {
 	path := d.Get("path").(string)
 	query_string := d.Get("query_string").(string)
 	debug := d.Get("debug").(bool)

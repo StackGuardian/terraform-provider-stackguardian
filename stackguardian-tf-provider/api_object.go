@@ -1,4 +1,4 @@
-package restapi
+package stackguardian_tf_provider
 
 import (
 	"bytes"
