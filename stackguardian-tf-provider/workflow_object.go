@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
-func resourceStackGuardianAPI() *schema.Resource {
+func resourceStackGuardianWorkflowAPI() *schema.Resource {
 	// Consider data sensitive if env variables is set to true.
 	is_data_sensitive, _ := strconv.ParseBool(GetEnvOrDefault("API_DATA_IS_SENSITIVE", "false"))
 
@@ -25,10 +25,20 @@ func resourceStackGuardianAPI() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"path": &schema.Schema{
+			// "path": &schema.Schema{
+			// 	Type:        schema.TypeString,
+			// 	Description: "The API path on top of the base URL set in the provider that represents objects of this type on the API server.",
+			// 	Required:    true,
+			// },
+			"wfgrp": &schema.Schema{
 				Type:        schema.TypeString,
-				Description: "The API path on top of the base URL set in the provider that represents objects of this type on the API server.",
+				Description: "WorkFlow Group Name",
 				Required:    true,
+			},
+			"stack": &schema.Schema{
+				Type:        schema.TypeString,
+				Description: "stack name",
+				Optional:    true,
 			},
 			"create_path": &schema.Schema{
 				Type:        schema.TypeString,
@@ -226,16 +236,6 @@ func resourceStackGuardianAPIUpdate(d *schema.ResourceData, meta interface{}) er
 		return err
 	}
 
-	/* If copy_keys is not empty, we have to grab the latest
-	   data so we can copy anything needed before the update */
-	client := meta.(*api_client)
-	if len(client.copy_keys) > 0 {
-		err = obj.read_object()
-		if err != nil {
-			return err
-		}
-	}
-
 	log.Printf("resource_api_object.go: Update routine called. Object built:\n%s\n", obj.toString())
 
 	err = obj.update_object()
@@ -300,8 +300,16 @@ func make_api_object(d *schema.ResourceData, meta interface{}) (*api_object, err
 }
 
 func buildApiObjectOpts(d *schema.ResourceData) (*apiObjectOpts, error) {
+	var resultPath string
+	stack, stackExists := d.Get("stack").(string)
+	if stackExists && stack != "" {
+		resultPath = "/wfgrps/" + d.Get("wfgrp").(string) + "/stacks/" + d.Get("stack").(string) + "/wfs/"
+	} else {
+		resultPath = "/wfgrps/" + d.Get("wfgrp").(string) + "/wfs/"
+	}
 	opts := &apiObjectOpts{
-		path: d.Get("path").(string),
+		// path: d.Get("path").(string),
+		path: resultPath,
 	}
 
 	/* Allow user to override provider-level id_attribute */
@@ -352,8 +360,7 @@ func buildApiObjectOpts(d *schema.ResourceData) (*apiObjectOpts, error) {
 	opts.read_search = read_search
 
 	opts.data = d.Get("data").(string)
-	opts.debug = d.Get("debug").(bool)
-
+	opts.debug = true
 	return opts, nil
 }
 

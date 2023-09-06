@@ -7,21 +7,18 @@ terraform {
 }
 
 provider "stackguardian" {
-  uri                  = "https://api.app.stackguardian.io/api/v1/orgs/fanda/"
-  debug                = true
-  write_returns_object = true
-  headers = {
-    "Authorization" = "apikey sgu_g5aHlvuHQvaarykFYHRG5"
-  }
-  id_attribute = "ResourceName"
+  api_uri  = "https://api.app.stackguardian.io/api/v1/"
+  org_name = "fanda"
+  api_key  = "sgu_g5aHlvuHQvaarykFYHRG5"
 }
 
 resource "stackguardian_tf_provider_workflow" "Test" {
-  path = "/wfgrps/Firstworkflow/wfs/"
+  wfgrp = "Firstworkflow"
+  # stack ="example" optional
   data = jsonencode({
     "ResourceName" : "Test",
     "wfgrpName" : "Firstworkflow",
-    "Description" : "test to send to Firas updated 3",
+    "Description" : "test to send to Firas updated 6",
     "Tags" : [],
     "EnvironmentVariables" : [],
     "DeploymentPlatformConfig" : [{

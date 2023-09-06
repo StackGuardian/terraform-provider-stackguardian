@@ -56,7 +56,7 @@ type api_object struct {
 
 // Make an api_object to manage a RESTful object in an API
 func NewAPIObject(i_client *api_client, opts *apiObjectOpts) (*api_object, error) {
-	if opts.debug {
+	if true {
 		log.Printf("api_object.go: Constructing debug api_object\n")
 		log.Printf(" id: %s\n", opts.ResourceName)
 	}
@@ -70,16 +70,16 @@ func NewAPIObject(i_client *api_client, opts *apiObjectOpts) (*api_object, error
 	}
 
 	if opts.create_method == "" {
-		opts.create_method = i_client.create_method
+		opts.create_method = "POST"
 	}
 	if opts.read_method == "" {
-		opts.read_method = i_client.read_method
+		opts.read_method = "GET"
 	}
 	if opts.update_method == "" {
-		opts.update_method = i_client.update_method
+		opts.update_method = "PATCH"
 	}
 	if opts.destroy_method == "" {
-		opts.destroy_method = i_client.destroy_method
+		opts.destroy_method = "DELETE"
 	}
 
 	if opts.post_path == "" {
@@ -110,7 +110,7 @@ func NewAPIObject(i_client *api_client, opts *apiObjectOpts) (*api_object, error
 		delete_path:    opts.delete_path,
 		delete_data:    opts.delete_data,
 		search_path:    opts.search_path,
-		debug:          opts.debug,
+		debug:          true,
 		read_search:    opts.read_search,
 		ResourceName:   opts.ResourceName,
 		id_attribute:   opts.id_attribute,
@@ -119,7 +119,7 @@ func NewAPIObject(i_client *api_client, opts *apiObjectOpts) (*api_object, error
 	}
 
 	if opts.data != "" {
-		if opts.debug {
+		if true {
 			log.Printf("api_object.go: Parsing data: '%s'", opts.data)
 		}
 
@@ -134,11 +134,11 @@ func NewAPIObject(i_client *api_client, opts *apiObjectOpts) (*api_object, error
 			var tmp string
 			tmp, err := GetStringAtKey(obj.data, obj.id_attribute, obj.debug)
 			if err == nil {
-				if opts.debug {
+				if true {
 					log.Printf("api_object.go: opportunisticly set id from data provided.")
 				}
 				obj.ResourceName = tmp
-			} else if !obj.api_client.write_returns_object && !obj.api_client.create_returns_object && obj.search_path == "" {
+			} else if !true && obj.search_path == "" {
 				/* If the id is not set and we cannot obtain it
 				   later, error out to be safe */
 				return nil, errors.New(fmt.Sprintf("Provided data does not have %s attribute for the object's id and the client is not configured to read the object from a POST response. Without an id, the object cannot be managed.", obj.id_attribute))
@@ -146,7 +146,7 @@ func NewAPIObject(i_client *api_client, opts *apiObjectOpts) (*api_object, error
 		}
 	}
 
-	if opts.debug {
+	if true {
 		log.Printf("api_object.go: Constructed object: %s", obj.toString())
 	}
 	return &obj, nil
@@ -208,18 +208,6 @@ func (obj *api_object) update_state(state string) error {
 		log.Printf("api_object.go: Not updating id. It is already set to '%s'\n", obj.ResourceName)
 	}
 
-	/* Any keys that come from the data we want to copy are done here */
-	if len(obj.api_client.copy_keys) > 0 {
-		for _, key := range obj.api_client.copy_keys {
-			if obj.debug {
-				log.Printf("api_object.go: Copying key '%s' from api_data (%v) to data (%v)\n", key, obj.api_data[key], obj.data[key])
-			}
-			obj.data[key] = obj.api_data[key]
-		}
-	} else if obj.debug {
-		log.Printf("api_object.go: copy_keys is empty - not attempting to copy data")
-	}
-
 	if obj.debug {
 		log.Printf("api_object.go: final object after synchronization of state:\n%+v\n", obj.toString())
 	}
@@ -231,7 +219,7 @@ func (obj *api_object) create_object() error {
 	   protect here also. If no id is set, and the API does not respond
 	   with the id of whatever gets created, we have no way to know what
 	   the object's id will be. Abandon this attempt */
-	if obj.ResourceName == "" && !obj.api_client.write_returns_object && !obj.api_client.create_returns_object {
+	if obj.ResourceName == "" && !true {
 		return errors.New("ERROR: Provided object does not have an id set and the client is not configured to read the object from a POST or PUT response. Without an id, the object cannot be managed.")
 	}
 
@@ -242,10 +230,10 @@ func (obj *api_object) create_object() error {
 	}
 
 	/* We will need to sync state as well as get the object's ID */
-	if obj.api_client.write_returns_object || obj.api_client.create_returns_object {
+	if true {
 		if obj.debug {
 			log.Printf("api_object.go: Parsing response from POST to update internal structures (write_returns_object=%t, create_returns_object=%t)...\n",
-				obj.api_client.write_returns_object, obj.api_client.create_returns_object)
+				true)
 		}
 		err = obj.update_state(res_str)
 		/* Yet another failsafe. In case something terrible went wrong internally,
@@ -256,7 +244,7 @@ func (obj *api_object) create_object() error {
 	} else {
 		if obj.debug {
 			log.Printf("api_object.go: Requesting created object from API (write_returns_object=%t, create_returns_object=%t)...\n",
-				obj.api_client.write_returns_object, obj.api_client.create_returns_object)
+				true)
 		}
 		err = obj.read_object()
 	}
@@ -311,7 +299,7 @@ func (obj *api_object) update_object() error {
 		return err
 	}
 
-	if obj.api_client.write_returns_object {
+	if true {
 		if obj.debug {
 			log.Printf("api_object.go: Parsing response from PUT to update internal structures (write_returns_object=true)...\n")
 		}
@@ -365,7 +353,7 @@ func (obj *api_object) find_object(query_string string, search_key string, searc
 	if obj.debug {
 		log.Printf("api_object.go: Calling API on path '%s'", search_path)
 	}
-	res_str, err := obj.api_client.send_request(obj.api_client.read_method, search_path, "")
+	res_str, err := obj.api_client.send_request("GET", search_path, "")
 	if err != nil {
 		return obj_found, err
 	}

@@ -2,71 +2,39 @@ package stackguardian_tf_provider
 
 import (
 	"bytes"
-	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
-	"math"
 	"net/http"
-	"net/http/cookiejar"
 	"strings"
-	"time"
-
-	"golang.org/x/time/rate"
 )
 
 type apiClientOpt struct {
-	uri                   string
-	insecure              bool
-	username              string
-	password              string
-	headers               map[string]string
-	timeout               int
-	id_attribute          string
-	create_method         string
-	read_method           string
-	update_method         string
-	destroy_method        string
-	copy_keys             []string
-	write_returns_object  bool
-	create_returns_object bool
-	xssi_prefix           string
-	use_cookies           bool
-	rate_limit            float64
-	debug                 bool
+	api_uri      string
+	org_name     string
+	headers      map[string]string
+	id_attribute string
 }
 
 type api_client struct {
-	http_client           *http.Client
-	uri                   string
-	insecure              bool
-	username              string
-	password              string
-	headers               map[string]string
-	timeout               int
-	id_attribute          string
-	create_method         string
-	read_method           string
-	update_method         string
-	destroy_method        string
-	copy_keys             []string
-	write_returns_object  bool
-	create_returns_object bool
-	xssi_prefix           string
-	rate_limiter          *rate.Limiter
-	debug                 bool
+	http_client  *http.Client
+	api_uri      string
+	org_name     string
+	headers      map[string]string
+	id_attribute string
 }
 
 // Make a new api client
 func NewAPIClient(opt *apiClientOpt) (*api_client, error) {
-	if opt.debug {
+	if true {
 		log.Printf("api_client.go: Constructing debug api_client\n")
 	}
 
-	if opt.uri == "" {
+	if opt.api_uri == "" {
 		return nil, errors.New("uri must be set to construct an API client")
+	} else {
+		opt.api_uri = opt.api_uri + "orgs/" + opt.org_name + "/"
 	}
 
 	/* Sane default */
@@ -76,65 +44,30 @@ func NewAPIClient(opt *apiClientOpt) (*api_client, error) {
 
 	/* Remove any trailing slashes since we will append
 	   to this URL with our own root-prefixed location */
-	if strings.HasSuffix(opt.uri, "/") {
-		opt.uri = opt.uri[:len(opt.uri)-1]
+	if strings.HasSuffix(opt.api_uri, "/") {
+		opt.api_uri = opt.api_uri[:len(opt.api_uri)-1]
 	}
 
-	if opt.create_method == "" {
-		opt.create_method = "POST"
-	}
-	if opt.read_method == "" {
-		opt.read_method = "GET"
-	}
-	if opt.update_method == "" {
-		opt.update_method = "PATCH"
-	}
-	if opt.destroy_method == "" {
-		opt.destroy_method = "DELETE"
-	}
+	// opt.create_method = "POST"
 
-	/* Disable TLS verification if requested */
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: opt.insecure},
-		Proxy:           http.ProxyFromEnvironment,
-	}
+	// opt.read_method = "GET"
+
+	// opt.update_method = "PATCH"
+
+	// opt.destroy_method = "DELETE"
 
 	var cookieJar http.CookieJar
 
-	if opt.use_cookies {
-		cookieJar, _ = cookiejar.New(nil)
-	}
-
-	rateLimit := rate.Limit(opt.rate_limit)
-	bucketSize := int(math.Max(math.Round(opt.rate_limit), 1))
-	log.Printf("limit: %f bucket: %d", opt.rate_limit, bucketSize)
-	rateLimiter := rate.NewLimiter(rateLimit, bucketSize)
-
 	client := api_client{
 		http_client: &http.Client{
-			Timeout:   time.Second * time.Duration(opt.timeout),
-			Transport: tr,
-			Jar:       cookieJar,
+			Jar: cookieJar,
 		},
-		rate_limiter:          rateLimiter,
-		uri:                   opt.uri,
-		insecure:              opt.insecure,
-		username:              opt.username,
-		password:              opt.password,
-		headers:               opt.headers,
-		id_attribute:          opt.id_attribute,
-		create_method:         opt.create_method,
-		read_method:           opt.read_method,
-		update_method:         opt.update_method,
-		destroy_method:        opt.destroy_method,
-		copy_keys:             opt.copy_keys,
-		write_returns_object:  opt.write_returns_object,
-		create_returns_object: opt.create_returns_object,
-		xssi_prefix:           opt.xssi_prefix,
-		debug:                 opt.debug,
+		api_uri:      opt.api_uri,
+		headers:      opt.headers,
+		id_attribute: opt.id_attribute,
 	}
 
-	if opt.debug {
+	if true {
 		log.Printf("api_client.go: Constructed object:\n%s", client.toString())
 	}
 	return &client, nil
@@ -144,19 +77,13 @@ func NewAPIClient(opt *apiClientOpt) (*api_client, error) {
 // This is useful for debugging.
 func (obj *api_client) toString() string {
 	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("uri: %s\n", obj.uri))
-	buffer.WriteString(fmt.Sprintf("insecure: %t\n", obj.insecure))
-	buffer.WriteString(fmt.Sprintf("username: %s\n", obj.username))
-	buffer.WriteString(fmt.Sprintf("password: %s\n", obj.password))
+	buffer.WriteString(fmt.Sprintf("api_uri: %s\n", obj.api_uri))
+	buffer.WriteString(fmt.Sprintf("org_name: %s\n", obj.org_name))
 	buffer.WriteString(fmt.Sprintf("id_attribute: %s\n", obj.id_attribute))
-	buffer.WriteString(fmt.Sprintf("write_returns_object: %t\n", obj.write_returns_object))
-	buffer.WriteString(fmt.Sprintf("create_returns_object: %t\n", obj.create_returns_object))
+	buffer.WriteString(fmt.Sprintf("write_returns_object: %t\n", true))
 	buffer.WriteString(fmt.Sprintf("headers:\n"))
 	for k, v := range obj.headers {
 		buffer.WriteString(fmt.Sprintf("  %s: %s\n", k, v))
-	}
-	for _, n := range obj.copy_keys {
-		buffer.WriteString(fmt.Sprintf("  %s", n))
 	}
 	return buffer.String()
 }
@@ -167,11 +94,11 @@ Helper function that handles sending/receiving and handling
 	of HTTP data in and out.
 */
 func (client *api_client) send_request(method string, path string, data string) (string, error) {
-	full_uri := client.uri + path
+	full_uri := client.api_uri + path
 	var req *http.Request
 	var err error
 
-	if client.debug {
+	if true {
 		log.Printf("api_client.go: method='%s', path='%s', full uri (derived)='%s', data='%s'\n", method, path, full_uri, data)
 	}
 
@@ -193,7 +120,7 @@ func (client *api_client) send_request(method string, path string, data string) 
 		return "", err
 	}
 
-	if client.debug {
+	if true {
 		log.Printf("api_client.go: Sending HTTP request to %s...\n", req.URL)
 	}
 
@@ -204,12 +131,7 @@ func (client *api_client) send_request(method string, path string, data string) 
 		}
 	}
 
-	if client.username != "" && client.password != "" {
-		/* ... and fall back to basic auth if configured */
-		req.SetBasicAuth(client.username, client.password)
-	}
-
-	if client.debug {
+	if true {
 		log.Printf("api_client.go: Request headers:\n")
 		for name, headers := range req.Header {
 			for _, h := range headers {
@@ -225,14 +147,6 @@ func (client *api_client) send_request(method string, path string, data string) 
 		log.Printf("%s\n", body)
 	}
 
-	if client.rate_limiter != nil {
-		// Rate limiting
-		if client.debug {
-			log.Printf("Waiting for rate limit availability\n")
-		}
-		_ = client.rate_limiter.Wait(context.Background())
-	}
-
 	resp, err := client.http_client.Do(req)
 
 	if err != nil {
@@ -240,7 +154,7 @@ func (client *api_client) send_request(method string, path string, data string) 
 		return "", err
 	}
 
-	if client.debug {
+	if true {
 		log.Printf("api_client.go: Response code: %d\n", resp.StatusCode)
 		log.Printf("api_client.go: Response headers:\n")
 		for name, headers := range resp.Header {
@@ -256,8 +170,8 @@ func (client *api_client) send_request(method string, path string, data string) 
 	if err2 != nil {
 		return "", err2
 	}
-	body := strings.TrimPrefix(string(bodyBytes), client.xssi_prefix)
-	if client.debug {
+	body := strings.TrimPrefix(string(bodyBytes), "")
+	if true {
 		log.Printf("api_client.go: BODY:\n%s\n", body)
 	}
 
