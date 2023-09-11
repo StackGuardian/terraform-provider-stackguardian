@@ -7,7 +7,6 @@ terraform {
 }
 
 provider "stackguardian" {
-  api_uri  = "https://api.app.stackguardian.io/api/v1/"
   org_name = "fanda"
   api_key  = "sgu_g5aHlvuHQvaarykFYHRG5"
 }

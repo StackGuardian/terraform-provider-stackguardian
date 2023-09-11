@@ -8,12 +8,6 @@ import (
 func Provider() terraform.ResourceProvider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
-			"api_uri": &schema.Schema{
-				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc("STACKGUARDIAN_API_URI", nil),
-				Description: "URI of the StackGuradian API endpoint. This serves as the base of all requests.",
-			},
 			"org_name": &schema.Schema{
 				Type:        schema.TypeString,
 				Required:    true,
@@ -63,7 +57,7 @@ func configureProvider(d *schema.ResourceData) (interface{}, error) {
 	// }
 
 	opt := &apiClientOpt{
-		api_uri:  d.Get("api_uri").(string),
+		api_uri:  "https://api.app.stackguardian.io/api/v1/",
 		org_name: d.Get("org_name").(string),
 		headers: map[string]string{
 			"Authorization": "apikey " + d.Get("api_key").(string),
