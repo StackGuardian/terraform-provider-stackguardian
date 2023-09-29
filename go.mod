@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/davecgh/go-spew v1.1.1
-	github.com/hashicorp/terraform v0.0.0-20190412113727-1c95b21c6cff
-	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
+	github.com/hashicorp/terraform v0.12.17
+	github.com/stretchr/testify v1.8.2 // indirect
+	golang.org/x/crypto v0.6.0 // indirect
 )
