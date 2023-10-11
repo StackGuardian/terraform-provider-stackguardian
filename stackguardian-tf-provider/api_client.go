@@ -94,7 +94,15 @@ Helper function that handles sending/receiving and handling
 	of HTTP data in and out.
 */
 func (client *api_client) send_request(method string, path string, data string) (string, error) {
-	full_uri := client.api_uri + path
+	var full_uri string
+
+	if strings.HasPrefix(client.api_uri, "https://") {
+		// If path starts with "https://", set full_uri to path
+		full_uri = client.api_uri
+	} else {
+		// Otherwise, concatenate client.api_uri and path
+		full_uri = client.api_uri + path
+	}
 	var req *http.Request
 	var err error
 

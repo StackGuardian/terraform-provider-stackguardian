@@ -1,0 +1,267 @@
+2023/09/14 10:56:02 [INFO] Terraform version: 0.13.0  
+2023/09/14 10:56:02 [INFO] Go runtime version: go1.14.2
+2023/09/14 10:56:02 [INFO] CLI args: []string{"/usr/local/bin/terraform", "import", "stackguardian_tf_provider_workflow.test_import", "https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/"}
+2023/09/14 10:56:02 [DEBUG] Attempting to open CLI config file: /home/firas/.terraformrc
+2023/09/14 10:56:02 [DEBUG] File doesn't exist, but doesn't need to. Ignoring.
+2023/09/14 10:56:02 [DEBUG] checking for credentials in "/home/firas/.terraform.d/plugins"
+2023/09/14 10:56:02 [DEBUG] ignoring non-existing provider search directory terraform.d/plugins
+2023/09/14 10:56:02 [DEBUG] will search for provider plugins in /home/firas/.terraform.d/plugins
+2023/09/14 10:56:02 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/hashicups v0.3.1 for darwin_amd64 at /home/firas/.terraform.d/plugins/hashicorp.com/edu/hashicups/0.3.1/darwin_amd64
+2023/09/14 10:56:02 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/hashicups v0.3.1 for linux_amd64 at /home/firas/.terraform.d/plugins/hashicorp.com/edu/hashicups/0.3.1/linux_amd64
+2023/09/14 10:56:02 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/hashicups v0.3.5 for linux_amd64 at /home/firas/.terraform.d/plugins/hashicorp.com/edu/hashicups/0.3.5/linux_amd64
+2023/09/14 10:56:02 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/hashicups-pf v0.3.5 for linux_amd64 at /home/firas/.terraform.d/plugins/hashicorp.com/edu/hashicups-pf/0.3.5/linux_amd64
+2023/09/14 10:56:02 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/hashicups-pf v0.3.6 for linux_amd64 at /home/firas/.terraform.d/plugins/hashicorp.com/edu/hashicups-pf/0.3.6/linux_amd64
+2023/09/14 10:56:02 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/hashicups-pf v0.3.7 for linux_amd60.34 at /home/firas/.terraform.d/plugins/hashicorp.com/edu/hashicups-pf/0.3.7/linux_amd60.34
+2023/09/14 10:56:02 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/hashicups-pf v0.3.7 for linux_amd64 at /home/firas/.terraform.d/plugins/hashicorp.com/edu/hashicups-pf/0.3.7/linux_amd64
+2023/09/14 10:56:02 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/rest v0.3.1 for linux_amd64 at /home/firas/.terraform.d/plugins/hashicorp.com/edu/rest/0.3.1/linux_amd64
+2023/09/14 10:56:02 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/rest v0.3.5 for linux_amd64 at /home/firas/.terraform.d/plugins/hashicorp.com/edu/rest/0.3.5/linux_amd64
+2023/09/14 10:56:02 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/rest-api v0.3.1 for linux_amd64 at /home/firas/.terraform.d/plugins/hashicorp.com/edu/rest-api/0.3.1/linux_amd64
+2023/09/14 10:56:02 [TRACE] getproviders.SearchLocalDirectory: found hashicorp.com/edu/restapi v0.3.5 for linux_amd64 at /home/firas/.terraform.d/plugins/hashicorp.com/edu/restapi/0.3.5/linux_amd64
+2023/09/14 10:56:02 [TRACE] getproviders.SearchLocalDirectory: found registry.terraform.io/dell/redfish v0.2.1 for linux_amd64 at /home/firas/.terraform.d/plugins/registry.terraform.io/dell/redfish/0.2.1/linux_amd64
+2023/09/14 10:56:02 [TRACE] getproviders.SearchLocalDirectory: found terraform/provider/stackguardian v0.3.5 for linux_amd64 at /home/firas/.terraform.d/plugins/terraform/provider/stackguardian/0.3.5/linux_amd64
+2023/09/14 10:56:02 [DEBUG] ignoring non-existing provider search directory /home/firas/.local/share/terraform/plugins
+2023/09/14 10:56:02 [DEBUG] ignoring non-existing provider search directory /usr/local/share/terraform/plugins
+2023/09/14 10:56:02 [DEBUG] ignoring non-existing provider search directory /usr/share/terraform/plugins
+2023/09/14 10:56:02 [DEBUG] ignoring non-existing provider search directory /var/lib/snapd/desktop/terraform/plugins
+2023/09/14 10:56:02 [INFO] CLI command args: []string{"import", "stackguardian_tf_provider_workflow.test_import", "https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/"}
+2023/09/14 10:56:02 [WARN] Log levels other than TRACE are currently unreliable, and are supported only for backward compatibility.
+  Use TF_LOG=TRACE to see Terraform's internal logs.
+  ----
+2023/09/14 10:56:02 [TRACE] Meta.Backend: no config given or present on disk, so returning nil config
+2023/09/14 10:56:02 [TRACE] Meta.Backend: backend has not previously been initialized in this working directory
+2023/09/14 10:56:02 [DEBUG] New state was assigned lineage "3f8c61c1-0195-2dfc-99f5-510e5e045ebb"
+2023/09/14 10:56:02 [TRACE] Meta.Backend: using default local state only (no backend configuration, and no existing initialized backend)
+2023/09/14 10:56:02 [TRACE] Meta.Backend: instantiated backend of type <nil>
+2023/09/14 10:56:02 [TRACE] providercache.fillMetaCache: scanning directory .terraform/plugins
+2023/09/14 10:56:02 [TRACE] getproviders.SearchLocalDirectory: found terraform/provider/stackguardian v0.3.5 for linux_amd64 at .terraform/plugins/terraform/provider/stackguardian/0.3.5/linux_amd64
+2023/09/14 10:56:02 [TRACE] providercache.fillMetaCache: including .terraform/plugins/terraform/provider/stackguardian/0.3.5/linux_amd64 as a candidate package for terraform/provider/stackguardian 0.3.5
+2023/09/14 10:56:02 [DEBUG] checking for provisioner in "."
+2023/09/14 10:56:02 [DEBUG] checking for provisioner in "/usr/local/bin"
+2023/09/14 10:56:02 [DEBUG] checking for provisioner in "/home/firas/.terraform.d/plugins"
+2023/09/14 10:56:02 [INFO] Failed to read plugin lock file .terraform/plugins/linux_amd64/lock.json: open .terraform/plugins/linux_amd64/lock.json: no such file or directory
+2023/09/14 10:56:02 [TRACE] Meta.Backend: backend <nil> does not support operations, so wrapping it in a local backend
+2023/09/14 10:56:02 [TRACE] backend/local: requesting state manager for workspace "default"
+2023/09/14 10:56:02 [TRACE] backend/local: state manager for workspace "default" will:
+ - read initial snapshot from terraform.tfstate
+ - write new snapshots to terraform.tfstate
+ - create any backup at terraform.tfstate.backup
+2023/09/14 10:56:02 [TRACE] backend/local: requesting state lock for workspace "default"
+2023/09/14 10:56:02 [TRACE] statemgr.Filesystem: preparing to manage state snapshots at terraform.tfstate
+2023/09/14 10:56:02 [TRACE] statemgr.Filesystem: no previously-stored snapshot exists
+2023/09/14 10:56:02 [TRACE] statemgr.Filesystem: locking terraform.tfstate using fcntl flock
+2023/09/14 10:56:02 [TRACE] statemgr.Filesystem: writing lock metadata to .terraform.tfstate.lock.info
+2023/09/14 10:56:02 [TRACE] backend/local: reading remote state for workspace "default"
+2023/09/14 10:56:02 [TRACE] statemgr.Filesystem: reading latest snapshot from terraform.tfstate
+2023/09/14 10:56:02 [TRACE] statemgr.Filesystem: snapshot file has nil snapshot, but that's okay
+2023/09/14 10:56:02 [TRACE] statemgr.Filesystem: read nil snapshot
+2023/09/14 10:56:02 [TRACE] backend/local: retrieving local state snapshot for workspace "default"
+2023/09/14 10:56:02 [TRACE] backend/local: building context for current working directory
+2023/09/14 10:56:02 [TRACE] terraform.NewContext: starting
+2023/09/14 10:56:02 [TRACE] terraform.NewContext: loading provider schemas
+2023/09/14 10:56:02 [TRACE] LoadSchemas: retrieving schema for provider type "terraform/provider/stackguardian"
+2023-09-14T10:56:02.428+0100 [INFO]  plugin: configuring client automatic mTLS
+2023-09-14T10:56:02.449+0100 [DEBUG] plugin: starting plugin: path=.terraform/plugins/terraform/provider/stackguardian/0.3.5/linux_amd64/terraform-provider-stackguardian args=[.terraform/plugins/terraform/provider/stackguardian/0.3.5/linux_amd64/terraform-provider-stackguardian]
+2023-09-14T10:56:02.449+0100 [DEBUG] plugin: plugin started: path=.terraform/plugins/terraform/provider/stackguardian/0.3.5/linux_amd64/terraform-provider-stackguardian pid=342612
+2023-09-14T10:56:02.449+0100 [DEBUG] plugin: waiting for RPC address: path=.terraform/plugins/terraform/provider/stackguardian/0.3.5/linux_amd64/terraform-provider-stackguardian
+2023-09-14T10:56:02.454+0100 [INFO]  plugin.terraform-provider-stackguardian: configuring server automatic mTLS: timestamp=2023-09-14T10:56:02.454+0100
+2023-09-14T10:56:02.466+0100 [DEBUG] plugin.terraform-provider-stackguardian: plugin address: address=/tmp/plugin4249878709 network=unix timestamp=2023-09-14T10:56:02.466+0100
+2023-09-14T10:56:02.466+0100 [DEBUG] plugin: using plugin: version=5
+2023/09/14 10:56:02 [TRACE] GRPCProvider: GetSchema
+2023-09-14T10:56:02.493+0100 [TRACE] plugin.stdio: waiting for stdio data
+2023-09-14T10:56:02.494+0100 [WARN]  plugin.stdio: received EOF, stopping recv loop: err="rpc error: code = Unimplemented desc = unknown service plugin.GRPCStdio"
+2023/09/14 10:56:02 [TRACE] No provider meta schema returned
+2023/09/14 10:56:02 [TRACE] GRPCProvider: Close
+2023-09-14T10:56:02.496+0100 [DEBUG] plugin: plugin process exited: path=.terraform/plugins/terraform/provider/stackguardian/0.3.5/linux_amd64/terraform-provider-stackguardian pid=342612
+2023-09-14T10:56:02.496+0100 [DEBUG] plugin: plugin exited
+2023/09/14 10:56:02 [TRACE] terraform.NewContext: complete
+2023/09/14 10:56:02 [TRACE] backend/local: finished building terraform.Context
+2023/09/14 10:56:02 [TRACE] Executing graph transform *terraform.ConfigTransformer
+2023/09/14 10:56:02 [TRACE] ConfigTransformer: Starting for path: 
+2023/09/14 10:56:02 [TRACE] Completed graph transform *terraform.ConfigTransformer with new graph:
+  stackguardian_tf_provider_workflow.test_import - *terraform.NodeAbstractResource
+  ------
+2023/09/14 10:56:02 [TRACE] Executing graph transform *terraform.AttachResourceConfigTransformer
+2023/09/14 10:56:02 [TRACE] AttachResourceConfigTransformer: attaching to "stackguardian_tf_provider_workflow.test_import" (*terraform.NodeAbstractResource) config from /home/firas/Desktop/PFE/freelance/stackguardian/terraform-provider-stackguardian/examples/import_resource/workflow.tf:14,1-60
+2023/09/14 10:56:02 [TRACE] AttachResourceConfigTransformer: attaching provider meta configs to stackguardian_tf_provider_workflow.test_import
+2023/09/14 10:56:02 [TRACE] Completed graph transform *terraform.AttachResourceConfigTransformer (no changes)
+2023/09/14 10:56:02 [TRACE] Executing graph transform *terraform.ImportStateTransformer
+2023/09/14 10:56:02 [TRACE] Completed graph transform *terraform.ImportStateTransformer with new graph:
+  stackguardian_tf_provider_workflow.test_import - *terraform.NodeAbstractResource
+  stackguardian_tf_provider_workflow.test_import (import id "https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/") - *terraform.graphNodeImportState
+  ------
+2023/09/14 10:56:02 [TRACE] Executing graph transform *terraform.RootVariableTransformer
+2023/09/14 10:56:02 [TRACE] Completed graph transform *terraform.RootVariableTransformer (no changes)
+2023/09/14 10:56:02 [TRACE] Executing graph transform *terraform.graphTransformerMulti
+2023/09/14 10:56:02 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.ProviderConfigTransformer
+2023/09/14 10:56:02 [TRACE] ProviderConfigTransformer: attaching to "provider[\"terraform/provider/stackguardian\"]" provider configuration from /home/firas/Desktop/PFE/freelance/stackguardian/terraform-provider-stackguardian/examples/import_resource/workflow.tf:9,1-25
+2023/09/14 10:56:02 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.ProviderConfigTransformer with new graph:
+  provider["terraform/provider/stackguardian"] - *terraform.NodeApplyableProvider
+  stackguardian_tf_provider_workflow.test_import - *terraform.NodeAbstractResource
+  stackguardian_tf_provider_workflow.test_import (import id "https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/") - *terraform.graphNodeImportState
+  ------
+2023/09/14 10:56:02 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.MissingProviderTransformer
+2023/09/14 10:56:02 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.MissingProviderTransformer (no changes)
+2023/09/14 10:56:02 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.ProviderTransformer
+2023/09/14 10:56:02 [TRACE] ProviderTransformer: exact match for provider["terraform/provider/stackguardian"] serving stackguardian_tf_provider_workflow.test_import
+2023/09/14 10:56:02 [DEBUG] ProviderTransformer: "stackguardian_tf_provider_workflow.test_import" (*terraform.NodeAbstractResource) needs provider["terraform/provider/stackguardian"]
+2023/09/14 10:56:02 [TRACE] ProviderTransformer: exact match for provider["terraform/provider/stackguardian"] serving stackguardian_tf_provider_workflow.test_import (import id "https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/")
+2023/09/14 10:56:02 [DEBUG] ProviderTransformer: "stackguardian_tf_provider_workflow.test_import (import id \"https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/\")" (*terraform.graphNodeImportState) needs provider["terraform/provider/stackguardian"]
+2023/09/14 10:56:02 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.ProviderTransformer with new graph:
+  provider["terraform/provider/stackguardian"] - *terraform.NodeApplyableProvider
+  stackguardian_tf_provider_workflow.test_import - *terraform.NodeAbstractResource
+    provider["terraform/provider/stackguardian"] - *terraform.NodeApplyableProvider
+  stackguardian_tf_provider_workflow.test_import (import id "https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/") - *terraform.graphNodeImportState
+    provider["terraform/provider/stackguardian"] - *terraform.NodeApplyableProvider
+  ------
+2023/09/14 10:56:02 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.PruneProviderTransformer
+2023/09/14 10:56:02 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.PruneProviderTransformer (no changes)
+2023/09/14 10:56:02 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.ParentProviderTransformer
+2023/09/14 10:56:02 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.ParentProviderTransformer (no changes)
+2023/09/14 10:56:02 [TRACE] Completed graph transform *terraform.graphTransformerMulti with new graph:
+  provider["terraform/provider/stackguardian"] - *terraform.NodeApplyableProvider
+  stackguardian_tf_provider_workflow.test_import - *terraform.NodeAbstractResource
+    provider["terraform/provider/stackguardian"] - *terraform.NodeApplyableProvider
+  stackguardian_tf_provider_workflow.test_import (import id "https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/") - *terraform.graphNodeImportState
+    provider["terraform/provider/stackguardian"] - *terraform.NodeApplyableProvider
+  ------
+2023/09/14 10:56:02 [TRACE] Executing graph transform *terraform.LocalTransformer
+2023/09/14 10:56:02 [TRACE] Completed graph transform *terraform.LocalTransformer (no changes)
+2023/09/14 10:56:02 [TRACE] Executing graph transform *terraform.OutputTransformer
+2023/09/14 10:56:02 [TRACE] Completed graph transform *terraform.OutputTransformer (no changes)
+2023/09/14 10:56:02 [TRACE] Executing graph transform *terraform.ModuleVariableTransformer
+2023/09/14 10:56:02 [TRACE] Completed graph transform *terraform.ModuleVariableTransformer (no changes)
+2023/09/14 10:56:02 [TRACE] Executing graph transform *terraform.AttachSchemaTransformer
+2023/09/14 10:56:02 [TRACE] AttachSchemaTransformer: attaching provider config schema to provider["terraform/provider/stackguardian"]
+2023/09/14 10:56:02 [TRACE] AttachSchemaTransformer: attaching resource schema to stackguardian_tf_provider_workflow.test_import
+2023/09/14 10:56:02 [TRACE] Completed graph transform *terraform.AttachSchemaTransformer (no changes)
+2023/09/14 10:56:02 [TRACE] Executing graph transform *terraform.ModuleExpansionTransformer
+2023/09/14 10:56:02 [TRACE] Completed graph transform *terraform.ModuleExpansionTransformer (no changes)
+2023/09/14 10:56:02 [TRACE] Executing graph transform *terraform.ReferenceTransformer
+2023/09/14 10:56:02 [DEBUG] ReferenceTransformer: "stackguardian_tf_provider_workflow.test_import" references: []
+2023/09/14 10:56:02 [DEBUG] ReferenceTransformer: "stackguardian_tf_provider_workflow.test_import (import id \"https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/\")" references: []
+2023/09/14 10:56:02 [DEBUG] ReferenceTransformer: "provider[\"terraform/provider/stackguardian\"]" references: []
+2023/09/14 10:56:02 [TRACE] Completed graph transform *terraform.ReferenceTransformer (no changes)
+2023/09/14 10:56:02 [TRACE] Executing graph transform *terraform.attachDataResourceDependenciesTransformer
+2023/09/14 10:56:02 [TRACE] Completed graph transform *terraform.attachDataResourceDependenciesTransformer (no changes)
+2023/09/14 10:56:02 [TRACE] Executing graph transform *terraform.CloseProviderTransformer
+2023/09/14 10:56:02 [TRACE] Completed graph transform *terraform.CloseProviderTransformer with new graph:
+  provider["terraform/provider/stackguardian"] - *terraform.NodeApplyableProvider
+  provider["terraform/provider/stackguardian"] (close) - *terraform.graphNodeCloseProvider
+    provider["terraform/provider/stackguardian"] - *terraform.NodeApplyableProvider
+    stackguardian_tf_provider_workflow.test_import - *terraform.NodeAbstractResource
+    stackguardian_tf_provider_workflow.test_import (import id "https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/") - *terraform.graphNodeImportState
+  stackguardian_tf_provider_workflow.test_import - *terraform.NodeAbstractResource
+    provider["terraform/provider/stackguardian"] - *terraform.NodeApplyableProvider
+  stackguardian_tf_provider_workflow.test_import (import id "https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/") - *terraform.graphNodeImportState
+    provider["terraform/provider/stackguardian"] - *terraform.NodeApplyableProvider
+  ------
+2023/09/14 10:56:02 [TRACE] Executing graph transform *terraform.CloseRootModuleTransformer
+2023/09/14 10:56:02 [TRACE] Completed graph transform *terraform.CloseRootModuleTransformer with new graph:
+  provider["terraform/provider/stackguardian"] - *terraform.NodeApplyableProvider
+  provider["terraform/provider/stackguardian"] (close) - *terraform.graphNodeCloseProvider
+    provider["terraform/provider/stackguardian"] - *terraform.NodeApplyableProvider
+    stackguardian_tf_provider_workflow.test_import - *terraform.NodeAbstractResource
+    stackguardian_tf_provider_workflow.test_import (import id "https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/") - *terraform.graphNodeImportState
+  root - *terraform.nodeCloseModule
+    provider["terraform/provider/stackguardian"] (close) - *terraform.graphNodeCloseProvider
+  stackguardian_tf_provider_workflow.test_import - *terraform.NodeAbstractResource
+    provider["terraform/provider/stackguardian"] - *terraform.NodeApplyableProvider
+  stackguardian_tf_provider_workflow.test_import (import id "https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/") - *terraform.graphNodeImportState
+    provider["terraform/provider/stackguardian"] - *terraform.NodeApplyableProvider
+  ------
+2023/09/14 10:56:02 [TRACE] Executing graph transform *terraform.TransitiveReductionTransformer
+2023/09/14 10:56:02 [TRACE] Completed graph transform *terraform.TransitiveReductionTransformer with new graph:
+  provider["terraform/provider/stackguardian"] - *terraform.NodeApplyableProvider
+  provider["terraform/provider/stackguardian"] (close) - *terraform.graphNodeCloseProvider
+    stackguardian_tf_provider_workflow.test_import - *terraform.NodeAbstractResource
+    stackguardian_tf_provider_workflow.test_import (import id "https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/") - *terraform.graphNodeImportState
+  root - *terraform.nodeCloseModule
+    provider["terraform/provider/stackguardian"] (close) - *terraform.graphNodeCloseProvider
+  stackguardian_tf_provider_workflow.test_import - *terraform.NodeAbstractResource
+    provider["terraform/provider/stackguardian"] - *terraform.NodeApplyableProvider
+  stackguardian_tf_provider_workflow.test_import (import id "https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/") - *terraform.graphNodeImportState
+    provider["terraform/provider/stackguardian"] - *terraform.NodeApplyableProvider
+  ------
+2023/09/14 10:56:02 [DEBUG] Starting graph walk: walkImport
+2023/09/14 10:56:02 [TRACE] dag/walk: visiting "provider[\"terraform/provider/stackguardian\"]"
+2023/09/14 10:56:02 [TRACE] vertex "provider[\"terraform/provider/stackguardian\"]": starting visit (*terraform.NodeApplyableProvider)
+2023/09/14 10:56:02 [TRACE] vertex "provider[\"terraform/provider/stackguardian\"]": evaluating
+2023/09/14 10:56:02 [TRACE] [walkImport] Entering eval tree: provider["terraform/provider/stackguardian"]
+2023/09/14 10:56:02 [TRACE] eval: *terraform.EvalSequence
+2023/09/14 10:56:02 [TRACE] eval: *terraform.EvalInitProvider
+2023-09-14T10:56:02.497+0100 [INFO]  plugin: configuring client automatic mTLS
+2023-09-14T10:56:02.521+0100 [DEBUG] plugin: starting plugin: path=.terraform/plugins/terraform/provider/stackguardian/0.3.5/linux_amd64/terraform-provider-stackguardian args=[.terraform/plugins/terraform/provider/stackguardian/0.3.5/linux_amd64/terraform-provider-stackguardian]
+2023-09-14T10:56:02.521+0100 [DEBUG] plugin: plugin started: path=.terraform/plugins/terraform/provider/stackguardian/0.3.5/linux_amd64/terraform-provider-stackguardian pid=342625
+2023-09-14T10:56:02.521+0100 [DEBUG] plugin: waiting for RPC address: path=.terraform/plugins/terraform/provider/stackguardian/0.3.5/linux_amd64/terraform-provider-stackguardian
+2023-09-14T10:56:02.526+0100 [INFO]  plugin.terraform-provider-stackguardian: configuring server automatic mTLS: timestamp=2023-09-14T10:56:02.526+0100
+2023-09-14T10:56:02.539+0100 [DEBUG] plugin.terraform-provider-stackguardian: plugin address: address=/tmp/plugin3297547892 network=unix timestamp=2023-09-14T10:56:02.539+0100
+2023-09-14T10:56:02.539+0100 [DEBUG] plugin: using plugin: version=5
+2023/09/14 10:56:02 [TRACE] BuiltinEvalContext: Initialized "provider[\"terraform/provider/stackguardian\"]" provider for provider["terraform/provider/stackguardian"]
+2023/09/14 10:56:02 [TRACE] eval: terraform.EvalNoop
+2023/09/14 10:56:02 [TRACE] eval: *terraform.EvalOpFilter
+2023/09/14 10:56:02 [TRACE] eval: *terraform.EvalSequence
+2023/09/14 10:56:02 [TRACE] eval: *terraform.EvalGetProvider
+2023/09/14 10:56:02 [TRACE] eval: terraform.EvalNoop
+2023/09/14 10:56:02 [TRACE] eval: *terraform.EvalOpFilter
+2023/09/14 10:56:02 [TRACE] eval: *terraform.EvalSequence
+2023/09/14 10:56:02 [TRACE] eval: *terraform.EvalConfigProvider
+2023/09/14 10:56:02 [TRACE] buildProviderConfig for provider["terraform/provider/stackguardian"]: using explicit config only
+2023/09/14 10:56:02 [TRACE] GRPCProvider: GetSchema
+2023-09-14T10:56:02.567+0100 [TRACE] plugin.stdio: waiting for stdio data
+2023-09-14T10:56:02.567+0100 [WARN]  plugin.stdio: received EOF, stopping recv loop: err="rpc error: code = Unimplemented desc = unknown service plugin.GRPCStdio"
+2023/09/14 10:56:02 [TRACE] No provider meta schema returned
+2023/09/14 10:56:02 [TRACE] GRPCProvider: Configure
+2023-09-14T10:56:02.569+0100 [DEBUG] plugin.terraform-provider-stackguardian: 2023/09/14 10:56:02 api_client.go: Constructing debug api_client
+2023-09-14T10:56:02.569+0100 [DEBUG] plugin.terraform-provider-stackguardian: 2023/09/14 10:56:02 api_client.go: Constructed object:
+2023-09-14T10:56:02.569+0100 [DEBUG] plugin.terraform-provider-stackguardian: api_uri: https://api.app.stackguardian.io/api/v1/orgs/fanda
+2023-09-14T10:56:02.569+0100 [DEBUG] plugin.terraform-provider-stackguardian: org_name: 
+2023-09-14T10:56:02.569+0100 [DEBUG] plugin.terraform-provider-stackguardian: id_attribute: ResourceName
+2023-09-14T10:56:02.569+0100 [DEBUG] plugin.terraform-provider-stackguardian: write_returns_object: true
+2023-09-14T10:56:02.569+0100 [DEBUG] plugin.terraform-provider-stackguardian: headers:
+2023-09-14T10:56:02.569+0100 [DEBUG] plugin.terraform-provider-stackguardian:   Authorization: apikey sgu_g5aHlvuHQvaarykFYHRG5
+2023/09/14 10:56:02 [TRACE] [walkImport] Exiting eval tree: provider["terraform/provider/stackguardian"]
+2023/09/14 10:56:02 [TRACE] vertex "provider[\"terraform/provider/stackguardian\"]": visit complete
+2023/09/14 10:56:02 [TRACE] dag/walk: visiting "stackguardian_tf_provider_workflow.test_import"
+2023/09/14 10:56:02 [TRACE] vertex "stackguardian_tf_provider_workflow.test_import": starting visit (*terraform.NodeAbstractResource)
+2023/09/14 10:56:02 [TRACE] vertex "stackguardian_tf_provider_workflow.test_import": visit complete
+2023/09/14 10:56:02 [TRACE] dag/walk: visiting "stackguardian_tf_provider_workflow.test_import (import id \"https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/\")"
+2023/09/14 10:56:02 [TRACE] vertex "stackguardian_tf_provider_workflow.test_import (import id \"https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/\")": starting visit (*terraform.graphNodeImportState)
+2023/09/14 10:56:02 [TRACE] vertex "stackguardian_tf_provider_workflow.test_import (import id \"https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/\")": evaluating
+2023/09/14 10:56:02 [TRACE] [walkImport] Entering eval tree: stackguardian_tf_provider_workflow.test_import (import id "https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/")
+2023/09/14 10:56:02 [TRACE] eval: *terraform.EvalSequence
+2023/09/14 10:56:02 [TRACE] eval: *terraform.EvalGetProvider
+2023/09/14 10:56:02 [TRACE] eval: *terraform.EvalImportState
+2023/09/14 10:56:02 [TRACE] GRPCProvider: ImportResourceState
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: panic: interface conversion: interface {} is nil, not string
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: 
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: goroutine 26 [running]:
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: github.com/stackguardian/stackguardian-tf-provider.buildApiObjectOpts(0xc000158d90)
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: 	/home/firas/Desktop/PFE/freelance/stackguardian/terraform-provider-stackguardian/stackguardian-tf-provider/workflow_object.go:311 +0xb85
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: github.com/stackguardian/stackguardian-tf-provider.make_api_object(0xc000158d90?, {0xbc8bc0?, 0xc000146940})
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: 	/home/firas/Desktop/PFE/freelance/stackguardian/terraform-provider-stackguardian/stackguardian-tf-provider/workflow_object.go:289 +0x25
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: github.com/stackguardian/stackguardian-tf-provider.resourceStackGuardianAPIImport(0xc000158d90, {0xbc8bc0, 0xc000146940})
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: 	/home/firas/Desktop/PFE/freelance/stackguardian/terraform-provider-stackguardian/stackguardian-tf-provider/workflow_object.go:181 +0x314
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: github.com/hashicorp/terraform/helper/schema.(*Provider).ImportState(0xc0001a3880, 0xc0000f98c8, {0xc000154600, 0x58})
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: 	/home/firas/go/pkg/mod/github.com/hashicorp/terraform@v0.0.0-20190412113727-1c95b21c6cff/helper/schema/provider.go:381 +0x166
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: github.com/hashicorp/terraform/helper/plugin.(*GRPCProviderServer).ImportResourceState(0xc00007a800, {0xc000146a40?, 0x4c2f26?}, 0xc000146a40)
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: 	/home/firas/go/pkg/mod/github.com/hashicorp/terraform@v0.0.0-20190412113727-1c95b21c6cff/helper/plugin/grpc_provider.go:880 +0xb3
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: github.com/hashicorp/terraform/internal/tfplugin5._Provider_ImportResourceState_Handler({0xc73c60?, 0xc00007a800}, {0xe01060, 0xc000440de0}, 0xc0001357c0, 0x0)
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: 	/home/firas/go/pkg/mod/github.com/hashicorp/terraform@v0.0.0-20190412113727-1c95b21c6cff/internal/tfplugin5/tfplugin5.pb.go:3037 +0x169
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: google.golang.org/grpc.(*Server).processUnaryRPC(0xc000002480, {0xe05178, 0xc00041a000}, 0xc000435900, 0xc000335800, 0x12df138, 0x0)
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: 	/home/firas/go/pkg/mod/google.golang.org/grpc@v1.18.0/server.go:966 +0xe48
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: google.golang.org/grpc.(*Server).handleStream(0xc000002480, {0xe05178, 0xc00041a000}, 0xc000435900, 0x0)
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: 	/home/firas/go/pkg/mod/google.golang.org/grpc@v1.18.0/server.go:1245 +0x987
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: google.golang.org/grpc.(*Server).serveStreams.func1.1()
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: 	/home/firas/go/pkg/mod/google.golang.org/grpc@v1.18.0/server.go:685 +0x8d
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: created by google.golang.org/grpc.(*Server).serveStreams.func1 in goroutine 21
+2023-09-14T10:56:02.573+0100 [DEBUG] plugin.terraform-provider-stackguardian: 	/home/firas/go/pkg/mod/google.golang.org/grpc@v1.18.0/server.go:683 +0xd2
+2023-09-14T10:56:02.574+0100 [DEBUG] plugin: plugin process exited: path=.terraform/plugins/terraform/provider/stackguardian/0.3.5/linux_amd64/terraform-provider-stackguardian pid=342625 error="exit status 2"
+2023/09/14 10:56:02 [ERROR] eval: *terraform.EvalImportState, err: rpc error: code = Unavailable desc = transport is closing
+2023/09/14 10:56:02 [ERROR] eval: *terraform.EvalSequence, err: rpc error: code = Unavailable desc = transport is closing
+2023/09/14 10:56:02 [TRACE] [walkImport] Exiting eval tree: stackguardian_tf_provider_workflow.test_import (import id "https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/")
+2023/09/14 10:56:02 [TRACE] vertex "stackguardian_tf_provider_workflow.test_import (import id \"https://api.app.stackguardian.io/api/v1/orgs/fanda/wfgrps/Firstworkflow/wfs/test_import/\")": visit complete
+2023/09/14 10:56:02 [TRACE] dag/walk: upstream of "provider[\"terraform/provider/stackguardian\"] (close)" errored, so skipping
+2023/09/14 10:56:02 [TRACE] dag/walk: upstream of "root" errored, so skipping
+2023/09/14 10:56:02 [TRACE] statemgr.Filesystem: removing lock metadata file .terraform.tfstate.lock.info
+2023/09/14 10:56:02 [TRACE] statemgr.Filesystem: unlocking terraform.tfstate using fcntl flock
+2023-09-14T10:56:02.575+0100 [DEBUG] plugin: plugin exited

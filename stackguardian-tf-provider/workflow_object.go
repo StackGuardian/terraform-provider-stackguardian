@@ -3,6 +3,7 @@ package stackguardian_tf_provider
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -148,6 +149,7 @@ Since there is nothing in the ResourceData structure other
 */
 func resourceStackGuardianAPIImport(d *schema.ResourceData, meta interface{}) (imported []*schema.ResourceData, err error) {
 	input := d.Id()
+	import_path := d.Id()
 
 	hasTrailingSlash := strings.LastIndex(input, "/") == len(input)-1
 	var n int
@@ -178,7 +180,7 @@ func resourceStackGuardianAPIImport(d *schema.ResourceData, meta interface{}) (i
 	   has useful information in case an import isn't working */
 	d.Set("debug", true)
 
-	obj, err := make_api_object(d, meta)
+	obj, err := make_api_object_importer(d, meta, import_path)
 	if err != nil {
 		return imported, err
 	}
@@ -285,6 +287,82 @@ Simple helper routine to build an api_object struct
 	terraform cannot just reuse objects, so each CRUD operation
 	results in a new object created
 */
+func make_api_object_importer(d *schema.ResourceData, meta interface{}, import_path string) (*api_object, error) {
+
+	opts, err := buildApiObjectOpts_importer(d, import_path)
+	if err != nil {
+		return nil, err
+	}
+
+	obj, err := NewAPIObject(meta.(*api_client), opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return obj, nil
+}
+func buildApiObjectOpts_importer(d *schema.ResourceData, import_path string) (*apiObjectOpts, error) {
+	// Define a regular expression pattern to match "/wfs/" followed by any characters
+	pattern := regexp.MustCompile(`/wfs/.*`)
+
+	// Replace the matched part with an empty string
+	updatedURL := pattern.ReplaceAllString(import_path, "/wfs/")
+	opts := &apiObjectOpts{
+		// path: d.Get("path").(string),
+		path: updatedURL,
+	}
+
+	/* Allow user to override provider-level id_attribute */
+	if v, ok := d.GetOk("id_attribute"); ok {
+		opts.id_attribute = v.(string)
+	}
+
+	/* Allow user to specify the ID manually */
+	if v, ok := d.GetOk("object_id"); ok {
+		opts.ResourceName = v.(string)
+	} else {
+		/* If not specified, see if terraform has an ID */
+		opts.ResourceName = d.Id()
+	}
+
+	log.Printf("common.go: make_api_object routine called for id '%s'\n", opts.ResourceName)
+
+	log.Printf("create_path: %s", d.Get("create_path"))
+	if v, ok := d.GetOk("create_path"); ok {
+		opts.post_path = v.(string)
+	}
+	if v, ok := d.GetOk("read_path"); ok {
+		opts.get_path = v.(string)
+	}
+	if v, ok := d.GetOk("update_path"); ok {
+		opts.put_path = v.(string)
+	}
+	if v, ok := d.GetOk("create_method"); ok {
+		opts.create_method = v.(string)
+	}
+	if v, ok := d.GetOk("read_method"); ok {
+		opts.read_method = v.(string)
+	}
+	if v, ok := d.GetOk("update_method"); ok {
+		opts.update_method = v.(string)
+	}
+	if v, ok := d.GetOk("destroy_method"); ok {
+		opts.destroy_method = v.(string)
+	}
+	if v, ok := d.GetOk("destroy_path"); ok {
+		opts.delete_path = v.(string)
+	}
+	if v, ok := d.GetOk("destroy_data"); ok {
+		opts.delete_data = v.(bool)
+	}
+
+	read_search := expandReadSearch(d.Get("read_search").(map[string]interface{}))
+	opts.read_search = read_search
+
+	opts.data = d.Get("data").(string)
+	opts.debug = true
+	return opts, nil
+}
 func make_api_object(d *schema.ResourceData, meta interface{}) (*api_object, error) {
 	opts, err := buildApiObjectOpts(d)
 	if err != nil {
@@ -302,10 +380,13 @@ func make_api_object(d *schema.ResourceData, meta interface{}) (*api_object, err
 func buildApiObjectOpts(d *schema.ResourceData) (*apiObjectOpts, error) {
 	var resultPath string
 	stack, stackExists := d.Get("stack").(string)
-	if stackExists && stack != "" {
-		resultPath = "/wfgrps/" + d.Get("wfgrp").(string) + "/stacks/" + d.Get("stack").(string) + "/wfs/"
+	wfgrps, wfgrpsExists := d.Get("wfgrps").(string)
+	if stackExists && stack != "" && wfgrpsExists && wfgrps != "" {
+		resultPath = "/wfgrps/" + wfgrps + "/stacks/" + stack + "/wfs/"
+	} else if wfgrpsExists && wfgrps != "" {
+		resultPath = "/wfgrps/" + wfgrps + "/wfs/"
 	} else {
-		resultPath = "/wfgrps/" + d.Get("wfgrp").(string) + "/wfs/"
+		log.Print("----------------------------------------------------")
 	}
 	opts := &apiObjectOpts{
 		// path: d.Get("path").(string),
