@@ -25,14 +25,16 @@ func Provider() terraform.ResourceProvider {
 			/* Could only get terraform to recognize this resource if
 			         the name began with the provider's name and had at least
 				 one underscore. This is not documented anywhere I could find */
-			"stackguardian_tf_provider_workflow": resourceStackGuardianWorkflowAPI(),
-			"stackguardian_tf_provider_stack":    resourceStackGuardianStackAPI(),
-			"stackguardian_tf_provider_policy":   resourceStackGuardianPolicyAPI(),
+			"stackguardian_tf_provider_workflow":    resourceStackGuardianWorkflowAPI(),
+			"stackguardian_tf_provider_stack":       resourceStackGuardianStackAPI(),
+			"stackguardian_tf_provider_policy":      resourceStackGuardianPolicyAPI(),
+			"stackguardian_tf_provider_integration": resourceStackGuardianIntegrationAPI(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"stackguardian_tf_provider_workflow": dataSourceStackGuardianAPI(),
-			"stackguardian_tf_provider_stack":    dataSourceStackGuardianAPI(),
-			"stackguardian_tf_provider_policy":   dataSourceStackGuardianAPI(),
+			"stackguardian_tf_provider_workflow":    dataSourceStackGuardianAPI(),
+			"stackguardian_tf_provider_stack":       dataSourceStackGuardianAPI(),
+			"stackguardian_tf_provider_policy":      dataSourceStackGuardianAPI(),
+			"stackguardian_tf_provider_integration": dataSourceStackGuardianAPI(),
 		},
 		ConfigureFunc: configureProvider,
 	}

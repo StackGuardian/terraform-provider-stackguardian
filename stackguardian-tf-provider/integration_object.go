@@ -9,32 +9,27 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
-func resourceStackGuardianWorkflowAPI() *schema.Resource {
+func resourceStackGuardianIntegrationAPI() *schema.Resource {
 	// Consider data sensitive if env variables is set to true.
 	is_data_sensitive, _ := strconv.ParseBool(GetEnvOrDefault("API_DATA_IS_SENSITIVE", "false"))
 
 	return &schema.Resource{
-		Create: resourceStackGuardianAPICreate,
-		Read:   resourceStackGuardianAPIRead,
-		Update: resourceStackGuardianAPIUpdate,
-		Delete: resourceStackGuardianAPIDelete,
-		Exists: resourceStackGuardianAPIExists,
+		Create: resourceresourceStackGuardianIntegrationAPICreate,
+		Read:   resourceresourceStackGuardianIntegrationAPIRead,
+		Update: resourceresourceStackGuardianIntegrationAPIUpdate,
+		Delete: resourceresourceStackGuardianIntegrationAPIDelete,
+		Exists: resourceresourceStackGuardianIntegrationAPIExists,
 
 		Importer: &schema.ResourceImporter{
-			State: resourceStackGuardianAPIImport,
+			State: resourceresourceStackGuardianIntegrationAPIImport,
 		},
 
 		Schema: map[string]*schema.Schema{
-			"wfgrp": &schema.Schema{
-				Type:        schema.TypeString,
-				Description: "WorkFlow Group Name",
-				Required:    true,
-			},
-			"stack": &schema.Schema{
-				Type:        schema.TypeString,
-				Description: "stack name",
-				Optional:    true,
-			},
+			// "wfgrp": &schema.Schema{
+			// 	Type:        schema.TypeString,
+			// 	Description: "WorkFlow Group Name",
+			// 	Required:    true,
+			// },
 			"create_path": &schema.Schema{
 				Type:        schema.TypeString,
 				Description: "Defaults to `path`. The API path that represents where to CREATE (POST) objects of this type on the API server. The string `{id}` will be replaced with the terraform ID of the object if the data contains the `id_attribute`.",
@@ -141,7 +136,7 @@ Since there is nothing in the ResourceData structure other
 	view of the API paths to figure out how to read that object
 	from the API
 */
-func resourceStackGuardianAPIImport(d *schema.ResourceData, meta interface{}) (imported []*schema.ResourceData, err error) {
+func resourceresourceStackGuardianIntegrationAPIImport(d *schema.ResourceData, meta interface{}) (imported []*schema.ResourceData, err error) {
 	input := d.Id()
 
 	hasTrailingSlash := strings.LastIndex(input, "/") == len(input)-1
@@ -173,7 +168,7 @@ func resourceStackGuardianAPIImport(d *schema.ResourceData, meta interface{}) (i
 	   has useful information in case an import isn't working */
 	d.Set("debug", true)
 
-	obj, err := make_api_object(d, meta)
+	obj, err := make_api_object_stack(d, meta)
 	if err != nil {
 		return imported, err
 	}
@@ -190,8 +185,8 @@ func resourceStackGuardianAPIImport(d *schema.ResourceData, meta interface{}) (i
 	return imported, err
 }
 
-func resourceStackGuardianAPICreate(d *schema.ResourceData, meta interface{}) error {
-	obj, err := make_api_object(d, meta)
+func resourceresourceStackGuardianIntegrationAPICreate(d *schema.ResourceData, meta interface{}) error {
+	obj, err := make_api_object_integration(d, meta)
 	if err != nil {
 		return err
 	}
@@ -208,8 +203,8 @@ func resourceStackGuardianAPICreate(d *schema.ResourceData, meta interface{}) er
 	return err
 }
 
-func resourceStackGuardianAPIRead(d *schema.ResourceData, meta interface{}) error {
-	obj, err := make_api_object(d, meta)
+func resourceresourceStackGuardianIntegrationAPIRead(d *schema.ResourceData, meta interface{}) error {
+	obj, err := make_api_object_integration(d, meta)
 	if err != nil {
 		return err
 	}
@@ -225,8 +220,8 @@ func resourceStackGuardianAPIRead(d *schema.ResourceData, meta interface{}) erro
 	return err
 }
 
-func resourceStackGuardianAPIUpdate(d *schema.ResourceData, meta interface{}) error {
-	obj, err := make_api_object(d, meta)
+func resourceresourceStackGuardianIntegrationAPIUpdate(d *schema.ResourceData, meta interface{}) error {
+	obj, err := make_api_object_integration(d, meta)
 	if err != nil {
 		return err
 	}
@@ -240,8 +235,8 @@ func resourceStackGuardianAPIUpdate(d *schema.ResourceData, meta interface{}) er
 	return err
 }
 
-func resourceStackGuardianAPIDelete(d *schema.ResourceData, meta interface{}) error {
-	obj, err := make_api_object(d, meta)
+func resourceresourceStackGuardianIntegrationAPIDelete(d *schema.ResourceData, meta interface{}) error {
+	obj, err := make_api_object_integration(d, meta)
 	if err != nil {
 		return err
 	}
@@ -257,8 +252,8 @@ func resourceStackGuardianAPIDelete(d *schema.ResourceData, meta interface{}) er
 	return err
 }
 
-func resourceStackGuardianAPIExists(d *schema.ResourceData, meta interface{}) (exists bool, err error) {
-	obj, err := make_api_object(d, meta)
+func resourceresourceStackGuardianIntegrationAPIExists(d *schema.ResourceData, meta interface{}) (exists bool, err error) {
+	obj, err := make_api_object_integration(d, meta)
 	if err != nil {
 		return exists, err
 	}
@@ -280,8 +275,8 @@ Simple helper routine to build an api_object struct
 	terraform cannot just reuse objects, so each CRUD operation
 	results in a new object created
 */
-func make_api_object(d *schema.ResourceData, meta interface{}) (*api_object, error) {
-	opts, err := buildApiObjectOpts(d)
+func make_api_object_integration(d *schema.ResourceData, meta interface{}) (*api_object, error) {
+	opts, err := buildApiObjectIntegrationOpts(d)
 	if err != nil {
 		return nil, err
 	}
@@ -294,17 +289,13 @@ func make_api_object(d *schema.ResourceData, meta interface{}) (*api_object, err
 	return obj, nil
 }
 
-func buildApiObjectOpts(d *schema.ResourceData) (*apiObjectOpts, error) {
-	var resultPath string
-	stack, stackExists := d.Get("stack").(string)
-	if stackExists && stack != "" {
-		resultPath = "/wfgrps/" + d.Get("wfgrp").(string) + "/stacks/" + d.Get("stack").(string) + "/wfs/"
-	} else {
-		resultPath = "/wfgrps/" + d.Get("wfgrp").(string) + "/wfs/"
-	}
+func buildApiObjectIntegrationOpts(d *schema.ResourceData) (*apiObjectOpts, error) {
+	// var resultPath string
+	// resultPath = "/wfgrps/" + d.Get("wfgrp").(string) + "/stacks/"
+
 	opts := &apiObjectOpts{
 		// path: d.Get("path").(string),
-		path: resultPath,
+		path: "",
 	}
 
 	/* Allow user to override provider-level id_attribute */
@@ -357,13 +348,4 @@ func buildApiObjectOpts(d *schema.ResourceData) (*apiObjectOpts, error) {
 	opts.data = d.Get("data").(string)
 	opts.debug = true
 	return opts, nil
-}
-
-func expandReadSearch(v map[string]interface{}) (read_search map[string]string) {
-	read_search = make(map[string]string)
-	for key, val := range v {
-		read_search[key] = val.(string)
-	}
-
-	return
 }

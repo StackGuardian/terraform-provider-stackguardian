@@ -17,7 +17,7 @@ resource "stackguardian_tf_provider_workflow" "Test" {
   data = jsonencode({
     "ResourceName" : "Test",
     "wfgrpName" : "Firstworkflow",
-    "Description" : "test to send to Firas updated 6",
+    "Description" : "test to send to Firas updated 8",
     "Tags" : [],
     "EnvironmentVariables" : [],
     "DeploymentPlatformConfig" : [{

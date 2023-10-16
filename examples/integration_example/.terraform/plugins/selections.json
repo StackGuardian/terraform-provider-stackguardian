@@ -1,0 +1,6 @@
+{
+  "terraform/provider/stackguardian": {
+    "hash": "h1:0btQigJtW0Z/Jst3/kjYF6XqRy1qDRhHAkEK/buvg8Y=",
+    "version": "0.3.5"
+  }
+}
