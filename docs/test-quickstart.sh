@@ -2,7 +2,7 @@
 
 export TFSG_PROVIDER="terraform/provider/stackguardian"
 export TFSG_OSARCH="linux_amd64"
-export TFSG_VERSION="0.1.0-aplha1"
+export TFSG_VERSION="0.1.0-beta1"
 
 SCRIPT_DIRPATH=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
 
@@ -17,24 +17,26 @@ mkdir -p $HOME/.terraform.d/plugins/${TFSG_PROVIDER}/${TFSG_VERSION}/${TFSG_OSAR
 cd $HOME/.terraform.d/plugins/${TFSG_PROVIDER}/${TFSG_VERSION}/${TFSG_OSARCH}
 
 # --- Fetch the plugin binary from Github
-wget -q https://github.com/StackGuardian/terraform-provider-stackguardian/releases/download/v${TFSG_VERSION}/terraform-provider-stackguardian_${TFSG_VERSION}_${TFSG_OSARCH}.zip
+wget https://github.com/StackGuardian/terraform-provider-stackguardian/releases/download/v${TFSG_VERSION}/terraform-provider-stackguardian_${TFSG_VERSION}_${TFSG_OSARCH}.zip
+### For local testing ### cp ~/Downloads/terraform-provider-stackguardian_${TFSG_VERSION}_${TFSG_OSARCH}.zip .
 
 # --- Install the plugin binary inside the plugin directory
 unzip terraform-provider-stackguardian_${TFSG_VERSION}_${TFSG_OSARCH}.zip
-mv terraform-provider-stackguardian_${TFSG_VERSION}_${TFSG_OSARCH} terraform-provider-stackguardian
+rm -v terraform-provider-stackguardian_${TFSG_VERSION}_${TFSG_OSARCH}.zip
 
 
 ## Provider Configuration inside project
-
+rm -rfv ~/tmp/terraform-stackguardian-quickstart
 mkdir -p ~/tmp/terraform-stackguardian-quickstart
-
 cp -v ${SCRIPT_DIRPATH}/stackguardian_workflow.tf -t ~/tmp/terraform-stackguardian-quickstart/
-
 cd ~/tmp/terraform-stackguardian-quickstart
 
-terraform init
+# --- Provider configuration should be passed from external environment variables
+# $ export STACKGUARDIAN_ORG_NAME="YOUR_SG_ORG"
+# $ export STACKGUARDIAN_API_KEY="YOUR_SG_KEY"
 
 terraform providers
+terraform init
 terraform version
 
 terraform plan

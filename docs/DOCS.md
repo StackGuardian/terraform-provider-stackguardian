@@ -8,7 +8,7 @@ Those quickstart instructions lets you setup a new IaC project with the Terrafor
 _For now, the StackGuardian Provider is not available on the Terraform Registry,
 so it is necessary to add it manually on your system to be able to use it in your IaC Terraform project._
 
-A plarform label, with an OS name and an architecture name, matching the system platform where you will run the terraform provider on, must be selected from the start.
+A platform label, with an OS name and an architecture name, matching the system platform where you will run the terraform provider on, must be selected from the start.
 Please select one among the following options:
 - `darwin_amd64`
 - `darwin_arm64`
@@ -18,18 +18,18 @@ Please select one among the following options:
 - `windows_arm64`
 
 - After selecting one of the available options, set it in the shell. For instance:
-```shell
+```console
 $ export TFSG_OSARCH="linux_amd64"
 ```
 
 - Go to the [latest release page](https://github.com/StackGuardian/terraform-provider-stackguardian/releases) from the Github repository.
 Select a release, pickup its bare version tag without the `v` prefix, and set it in the shell. For instance:
-```shell
-$ export TFSG_VERSION="0.1.0-aplha1"
+```console
+$ export TFSG_VERSION="0.1.0-beta1"
 ```
 
 - Execute the following shell commands to install the provider:
-```shell
+```console
 # Prepare the plugin directory
 $ rm -rfv $HOME/.terraform.d/plugins/terraform/provider/stackguardian/${TFSG_VERSION}/${TFSG_OSARCH}
 $ mkdir -p $HOME/.terraform.d/plugins/terraform/provider/stackguardian/${TFSG_VERSION}/${TFSG_OSARCH}
@@ -40,26 +40,27 @@ $ wget -q https://github.com/StackGuardian/terraform-provider-stackguardian/rele
 
 # Install the plugin binary inside the plugin directory
 $ unzip terraform-provider-stackguardian_${TFSG_VERSION}_${TFSG_OSARCH}.zip
-$ mv terraform-provider-stackguardian_${TFSG_VERSION}_${TFSG_OSARCH} terraform-provider-stackguardian
+$ rm -v terraform-provider-stackguardian_${TFSG_VERSION}_${TFSG_OSARCH}.zip
 ```
 
 
 ## Provider Configuration inside project
 
 - Create a new IaC project to setup before being able to define StackGuardian objects.
-```shell
+```console
 $ mkdir -p ~/devel/terraform-stackguardian-quickstart
 $ cd ~/devel/terraform-stackguardian-quickstart
 ```
 
-- Create a new file to declare the provider:
-```json
-// stackguardian.hcl
+- Create a new file `stackguardian.tf` to declare the provider:
+```terraform
+// stackguardian.tf
 
 terraform {
   required_providers {
     stackguardian = {
-      source = "terraform-provider-stackguardian"
+      source = "terraform/provider/stackguardian"
+      version = "0.1.0-beta1"
     }
   }
 }
@@ -69,18 +70,39 @@ provider "stackguardian" {}
 The provider configuration will be passed from environment variables later.
 
 - Check whether the provider was correctly installed with the following commands:
-If it is correctly installed, the output will look similar, otherwise it will show an error.
-```shell
-$ terraform init
-[...]
+If the provider is correctly recognized and installed, the output will look similar, otherwise it will show an error.
+Please note that a warning will be printed for the `init` command, this is expected.
+```console
 $ terraform providers
 
 Providers required by configuration:
 .
-└── provider[terraform/provider/stackguardian]
+└── provider[terraform/provider/stackguardian] 0.1.0-beta1
+
+$ terraform init
+
+Initializing the backend...
+
+Initializing provider plugins...
+- Finding terraform/provider/stackguardian versions matching "0.1.0-beta1"...
+- Installing terraform/provider/stackguardian v0.1.0-beta1...
+- Installed terraform/provider/stackguardian v0.1.0-beta1 (unauthenticated)
+
+[...]
+
+Terraform has been successfully initialized!
+
+[...]
+
+$ terraform version
+Terraform v1.X.Z
+on linux_amd64
++ provider terraform/provider/stackguardian v0.1.0-beta1
+
+[...]
 ```
 
-Finally, the provider can be configurated from environment variables:
+Finally, the provider can be configured from environment variables:
 ```
 $ export STACKGUARDIAN_ORG_NAME="YOUR_SG_ORG"
 $ export STACKGUARDIAN_API_KEY="YOUR_SG_KEY"
@@ -90,14 +112,14 @@ If you do not have any API key for your organization yet, you can generate one o
 StackGuardian App by going to "Organization settings > API Keys".
 
 
-## Example: Worflow
+## Example: Workflow
 
 Finally, you can take inspiration from the [provider examples](./../examples) to create new StackGuardian objects in your organization.
 
-For instance you can create a new workflow
+For instance you can create a new workflow on StackGuardian Orchestrator by adding the following block to the `stackguardian.tf` file:
 
-```json
-// stackguardian.hcl
+```terraform
+// stackguardian.tf
 
 resource "stackguardian_tf_provider_workflow" "Workflow_DeployWebsiteS3" {
   wfgrp = "WorkflowGroup_DeployWebsiteS3"
@@ -141,7 +163,7 @@ resource "stackguardian_tf_provider_workflow" "Workflow_DeployWebsiteS3" {
 For a complete example, please refer to the file [docs/stackguardian_workflow.tf](./stackguardian_workflow.tf)
 
 Finally, inspect the plan offered by Terraform, and execute it to create the desired object on StackGuardian:
-```shell
+```console
 $ terraform plan
 [...]
 $ terraform apply
