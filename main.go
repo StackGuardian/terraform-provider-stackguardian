@@ -3,7 +3,8 @@ package main
 import (
 	"github.com/hashicorp/terraform/plugin"
 	"github.com/hashicorp/terraform/terraform"
-	stackguardian_tf_provider "github.com/stackguardian/stackguardian-tf-provider"
+
+	stackguardian_tf_provider "github.com/StackGuardian/terraform-provider-stackguardian/stackguardian-tf-provider"
 )
 
 func main() {

@@ -35,6 +35,7 @@ func Provider() terraform.ResourceProvider {
 			"stackguardian_tf_provider_stack":       dataSourceStackGuardianAPI(),
 			"stackguardian_tf_provider_policy":      dataSourceStackGuardianAPI(),
 			"stackguardian_tf_provider_integration": dataSourceStackGuardianAPI(),
+			"stackguardian_tf_provider_wf_output":   dataSourceStackGuardianWorkflowOutputsAPI(),
 		},
 		ConfigureFunc: configureProvider,
 	}

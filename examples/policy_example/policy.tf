@@ -2,13 +2,14 @@ terraform {
   required_providers {
     stackguardian = {
       source = "terraform/provider/stackguardian"
+      version = "0.0.0-dev"
     }
   }
 }
 
 provider "stackguardian" {
-  org_name = "fanda"
-  api_key  = "sgu_g5aHlvuHQvaarykFYHRG5"
+  org_name = "---" // TBD
+  api_key  = "---" // TBD
 }
 
 resource "stackguardian_tf_provider_policy" "TestPolicy" {
@@ -16,4 +17,3 @@ resource "stackguardian_tf_provider_policy" "TestPolicy" {
     { "ResourceName" : "test", "Description" : "", "Tags" : ["test", "policy"] }
   )
 }
-
