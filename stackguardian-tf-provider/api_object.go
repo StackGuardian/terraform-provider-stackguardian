@@ -232,8 +232,7 @@ func (obj *api_object) create_object() error {
 	/* We will need to sync state as well as get the object's ID */
 	if true {
 		if obj.debug {
-			log.Printf("api_object.go: Parsing response from POST to update internal structures (write_returns_object=%t, create_returns_object=%t)...\n",
-				true)
+			log.Printf("api_object.go: Parsing response from POST to update internal structures (write_returns_object=, create_returns_object=)...\n")
 		}
 		err = obj.update_state(res_str)
 		/* Yet another failsafe. In case something terrible went wrong internally,
@@ -243,8 +242,7 @@ func (obj *api_object) create_object() error {
 		}
 	} else {
 		if obj.debug {
-			log.Printf("api_object.go: Requesting created object from API (write_returns_object=%t, create_returns_object=%t)...\n",
-				true)
+			log.Printf("api_object.go: Requesting created object from API (write_returns_object=, create_returns_object=)...\n")
 		}
 		err = obj.read_object()
 	}
