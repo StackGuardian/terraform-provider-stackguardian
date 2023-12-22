@@ -58,7 +58,7 @@ checksum:
 release:
   name_template: "v{{.Version}}"
   github:
-    owner: piroux-sg # stackguardian
+    owner: stackguardian
     name: terraform-provider-stackguardian
   #  extra_files:
   #    - glob: 'terraform-registry-manifest.json'
