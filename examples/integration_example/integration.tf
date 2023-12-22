@@ -7,8 +7,8 @@ terraform {
 }
 
 provider "stackguardian" {
-  org_name = "fanda"
-  api_key  = "sgu_g5aHlvuHQvaarykFYHRG5"
+  org_name = "---" // TBD
+  api_key  = "---" // TBD
 }
 
 resource "stackguardian_tf_provider_integration" "aws-static-integ" {

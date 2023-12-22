@@ -2,8 +2,6 @@ terraform {
   required_providers {
     stackguardian = {
       source = "terraform/provider/stackguardian"
-
-      # https://developer.hashicorp.com/terraform/cli/config/config-file#provider_installation
     }
   }
 }
