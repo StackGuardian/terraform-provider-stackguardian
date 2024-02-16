@@ -31,7 +31,7 @@ mkdir -p ~/tmp/terraform-stackguardian-quickstart
 cp -v ${SCRIPT_DIRPATH}/stackguardian_workflow.tf -t ~/tmp/terraform-stackguardian-quickstart/
 cd ~/tmp/terraform-stackguardian-quickstart
 
-# --- Provider configuration should be passed from external environment variables
+# --- The provider configuration should be passed from external environment variables:
 # $ export STACKGUARDIAN_ORG_NAME="YOUR_SG_ORG"
 # $ export STACKGUARDIAN_API_KEY="YOUR_SG_KEY"
 

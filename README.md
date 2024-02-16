@@ -1,4 +1,4 @@
-# terraform-provider-stackguardian
+# StackGuardian Terraform Provider
 
 
 _*WARNING:* This Terraform Provider project is currently in pre-production mode, so it is not yet available on the Terraform Registry._

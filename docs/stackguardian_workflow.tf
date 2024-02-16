@@ -8,7 +8,7 @@ terraform {
 }
 
 /*
-The provider can configurated from environment variables:
+The provider configuration should be passed from external environment variables:
 ```
 $ export STACKGUARDIAN_ORG_NAME="YOUR_SG_ORG"
 $ export STACKGUARDIAN_API_KEY="YOUR_SG_KEY"
