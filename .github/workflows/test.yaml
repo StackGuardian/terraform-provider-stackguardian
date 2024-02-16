@@ -5,8 +5,11 @@ on:
     branches:
       - main
       - devel
+  # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request
   pull_request:
-    branches: ['release/**'] # TODO: require branch protection before enabling
+    branches:
+      - 'main'
+    types: [opened, edited, reopened, synchronize, ready_for_review]
   schedule:
     - cron: '0 4 * * 1'
   workflow_dispatch:
