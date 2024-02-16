@@ -1,6 +1,10 @@
 package provider
 
 import (
+	"log"
+	"os"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -48,4 +52,22 @@ func configureProvider(d *schema.ResourceData) (interface{}, error) {
 	}
 	client, err := NewAPIClient(opt)
 	return client, err
+}
+
+/// DEBUG /////////////////////////////////////////////////////////////////////////////////////////
+
+func debugProcess() {
+	debugMode, found := os.LookupEnv("TF_LOG")
+	if !found || debugMode != "debug" {
+		return
+	}
+
+	pid_current := os.Getpid()
+	pid_parent := os.Getppid()
+
+	wait := time.Second * 15
+
+	log.Printf("DEBUG: ParentPID = %d | CurrentPID = %d", pid_parent, pid_current)
+	log.Printf("DEBUG: Continuing in %s", wait)
+	time.Sleep(wait)
 }

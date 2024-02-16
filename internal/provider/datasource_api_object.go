@@ -57,8 +57,7 @@ func dataSourceStackGuardianAPI() *schema.Resource {
 				Description: "The raw body of the HTTP response from the last read of the object.",
 				Computed:    true,
 			},
-		}, /* End schema */
-
+		},
 	}
 }
 

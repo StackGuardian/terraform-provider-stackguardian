@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// var testAccProviders map[string]*schema.Provider
 var testAccProviders map[string]*schema.Provider
 var testAccProvider *schema.Provider
 
@@ -26,10 +25,4 @@ func testAccPreCheck(t *testing.T) {
 	if os.Getenv("STACKGUARDIAN_API_KEY") == "" {
 		t.Fatal("STACKGUARDIAN_API_KEY must be set for acceptance tests")
 	}
-
-	// Needed ?
-	// err := testAccProvider.Configure(terraform.NewResourceConfig(nil))
-	// if err != nil {
-	// 		t.Fatal(err)
-	// }
 }
