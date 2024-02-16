@@ -120,7 +120,7 @@ For instance you can create a new workflow on StackGuardian Orchestrator by addi
 ```terraform
 // stackguardian.tf
 
-resource "stackguardian_tf_provider_workflow" "Workflow_DeployWebsiteS3" {
+resource "stackguardian_workflow" "Workflow_DeployWebsiteS3" {
   wfgrp = "WorkflowGroup_DeployWebsiteS3"
 
   data = jsonencode({

@@ -12,7 +12,7 @@ provider "stackguardian" {
   api_key  = "---" // TBD
 }
 
-resource "stackguardian_tf_provider_integration" "aws-static-integ" {
+resource "stackguardian_integration" "aws-static-integ" {
   data = jsonencode({
   "ResourceName": "aws-static-integ",
   "Description": "",
@@ -29,7 +29,7 @@ resource "stackguardian_tf_provider_integration" "aws-static-integ" {
 })
 }
 
-resource "stackguardian_tf_provider_integration" "devops" {
+resource "stackguardian_integration" "devops" {
   data = jsonencode({
   "ResourceName": "devops",
   "Settings": {
@@ -44,7 +44,7 @@ resource "stackguardian_tf_provider_integration" "devops" {
 }
 
 
-resource "stackguardian_tf_provider_integration" "gc-integaxcsdcs" {
+resource "stackguardian_integration" "gc-integaxcsdcs" {
   data = jsonencode({
   "ResourceName": "gc-integaxcsdcs",
   "Description": "csdcsdcsdc",
@@ -59,7 +59,7 @@ resource "stackguardian_tf_provider_integration" "gc-integaxcsdcs" {
 })
 }
 
-resource "stackguardian_tf_provider_integration" "cdcdcdc" {
+resource "stackguardian_integration" "cdcdcdc" {
   data = jsonencode({
   "ResourceName": "cdcdcdc",
   "Description": "",
@@ -77,7 +77,7 @@ resource "stackguardian_tf_provider_integration" "cdcdcdc" {
 })
 }
 
-resource "stackguardian_tf_provider_integration" "gitlab-integxcsdc" {
+resource "stackguardian_integration" "gitlab-integxcsdc" {
   data = jsonencode({
   "ResourceName": "gitlab-integxcsdc",
   "Settings": {
@@ -91,7 +91,7 @@ resource "stackguardian_tf_provider_integration" "gitlab-integxcsdc" {
 })
 }
 
-resource "stackguardian_tf_provider_integration" "rbac-integ" {
+resource "stackguardian_integration" "rbac-integ" {
   data = jsonencode({
   "ResourceName": "rbac-integ",
   "Description": "",

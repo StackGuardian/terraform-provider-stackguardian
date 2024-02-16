@@ -45,7 +45,7 @@ func testAccPreCheck(t *testing.T) {
 }
 
 const testAccCheckSgWorkflowOutputsConfig = `
-data "stackguardian_tf_provider_wf_output" "wf-test-1" {
+data "stackguardian_wf_output" "wf-test-1" {
 	# wfgrps/aws-dev-environments/wfs/wf-musical-coral?tab=outputs
 	wfgrp           = "aws-dev-environments"
 	wf              = "wf-musical-coral"
@@ -53,16 +53,16 @@ data "stackguardian_tf_provider_wf_output" "wf-test-1" {
   }
 
   output "website_url_from_mapstr" {
-	value = data.stackguardian_tf_provider_wf_output.wf-test-1.outputs_str.sample_website_url
+	value = data.stackguardian_wf_output.wf-test-1.outputs_str.sample_website_url
   }
 
 
   output "website_url_from_json" {
-	value = jsondecode(data.stackguardian_tf_provider_wf_output.wf-test-1.outputs_json).sample_website_url.value
+	value = jsondecode(data.stackguardian_wf_output.wf-test-1.outputs_json).sample_website_url.value
   }
 
   output "outputs_full_json" {
-	value = jsondecode(data.stackguardian_tf_provider_wf_output.wf-test-1.outputs_json)
+	value = jsondecode(data.stackguardian_wf_output.wf-test-1.outputs_json)
   }
 `
 

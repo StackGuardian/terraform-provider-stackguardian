@@ -17,7 +17,7 @@ $ export STACKGUARDIAN_API_KEY="YOUR_SG_KEY"
 provider "stackguardian" {}
 
 
-resource "stackguardian_tf_provider_workflow" "Workflow_DeployWebsiteS3" {
+resource "stackguardian_workflow" "Workflow_DeployWebsiteS3" {
   wfgrp = "WorkflowGroup_DeployWebsiteS3"
 
   data = jsonencode({
