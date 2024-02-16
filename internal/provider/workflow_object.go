@@ -1,4 +1,4 @@
-package stackguardian_tf_provider
+package provider
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
 func resourceStackGuardianWorkflowAPI() *schema.Resource {

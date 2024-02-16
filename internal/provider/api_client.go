@@ -1,4 +1,4 @@
-package stackguardian_tf_provider
+package provider
 
 import (
 	"bytes"

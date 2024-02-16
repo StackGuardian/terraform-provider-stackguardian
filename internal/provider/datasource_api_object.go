@@ -1,9 +1,9 @@
-package stackguardian_tf_provider
+package provider
 
 import (
 	"log"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
 func dataSourceStackGuardianAPI() *schema.Resource {
@@ -11,22 +11,22 @@ func dataSourceStackGuardianAPI() *schema.Resource {
 		Read: dataSourceStackGuardianAPIRead,
 
 		Schema: map[string]*schema.Schema{
-			"path": &schema.Schema{
+			"path": {
 				Type:        schema.TypeString,
 				Description: "The API path on top of the base URL set in the provider that represents objects of this type on the API server.",
 				Required:    true,
 			},
-			"query_string": &schema.Schema{
+			"query_string": {
 				Type:        schema.TypeString,
 				Description: "An optional query string to send when performing the search.",
 				Optional:    true,
 			},
-			"search_key": &schema.Schema{
+			"search_key": {
 				Type:        schema.TypeString,
 				Description: "When reading search results from the API, this key is used to identify the specific record to read. This should be a unique record such as 'name'. Similar to results_key, the value may be in the format of 'field/field/field' to search for data deeper in the returned object.",
 				Required:    true,
 			},
-			"search_value": &schema.Schema{
+			"search_value": {
 				Type:        schema.TypeString,
 				Description: "The value of 'search_key' will be compared to this value to determine if the correct object was found. Example: if 'search_key' is 'name' and 'search_value' is 'foo', the record in the array returned by the API with name=foo will be used.",
 				Required:    true,
