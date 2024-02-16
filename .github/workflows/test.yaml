@@ -1,0 +1,40 @@
+name: "Provider Test on SG-Prod"
+
+on:
+  push:
+    branches: [main]
+  # pull_request:
+  #   branches: ['release/**'] // TODO: require branch protection before enabling
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+
+  run-tests:
+    name: "Run the provider tests"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v4
+
+      - name: "Install Go"
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: "Install Terraform"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+          terraform_version: '1.5.7' # TODO: matrix of terraform & tofu versions
+
+      - name: "Build provider"
+        run: make build
+
+      - name: "Test provider"
+        run: make testacc
+        env:
+          STACKGUARDIAN_API_KEY: ${{ secrets.PROD_STACKGUARDIAN_API_KEY_FOR_TESTS }}
