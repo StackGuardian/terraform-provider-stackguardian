@@ -1,11 +1,9 @@
 package provider
 
 import (
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 /*
@@ -16,35 +14,8 @@ TODO:
 	- fix test for `outputs_full_json`: with/without jsondecode
 */
 
-// var testAccProviders map[string]*schema.Provider
-var testAccProviders map[string]*schema.Provider
-var testAccProvider *schema.Provider
-
-func init() {
-	testAccProvider = Provider()
-	testAccProviders = map[string]*schema.Provider{
-		"stackguardian": testAccProvider,
-	}
-}
-
-func testAccPreCheck(t *testing.T) {
-	if os.Getenv("STACKGUARDIAN_ORG_NAME") == "" {
-		t.Fatal("STACKGUARDIAN_ORG_NAME must be set for acceptance tests")
-	}
-
-	if os.Getenv("STACKGUARDIAN_API_KEY") == "" {
-		t.Fatal("STACKGUARDIAN_API_KEY must be set for acceptance tests")
-	}
-
-	// Needed ?
-	// err := testAccProvider.Configure(terraform.NewResourceConfig(nil))
-	// if err != nil {
-	// 		t.Fatal(err)
-	// }
-}
-
 const testAccCheckSgWorkflowOutputsConfig = `
-data "stackguardian_wf_output" "wf-test-1" {
+data "stackguardian_wf_output" "TPS-Test-Outputs" {
 	# wfgrps/aws-dev-environments/wfs/wf-musical-coral?tab=outputs
 	wfgrp           = "aws-dev-environments"
 	wf              = "wf-musical-coral"
@@ -52,20 +23,20 @@ data "stackguardian_wf_output" "wf-test-1" {
   }
 
   output "website_url_from_mapstr" {
-	value = data.stackguardian_wf_output.wf-test-1.outputs_str.sample_website_url
+	value = data.stackguardian_wf_output.TPS-Test-Outputs.outputs_str.sample_website_url
   }
 
 
   output "website_url_from_json" {
-	value = jsondecode(data.stackguardian_wf_output.wf-test-1.outputs_json).sample_website_url.value
+	value = jsondecode(data.stackguardian_wf_output.TPS-Test-Outputs.outputs_json).sample_website_url.value
   }
 
   output "outputs_full_json" {
-	value = jsondecode(data.stackguardian_wf_output.wf-test-1.outputs_json)
+	value = jsondecode(data.stackguardian_wf_output.TPS-Test-Outputs.outputs_json)
   }
 `
 
-func TestAccSgWorkflowOutputsDataSource_Outputs(t *testing.T) {
+func TestAcc_DatasourceSgWorkflowOutputs(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,

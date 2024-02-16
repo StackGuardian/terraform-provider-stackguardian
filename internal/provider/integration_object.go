@@ -14,14 +14,14 @@ func resourceStackGuardianIntegrationAPI() *schema.Resource {
 	is_data_sensitive, _ := strconv.ParseBool(GetEnvOrDefault("API_DATA_IS_SENSITIVE", "false"))
 
 	return &schema.Resource{
-		Create: resourceresourceStackGuardianIntegrationAPICreate,
-		Read:   resourceresourceStackGuardianIntegrationAPIRead,
-		Update: resourceresourceStackGuardianIntegrationAPIUpdate,
-		Delete: resourceresourceStackGuardianIntegrationAPIDelete,
-		Exists: resourceresourceStackGuardianIntegrationAPIExists,
+		Create: resourceStackGuardianIntegrationAPICreate,
+		Read:   resourceStackGuardianIntegrationAPIRead,
+		Update: resourceStackGuardianIntegrationAPIUpdate,
+		Delete: resourceStackGuardianIntegrationAPIDelete,
+		Exists: resourceStackGuardianIntegrationAPIExists,
 
 		Importer: &schema.ResourceImporter{
-			State: resourceresourceStackGuardianIntegrationAPIImport,
+			State: resourceStackGuardianIntegrationAPIImport,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -30,77 +30,81 @@ func resourceStackGuardianIntegrationAPI() *schema.Resource {
 			// 	Description: "WorkFlow Group Name",
 			// 	Required:    true,
 			// },
-			"create_path": {
-				Type:        schema.TypeString,
-				Description: "Defaults to `path`. The API path that represents where to CREATE (POST) objects of this type on the API server. The string `{id}` will be replaced with the terraform ID of the object if the data contains the `id_attribute`.",
-				Optional:    true,
-			},
-			"read_path": {
-				Type:        schema.TypeString,
-				Description: "Defaults to `path/{id}`. The API path that represents where to READ (GET) objects of this type on the API server. The string `{id}` will be replaced with the terraform ID of the object.",
-				Optional:    true,
-			},
-			"update_path": {
-				Type:        schema.TypeString,
-				Description: "Defaults to `path/{id}`. The API path that represents where to UPDATE (PUT) objects of this type on the API server. The string `{id}` will be replaced with the terraform ID of the object.",
-				Optional:    true,
-			},
-			"create_method": {
-				Type:        schema.TypeString,
-				Description: "Defaults to `create_method` set on the provider. Allows per-resource override of `create_method` (see `create_method` provider config documentation)",
-				Optional:    true,
-			},
-			"read_method": {
-				Type:        schema.TypeString,
-				Description: "Defaults to `read_method` set on the provider. Allows per-resource override of `read_method` (see `read_method` provider config documentation)",
-				Optional:    true,
-			},
-			"update_method": {
-				Type:        schema.TypeString,
-				Description: "Defaults to `update_method` set on the provider. Allows per-resource override of `update_method` (see `update_method` provider config documentation)",
-				Optional:    true,
-			},
-			"destroy_method": {
-				Type:        schema.TypeString,
-				Description: "Defaults to `destroy_method` set on the provider. Allows per-resource override of `destroy_method` (see `destroy_method` provider config documentation)",
-				Optional:    true,
-			},
-			"destroy_path": {
-				Type:        schema.TypeString,
-				Description: "Defaults to `path/{id}`. The API path that represents where to DESTROY (DELETE) objects of this type on the API server. The string `{id}` will be replaced with the terraform ID of the object.",
-				Optional:    true,
-			},
-			"destroy_data": {
-				Type:        schema.TypeBool,
-				Description: "Whether to use the data object as the body for the delete request.",
-				Optional:    true,
-			},
-			"id_attribute": {
-				Type:        schema.TypeString,
-				Description: "Defaults to `id_attribute` set on the provider. Allows per-resource override of `id_attribute` (see `id_attribute` provider config documentation)",
-				Optional:    true,
-			},
-			"object_id": {
-				Type:        schema.TypeString,
-				Description: "Defaults to the id learned by the provider during normal operations and `id_attribute`. Allows you to set the id manually. This is used in conjunction with the `*_path` attributes.",
-				Optional:    true,
-			},
+			/*
+				"create_path": {
+					Type:        schema.TypeString,
+					Description: "Defaults to `path`. The API path that represents where to CREATE (POST) objects of this type on the API server. The string `{id}` will be replaced with the terraform ID of the object if the data contains the `id_attribute`.",
+					Optional:    true,
+				},
+				"read_path": {
+					Type:        schema.TypeString,
+					Description: "Defaults to `path/{id}`. The API path that represents where to READ (GET) objects of this type on the API server. The string `{id}` will be replaced with the terraform ID of the object.",
+					Optional:    true,
+				},
+				"update_path": {
+					Type:        schema.TypeString,
+					Description: "Defaults to `path/{id}`. The API path that represents where to UPDATE (PUT) objects of this type on the API server. The string `{id}` will be replaced with the terraform ID of the object.",
+					Optional:    true,
+				},
+				"create_method": {
+					Type:        schema.TypeString,
+					Description: "Defaults to `create_method` set on the provider. Allows per-resource override of `create_method` (see `create_method` provider config documentation)",
+					Optional:    true,
+				},
+				"read_method": {
+					Type:        schema.TypeString,
+					Description: "Defaults to `read_method` set on the provider. Allows per-resource override of `read_method` (see `read_method` provider config documentation)",
+					Optional:    true,
+				},
+				"update_method": {
+					Type:        schema.TypeString,
+					Description: "Defaults to `update_method` set on the provider. Allows per-resource override of `update_method` (see `update_method` provider config documentation)",
+					Optional:    true,
+				},
+				"destroy_method": {
+					Type:        schema.TypeString,
+					Description: "Defaults to `destroy_method` set on the provider. Allows per-resource override of `destroy_method` (see `destroy_method` provider config documentation)",
+					Optional:    true,
+				},
+				"destroy_path": {
+					Type:        schema.TypeString,
+					Description: "Defaults to `path/{id}`. The API path that represents where to DESTROY (DELETE) objects of this type on the API server. The string `{id}` will be replaced with the terraform ID of the object.",
+					Optional:    true,
+				},
+				"destroy_data": {
+					Type:        schema.TypeBool,
+					Description: "Whether to use the data object as the body for the delete request.",
+					Optional:    true,
+				},
+				"id_attribute": {
+					Type:        schema.TypeString,
+					Description: "Defaults to `id_attribute` set on the provider. Allows per-resource override of `id_attribute` (see `id_attribute` provider config documentation)",
+					Optional:    true,
+				},
+				"object_id": {
+					Type:        schema.TypeString,
+					Description: "Defaults to the id learned by the provider during normal operations and `id_attribute`. Allows you to set the id manually. This is used in conjunction with the `*_path` attributes.",
+					Optional:    true,
+				},
+			*/
 			"data": {
 				Type:        schema.TypeString,
 				Description: "Valid JSON data that this provider will manage with the API server.",
 				Required:    true,
 				Sensitive:   is_data_sensitive,
 			},
-			"debug": {
-				Type:        schema.TypeBool,
-				Description: "Whether to emit verbose debug output while working with the API object on the server.",
-				Optional:    true,
-			},
-			"read_search": {
-				Type:        schema.TypeMap,
-				Description: "Custom search for `read_path`. This map will take `search_key`, `search_value`, `results_key` and `query_string` (see datasource config documentation)",
-				Optional:    true,
-			},
+			/*
+				"debug": {
+					Type:        schema.TypeBool,
+					Description: "Whether to emit verbose debug output while working with the API object on the server.",
+					Optional:    true,
+				},
+				"read_search": {
+					Type:        schema.TypeMap,
+					Description: "Custom search for `read_path`. This map will take `search_key`, `search_value`, `results_key` and `query_string` (see datasource config documentation)",
+					Optional:    true,
+				},
+			*/
 			"api_data": {
 				Type:        schema.TypeMap,
 				Elem:        &schema.Schema{Type: schema.TypeString},
@@ -112,18 +116,20 @@ func resourceStackGuardianIntegrationAPI() *schema.Resource {
 				Description: "The raw body of the HTTP response from the last read of the object.",
 				Computed:    true,
 			},
-			"create_response": {
-				Type:        schema.TypeString,
-				Description: "The raw body of the HTTP response returned when creating the object.",
-				Computed:    true,
-			},
-			"force_new": {
-				Type:        schema.TypeList,
-				Elem:        &schema.Schema{Type: schema.TypeString},
-				Optional:    true,
-				ForceNew:    true,
-				Description: "Any changes to these values will result in recreating the resource instead of updating.",
-			},
+			/*
+				"create_response": {
+					Type:        schema.TypeString,
+					Description: "The raw body of the HTTP response returned when creating the object.",
+					Computed:    true,
+				},
+				"force_new": {
+					Type:        schema.TypeList,
+					Elem:        &schema.Schema{Type: schema.TypeString},
+					Optional:    true,
+					ForceNew:    true,
+					Description: "Any changes to these values will result in recreating the resource instead of updating.",
+				},
+			*/
 		}, /* End schema */
 
 	}
@@ -136,7 +142,7 @@ Since there is nothing in the ResourceData structure other
 	view of the API paths to figure out how to read that object
 	from the API
 */
-func resourceresourceStackGuardianIntegrationAPIImport(d *schema.ResourceData, meta interface{}) (imported []*schema.ResourceData, err error) {
+func resourceStackGuardianIntegrationAPIImport(d *schema.ResourceData, meta interface{}) (imported []*schema.ResourceData, err error) {
 	input := d.Id()
 
 	hasTrailingSlash := strings.LastIndex(input, "/") == len(input)-1
@@ -151,8 +157,8 @@ func resourceresourceStackGuardianIntegrationAPIImport(d *schema.ResourceData, m
 		return imported, fmt.Errorf("invalid path to import api_object '%s'. Must be /<full path from server root>/<object id>", input)
 	}
 
-	path := input[0:n]
-	d.Set("path", path)
+	// path := input[0:n]
+	// d.Set("path", path)
 
 	var id string
 	if hasTrailingSlash {
@@ -166,7 +172,7 @@ func resourceresourceStackGuardianIntegrationAPIImport(d *schema.ResourceData, m
 
 	/* Troubleshooting is hard enough. Emit log messages so TF_LOG
 	   has useful information in case an import isn't working */
-	d.Set("debug", true)
+	//d.Set("debug", true)
 
 	obj, err := make_api_object_stack(d, meta)
 	if err != nil {
@@ -185,7 +191,7 @@ func resourceresourceStackGuardianIntegrationAPIImport(d *schema.ResourceData, m
 	return imported, err
 }
 
-func resourceresourceStackGuardianIntegrationAPICreate(d *schema.ResourceData, meta interface{}) error {
+func resourceStackGuardianIntegrationAPICreate(d *schema.ResourceData, meta interface{}) error {
 	obj, err := make_api_object_integration(d, meta)
 	if err != nil {
 		return err
@@ -198,12 +204,12 @@ func resourceresourceStackGuardianIntegrationAPICreate(d *schema.ResourceData, m
 		d.SetId(obj.ResourceName)
 		set_resource_state(obj, d)
 		/* Only set during create for APIs that don't return sensitive data on subsequent retrieval */
-		d.Set("create_response", obj.api_response)
+		//d.Set("create_response", obj.api_response)
 	}
 	return err
 }
 
-func resourceresourceStackGuardianIntegrationAPIRead(d *schema.ResourceData, meta interface{}) error {
+func resourceStackGuardianIntegrationAPIRead(d *schema.ResourceData, meta interface{}) error {
 	obj, err := make_api_object_integration(d, meta)
 	if err != nil {
 		return err
@@ -220,7 +226,7 @@ func resourceresourceStackGuardianIntegrationAPIRead(d *schema.ResourceData, met
 	return err
 }
 
-func resourceresourceStackGuardianIntegrationAPIUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceStackGuardianIntegrationAPIUpdate(d *schema.ResourceData, meta interface{}) error {
 	obj, err := make_api_object_integration(d, meta)
 	if err != nil {
 		return err
@@ -235,12 +241,16 @@ func resourceresourceStackGuardianIntegrationAPIUpdate(d *schema.ResourceData, m
 	return err
 }
 
-func resourceresourceStackGuardianIntegrationAPIDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceStackGuardianIntegrationAPIDelete(d *schema.ResourceData, meta interface{}) error {
+	// https://api.app.stackguardian.io/api/v1/orgs/wicked-hop/integrations/TPS-Test-Integration/
+	// https://api.app.stackguardian.io/api/v1/orgs/wicked-hop/integrations/TPS-Test-Integration
 	obj, err := make_api_object_integration(d, meta)
 	if err != nil {
 		return err
 	}
 	log.Printf("resource_api_object.go: Delete routine called. Object built:\n%s\n", obj.toString())
+
+	log.Printf("warning: deletion of Integration resource is not possible with API Key")
 
 	err = obj.delete_object()
 	if err != nil {
@@ -252,7 +262,7 @@ func resourceresourceStackGuardianIntegrationAPIDelete(d *schema.ResourceData, m
 	return err
 }
 
-func resourceresourceStackGuardianIntegrationAPIExists(d *schema.ResourceData, meta interface{}) (exists bool, err error) {
+func resourceStackGuardianIntegrationAPIExists(d *schema.ResourceData, meta interface{}) (exists bool, err error) {
 	obj, err := make_api_object_integration(d, meta)
 	if err != nil {
 		return exists, err
@@ -292,58 +302,63 @@ func make_api_object_integration(d *schema.ResourceData, meta interface{}) (*api
 func buildApiObjectIntegrationOpts(d *schema.ResourceData) (*apiObjectOpts, error) {
 	// var resultPath string
 	// resultPath = "/wfgrps/" + d.Get("wfgrp").(string) + "/stacks/"
+	resultPath := "/integrations/"
 
 	opts := &apiObjectOpts{
 		// path: d.Get("path").(string),
-		path: "",
+		path: resultPath,
+		// delete_path: "/integrations/{ResourceName}/",
 	}
 
 	/* Allow user to override provider-level id_attribute */
-	if v, ok := d.GetOk("id_attribute"); ok {
-		opts.id_attribute = v.(string)
-	}
+	// if v, ok := d.GetOk("id_attribute"); ok {
+	// 	opts.id_attribute = v.(string)
+	// }
 
 	/* Allow user to specify the ID manually */
-	if v, ok := d.GetOk("object_id"); ok {
-		opts.ResourceName = v.(string)
-	} else {
-		/* If not specified, see if terraform has an ID */
-		opts.ResourceName = d.Id()
-	}
+	// if v, ok := d.GetOk("object_id"); ok {
+	// 	opts.ResourceName = v.(string)
+	// } else {
+	// 	/* If not specified, see if terraform has an ID */
+	// 	opts.ResourceName = d.Id()
+	// }
+	opts.ResourceName = d.Id()
 
 	log.Printf("common.go: make_api_object routine called for id '%s'\n", opts.ResourceName)
 
-	log.Printf("create_path: %s", d.Get("create_path"))
-	if v, ok := d.GetOk("create_path"); ok {
-		opts.post_path = v.(string)
-	}
-	if v, ok := d.GetOk("read_path"); ok {
-		opts.get_path = v.(string)
-	}
-	if v, ok := d.GetOk("update_path"); ok {
-		opts.put_path = v.(string)
-	}
-	if v, ok := d.GetOk("create_method"); ok {
-		opts.create_method = v.(string)
-	}
-	if v, ok := d.GetOk("read_method"); ok {
-		opts.read_method = v.(string)
-	}
-	if v, ok := d.GetOk("update_method"); ok {
-		opts.update_method = v.(string)
-	}
-	if v, ok := d.GetOk("destroy_method"); ok {
-		opts.destroy_method = v.(string)
-	}
-	if v, ok := d.GetOk("destroy_path"); ok {
-		opts.delete_path = v.(string)
-	}
-	if v, ok := d.GetOk("destroy_data"); ok {
-		opts.delete_data = v.(bool)
-	}
+	/*
+		log.Printf("create_path: %s", d.Get("create_path"))
+		if v, ok := d.GetOk("create_path"); ok {
+			opts.post_path = v.(string)
+		}
+		if v, ok := d.GetOk("read_path"); ok {
+			opts.get_path = v.(string)
+		}
+		if v, ok := d.GetOk("update_path"); ok {
+			opts.put_path = v.(string)
+		}
+		if v, ok := d.GetOk("create_method"); ok {
+			opts.create_method = v.(string)
+		}
+		if v, ok := d.GetOk("read_method"); ok {
+			opts.read_method = v.(string)
+		}
+		if v, ok := d.GetOk("update_method"); ok {
+			opts.update_method = v.(string)
+		}
+		if v, ok := d.GetOk("destroy_method"); ok {
+			opts.destroy_method = v.(string)
+		}
+		if v, ok := d.GetOk("destroy_path"); ok {
+			opts.delete_path = v.(string)
+		}
+		if v, ok := d.GetOk("destroy_data"); ok {
+			opts.delete_data = v.(bool)
+		}
 
-	read_search := expandReadSearch(d.Get("read_search").(map[string]interface{}))
-	opts.read_search = read_search
+		read_search := expandReadSearch(d.Get("read_search").(map[string]interface{}))
+		opts.read_search = read_search
+	*/
 
 	opts.data = d.Get("data").(string)
 	opts.debug = true
