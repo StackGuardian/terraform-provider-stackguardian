@@ -1,4 +1,4 @@
-name: "Provider Release"
+name: "Release TF-Provider"
 
 on:
   push:
@@ -13,10 +13,11 @@ jobs:
   test-provider:
     name: "Test Provider"
     uses: ./.github/workflows/test.yaml
+    secrets: inherit
 
   release-provider:
     name: "Release Provider"
-    uses: hashicorp/ghaction-terraform-provider-release/.github/workflows/community.yml@v2
+    uses: hashicorp/ghaction-terraform-provider-release/.github/workflows/community.yml@v3
     secrets:
       gpg-private-key: '${{ secrets.GPG_PRIVATE_KEY }}'
     with:

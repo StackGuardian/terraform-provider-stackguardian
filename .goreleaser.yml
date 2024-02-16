@@ -14,7 +14,7 @@ project_name: terraform-provider-stackguardian
 builds:
   - env:
       - CGO_ENABLED=0
-      - GOPRIVATE="github.com/StackGuardian/terraform-provider-stackguardian"
+      - GOPRIVATE='github.com/StackGuardian/terraform-provider-stackguardian'
     mod_timestamp: '{{ .CommitTimestamp }}'
     flags:
       - '-trimpath'
@@ -46,16 +46,18 @@ signs:
     args:
       - "--batch"
       - "--local-user"
-      - "{{ .Env.GPG_FINGERPRINT }}" # set this environment variable for your signing key
+      - "{{ .Env.GPG_FINGERPRINT }}"
       - "--output"
       - "${signature}"
       - "--detach-sign"
       - "${artifact}"
 
 release:
-  name_template: "v{{.Version}}"
+  name_template: 'v{{.Version}}'
   github:
-    owner: stackguardian
+    #owner: stackguardian
+    #owner: '{{ .Env.GITHUB_REPOSITORY_OWNER }}'
+    owner: '{{ if index .Env "GITHUB_REPOSITORY_OWNER" }}{{ .Env.GITHUB_REPOSITORY_OWNER }}{{ else }}stackguardian{{ end }}'
     name: terraform-provider-stackguardian
   extra_files:
     - glob: 'terraform-registry-manifest.json'
