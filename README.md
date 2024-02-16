@@ -9,7 +9,7 @@ The [StackGuardian Terraform Provider](https://github.com/StackGuardian/terrafor
 
 
 ## Documentation
-A [quickstart step-by-step guide](docs/DOCS.md) can be found in this repository.
+A [quickstart step-by-step guide](docs/quickstart/DOCS.md) can be found in this repository.
 
 
 ## Contributing

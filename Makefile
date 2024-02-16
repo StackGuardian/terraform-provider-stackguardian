@@ -23,4 +23,7 @@ test:
 	echo $(TEST) | xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
 
 testacc:
-	TF_ACC=1 STACKGUARDIAN_ORG_NAME=wicked-hop go test $(TEST) -v $(TESTARGS) -timeout 120m
+	TF_ACC=1 STACKGUARDIAN_ORG_NAME=wicked-hop go test -parallel=1 $(TEST) -v $(TESTARGS) -timeout=15m
+
+docstf:
+	tfplugindocs generate --rendered-website-dir docs/reference

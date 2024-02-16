@@ -25,7 +25,7 @@ $ export TFSG_OSARCH="linux_amd64"
 - Go to the [latest release page](https://github.com/StackGuardian/terraform-provider-stackguardian/releases) from the Github repository.
 Select a release, pickup its bare version tag without the `v` prefix, and set it in the shell. For instance:
 ```console
-$ export TFSG_VERSION="0.1.0-beta1"
+$ export TFSG_VERSION="1.0.0"
 ```
 
 - Execute the following shell commands to install the provider:
@@ -60,7 +60,7 @@ terraform {
   required_providers {
     stackguardian = {
       source = "terraform/provider/stackguardian"
-      version = "0.1.0-beta1"
+      version = "1.0.0"
     }
   }
 }
@@ -113,7 +113,7 @@ If you do not have any API key for your organization yet, you can generate one o
 
 ## Example: Workflow
 
-Finally, you can take inspiration from the [provider examples](./../examples) to create new StackGuardian objects in your organization.
+Finally, you can take inspiration from the [provider examples](./../../examples) to create new StackGuardian objects in your organization.
 
 For instance you can create a new workflow on StackGuardian Orchestrator by adding the following block to the `stackguardian.tf` file:
 
@@ -159,7 +159,7 @@ resource "stackguardian_workflow" "Workflow_DeployWebsiteS3" {
 }
 ```
 
-For a complete example, please refer to the file [docs/stackguardian_workflow.tf](./stackguardian_workflow.tf)
+For a complete example, please refer to the file [docs/quickstart/stackguardian_workflow.tf](./stackguardian_workflow.tf)
 
 Finally, inspect the plan offered by Terraform, and execute it to create the desired object on StackGuardian:
 ```console

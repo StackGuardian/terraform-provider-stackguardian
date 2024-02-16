@@ -2,7 +2,7 @@
 
 export TFSG_PROVIDER="terraform/provider/stackguardian"
 export TFSG_OSARCH="linux_amd64"
-export TFSG_VERSION="0.1.0-beta1"
+export TFSG_VERSION="1.0.0"
 
 SCRIPT_DIRPATH=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
 
