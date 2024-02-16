@@ -39,7 +39,6 @@ terraform.rc
 
 # Terraform provider build files
 terraform-provider-stackguardian
-terraform-registry-manifest.json
 
 
 ### Go ###
