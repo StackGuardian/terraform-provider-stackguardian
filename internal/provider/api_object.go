@@ -141,7 +141,7 @@ func NewAPIObject(i_client *api_client, opts *apiObjectOpts) (*api_object, error
 			} else if !true && obj.search_path == "" {
 				/* If the id is not set and we cannot obtain it
 				   later, error out to be safe */
-				return nil, errors.New(fmt.Sprintf("Provided data does not have %s attribute for the object's id and the client is not configured to read the object from a POST response. Without an id, the object cannot be managed.", obj.id_attribute))
+				return nil, fmt.Errorf("provided data does not have %s attribute for the object's id and the client is not configured to read the object from a POST response: without an id, the object cannot be managed", obj.id_attribute)
 			}
 		}
 	}
@@ -220,7 +220,7 @@ func (obj *api_object) create_object() error {
 	   with the id of whatever gets created, we have no way to know what
 	   the object's id will be. Abandon this attempt */
 	if obj.ResourceName == "" && !true {
-		return errors.New("ERROR: Provided object does not have an id set and the client is not configured to read the object from a POST or PUT response. Without an id, the object cannot be managed.")
+		return errors.New("ERROR: provided object does not have an id set and the client is not configured to read the object from a POST or PUT response. Without an id, the object cannot be managed")
 	}
 
 	b, _ := json.Marshal(obj.data)
@@ -238,7 +238,7 @@ func (obj *api_object) create_object() error {
 		/* Yet another failsafe. In case something terrible went wrong internally,
 		   bail out so the user at least knows that the ID did not get set. */
 		if obj.ResourceName == "" {
-			return errors.New("Internal validation failed. Object ID is not set, but *may* have been created. This should never happen!")
+			return errors.New("internal validation failed. Object ID is not set, but *may* have been created (This should never happen)")
 		}
 	} else {
 		if obj.debug {
@@ -250,8 +250,9 @@ func (obj *api_object) create_object() error {
 }
 
 func (obj *api_object) read_object() error {
+	var err error
 	if obj.ResourceName == "" {
-		return errors.New("Cannot read an object unless the ID has been set.")
+		return errors.New("cannot read an object unless the ID has been set")
 	}
 
 	res_str, err := obj.api_client.send_request(obj.read_method, strings.Replace(obj.get_path, "{ResourceName}", obj.ResourceName, -1), "")
@@ -268,12 +269,12 @@ func (obj *api_object) read_object() error {
 	search_value := obj.read_search["search_value"]
 
 	if search_key != "" && search_value != "" {
-
 		obj.search_path = strings.Replace(obj.get_path, "{ResourceName}", obj.ResourceName, -1)
 
 		query_string := obj.read_search["query_string"]
 		results_key := obj.read_search["results_key"]
-		obj_found, err := obj.find_object(query_string, search_key, search_value, results_key)
+		obj_found, err_ := obj.find_object(query_string, search_key, search_value, results_key)
+		err = err_
 		if err != nil {
 			obj.ResourceName = ""
 			return nil
@@ -288,7 +289,7 @@ func (obj *api_object) read_object() error {
 
 func (obj *api_object) update_object() error {
 	if obj.ResourceName == "" {
-		return errors.New("Cannot update an object unless the ID has been set.")
+		return errors.New("cannot update an object unless the ID has been set")
 	}
 
 	b, _ := json.Marshal(obj.data)
@@ -341,7 +342,7 @@ func (obj *api_object) find_object(query_string string, search_key string, searc
 	   Issue a GET to the base path and expect results to come back
 	*/
 	search_path := obj.search_path
-	if "" != query_string {
+	if query_string != "" {
 		if obj.debug {
 			log.Printf("api_object.go: Adding query string '%s'", query_string)
 		}
@@ -368,7 +369,7 @@ func (obj *api_object) find_object(query_string string, search_key string, searc
 		return obj_found, err
 	}
 
-	if "" != results_key {
+	if results_key != "" {
 		var tmp interface{}
 
 		if obj.debug {
@@ -401,7 +402,7 @@ func (obj *api_object) find_object(query_string string, search_key string, searc
 		var hash map[string]interface{}
 
 		if hash, ok = item.(map[string]interface{}); !ok {
-			return obj_found, fmt.Errorf("api_object.go: The elements being searched for data are not a map of key value pairs.")
+			return obj_found, fmt.Errorf("api_object.go: The elements being searched for data are not a map of key value pairs")
 		}
 
 		if obj.debug {
@@ -411,7 +412,7 @@ func (obj *api_object) find_object(query_string string, search_key string, searc
 
 		tmp, err := GetStringAtKey(hash, search_key, obj.debug)
 		if err != nil {
-			return obj_found, (fmt.Errorf("Failed to get the value of '%s' in the results array at '%s': %s", search_key, results_key, err))
+			return obj_found, fmt.Errorf("failed to get the value of '%s' in the results array at '%s': %s", search_key, results_key, err)
 		}
 
 		/* We found our record */
@@ -419,7 +420,7 @@ func (obj *api_object) find_object(query_string string, search_key string, searc
 			obj_found = hash
 			obj.ResourceName, err = GetStringAtKey(hash, obj.id_attribute, obj.debug)
 			if err != nil {
-				return obj_found, (fmt.Errorf("Failed to find id_attribute '%s' in the record: %s", obj.id_attribute, err))
+				return obj_found, fmt.Errorf("failed to find id_attribute '%s' in the record: %s", obj.id_attribute, err)
 			}
 
 			if obj.debug {
@@ -427,15 +428,15 @@ func (obj *api_object) find_object(query_string string, search_key string, searc
 			}
 
 			/* But there is no id attribute??? */
-			if "" == obj.ResourceName {
-				return obj_found, (errors.New(fmt.Sprintf("The object for '%s'='%s' did not have the id attribute '%s', or the value was empty.", search_key, search_value, obj.id_attribute)))
+			if obj.ResourceName == "" {
+				return obj_found, fmt.Errorf("object for '%s'='%s' did not have the id attribute '%s', or the value was empty", search_key, search_value, obj.id_attribute)
 			}
 			break
 		}
 	}
 
-	if "" == obj.ResourceName {
-		return obj_found, (fmt.Errorf("Failed to find an object with the '%s' key = '%s' at %s", search_key, search_value, search_path))
+	if obj.ResourceName == "" {
+		return obj_found, fmt.Errorf("failed to find an object with the '%s' key = '%s' at %s", search_key, search_value, search_path)
 	}
 
 	return obj_found, nil

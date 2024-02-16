@@ -44,9 +44,7 @@ func NewAPIClient(opt *apiClientOpt) (*api_client, error) {
 
 	/* Remove any trailing slashes since we will append
 	   to this URL with our own root-prefixed location */
-	if strings.HasSuffix(opt.api_uri, "/") {
-		opt.api_uri = opt.api_uri[:len(opt.api_uri)-1]
-	}
+	opt.api_uri = strings.TrimSuffix(opt.api_uri, "/")
 
 	// opt.create_method = "POST"
 
@@ -81,7 +79,7 @@ func (obj *api_client) toString() string {
 	buffer.WriteString(fmt.Sprintf("org_name: %s\n", obj.org_name))
 	buffer.WriteString(fmt.Sprintf("id_attribute: %s\n", obj.id_attribute))
 	buffer.WriteString(fmt.Sprintf("write_returns_object: %t\n", true))
-	buffer.WriteString(fmt.Sprintf("headers:\n"))
+	buffer.WriteString("headers:\n")
 	for k, v := range obj.headers {
 		buffer.WriteString(fmt.Sprintf("  %s: %s\n", k, v))
 	}
@@ -176,7 +174,7 @@ func (client *api_client) send_request(method string, path string, data string) 
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return body, errors.New(fmt.Sprintf("Unexpected response code '%d': %s", resp.StatusCode, body))
+		return body, fmt.Errorf("unexpected response code '%d': %s", resp.StatusCode, body)
 	}
 
 	return body, nil

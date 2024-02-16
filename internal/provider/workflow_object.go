@@ -25,104 +25,104 @@ func resourceStackGuardianWorkflowAPI() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"wfgrp": &schema.Schema{
+			"wfgrp": {
 				Type:        schema.TypeString,
 				Description: "WorkFlow Group Name",
 				Required:    true,
 			},
-			"stack": &schema.Schema{
+			"stack": {
 				Type:        schema.TypeString,
 				Description: "stack name",
 				Optional:    true,
 			},
-			"create_path": &schema.Schema{
+			"create_path": {
 				Type:        schema.TypeString,
 				Description: "Defaults to `path`. The API path that represents where to CREATE (POST) objects of this type on the API server. The string `{id}` will be replaced with the terraform ID of the object if the data contains the `id_attribute`.",
 				Optional:    true,
 			},
-			"read_path": &schema.Schema{
+			"read_path": {
 				Type:        schema.TypeString,
 				Description: "Defaults to `path/{id}`. The API path that represents where to READ (GET) objects of this type on the API server. The string `{id}` will be replaced with the terraform ID of the object.",
 				Optional:    true,
 			},
-			"update_path": &schema.Schema{
+			"update_path": {
 				Type:        schema.TypeString,
 				Description: "Defaults to `path/{id}`. The API path that represents where to UPDATE (PUT) objects of this type on the API server. The string `{id}` will be replaced with the terraform ID of the object.",
 				Optional:    true,
 			},
-			"create_method": &schema.Schema{
+			"create_method": {
 				Type:        schema.TypeString,
 				Description: "Defaults to `create_method` set on the provider. Allows per-resource override of `create_method` (see `create_method` provider config documentation)",
 				Optional:    true,
 			},
-			"read_method": &schema.Schema{
+			"read_method": {
 				Type:        schema.TypeString,
 				Description: "Defaults to `read_method` set on the provider. Allows per-resource override of `read_method` (see `read_method` provider config documentation)",
 				Optional:    true,
 			},
-			"update_method": &schema.Schema{
+			"update_method": {
 				Type:        schema.TypeString,
 				Description: "Defaults to `update_method` set on the provider. Allows per-resource override of `update_method` (see `update_method` provider config documentation)",
 				Optional:    true,
 			},
-			"destroy_method": &schema.Schema{
+			"destroy_method": {
 				Type:        schema.TypeString,
 				Description: "Defaults to `destroy_method` set on the provider. Allows per-resource override of `destroy_method` (see `destroy_method` provider config documentation)",
 				Optional:    true,
 			},
-			"destroy_path": &schema.Schema{
+			"destroy_path": {
 				Type:        schema.TypeString,
 				Description: "Defaults to `path/{id}`. The API path that represents where to DESTROY (DELETE) objects of this type on the API server. The string `{id}` will be replaced with the terraform ID of the object.",
 				Optional:    true,
 			},
-			"destroy_data": &schema.Schema{
+			"destroy_data": {
 				Type:        schema.TypeBool,
 				Description: "Whether to use the data object as the body for the delete request.",
 				Optional:    true,
 			},
-			"id_attribute": &schema.Schema{
+			"id_attribute": {
 				Type:        schema.TypeString,
 				Description: "Defaults to `id_attribute` set on the provider. Allows per-resource override of `id_attribute` (see `id_attribute` provider config documentation)",
 				Optional:    true,
 			},
-			"object_id": &schema.Schema{
+			"object_id": {
 				Type:        schema.TypeString,
 				Description: "Defaults to the id learned by the provider during normal operations and `id_attribute`. Allows you to set the id manually. This is used in conjunction with the `*_path` attributes.",
 				Optional:    true,
 			},
-			"data": &schema.Schema{
+			"data": {
 				Type:        schema.TypeString,
 				Description: "Valid JSON data that this provider will manage with the API server.",
 				Required:    true,
 				Sensitive:   is_data_sensitive,
 			},
-			"debug": &schema.Schema{
+			"debug": {
 				Type:        schema.TypeBool,
 				Description: "Whether to emit verbose debug output while working with the API object on the server.",
 				Optional:    true,
 			},
-			"read_search": &schema.Schema{
+			"read_search": {
 				Type:        schema.TypeMap,
 				Description: "Custom search for `read_path`. This map will take `search_key`, `search_value`, `results_key` and `query_string` (see datasource config documentation)",
 				Optional:    true,
 			},
-			"api_data": &schema.Schema{
+			"api_data": {
 				Type:        schema.TypeMap,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "After data from the API server is read, this map will include k/v pairs usable in other terraform resources as readable objects. Currently the value is the golang fmt package's representation of the value (simple primitives are set as expected, but complex types like arrays and maps contain golang formatting).",
 				Computed:    true,
 			},
-			"api_response": &schema.Schema{
+			"api_response": {
 				Type:        schema.TypeString,
 				Description: "The raw body of the HTTP response from the last read of the object.",
 				Computed:    true,
 			},
-			"create_response": &schema.Schema{
+			"create_response": {
 				Type:        schema.TypeString,
 				Description: "The raw body of the HTTP response returned when creating the object.",
 				Computed:    true,
 			},
-			"force_new": &schema.Schema{
+			"force_new": {
 				Type:        schema.TypeList,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Optional:    true,
@@ -153,7 +153,7 @@ func resourceStackGuardianAPIImport(d *schema.ResourceData, meta interface{}) (i
 	}
 
 	if n == -1 {
-		return imported, fmt.Errorf("Invalid path to import api_object '%s'. Must be /<full path from server root>/<object id>", input)
+		return imported, fmt.Errorf("invalid path to import api_object '%s'. Must be /<full path from server root>/<object id>", input)
 	}
 
 	path := input[0:n]
@@ -163,7 +163,7 @@ func resourceStackGuardianAPIImport(d *schema.ResourceData, meta interface{}) (i
 	if hasTrailingSlash {
 		id = input[n+1 : len(input)-1]
 	} else {
-		id = input[n+1 : len(input)]
+		id = input[n+1:]
 	}
 
 	d.Set("data", fmt.Sprintf(`{ "id": "%s" }`, id))

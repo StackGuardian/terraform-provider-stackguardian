@@ -43,7 +43,7 @@ func GetStringAtKey(data map[string]interface{}, path string, debug bool) (strin
 	} else if t == "float64" {
 		return strconv.FormatFloat(res.(float64), 'f', -1, 64), nil
 	} else {
-		return "", fmt.Errorf("Object at path '%s' is not a JSON string or number (float64). The go fmt package says it is '%T'", path, res)
+		return "", fmt.Errorf("object at path '%s' is not a JSON string or number (float64). The go fmt package says it is '%T'", path, res)
 	}
 }
 
@@ -62,7 +62,7 @@ func GetObjectAtKey(data map[string]interface{}, path string, debug bool) (inter
 		part, parts = parts[0], parts[1:]
 
 		/* Protect against double slashes by mistake */
-		if "" == part {
+		if part == "" {
 			continue
 		}
 
@@ -102,7 +102,7 @@ func GetObjectAtKey(data map[string]interface{}, path string, debug bool) (inter
 	} /* End Loop through parts */
 
 	/* We have found the containing map of the value we want */
-	part, parts = parts[0], parts[1:] /* One last time */
+	part, _ = parts[0], parts[1:] /* One last time */
 	if _, ok := hash[part]; !ok {
 		if debug {
 			log.Printf("common.go:GetObjectAtKey:  %s - MISSING (available: %s)", part, strings.Join(GetKeys(hash), ","))

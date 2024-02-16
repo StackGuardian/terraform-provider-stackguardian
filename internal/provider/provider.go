@@ -21,9 +21,6 @@ func Provider() *schema.Provider {
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			/* Could only get terraform to recognize this resource if
-			         the name began with the provider's name and had at least
-				 one underscore. This is not documented anywhere I could find */
 			"stackguardian_workflow":    resourceStackGuardianWorkflowAPI(),
 			"stackguardian_stack":       resourceStackGuardianStackAPI(),
 			"stackguardian_policy":      resourceStackGuardianPolicyAPI(),
@@ -41,23 +38,6 @@ func Provider() *schema.Provider {
 }
 
 func configureProvider(d *schema.ResourceData) (interface{}, error) {
-
-	/* As "data-safe" as terraform says it is, you'd think
-	   it would have already coaxed this to a slice FOR me */
-	copy_keys := make([]string, 0)
-	if i_copy_keys := d.Get("copy_keys"); i_copy_keys != nil {
-		for _, v := range i_copy_keys.([]interface{}) {
-			copy_keys = append(copy_keys, v.(string))
-		}
-	}
-
-	// headers := make(map[string]string)
-	// if i_headers := d.Get("headers"); i_headers != nil {
-	// 	for k, v := range i_headers.(map[string]interface{}) {
-	// 		headers[k] = v.(string)
-	// 	}
-	// }
-
 	opt := &apiClientOpt{
 		api_uri:  "https://api.app.stackguardian.io/api/v1/",
 		org_name: d.Get("org_name").(string),
@@ -66,7 +46,6 @@ func configureProvider(d *schema.ResourceData) (interface{}, error) {
 		},
 		id_attribute: "ResourceName",
 	}
-
 	client, err := NewAPIClient(opt)
 	return client, err
 }

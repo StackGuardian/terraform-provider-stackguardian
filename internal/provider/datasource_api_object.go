@@ -31,28 +31,28 @@ func dataSourceStackGuardianAPI() *schema.Resource {
 				Description: "The value of 'search_key' will be compared to this value to determine if the correct object was found. Example: if 'search_key' is 'name' and 'search_value' is 'foo', the record in the array returned by the API with name=foo will be used.",
 				Required:    true,
 			},
-			"results_key": &schema.Schema{
+			"results_key": {
 				Type:        schema.TypeString,
 				Description: "When issuing a GET to the path, this JSON key is used to locate the results array. The format is 'field/field/field'. Example: 'results/values'. If omitted, it is assumed the results coming back are already an array and are to be used exactly as-is.",
 				Optional:    true,
 			},
-			"id_attribute": &schema.Schema{
+			"id_attribute": {
 				Type:        schema.TypeString,
 				Description: "Defaults to `id_attribute` set on the provider. Allows per-resource override of `id_attribute` (see `id_attribute` provider config documentation)",
 				Optional:    true,
 			},
-			"debug": &schema.Schema{
+			"debug": {
 				Type:        schema.TypeBool,
 				Description: "Whether to emit verbose debug output while working with the API object on the server.",
 				Optional:    true,
 			},
-			"api_data": &schema.Schema{
+			"api_data": {
 				Type:        schema.TypeMap,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "After data from the API server is read, this map will include k/v pairs usable in other terraform resources as readable objects. Currently the value is the golang fmt package's representation of the value (simple primitives are set as expected, but complex types like arrays and maps contain golang formatting).",
 				Computed:    true,
 			},
-			"api_response": &schema.Schema{
+			"api_response": {
 				Type:        schema.TypeString,
 				Description: "The raw body of the HTTP response from the last read of the object.",
 				Computed:    true,
