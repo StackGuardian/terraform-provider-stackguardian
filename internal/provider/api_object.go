@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2015 Mastercard
+// Copyright 2023 StackGuardian
+
 package provider
 
 import (
