@@ -1,16 +1,15 @@
 package main
 
 import (
-	"github.com/hashicorp/terraform/plugin"
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
 
-	stackguardian_tf_provider "github.com/StackGuardian/terraform-provider-stackguardian/stackguardian-tf-provider"
+	provider "github.com/StackGuardian/terraform-provider-stackguardian/internal/provider"
 )
 
 func main() {
-	plugin.Serve(&plugin.ServeOpts{
-		ProviderFunc: func() terraform.ResourceProvider {
-			return stackguardian_tf_provider.Provider()
-		},
-	})
+	plugin.Serve(
+		&plugin.ServeOpts{
+			ProviderFunc: provider.Provider,
+			// TODO: fill in ProviderAddr
+		})
 }

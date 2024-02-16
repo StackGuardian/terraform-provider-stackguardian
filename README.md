@@ -1,4 +1,4 @@
-# terraform-provider-stackguardian
+# StackGuardian Terraform Provider
 
 
 _*WARNING:* This Terraform Provider project is currently in pre-production mode, so it is not yet available on the Terraform Registry._
@@ -9,7 +9,7 @@ The [StackGuardian Terraform Provider](https://github.com/StackGuardian/terrafor
 
 
 ## Documentation
-A [quickstart step-by-step guide](docs/DOCS.md) can be found in this repository.
+A [quickstart step-by-step guide](docs/quickstart/DOCS.md) can be found in this repository.
 
 
 ## Contributing

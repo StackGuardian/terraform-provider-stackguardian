@@ -1,13 +1,11 @@
-package stackguardian_tf_provider
+package provider
 
 import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
-	"time"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -16,100 +14,59 @@ func dataSourceStackGuardianWorkflowOutputsAPI() *schema.Resource {
 		Read: dataSourceStackGuardianWorkflowOutputsAPIRead,
 
 		Schema: map[string]*schema.Schema{
-			"wfgrp": &schema.Schema{
+			"wfgrp": {
 				Type:        schema.TypeString,
 				Description: "WorkFlow Group Name",
 				Required:    true,
 			},
-			"stack": &schema.Schema{
+			"stack": {
 				Type:        schema.TypeString,
 				Description: "Stack name",
 				Optional:    true,
 			},
-			"wf": &schema.Schema{
+			"wf": {
 				Type:        schema.TypeString,
 				Description: "WorkFlow Name",
 				Required:    true,
 			},
-			"msg": &schema.Schema{
+			"msg": {
 				Type:        schema.TypeString,
 				Description: "Message from API",
 				Computed:    true,
 			},
-			"data": &schema.Schema{ // TODO: rename it to "outputs"
+			"data": { // TODO: rename it to "outputs"
 				Type:        schema.TypeMap,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "After data from the API server is read, this map will include k/v pairs usable in other terraform resources as readable objects. Currently the value is the golang fmt package's representation of the value (simple primitives are set as expected, but complex types like arrays and maps contain golang formatting).",
 				Computed:    true,
 			},
-
-			"outputs_json": &schema.Schema{
+			"outputs_json": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"outputs_str": &schema.Schema{
+			"outputs_str": {
 				Type: schema.TypeMap,
 				//Elem:     &schema.Schema{Type: schema.TypeString},
 				Elem:     schema.TypeString,
 				Computed: true,
 			},
-			/*
-				"path": &schema.Schema{
-					Type:        schema.TypeString,
-					Description: "The API path on top of the base URL set in the provider that represents objects of this type on the API server.",
-					Required:    true,
-				},
-
-				"query_string": &schema.Schema{
-					Type:        schema.TypeString,
-					Description: "An optional query string to send when performing the search.",
-					Optional:    true,
-				},
-				"search_key": &schema.Schema{
-					Type:        schema.TypeString,
-					Description: "When reading search results from the API, this key is used to identify the specific record to read. This should be a unique record such as 'name'. Similar to results_key, the value may be in the format of 'field/field/field' to search for data deeper in the returned object.",
-					Required:    true,
-				},
-				"search_value": &schema.Schema{
-					Type:        schema.TypeString,
-					Description: "The value of 'search_key' will be compared to this value to determine if the correct object was found. Example: if 'search_key' is 'name' and 'search_value' is 'foo', the record in the array returned by the API with name=foo will be used.",
-					Required:    true,
-				},
-				"results_key": &schema.Schema{
-					Type:        schema.TypeString,
-					Description: "When issuing a GET to the path, this JSON key is used to locate the results array. The format is 'field/field/field'. Example: 'results/values'. If omitted, it is assumed the results coming back are already an array and are to be used exactly as-is.",
-					Optional:    true,
-				},
-			*/
-			"id_attribute": &schema.Schema{
-				Type:        schema.TypeString,
-				Description: "Defaults to `id_attribute` set on the provider. Allows per-resource override of `id_attribute` (see `id_attribute` provider config documentation)",
-				Optional:    true,
-			},
-
-			"debug": &schema.Schema{
-				Type:        schema.TypeBool,
-				Description: "Whether to emit verbose debug output while working with the API object on the server.",
-				Optional:    true,
-			},
-			"api_data": &schema.Schema{
+			"api_data": {
 				Type:        schema.TypeMap,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "After data from the API server is read, this map will include k/v pairs usable in other terraform resources as readable objects. Currently the value is the golang fmt package's representation of the value (simple primitives are set as expected, but complex types like arrays and maps contain golang formatting).",
 				Computed:    true,
 			},
-			"api_response": &schema.Schema{
+			"api_response": {
 				Type:        schema.TypeString,
 				Description: "The raw body of the HTTP response from the last read of the object.",
 				Computed:    true,
 			},
-		}, /* End schema */
-
+		},
 	}
 }
 
 func dataSourceStackGuardianWorkflowOutputsAPIRead(d *schema.ResourceData, meta interface{}) error {
-	debugProcess()
+	// DEBUG: debugProcess()
 	log.Printf("DEBUG: dataSourceStackGuardianWorkflowOutputsAPIRead: ...")
 
 	var resultPath string
@@ -120,15 +77,10 @@ func dataSourceStackGuardianWorkflowOutputsAPIRead(d *schema.ResourceData, meta 
 		resultPath = "/wfgrps/" + d.Get("wfgrp").(string) + "/wfs/" + d.Get("wf").(string) + "/outputs/"
 	}
 
-	debug := d.Get("debug").(bool)
 	client := meta.(*api_client)
-	if debug {
-		log.Printf("workflow_outputs_object.go: Data routine called.")
-	}
 
 	opts := &apiObjectOpts{
 		get_path: resultPath,
-		debug:    debug,
 	}
 
 	obj, err := NewAPIObject(client, opts)
@@ -142,9 +94,8 @@ func dataSourceStackGuardianWorkflowOutputsAPIRead(d *schema.ResourceData, meta 
 	obj.ResourceName = fmt.Sprintf("%s/%s", d.Get("wfgrp").(string), d.Get("wf").(string))
 
 	/* Back to terraform-specific stuff. Create an api_object with the ID and refresh it object */
-	if debug {
-		log.Printf("workflow_outputs_object.go: Attempting to construct api_object to refresh data")
-	}
+
+	log.Printf("workflow_outputs_object.go: Attempting to construct api_object to refresh data")
 
 	log.Printf("DEBUG: d.SetId(obj.ResourceName) with obj.ResourceName=%v", obj.ResourceName)
 	d.SetId(obj.ResourceName)
@@ -299,22 +250,4 @@ func exportOutputsTerraformBasic(outputs_raw json.RawMessage) (map[string]string
 	}
 
 	return outputs_str, nil
-}
-
-/// DEBUG /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func debugProcess() {
-	debugMode, found := os.LookupEnv("TF_LOG")
-	if !found || debugMode != "debug" {
-		return
-	}
-
-	pid_current := os.Getpid()
-	pid_parent := os.Getppid()
-
-	wait := time.Second * 15
-
-	log.Printf("DEBUG: ParentPID = %d | CurrentPID = %d", pid_parent, pid_current)
-	log.Printf("DEBUG: Continuing in %s", wait)
-	time.Sleep(wait)
 }

@@ -12,7 +12,7 @@ provider "stackguardian" {
   api_key  = "---" // TBD
 }
 
-resource "stackguardian_tf_provider_stack" "TestStack" {
+resource "stackguardian_stack" "TestStack" {
   wfgrp = "Firstworkflow"
   data = jsonencode(
 {

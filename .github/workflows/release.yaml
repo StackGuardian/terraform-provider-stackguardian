@@ -1,0 +1,25 @@
+name: "Release TF-Provider"
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+permissions:
+  contents: write
+
+jobs:
+
+  test-provider:
+    name: "Test Provider"
+    uses: ./.github/workflows/test.yaml
+    secrets: inherit
+
+  release-provider:
+    name: "Release Provider"
+    uses: hashicorp/ghaction-terraform-provider-release/.github/workflows/community.yml@v3
+    secrets:
+      gpg-private-key: '${{ secrets.GPG_PRIVATE_KEY }}'
+    with:
+      setup-go-version-file: 'go.mod'
+    needs: test-provider

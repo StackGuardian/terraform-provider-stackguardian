@@ -1,9 +1,9 @@
-package stackguardian_tf_provider
+package provider
 
 import (
 	"log"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceStackGuardianAPI() *schema.Resource {
@@ -11,54 +11,53 @@ func dataSourceStackGuardianAPI() *schema.Resource {
 		Read: dataSourceStackGuardianAPIRead,
 
 		Schema: map[string]*schema.Schema{
-			"path": &schema.Schema{
+			"path": {
 				Type:        schema.TypeString,
 				Description: "The API path on top of the base URL set in the provider that represents objects of this type on the API server.",
 				Required:    true,
 			},
-			"query_string": &schema.Schema{
+			"query_string": {
 				Type:        schema.TypeString,
 				Description: "An optional query string to send when performing the search.",
 				Optional:    true,
 			},
-			"search_key": &schema.Schema{
+			"search_key": {
 				Type:        schema.TypeString,
 				Description: "When reading search results from the API, this key is used to identify the specific record to read. This should be a unique record such as 'name'. Similar to results_key, the value may be in the format of 'field/field/field' to search for data deeper in the returned object.",
 				Required:    true,
 			},
-			"search_value": &schema.Schema{
+			"search_value": {
 				Type:        schema.TypeString,
 				Description: "The value of 'search_key' will be compared to this value to determine if the correct object was found. Example: if 'search_key' is 'name' and 'search_value' is 'foo', the record in the array returned by the API with name=foo will be used.",
 				Required:    true,
 			},
-			"results_key": &schema.Schema{
+			"results_key": {
 				Type:        schema.TypeString,
 				Description: "When issuing a GET to the path, this JSON key is used to locate the results array. The format is 'field/field/field'. Example: 'results/values'. If omitted, it is assumed the results coming back are already an array and are to be used exactly as-is.",
 				Optional:    true,
 			},
-			"id_attribute": &schema.Schema{
+			"id_attribute": {
 				Type:        schema.TypeString,
 				Description: "Defaults to `id_attribute` set on the provider. Allows per-resource override of `id_attribute` (see `id_attribute` provider config documentation)",
 				Optional:    true,
 			},
-			"debug": &schema.Schema{
+			"debug": {
 				Type:        schema.TypeBool,
 				Description: "Whether to emit verbose debug output while working with the API object on the server.",
 				Optional:    true,
 			},
-			"api_data": &schema.Schema{
+			"api_data": {
 				Type:        schema.TypeMap,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "After data from the API server is read, this map will include k/v pairs usable in other terraform resources as readable objects. Currently the value is the golang fmt package's representation of the value (simple primitives are set as expected, but complex types like arrays and maps contain golang formatting).",
 				Computed:    true,
 			},
-			"api_response": &schema.Schema{
+			"api_response": {
 				Type:        schema.TypeString,
 				Description: "The raw body of the HTTP response from the last read of the object.",
 				Computed:    true,
 			},
-		}, /* End schema */
-
+		},
 	}
 }
 

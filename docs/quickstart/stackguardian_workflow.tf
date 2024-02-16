@@ -2,13 +2,13 @@ terraform {
   required_providers {
     stackguardian = {
       source = "terraform/provider/stackguardian"
-      version = "0.1.0-beta1"
+      version = "1.0.0"
     }
   }
 }
 
 /*
-The provider can configurated from environment variables:
+The provider configuration should be passed from external environment variables:
 ```
 $ export STACKGUARDIAN_ORG_NAME="YOUR_SG_ORG"
 $ export STACKGUARDIAN_API_KEY="YOUR_SG_KEY"
@@ -17,7 +17,7 @@ $ export STACKGUARDIAN_API_KEY="YOUR_SG_KEY"
 provider "stackguardian" {}
 
 
-resource "stackguardian_tf_provider_workflow" "Workflow_DeployWebsiteS3" {
+resource "stackguardian_workflow" "Workflow_DeployWebsiteS3" {
   wfgrp = "WorkflowGroup_DeployWebsiteS3"
 
   data = jsonencode({

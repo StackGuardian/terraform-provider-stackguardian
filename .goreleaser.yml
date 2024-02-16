@@ -5,16 +5,16 @@ project_name: terraform-provider-stackguardian
 #  env_files:
 #    github_token: '{{ .Env.SG_GITHUB_KEY_FILEPATH }}'
 
-before:
-  hooks:
-    # This is just an example and not a requirement for provider building/publishing
-    # Is it really required?
-    - go mod tidy
+#  before:
+#    hooks:
+#      # This is just an example and not a requirement for provider building/publishing
+#      # Is it really required?
+#      - go mod tidy
 
 builds:
   - env:
       - CGO_ENABLED=0
-      - GOPRIVATE="github.com/StackGuardian/terraform-provider-stackguardian"
+      - GOPRIVATE='github.com/StackGuardian/terraform-provider-stackguardian'
     mod_timestamp: '{{ .CommitTimestamp }}'
     flags:
       - '-trimpath'
@@ -37,32 +37,31 @@ archives:
 checksum:
   name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
   algorithm: sha256
-  #  extra_files:
-  #    - glob: 'terraform-registry-manifest.json'
-  #      name_template: '{{ .ProjectName }}_{{ .Version }}_manifest.json'
+  extra_files:
+    - glob: 'terraform-registry-manifest.json'
+      name_template: '{{ .ProjectName }}_{{ .Version }}_manifest.json'
 
-# https://goreleaser.com/ci/actions/#signing
-#  signs:
-#    - artifacts: checksum
-#      args:
-#        # if you are using this in a GitHub action or some other automated pipeline, you
-#        # need to pass the batch flag to indicate its not interactive.
-#        - "--batch"
-#        - "--local-user"
-#        - "{{ .Env.GPG_FINGERPRINT }}" # set this environment variable for your signing key
-#        - "--output"
-#        - "${signature}"
-#        - "--detach-sign"
-#        - "${artifact}"
+signs:
+  - artifacts: checksum
+    args:
+      - "--batch"
+      - "--local-user"
+      - "{{ .Env.GPG_FINGERPRINT }}"
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
 
 release:
-  name_template: "v{{.Version}}"
+  name_template: 'v{{.Version}}'
   github:
-    owner: stackguardian
+    #owner: stackguardian
+    #owner: '{{ .Env.GITHUB_REPOSITORY_OWNER }}'
+    owner: '{{ if index .Env "GITHUB_REPOSITORY_OWNER" }}{{ .Env.GITHUB_REPOSITORY_OWNER }}{{ else }}stackguardian{{ end }}'
     name: terraform-provider-stackguardian
-  #  extra_files:
-  #    - glob: 'terraform-registry-manifest.json'
-  #      name_template: '{{ .ProjectName }}_{{ .Version }}_manifest.json'
+  extra_files:
+    - glob: 'terraform-registry-manifest.json'
+      name_template: '{{ .ProjectName }}_{{ .Version }}_manifest.json'
   draft: true
   replace_existing_draft: true
   prerelease: auto
