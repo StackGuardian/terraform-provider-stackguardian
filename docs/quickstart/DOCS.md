@@ -77,16 +77,16 @@ $ terraform providers
 
 Providers required by configuration:
 .
-└── provider[terraform/provider/stackguardian] 0.1.0-beta1
+└── provider[terraform/provider/stackguardian] 1.0.0
 
 $ terraform init
 
 Initializing the backend...
 
 Initializing provider plugins...
-- Finding terraform/provider/stackguardian versions matching "0.1.0-beta1"...
-- Installing terraform/provider/stackguardian v0.1.0-beta1...
-- Installed terraform/provider/stackguardian v0.1.0-beta1 (unauthenticated)
+- Finding terraform/provider/stackguardian versions matching "1.0.0"...
+- Installing terraform/provider/stackguardian v1.0.0...
+- Installed terraform/provider/stackguardian v1.0.0 (unauthenticated)
 
 [...]
 
@@ -97,7 +97,7 @@ Terraform has been successfully initialized!
 $ terraform version
 Terraform v1.X.Z
 on linux_amd64
-+ provider terraform/provider/stackguardian v0.1.0-beta1
++ provider terraform/provider/stackguardian v1.0.0
 
 [...]
 ```
