@@ -17,11 +17,11 @@ on:
 
 jobs:
 
-  run-tests:
-    name: "Run the provider tests"
+  provider-project_test:
+    name: "Test Provider project"
     runs-on: ubuntu-latest
-
     steps:
+
       - name: "Checkout code"
         uses: actions/checkout@v4
 
@@ -36,11 +36,11 @@ jobs:
           terraform_wrapper: false
           terraform_version: '1.5.7' # TODO: matrix of terraform & tofu versions
 
-      - name: "Build provider"
+      - name: "Build Provider"
         run: make build
 
-      - name: "Test provider"
-        run: make testacc
+      - name: "Test Provider with acceptance tests"
+        run: make test-acc
         env:
           STACKGUARDIAN_API_KEY: ${{ secrets.STACKGUARDIAN_API_KEY }}
           STACKGUARDIAN_ORG_NAME: ${{ secrets.STACKGUARDIAN_ORG_NAME }}

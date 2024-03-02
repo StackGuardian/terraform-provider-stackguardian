@@ -2,7 +2,10 @@ terraform {
   required_providers {
     stackguardian = {
       source = "terraform/provider/stackguardian"
-      version = "1.0.0"
+
+      # https://developer.hashicorp.com/terraform/language/expressions/version-constraints#version-constraint-behavior
+      # NOTE: A prerelease version can be selected only by an exact version constraint.
+      version = "0.1.0-rc1" #provider-version
     }
   }
 }
@@ -17,11 +20,11 @@ $ export STACKGUARDIAN_API_KEY="YOUR_SG_KEY"
 provider "stackguardian" {}
 
 
-resource "stackguardian_workflow" "Workflow_DeployWebsiteS3" {
-  wfgrp = "WorkflowGroup_DeployWebsiteS3"
+resource "stackguardian_workflow" "TPS-Example-Workflow_DeployWebsiteS3" {
+  wfgrp = "TPS-Test"
 
   data = jsonencode({
-    "ResourceName": "Workflow_DeployWebsiteS3",
+    "ResourceName": "TPS-Example-Workflow_DeployWebsiteS3",
     "Description": "Example of StackGuardian Workflow: Deploy a website from AWS S3",
     "Tags": ["tf-provider-example"],
     "EnvironmentVariables": [],

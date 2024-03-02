@@ -22,8 +22,18 @@ test:
 	go test -i $(TEST) || exit 1
 	echo $(TEST) | xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
 
-testacc:
+test-acc:
 	TF_ACC=1 STACKGUARDIAN_ORG_NAME=wicked-hop go test -parallel=1 $(TEST) -v $(TESTARGS) -timeout=15m
+
+test-example:
+	bash docs/quickstart/test-quickstart.sh $(ARGS)
+
 
 docstf:
 	tfplugindocs generate --rendered-website-dir docs/reference
+
+gh-workflow:
+	act --job run-tests \
+		--secret STACKGUARDIAN_ORG_NAME=${STACKGUARDIAN_ORG_NAME} \
+		--secret STACKGUARDIAN_API_KEY=${STACKGUARDIAN_API_KEY} \
+		;
