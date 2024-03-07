@@ -10,16 +10,46 @@ permissions:
 
 jobs:
 
-  test-provider:
-    name: "Test Provider"
+  provider-release_pre-test:
+    name: "Test Provider code before the Release"
     uses: ./.github/workflows/test.yaml
     secrets: inherit
 
-  release-provider:
-    name: "Release Provider"
+  provider-release_build:
+    name: "Build Release of the Provider"
+    needs: provider-release_pre-test
     uses: hashicorp/ghaction-terraform-provider-release/.github/workflows/community.yml@v3
     secrets:
       gpg-private-key: '${{ secrets.GPG_PRIVATE_KEY }}'
     with:
       setup-go-version-file: 'go.mod'
-    needs: test-provider
+
+  #TODO :Q: How to access the release while it is in draft mode?
+  # - use gh cli
+  # - modify script to use either wget or gh to download release (add cli flag to force usage of gh)
+  provider-release_post-test:
+    name: "Test Provider artifact after the Release"
+    needs: provider-release_build
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: "Checkout Provider code from release tag"
+        uses: actions/checkout@v4
+
+      - name: "Install Terraform"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+          terraform_version: '1.5.7' # TODO: matrix of terraform & tofu versions
+
+      - name: "Test Provider with quickstart example"
+        run: |
+          set -eu -x;
+          TAG=${{ github.event.release.tag_name }};
+          VERSION=${TAG#v};
+
+          make test-example ARGS="-v ${VERSION} -f github-release-draft";
+        env:
+          STACKGUARDIAN_API_KEY: ${{ secrets.STACKGUARDIAN_API_KEY }}
+          STACKGUARDIAN_ORG_NAME: ${{ secrets.STACKGUARDIAN_ORG_NAME }}
