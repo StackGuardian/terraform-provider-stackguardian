@@ -46,10 +46,10 @@ jobs:
       - name: "Test Provider with quickstart example"
         run: |
           set -eu -x;
-          TAG=${{ github.event.release.tag_name }};
+          TAG=${{ github.ref_name }};
           VERSION=${TAG#v};
-
           make test-example ARGS="-v ${VERSION} -f github-release-draft";
+        shell: bash
         env:
           STACKGUARDIAN_API_KEY: ${{ secrets.STACKGUARDIAN_API_KEY }}
           STACKGUARDIAN_ORG_NAME: ${{ secrets.STACKGUARDIAN_ORG_NAME }}
