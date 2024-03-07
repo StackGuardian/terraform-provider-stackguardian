@@ -28,12 +28,14 @@ test-acc:
 test-example:
 	bash docs/quickstart/test-quickstart.sh $(ARGS)
 
-
 docstf:
 	tfplugindocs generate --rendered-website-dir docs/reference
 
 gh-workflow:
-	act --job run-tests \
+	act \
+		--workflows ${PWD}/.github/workflows/test.yaml \
+		--job provider-project_test \
 		--secret STACKGUARDIAN_ORG_NAME=${STACKGUARDIAN_ORG_NAME} \
 		--secret STACKGUARDIAN_API_KEY=${STACKGUARDIAN_API_KEY} \
+		push \
 		;

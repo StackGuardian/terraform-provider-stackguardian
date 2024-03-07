@@ -24,7 +24,9 @@ jobs:
     with:
       setup-go-version-file: 'go.mod'
 
-  # Q: How to access the release while it is in draft mode?
+  #TODO :Q: How to access the release while it is in draft mode?
+  # - use gh cli
+  # - modify script to use either wget or gh to download release (add cli flag to force usage of gh)
   provider-release_post-test:
     name: "Test Provider artifact after the Release"
     needs: provider-release_build
@@ -41,12 +43,13 @@ jobs:
           terraform_wrapper: false
           terraform_version: '1.5.7' # TODO: matrix of terraform & tofu versions
 
-      - name: "Test provider"
+      - name: "Test Provider with quickstart example"
         run: |
           set -eu -x;
           TAG=${{ github.event.release.tag_name }};
           VERSION=${TAG#v};
-          make test-examples ARGS="-v ${VERSION}";
+
+          make test-example ARGS="-v ${VERSION} -f github-release-draft";
         env:
           STACKGUARDIAN_API_KEY: ${{ secrets.STACKGUARDIAN_API_KEY }}
           STACKGUARDIAN_ORG_NAME: ${{ secrets.STACKGUARDIAN_ORG_NAME }}

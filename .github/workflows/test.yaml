@@ -44,3 +44,12 @@ jobs:
         env:
           STACKGUARDIAN_API_KEY: ${{ secrets.STACKGUARDIAN_API_KEY }}
           STACKGUARDIAN_ORG_NAME: ${{ secrets.STACKGUARDIAN_ORG_NAME }}
+
+      - name: "Test Provider with quickstart example"
+        run: |
+          set -eu -x;
+          make install;
+          make test-example ARGS="-f local-build";
+        env:
+          STACKGUARDIAN_API_KEY: ${{ secrets.STACKGUARDIAN_API_KEY }}
+          STACKGUARDIAN_ORG_NAME: ${{ secrets.STACKGUARDIAN_ORG_NAME }}

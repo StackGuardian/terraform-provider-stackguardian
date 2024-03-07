@@ -67,6 +67,8 @@ terraform {
 
 provider "stackguardian" {}
 ```
+The value of the `version` attribute in the `terraform.required_providers.stackguardian` block
+must be the same provider version passed as the value of the `TFSG_VERSION` environment variable. <br/>
 The provider configuration will be passed from environment variables later.
 
 - Check whether the provider was correctly installed with the following commands: <br/>
