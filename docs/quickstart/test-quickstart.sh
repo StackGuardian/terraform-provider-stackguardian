@@ -75,7 +75,9 @@ case "${TFSG_ORIGIN}" in
                 ### If downloading releases manually: ### cp ~/Downloads/terraform-provider-stackguardian_${TFSG_VERSION}_${TFSG_OSARCH}.zip .
                 ;;
             github-release-draft)
-                gh release download --pattern "terraform-provider-stackguardian_${TFSG_VERSION}_${TFSG_OSARCH}.zip" v${TFSG_VERSION}
+                pushd ${SCRIPT_DIRPATH}/../../
+                    gh release download --pattern "terraform-provider-stackguardian_${TFSG_VERSION}_${TFSG_OSARCH}.zip" --dir $HOME/.terraform.d/plugins/${TFSG_PROVIDER}/${TFSG_VERSION}/${TFSG_OSARCH} v${TFSG_VERSION}
+                popd
                 ;;
         esac
 
