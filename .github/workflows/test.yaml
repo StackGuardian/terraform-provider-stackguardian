@@ -50,6 +50,7 @@ jobs:
           set -eu -x;
           make install;
           make test-example ARGS="-f local-build";
+        shell: bash
         env:
           STACKGUARDIAN_API_KEY: ${{ secrets.STACKGUARDIAN_API_KEY }}
           STACKGUARDIAN_ORG_NAME: ${{ secrets.STACKGUARDIAN_ORG_NAME }}

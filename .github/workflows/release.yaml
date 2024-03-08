@@ -24,9 +24,6 @@ jobs:
     with:
       setup-go-version-file: 'go.mod'
 
-  #TODO :Q: How to access the release while it is in draft mode?
-  # - use gh cli
-  # - modify script to use either wget or gh to download release (add cli flag to force usage of gh)
   provider-release_post-test:
     name: "Test Provider artifact after the Release"
     needs: provider-release_build
