@@ -54,3 +54,10 @@ jobs:
         env:
           STACKGUARDIAN_API_KEY: ${{ secrets.STACKGUARDIAN_API_KEY }}
           STACKGUARDIAN_ORG_NAME: ${{ secrets.STACKGUARDIAN_ORG_NAME }}
+
+      - name: "Check Provider docs"
+        run: |
+          set -eu -x;
+          make tools-install;
+          make docs-validate;
+        shell: bash
