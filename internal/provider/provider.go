@@ -30,7 +30,7 @@ func Provider() *schema.Provider {
 			"stackguardian_stack":          resourceStackGuardianStackAPI(),
 			"stackguardian_policy":         resourceStackGuardianPolicyAPI(),
 			"stackguardian_integration":    resourceStackGuardianIntegrationAPI(),
-			//"stackguardian_role":            resourceStackGuardianRoleAPI(),
+			"stackguardian_role":           resourceStackGuardianRoleAPI(),
 			//"stackguardian_connector_cloud": resourceStackGuardianConnectorCloudAPI(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
@@ -40,7 +40,7 @@ func Provider() *schema.Provider {
 			"stackguardian_policy":         dataSourceStackGuardianAPI(),
 			"stackguardian_integration":    dataSourceStackGuardianAPI(),
 			"stackguardian_wf_output":      dataSourceStackGuardianWorkflowOutputsAPI(),
-			//"stackguardian_role":            dataSourceStackGuardianAPI(),
+			"stackguardian_role":           dataSourceStackGuardianAPI(),
 			//"stackguardian_connector_cloud": dataSourceStackGuardianAPI(),
 		},
 		ConfigureFunc: configureProvider,
