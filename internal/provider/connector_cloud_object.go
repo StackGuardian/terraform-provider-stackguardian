@@ -25,11 +25,11 @@ func resourceStackGuardianConnectorCloudAPI() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"integrationgroup": {
-				Type:        schema.TypeString,
-				Description: "Integration Group Name",
-				Required:    true,
-			},
+			// "integrationgroup": {
+			// 	Type:        schema.TypeString,
+			// 	Description: "Integration Group Name",
+			// 	Required:    true,
+			// },
 			"data": {
 				Type:        schema.TypeString,
 				Description: "Valid JSON data that this provider will manage with the API server.",
@@ -205,7 +205,8 @@ func make_api_object_ConnectorCloud(d *schema.ResourceData, meta interface{}) (*
 }
 
 func buildApiObjectConnectorCloudOpts(d *schema.ResourceData) (*apiObjectOpts, error) {
-	var resultPath = "/integrationgroups/" + d.Get("integrationgroup").(string) + "/integrations/"
+	// var resultPath = "/integrationgroups/" + d.Get("integrationgroup").(string) + "/integrations/"
+	var resultPath = "/integrations/"
 
 	opts := &apiObjectOpts{
 		path: resultPath,

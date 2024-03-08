@@ -8,10 +8,10 @@ import (
 
 const testAccCheckConfig_ResourceSgConnectorCloud = `
 resource "stackguardian_connector_cloud" "TPS-Test-ConnectorCloud" {
-	integrationgroup = "TPS-Test"
+	// integrationgroup = "TPS-Test"
 	data = jsonencode({
 	"ResourceName": "TPS-Test-ConnectorCloud",
-	// "Tags" : ["tf-provider-test"]
+	"Tags" : ["tf-provider-test"]
 	"Description": "Test of terraform-provider-stackguardian for ConnectorCloud",
 	"Settings": {
 		"kind": "AWS_STATIC",
