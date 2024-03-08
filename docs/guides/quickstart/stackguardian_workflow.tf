@@ -20,11 +20,11 @@ $ export STACKGUARDIAN_API_KEY="YOUR_SG_KEY"
 provider "stackguardian" {}
 
 
-resource "stackguardian_workflow" "TPS-Example-Workflow_DeployWebsiteS3" {
+resource "stackguardian_workflow" "TPS-Example-Workflow_WebsiteS3-T000000" {
   wfgrp = "TPS-Test"
 
   data = jsonencode({
-    "ResourceName": "TPS-Example-Workflow_DeployWebsiteS3",
+    "ResourceName": "TPS-Example-Workflow_WebsiteS3-T000000",
     "Description": "Example of StackGuardian Workflow: Deploy a website from AWS S3",
     "Tags": ["tf-provider-example"],
     "EnvironmentVariables": [],

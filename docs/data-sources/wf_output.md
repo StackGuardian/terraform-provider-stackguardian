@@ -22,8 +22,6 @@ description: |-
 
 ### Optional
 
-- `debug` (Boolean) Whether to emit verbose debug output while working with the API object on the server.
-- `id_attribute` (String) Defaults to `id_attribute` set on the provider. Allows per-resource override of `id_attribute` (see `id_attribute` provider config documentation)
 - `stack` (String) Stack name
 
 ### Read-Only

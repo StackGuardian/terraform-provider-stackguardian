@@ -26,10 +26,20 @@ test-acc:
 	TF_ACC=1 STACKGUARDIAN_ORG_NAME=wicked-hop go test -parallel=1 $(TEST) -v $(TESTARGS) -timeout=15m
 
 test-example:
-	bash docs/quickstart/test-quickstart.sh $(ARGS)
+	bash docs/guides/quickstart/test-quickstart.sh $(ARGS)
 
-docstf:
-	tfplugindocs generate --rendered-website-dir docs/reference
+docs-generate:
+	mv docs/guides docs_guides
+	tfplugindocs generate
+	mv docs_guides docs/guides
+
+docs-validate:
+	mv docs/guides docs_guides
+	tfplugindocs validate
+	mv docs_guides docs/guides
+
+tools-install:
+	cd tools; go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
 
 gh-workflow:
 	act \

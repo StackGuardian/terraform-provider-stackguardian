@@ -1,3 +1,7 @@
+<a href="https://www.stackguardian.io/">
+    <img src=".github/stackguardian_logo.svg" alt="stackguardian logo" title="stackguardian" align="right" height="40" />
+</a>
+
 # StackGuardian Terraform Provider
 
 
@@ -9,7 +13,10 @@ The [StackGuardian Terraform Provider](https://github.com/StackGuardian/terrafor
 
 
 ## Documentation
-A [quickstart step-by-step guide](docs/quickstart/DOCS.md) can be found in this repository.
+
+The **reference documentation** of the Provider releases is available on the [Terraform Registry](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs)
+
+A **quickstart step-by-step guide** can be found on the Terraform Registry or in this [repository](docs/guides/quickstart/quickstart.md).
 
 
 ## Contributing
