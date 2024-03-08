@@ -1,3 +1,9 @@
+---
+page_title: "Setup & Example Test - step by step"
+subcategory: "Quickstart"
+---
+
+
 # Quickstart Instructions for the StackGuardian Provider
 
 Those quickstart instructions lets you setup a new IaC project with the Terraform Provider for StackGuardian.
@@ -115,7 +121,7 @@ If you do not have any API key for your organization yet, you can generate one o
 
 ## Example: Workflow
 
-Finally, you can take inspiration from the [provider examples](./../../examples) to create new StackGuardian objects in your organization.
+Finally, you can take inspiration from the [provider examples](./../../../examples) to create new StackGuardian objects in your organization.
 
 For instance you can create a new workflow on StackGuardian Orchestrator by adding the following block to the `stackguardian.tf` file:
 
@@ -161,7 +167,7 @@ resource "stackguardian_workflow" "Workflow_DeployWebsiteS3" {
 }
 ```
 
-For a complete example, please refer to the file [docs/quickstart/stackguardian_workflow.tf](./stackguardian_workflow.tf)
+For a complete example, please refer to the file [docs/guides/quickstart/stackguardian_workflow.tf](./stackguardian_workflow.tf)
 
 Finally, inspect the plan offered by Terraform, and execute it to create the desired object on StackGuardian:
 ```console

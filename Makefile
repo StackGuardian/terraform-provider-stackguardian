@@ -26,7 +26,7 @@ test-acc:
 	TF_ACC=1 STACKGUARDIAN_ORG_NAME=wicked-hop go test -parallel=1 $(TEST) -v $(TESTARGS) -timeout=15m
 
 test-example:
-	bash docs/quickstart/test-quickstart.sh $(ARGS)
+	bash docs/guides/quickstart/test-quickstart.sh $(ARGS)
 
 docstf:
 	tfplugindocs generate --rendered-website-dir docs/reference
