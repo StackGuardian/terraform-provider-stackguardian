@@ -9,7 +9,6 @@ import (
 )
 
 func Provider() *schema.Provider {
-	// debugProcess()
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"org_name": {

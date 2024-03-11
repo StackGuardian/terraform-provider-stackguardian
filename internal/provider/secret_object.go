@@ -112,7 +112,7 @@ func resourceStackGuardianSecretAPICreate(d *schema.ResourceData, meta interface
 }
 
 func resourceStackGuardianSecretAPIRead(d *schema.ResourceData, meta interface{}) error {
-	// Refresh of the secret is not going to work
+	// debugProcess()
 	obj, err := make_api_object_secret_read(d, meta)
 	if err != nil {
 		return err
