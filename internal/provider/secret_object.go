@@ -9,7 +9,6 @@ import (
 )
 
 func resourceStackGuardianSecretAPI() *schema.Resource {
-	// Consider data sensitive if env variables is set to true.
 	is_data_sensitive := true
 
 	return &schema.Resource{
@@ -84,7 +83,7 @@ func resourceStackGuardianSecretAPIImport(d *schema.ResourceData, meta interface
 	log.Printf("resource_api_object.go: Import routine called. Object built:\n%s\n", obj.toString())
 
 	// WARNING: It will fail unless FIXME is implemented
-	err = obj.read_object_from_listall() // FIXME: store ResourseName in obj
+	err = obj.read_object_from_listall() // FIXME: store ResourceName in obj
 	if err == nil {
 		set_resource_state(obj, d)
 		/* Data that we set in the state above must be passed along
@@ -199,7 +198,6 @@ func make_api_object_secret(d *schema.ResourceData, meta interface{}) (*api_obje
 }
 
 func buildApiObjectSecretOpts(d *schema.ResourceData) (*apiObjectOpts, error) {
-	// resultPath := "/wfgrps/" + d.Get("wfgrp").(string) + "/stacks/"
 	resultPath := "/secrets/"
 
 	opts := &apiObjectOpts{

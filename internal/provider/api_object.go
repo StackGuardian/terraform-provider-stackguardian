@@ -307,14 +307,8 @@ func (obj *api_object) read_object_from_listall() error {
 		return err
 	}
 
-	/*
-		TODO:
-		- Unmarshal
-		- Find data msg key
-		- Iterate over array of Secrets
-		- Create internal limited secret struct if it finds the ResourceName -- needed if no update ?
-		- No update of the state
-	*/
+	// NOTE: If another resource beyond Secret need to use the listall path for read purposes,
+	// a type switch deriving the resource type from the get_path shall be added here.
 
 	type secretListAllResponse struct {
 		Msg []struct {

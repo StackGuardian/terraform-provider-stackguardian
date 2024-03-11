@@ -16,7 +16,6 @@ resource "stackguardian_secret" "TPS-Test-Secret-Name" {
 `
 
 func TestAcc_ResourceSgSecret(t *testing.T) {
-	//t.Skipf("TODO: Fix DELETE: deletion of Secret resource is not possible with API Key")
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
@@ -30,8 +29,6 @@ func TestAcc_ResourceSgSecret(t *testing.T) {
 						"TPS-Test-Secret-Name",
 					),
 				),
-				//Destroy: true,
-				//PreventPostDestroyRefresh: true,
 			},
 		},
 	})
