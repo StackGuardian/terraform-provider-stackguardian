@@ -9,6 +9,7 @@ import (
 )
 
 func Provider() *schema.Provider {
+	// debugProcess()
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"org_name": {
@@ -33,6 +34,7 @@ func Provider() *schema.Provider {
 			"stackguardian_role":            resourceStackGuardianRoleAPI(),
 			"stackguardian_connector_cloud": resourceStackGuardianConnectorCloudAPI(),
 			"stackguardian_connector_vcs":   resourceStackGuardianConnectorVcsAPI(),
+			"stackguardian_secret":          resourceStackGuardianSecretAPI(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"stackguardian_workflow":        dataSourceStackGuardianAPI(),
@@ -44,6 +46,7 @@ func Provider() *schema.Provider {
 			"stackguardian_role":            dataSourceStackGuardianAPI(),
 			"stackguardian_connector_cloud": dataSourceStackGuardianAPI(),
 			"stackguardian_connector_vcs":   dataSourceStackGuardianAPI(),
+			"stackguardian_secret":          dataSourceStackGuardianAPI(),
 		},
 		ConfigureFunc: configureProvider,
 	}
@@ -65,8 +68,8 @@ func configureProvider(d *schema.ResourceData) (interface{}, error) {
 /// DEBUG /////////////////////////////////////////////////////////////////////////////////////////
 
 func debugProcess() {
-	debugMode, found := os.LookupEnv("TF_LOG")
-	if !found || debugMode != "debug" {
+	_, found := os.LookupEnv("TF_LOG")
+	if !found {
 		return
 	}
 
