@@ -83,7 +83,7 @@ func resourceStackGuardianConnectorVcsAPIImport(d *schema.ResourceData, meta int
 	d.Set("data", fmt.Sprintf(`{ "id": "%s" }`, id))
 	d.SetId(id)
 
-	obj, err := make_api_object_stack(d, meta)
+	obj, err := make_api_object_ConnectorVcs(d, meta)
 	if err != nil {
 		return imported, err
 	}

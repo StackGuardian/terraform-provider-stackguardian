@@ -76,7 +76,7 @@ func resourceStackGuardianSecretAPIImport(d *schema.ResourceData, meta interface
 	d.Set("data", fmt.Sprintf(`{ "id": "%s" }`, id))
 	d.SetId(id)
 
-	obj, err := make_api_object_stack(d, meta)
+	obj, err := make_api_object_secret_read(d, meta)
 	if err != nil {
 		return imported, err
 	}
