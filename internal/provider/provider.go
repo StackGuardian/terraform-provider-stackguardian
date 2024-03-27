@@ -8,9 +8,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+const default_api_uri = "https://api.app.stackguardian.io/api/v1/"
+
 func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
+			"api_uri": {
+				Type:        schema.TypeString,
+				Required:    true,
+				DefaultFunc: schema.EnvDefaultFunc("STACKGUARDIAN_API_URI", default_api_uri),
+				Description: "Api Uri to use as base for StackGuardian API",
+			},
 			"org_name": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -53,7 +61,7 @@ func Provider() *schema.Provider {
 
 func configureProvider(d *schema.ResourceData) (interface{}, error) {
 	opt := &apiClientOpt{
-		api_uri:  "https://api.app.stackguardian.io/api/v1/",
+		api_uri:  d.Get("api_uri").(string),
 		org_name: d.Get("org_name").(string),
 		headers: map[string]string{
 			"Authorization": "apikey " + d.Get("api_key").(string),
