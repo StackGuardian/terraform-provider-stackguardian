@@ -1,0 +1,121 @@
+name: "Test API with TF-Provider"  # with examples on one API env
+
+on:
+  workflow_call:
+    inputs:
+      gitref:
+        type: string
+        default: 'devel'
+        required: true
+      testenv:
+        type: string
+        default: PRD
+        required: true
+        description: "STG|PRD"
+
+jobs:
+
+  api_examples-test:
+    name: "Test API with Provider examples"
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: "Checkout code"
+        if: ${{ !env.ACT }}
+        uses: actions/checkout@v4
+        with:
+          ref: '${{ inputs.gitref }}'
+
+      - name: "Checkout code (local)"
+        if: env.ACT
+        uses: actions/checkout@v4
+
+      - name: "Verify checked-out code (local)"
+        if: ${{ env.ACT }}
+        run: |
+          git --no-pager show --stat;
+          git --no-pager status;
+
+      - name: "Install Go"
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+
+      - name: "Install Terraform"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+          terraform_version: '1.5.7'
+
+      - name: "Build Provider"
+        run: make build
+
+
+      ### --- testenv: STG ----------------------------------------------------
+
+      - name: "Test API-STG with Provider acceptance tests"
+        if: inputs.testenv=='STG'
+        run: make test-acc
+        env:
+          STACKGUARDIAN_API_URI: '${{ secrets.SG_STG_API_URI }}'
+          STACKGUARDIAN_API_KEY: '${{ secrets.SG_STG_API_KEY }}'
+          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_STG_ORG_NAME }}'
+
+      - name: "Test API-STG with Provider quickstart example"
+        if: inputs.testenv=='STG'
+        run: |
+          set -eu -x;
+          make install;
+          make test-examples-quickstart ARGS="-f local-build";
+        shell: bash
+        env:
+          STACKGUARDIAN_API_URI: '${{ secrets.SG_STG_API_URI }}'
+          STACKGUARDIAN_API_KEY: '${{ secrets.SG_STG_API_KEY }}'
+          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_STG_ORG_NAME }}'
+
+      - name: "Test API-STG with Provider onboarding example"
+        if: inputs.testenv=='STG'
+        run: |
+          set -eu -x;
+          make install;
+          make test-examples-onboarding ARGS="-f local-build";
+        shell: bash
+        env:
+          STACKGUARDIAN_API_URI: '${{ secrets.SG_STG_API_URI }}'
+          STACKGUARDIAN_API_KEY: '${{ secrets.SG_STG_API_KEY }}'
+          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_STG_ORG_NAME }}'
+
+
+      ### --- testenv: PRD ----------------------------------------------------
+
+      - name: "Test API-PRD with Provider acceptance tests"
+        if: inputs.testenv=='PRD'
+        run: make test-acc
+        env:
+          STACKGUARDIAN_API_URI: '${{ secrets.SG_PRD_API_URI }}'
+          STACKGUARDIAN_API_KEY: '${{ secrets.SG_PRD_API_KEY }}'
+          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'
+
+      - name: "Test API-PRD with Provider quickstart example"
+        if: inputs.testenv=='PRD'
+        run: |
+          set -eu -x;
+          make install;
+          make test-examples-quickstart ARGS="-f local-build";
+        shell: bash
+        env:
+          STACKGUARDIAN_API_URI: '${{ secrets.SG_PRD_API_URI }}'
+          STACKGUARDIAN_API_KEY: '${{ secrets.SG_PRD_API_KEY }}'
+          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'
+
+      - name: "Test API-PRD with Provider onboarding example"
+        if: inputs.testenv=='PRD'
+        run: |
+          set -eu -x;
+          make install;
+          make test-examples-onboarding ARGS="-f local-build";
+        shell: bash
+        env:
+          STACKGUARDIAN_API_URI: '${{ secrets.SG_PRD_API_URI }}'
+          STACKGUARDIAN_API_KEY: '${{ secrets.SG_PRD_API_KEY }}'
+          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'

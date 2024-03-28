@@ -25,7 +25,7 @@ resource "stackguardian_workflow" "TPS-Test-Workflow" {
 		"iacVCSConfig": {
 		  "useMarketplaceTemplate": true,
 		  "iacTemplate": "/stackguardian/aws-s3-demo-website",
-		  "iacTemplateId": "/stackguardian/aws-s3-demo-website:11"
+		  "iacTemplateId": "/stackguardian/aws-s3-demo-website:4"
 		},
 		"iacInputData": {
 		  "schemaType": "FORM_JSONSCHEMA",

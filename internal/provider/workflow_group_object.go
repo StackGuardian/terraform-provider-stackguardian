@@ -9,19 +9,19 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func resourceStackGuardianIntegrationAPI() *schema.Resource {
+func resourceStackGuardianWorkflowGroupAPI() *schema.Resource {
 	// Consider data sensitive if env variables is set to true.
 	is_data_sensitive, _ := strconv.ParseBool(GetEnvOrDefault("API_DATA_IS_SENSITIVE", "false"))
 
 	return &schema.Resource{
-		Create: resourceStackGuardianIntegrationAPICreate,
-		Read:   resourceStackGuardianIntegrationAPIRead,
-		Update: resourceStackGuardianIntegrationAPIUpdate,
-		Delete: resourceStackGuardianIntegrationAPIDelete,
-		Exists: resourceStackGuardianIntegrationAPIExists,
+		Create: resourceStackGuardianWorkflowGroupAPICreate,
+		Read:   resourceStackGuardianWorkflowGroupAPIRead,
+		Update: resourceStackGuardianWorkflowGroupAPIUpdate,
+		Delete: resourceStackGuardianWorkflowGroupAPIDelete,
+		Exists: resourceStackGuardianWorkflowGroupAPIExists,
 
 		Importer: &schema.ResourceImporter{
-			State: resourceStackGuardianIntegrationAPIImport,
+			State: resourceStackGuardianWorkflowGroupAPIImport,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -53,7 +53,7 @@ Since there is nothing in the ResourceData structure other
 	view of the API paths to figure out how to read that object
 	from the API
 */
-func resourceStackGuardianIntegrationAPIImport(d *schema.ResourceData, meta interface{}) (imported []*schema.ResourceData, err error) {
+func resourceStackGuardianWorkflowGroupAPIImport(d *schema.ResourceData, meta interface{}) (imported []*schema.ResourceData, err error) {
 	input := d.Id()
 
 	hasTrailingSlash := strings.LastIndex(input, "/") == len(input)-1
@@ -78,7 +78,7 @@ func resourceStackGuardianIntegrationAPIImport(d *schema.ResourceData, meta inte
 	d.Set("data", fmt.Sprintf(`{ "id": "%s" }`, id))
 	d.SetId(id)
 
-	obj, err := make_api_object_integration(d, meta)
+	obj, err := make_api_object_WorkflowGroup(d, meta)
 	if err != nil {
 		return imported, err
 	}
@@ -95,8 +95,8 @@ func resourceStackGuardianIntegrationAPIImport(d *schema.ResourceData, meta inte
 	return imported, err
 }
 
-func resourceStackGuardianIntegrationAPICreate(d *schema.ResourceData, meta interface{}) error {
-	obj, err := make_api_object_integration(d, meta)
+func resourceStackGuardianWorkflowGroupAPICreate(d *schema.ResourceData, meta interface{}) error {
+	obj, err := make_api_object_WorkflowGroup(d, meta)
 	if err != nil {
 		return err
 	}
@@ -111,8 +111,8 @@ func resourceStackGuardianIntegrationAPICreate(d *schema.ResourceData, meta inte
 	return err
 }
 
-func resourceStackGuardianIntegrationAPIRead(d *schema.ResourceData, meta interface{}) error {
-	obj, err := make_api_object_integration(d, meta)
+func resourceStackGuardianWorkflowGroupAPIRead(d *schema.ResourceData, meta interface{}) error {
+	obj, err := make_api_object_WorkflowGroup(d, meta)
 	if err != nil {
 		return err
 	}
@@ -128,8 +128,8 @@ func resourceStackGuardianIntegrationAPIRead(d *schema.ResourceData, meta interf
 	return err
 }
 
-func resourceStackGuardianIntegrationAPIUpdate(d *schema.ResourceData, meta interface{}) error {
-	obj, err := make_api_object_integration(d, meta)
+func resourceStackGuardianWorkflowGroupAPIUpdate(d *schema.ResourceData, meta interface{}) error {
+	obj, err := make_api_object_WorkflowGroup(d, meta)
 	if err != nil {
 		return err
 	}
@@ -143,14 +143,12 @@ func resourceStackGuardianIntegrationAPIUpdate(d *schema.ResourceData, meta inte
 	return err
 }
 
-func resourceStackGuardianIntegrationAPIDelete(d *schema.ResourceData, meta interface{}) error {
-	obj, err := make_api_object_integration(d, meta)
+func resourceStackGuardianWorkflowGroupAPIDelete(d *schema.ResourceData, meta interface{}) error {
+	obj, err := make_api_object_WorkflowGroup(d, meta)
 	if err != nil {
 		return err
 	}
 	log.Printf("resource_api_object.go: Delete routine called. Object built:\n%s\n", obj.toString())
-
-	log.Printf("warning: deletion of Integration resource is not possible with API Key")
 
 	err = obj.delete_object()
 	if err != nil {
@@ -162,8 +160,8 @@ func resourceStackGuardianIntegrationAPIDelete(d *schema.ResourceData, meta inte
 	return err
 }
 
-func resourceStackGuardianIntegrationAPIExists(d *schema.ResourceData, meta interface{}) (exists bool, err error) {
-	obj, err := make_api_object_integration(d, meta)
+func resourceStackGuardianWorkflowGroupAPIExists(d *schema.ResourceData, meta interface{}) (exists bool, err error) {
+	obj, err := make_api_object_WorkflowGroup(d, meta)
 	if err != nil {
 		return exists, err
 	}
@@ -185,8 +183,8 @@ Simple helper routine to build an api_object struct
 	terraform cannot just reuse objects, so each CRUD operation
 	results in a new object created
 */
-func make_api_object_integration(d *schema.ResourceData, meta interface{}) (*api_object, error) {
-	opts, err := buildApiObjectIntegrationOpts(d)
+func make_api_object_WorkflowGroup(d *schema.ResourceData, meta interface{}) (*api_object, error) {
+	opts, err := buildApiObjectOpts_WorkflowGroup(d)
 	if err != nil {
 		return nil, err
 	}
@@ -199,9 +197,8 @@ func make_api_object_integration(d *schema.ResourceData, meta interface{}) (*api
 	return obj, nil
 }
 
-func buildApiObjectIntegrationOpts(d *schema.ResourceData) (*apiObjectOpts, error) {
-	// resultPath := "/wfgrps/" + d.Get("wfgrp").(string) + "/stacks/"
-	resultPath := "/integrations/"
+func buildApiObjectOpts_WorkflowGroup(d *schema.ResourceData) (*apiObjectOpts, error) {
+	resultPath := "/wfgrps/"
 
 	opts := &apiObjectOpts{
 		path: resultPath,

@@ -37,6 +37,7 @@ data "stackguardian_wf_output" "TPS-Test-Outputs" {
 `
 
 func TestAcc_DatasourceSgWorkflowOutputs(t *testing.T) {
+	t.Skipf("TODO: Find identical WF for PRD and STG")
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,

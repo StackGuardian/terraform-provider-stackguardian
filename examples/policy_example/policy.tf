@@ -1,19 +1,18 @@
 terraform {
   required_providers {
     stackguardian = {
-      source = "terraform/provider/stackguardian"
+      source  = "terraform/provider/stackguardian"
       version = "0.0.0-dev"
     }
   }
 }
 
-provider "stackguardian" {
-  org_name = "---" // TBD
-  api_key  = "---" // TBD
-}
+provider "stackguardian" {}
 
-resource "stackguardian_policy" "TestPolicy" {
-  data = jsonencode(
-    { "ResourceName" : "test", "Description" : "", "Tags" : ["test", "policy"] }
-  )
+resource "stackguardian_policy" "TPS-Example-Policy" {
+  data = jsonencode({
+    "ResourceName" : "TPS-Example-Policy",
+    "Description" : "Example of terraform-provider-stackguardian for Policy",
+    "Tags" : ["tf-provider-example", "example", "policy"]
+  })
 }

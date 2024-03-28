@@ -1,10 +1,9 @@
-name: "Test TF-Provider on SG-Prod"
+name: "Test TF-Provider on API-PROD"
 
 on:
   push:
     branches:
       - main
-      - devel
   # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request
   pull_request:
     branches:
@@ -28,7 +27,7 @@ jobs:
       - name: "Install Go"
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version-file: 'go.mod'
 
       - name: "Install Terraform"
         uses: hashicorp/setup-terraform@v3
@@ -42,18 +41,31 @@ jobs:
       - name: "Test Provider with acceptance tests"
         run: make test-acc
         env:
-          STACKGUARDIAN_API_KEY: ${{ secrets.STACKGUARDIAN_API_KEY }}
-          STACKGUARDIAN_ORG_NAME: ${{ secrets.STACKGUARDIAN_ORG_NAME }}
+          STACKGUARDIAN_API_URI: '${{ secrets.SG_PRD_API_URI }}'
+          STACKGUARDIAN_API_KEY: '${{ secrets.SG_PRD_API_KEY }}'
+          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'
 
       - name: "Test Provider with quickstart example"
         run: |
           set -eu -x;
           make install;
-          make test-example ARGS="-f local-build";
+          make test-examples-quickstart ARGS="-f local-build";
         shell: bash
         env:
-          STACKGUARDIAN_API_KEY: ${{ secrets.STACKGUARDIAN_API_KEY }}
-          STACKGUARDIAN_ORG_NAME: ${{ secrets.STACKGUARDIAN_ORG_NAME }}
+          STACKGUARDIAN_API_KEY: '${{ secrets.SG_PRD_API_KEY }}'
+          STACKGUARDIAN_API_URI: '${{ secrets.SG_PRD_API_URI }}'
+          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'
+
+      - name: "Test Provider with onboarding example"
+        run: |
+          set -eu -x;
+          make install;
+          make test-examples-onboarding ARGS="-f local-build";
+        shell: bash
+        env:
+          STACKGUARDIAN_API_KEY: '${{ secrets.SG_PRD_API_KEY }}'
+          STACKGUARDIAN_API_URI: '${{ secrets.SG_PRD_API_URI }}'
+          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'
 
       - name: "Check Provider docs"
         run: |

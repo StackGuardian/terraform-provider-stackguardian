@@ -3,25 +3,23 @@ package provider
 import (
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func resourceStackGuardianIntegrationAPI() *schema.Resource {
-	// Consider data sensitive if env variables is set to true.
-	is_data_sensitive, _ := strconv.ParseBool(GetEnvOrDefault("API_DATA_IS_SENSITIVE", "false"))
+func resourceStackGuardianSecretAPI() *schema.Resource {
+	is_data_sensitive := true
 
 	return &schema.Resource{
-		Create: resourceStackGuardianIntegrationAPICreate,
-		Read:   resourceStackGuardianIntegrationAPIRead,
-		Update: resourceStackGuardianIntegrationAPIUpdate,
-		Delete: resourceStackGuardianIntegrationAPIDelete,
-		Exists: resourceStackGuardianIntegrationAPIExists,
+		Create: resourceStackGuardianSecretAPICreate,
+		Read:   resourceStackGuardianSecretAPIRead,
+		Update: resourceStackGuardianSecretAPIUpdate,
+		Delete: resourceStackGuardianSecretAPIDelete,
+		Exists: resourceStackGuardianSecretAPIExists,
 
 		Importer: &schema.ResourceImporter{
-			State: resourceStackGuardianIntegrationAPIImport,
+			State: resourceStackGuardianSecretAPIImport,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -53,7 +51,7 @@ Since there is nothing in the ResourceData structure other
 	view of the API paths to figure out how to read that object
 	from the API
 */
-func resourceStackGuardianIntegrationAPIImport(d *schema.ResourceData, meta interface{}) (imported []*schema.ResourceData, err error) {
+func resourceStackGuardianSecretAPIImport(d *schema.ResourceData, meta interface{}) (imported []*schema.ResourceData, err error) {
 	input := d.Id()
 
 	hasTrailingSlash := strings.LastIndex(input, "/") == len(input)-1
@@ -78,13 +76,14 @@ func resourceStackGuardianIntegrationAPIImport(d *schema.ResourceData, meta inte
 	d.Set("data", fmt.Sprintf(`{ "id": "%s" }`, id))
 	d.SetId(id)
 
-	obj, err := make_api_object_integration(d, meta)
+	obj, err := make_api_object_secret_read(d, meta)
 	if err != nil {
 		return imported, err
 	}
 	log.Printf("resource_api_object.go: Import routine called. Object built:\n%s\n", obj.toString())
 
-	err = obj.read_object()
+	// WARNING: It will fail unless FIXME is implemented
+	err = obj.read_object_from_listall() // FIXME: store ResourceName in obj
 	if err == nil {
 		set_resource_state(obj, d)
 		/* Data that we set in the state above must be passed along
@@ -95,8 +94,8 @@ func resourceStackGuardianIntegrationAPIImport(d *schema.ResourceData, meta inte
 	return imported, err
 }
 
-func resourceStackGuardianIntegrationAPICreate(d *schema.ResourceData, meta interface{}) error {
-	obj, err := make_api_object_integration(d, meta)
+func resourceStackGuardianSecretAPICreate(d *schema.ResourceData, meta interface{}) error {
+	obj, err := make_api_object_secret(d, meta)
 	if err != nil {
 		return err
 	}
@@ -111,14 +110,15 @@ func resourceStackGuardianIntegrationAPICreate(d *schema.ResourceData, meta inte
 	return err
 }
 
-func resourceStackGuardianIntegrationAPIRead(d *schema.ResourceData, meta interface{}) error {
-	obj, err := make_api_object_integration(d, meta)
+func resourceStackGuardianSecretAPIRead(d *schema.ResourceData, meta interface{}) error {
+	// debugProcess()
+	obj, err := make_api_object_secret_read(d, meta)
 	if err != nil {
 		return err
 	}
 	log.Printf("resource_api_object.go: Read routine called. Object built:\n%s\n", obj.toString())
 
-	err = obj.read_object()
+	err = obj.read_object_from_listall()
 	if err == nil {
 		/* Setting terraform ID tells terraform the object was created or it exists */
 		log.Printf("resource_api_object.go: Read resource. Returned id is '%s'\n", obj.ResourceName)
@@ -128,8 +128,8 @@ func resourceStackGuardianIntegrationAPIRead(d *schema.ResourceData, meta interf
 	return err
 }
 
-func resourceStackGuardianIntegrationAPIUpdate(d *schema.ResourceData, meta interface{}) error {
-	obj, err := make_api_object_integration(d, meta)
+func resourceStackGuardianSecretAPIUpdate(d *schema.ResourceData, meta interface{}) error {
+	obj, err := make_api_object_secret(d, meta)
 	if err != nil {
 		return err
 	}
@@ -143,14 +143,12 @@ func resourceStackGuardianIntegrationAPIUpdate(d *schema.ResourceData, meta inte
 	return err
 }
 
-func resourceStackGuardianIntegrationAPIDelete(d *schema.ResourceData, meta interface{}) error {
-	obj, err := make_api_object_integration(d, meta)
+func resourceStackGuardianSecretAPIDelete(d *schema.ResourceData, meta interface{}) error {
+	obj, err := make_api_object_secret(d, meta)
 	if err != nil {
 		return err
 	}
 	log.Printf("resource_api_object.go: Delete routine called. Object built:\n%s\n", obj.toString())
-
-	log.Printf("warning: deletion of Integration resource is not possible with API Key")
 
 	err = obj.delete_object()
 	if err != nil {
@@ -162,8 +160,8 @@ func resourceStackGuardianIntegrationAPIDelete(d *schema.ResourceData, meta inte
 	return err
 }
 
-func resourceStackGuardianIntegrationAPIExists(d *schema.ResourceData, meta interface{}) (exists bool, err error) {
-	obj, err := make_api_object_integration(d, meta)
+func resourceStackGuardianSecretAPIExists(d *schema.ResourceData, meta interface{}) (exists bool, err error) {
+	obj, err := make_api_object_secret_read(d, meta)
 	if err != nil {
 		return exists, err
 	}
@@ -171,7 +169,7 @@ func resourceStackGuardianIntegrationAPIExists(d *schema.ResourceData, meta inte
 
 	/* Assume all errors indicate the object just doesn't exist.
 	This may not be a good assumption... */
-	err = obj.read_object()
+	err = obj.read_object_from_listall()
 	if err == nil {
 		exists = true
 	}
@@ -185,8 +183,8 @@ Simple helper routine to build an api_object struct
 	terraform cannot just reuse objects, so each CRUD operation
 	results in a new object created
 */
-func make_api_object_integration(d *schema.ResourceData, meta interface{}) (*api_object, error) {
-	opts, err := buildApiObjectIntegrationOpts(d)
+func make_api_object_secret(d *schema.ResourceData, meta interface{}) (*api_object, error) {
+	opts, err := buildApiObjectSecretOpts(d)
 	if err != nil {
 		return nil, err
 	}
@@ -199,12 +197,46 @@ func make_api_object_integration(d *schema.ResourceData, meta interface{}) (*api
 	return obj, nil
 }
 
-func buildApiObjectIntegrationOpts(d *schema.ResourceData) (*apiObjectOpts, error) {
-	// resultPath := "/wfgrps/" + d.Get("wfgrp").(string) + "/stacks/"
-	resultPath := "/integrations/"
+func buildApiObjectSecretOpts(d *schema.ResourceData) (*apiObjectOpts, error) {
+	resultPath := "/secrets/"
 
 	opts := &apiObjectOpts{
 		path: resultPath,
+	}
+
+	opts.ResourceName = d.Id()
+
+	log.Printf("common.go: make_api_object routine called for id '%s'\n", opts.ResourceName)
+
+	opts.data = d.Get("data").(string)
+	opts.debug = true
+	return opts, nil
+}
+
+func make_api_object_secret_read(d *schema.ResourceData, meta interface{}) (*api_object, error) {
+	opts, err := buildApiObjectSecretOptsRead(d)
+	if err != nil {
+		return nil, err
+	}
+
+	obj, err := NewAPIObject(meta.(*api_client), opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return obj, nil
+}
+
+func buildApiObjectSecretOptsRead(d *schema.ResourceData) (*apiObjectOpts, error) {
+	readPath := "/secrets/listall/"
+
+	opts := &apiObjectOpts{
+		path:        "",
+		post_path:   "",
+		put_path:    "",
+		delete_path: "",
+		search_path: "",
+		get_path:    readPath,
 	}
 
 	opts.ResourceName = d.Id()

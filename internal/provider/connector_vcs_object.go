@@ -9,22 +9,27 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func resourceStackGuardianIntegrationAPI() *schema.Resource {
+func resourceStackGuardianConnectorVcsAPI() *schema.Resource {
 	// Consider data sensitive if env variables is set to true.
 	is_data_sensitive, _ := strconv.ParseBool(GetEnvOrDefault("API_DATA_IS_SENSITIVE", "false"))
 
 	return &schema.Resource{
-		Create: resourceStackGuardianIntegrationAPICreate,
-		Read:   resourceStackGuardianIntegrationAPIRead,
-		Update: resourceStackGuardianIntegrationAPIUpdate,
-		Delete: resourceStackGuardianIntegrationAPIDelete,
-		Exists: resourceStackGuardianIntegrationAPIExists,
+		Create: resourceStackGuardianConnectorVcsAPICreate,
+		Read:   resourceStackGuardianConnectorVcsAPIRead,
+		Update: resourceStackGuardianConnectorVcsAPIUpdate,
+		Delete: resourceStackGuardianConnectorVcsAPIDelete,
+		Exists: resourceStackGuardianConnectorVcsAPIExists,
 
 		Importer: &schema.ResourceImporter{
-			State: resourceStackGuardianIntegrationAPIImport,
+			State: resourceStackGuardianConnectorVcsAPIImport,
 		},
 
 		Schema: map[string]*schema.Schema{
+			// "integrationgroup": {
+			// 	Type:        schema.TypeString,
+			// 	Description: "Integration Group Name",
+			// 	Required:    true,
+			// },
 			"data": {
 				Type:        schema.TypeString,
 				Description: "Valid JSON data that this provider will manage with the API server.",
@@ -53,7 +58,7 @@ Since there is nothing in the ResourceData structure other
 	view of the API paths to figure out how to read that object
 	from the API
 */
-func resourceStackGuardianIntegrationAPIImport(d *schema.ResourceData, meta interface{}) (imported []*schema.ResourceData, err error) {
+func resourceStackGuardianConnectorVcsAPIImport(d *schema.ResourceData, meta interface{}) (imported []*schema.ResourceData, err error) {
 	input := d.Id()
 
 	hasTrailingSlash := strings.LastIndex(input, "/") == len(input)-1
@@ -78,7 +83,7 @@ func resourceStackGuardianIntegrationAPIImport(d *schema.ResourceData, meta inte
 	d.Set("data", fmt.Sprintf(`{ "id": "%s" }`, id))
 	d.SetId(id)
 
-	obj, err := make_api_object_integration(d, meta)
+	obj, err := make_api_object_ConnectorVcs(d, meta)
 	if err != nil {
 		return imported, err
 	}
@@ -95,8 +100,8 @@ func resourceStackGuardianIntegrationAPIImport(d *schema.ResourceData, meta inte
 	return imported, err
 }
 
-func resourceStackGuardianIntegrationAPICreate(d *schema.ResourceData, meta interface{}) error {
-	obj, err := make_api_object_integration(d, meta)
+func resourceStackGuardianConnectorVcsAPICreate(d *schema.ResourceData, meta interface{}) error {
+	obj, err := make_api_object_ConnectorVcs(d, meta)
 	if err != nil {
 		return err
 	}
@@ -111,8 +116,8 @@ func resourceStackGuardianIntegrationAPICreate(d *schema.ResourceData, meta inte
 	return err
 }
 
-func resourceStackGuardianIntegrationAPIRead(d *schema.ResourceData, meta interface{}) error {
-	obj, err := make_api_object_integration(d, meta)
+func resourceStackGuardianConnectorVcsAPIRead(d *schema.ResourceData, meta interface{}) error {
+	obj, err := make_api_object_ConnectorVcs(d, meta)
 	if err != nil {
 		return err
 	}
@@ -128,8 +133,8 @@ func resourceStackGuardianIntegrationAPIRead(d *schema.ResourceData, meta interf
 	return err
 }
 
-func resourceStackGuardianIntegrationAPIUpdate(d *schema.ResourceData, meta interface{}) error {
-	obj, err := make_api_object_integration(d, meta)
+func resourceStackGuardianConnectorVcsAPIUpdate(d *schema.ResourceData, meta interface{}) error {
+	obj, err := make_api_object_ConnectorVcs(d, meta)
 	if err != nil {
 		return err
 	}
@@ -143,14 +148,14 @@ func resourceStackGuardianIntegrationAPIUpdate(d *schema.ResourceData, meta inte
 	return err
 }
 
-func resourceStackGuardianIntegrationAPIDelete(d *schema.ResourceData, meta interface{}) error {
-	obj, err := make_api_object_integration(d, meta)
+func resourceStackGuardianConnectorVcsAPIDelete(d *schema.ResourceData, meta interface{}) error {
+	obj, err := make_api_object_ConnectorVcs(d, meta)
 	if err != nil {
 		return err
 	}
 	log.Printf("resource_api_object.go: Delete routine called. Object built:\n%s\n", obj.toString())
 
-	log.Printf("warning: deletion of Integration resource is not possible with API Key")
+	log.Printf("warning: deletion of ConnectorVcs resource is not possible with API Key")
 
 	err = obj.delete_object()
 	if err != nil {
@@ -162,8 +167,8 @@ func resourceStackGuardianIntegrationAPIDelete(d *schema.ResourceData, meta inte
 	return err
 }
 
-func resourceStackGuardianIntegrationAPIExists(d *schema.ResourceData, meta interface{}) (exists bool, err error) {
-	obj, err := make_api_object_integration(d, meta)
+func resourceStackGuardianConnectorVcsAPIExists(d *schema.ResourceData, meta interface{}) (exists bool, err error) {
+	obj, err := make_api_object_ConnectorVcs(d, meta)
 	if err != nil {
 		return exists, err
 	}
@@ -185,8 +190,8 @@ Simple helper routine to build an api_object struct
 	terraform cannot just reuse objects, so each CRUD operation
 	results in a new object created
 */
-func make_api_object_integration(d *schema.ResourceData, meta interface{}) (*api_object, error) {
-	opts, err := buildApiObjectIntegrationOpts(d)
+func make_api_object_ConnectorVcs(d *schema.ResourceData, meta interface{}) (*api_object, error) {
+	opts, err := buildApiObjectConnectorVcsOpts(d)
 	if err != nil {
 		return nil, err
 	}
@@ -199,9 +204,9 @@ func make_api_object_integration(d *schema.ResourceData, meta interface{}) (*api
 	return obj, nil
 }
 
-func buildApiObjectIntegrationOpts(d *schema.ResourceData) (*apiObjectOpts, error) {
-	// resultPath := "/wfgrps/" + d.Get("wfgrp").(string) + "/stacks/"
-	resultPath := "/integrations/"
+func buildApiObjectConnectorVcsOpts(d *schema.ResourceData) (*apiObjectOpts, error) {
+	// var resultPath = "/integrationgroups/" + d.Get("integrationgroup").(string) + "/integrations/"
+	var resultPath = "/integrations/"
 
 	opts := &apiObjectOpts{
 		path: resultPath,
