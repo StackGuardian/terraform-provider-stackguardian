@@ -4,6 +4,9 @@ terraform {
   required_providers {
     stackguardian = {
       source  = "terraform/provider/stackguardian"
+
+      # https://developer.hashicorp.com/terraform/language/expressions/version-constraints#version-constraint-behavior
+      # NOTE: A prerelease version can be selected only by an exact version constraint.
       version = "0.0.0-dev"
     }
   }
