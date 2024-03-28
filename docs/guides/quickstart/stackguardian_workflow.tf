@@ -5,7 +5,7 @@ terraform {
 
       # https://developer.hashicorp.com/terraform/language/expressions/version-constraints#version-constraint-behavior
       # NOTE: A prerelease version can be selected only by an exact version constraint.
-      version = "0.1.0-rc1" #provider-version
+      version = "0.0.0-rc1" #provider-version
     }
   }
 }
@@ -17,6 +17,10 @@ $ export STACKGUARDIAN_ORG_NAME="YOUR_SG_ORG"
 $ export STACKGUARDIAN_API_KEY="YOUR_SG_KEY"
 ```
 */
+
+provider "stackguardian" {}
+
+
 
 resource "stackguardian_workflow_group" "TPS-Quickstart-T000000" {
   data = jsonencode({

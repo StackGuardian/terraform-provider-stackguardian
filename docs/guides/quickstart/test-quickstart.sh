@@ -121,7 +121,16 @@ terraform providers
 terraform init
 terraform version
 
+terraform validate
+
 terraform plan
+
+terraform state list || true
+
 terraform apply -auto-approve
+terraform state list
+
 sleep 10
+
 terraform destroy -auto-approve
+terraform state list
