@@ -28,7 +28,7 @@ resource "stackguardian_connector_cloud" "TPS-Test-ConnectorCloud" {
 `
 
 func TestAcc_ResourceSgConnectorCloud(t *testing.T) {
-	t.Skipf("TODO: Fix DELETE: deletion of ConnectorCloud resource is not possible with API Key")
+	//t.Skipf("TODO: Fix DELETE: deletion of ConnectorCloud resource is not possible with API Key")  // TODO: clean after check in PROD
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,

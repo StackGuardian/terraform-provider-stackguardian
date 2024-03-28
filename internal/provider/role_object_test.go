@@ -11,7 +11,7 @@ resource "stackguardian_role" "TPS-Test-Role" {
 
 	data = jsonencode({
 		"ResourceName": "TPS-Test-Role",
-		"Description": "Test of terraform-provider-stackguardian for Role",
+		//"Description": "Test of terraform-provider-stackguardian for Role", // TODO: Uncomment after fix in Frontend
 		"Tags": ["tf-provider-test"],
 		"Actions": [
 			"Action-1"
