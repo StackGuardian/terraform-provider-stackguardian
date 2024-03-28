@@ -4,6 +4,9 @@ terraform {
   required_providers {
     stackguardian = {
       source  = "terraform/provider/stackguardian"
+
+      # https://developer.hashicorp.com/terraform/language/expressions/version-constraints#version-constraint-behavior
+      # NOTE: A prerelease version can be selected only by an exact version constraint.
       version = "0.0.0-dev"
     }
   }
@@ -15,7 +18,7 @@ provider "stackguardian" {}
 resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
   data = jsonencode({
     "ResourceName" : "ONBOARDING-Project01-Developer",
-    "Description" : "Onboarding example of terraform-provider-stackguardian for Role Developer",
+    //"Description" : "Onboarding example of terraform-provider-stackguardian for Role Developer",
     "Tags" : ["tf-provider-example", "onboarding"],
     "Actions" : [
       "wicked-hop",
@@ -316,7 +319,7 @@ resource "stackguardian_policy" "ONBOARDING-Project01" {
   })
 }
 
-/*
+
 resource "stackguardian_connector_cloud" "ONBOARDING-Project01" {
   data = jsonencode({
     "ResourceName" : "ONBOARDING-Project01",
@@ -334,7 +337,7 @@ resource "stackguardian_connector_cloud" "ONBOARDING-Project01" {
     }
   })
 }
-*/
+
 
 resource "stackguardian_connector_vcs" "ONBOARDING-Project01" {
   data = jsonencode({
@@ -350,5 +353,46 @@ resource "stackguardian_connector_vcs" "ONBOARDING-Project01" {
         }
       ]
     },
+  })
+}
+
+
+// --- Non-onboarding resources:
+
+resource "stackguardian_workflow" "ONBOARDING-Project01-DevOps-Wf01" {
+  wfgrp = stackguardian_workflow_group.ONBOARDING-Project01-DevOps.id
+
+  data = jsonencode({
+    "ResourceName": "ONBOARDING-Project01-DevOps-Wf01",
+    "Description": "Example of StackGuardian Workflow: Deploy a website from AWS S3",
+    "Tags": ["tf-provider-test", "onboarding"],
+    "EnvironmentVariables": [],
+    "DeploymentPlatformConfig": [{
+      "kind": "AWS_RBAC",
+      "config": {
+        "integrationId": "/integrations/aws"
+      }
+    }],
+    "VCSConfig": {
+      "iacVCSConfig": {
+        "useMarketplaceTemplate": true,
+        "iacTemplate": "/stackguardian/aws-s3-demo-website",
+        "iacTemplateId": "/stackguardian/aws-s3-demo-website:4"
+      },
+      "iacInputData": {
+        "schemaType": "FORM_JSONSCHEMA",
+        "data": {
+          "shop_name": "StackGuardian",
+          "bucket_region": "eu-central-1"
+        }
+      }
+    },
+    "Approvers": [],
+    "TerraformConfig": {
+      "managedTerraformState": true,
+      "terraformVersion": "1.4.6"
+    },
+    "WfType": "TERRAFORM",
+    "UserSchedules": []
   })
 }
