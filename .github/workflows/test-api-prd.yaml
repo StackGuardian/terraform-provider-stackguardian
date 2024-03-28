@@ -1,0 +1,20 @@
+name: "Test API-PRD with TF-Provider"  # for API High-Load with examples on API-PRD
+
+on:
+  # NOTE: Uncomment if needed later
+  #push:
+  #  branches:
+  #    - main
+  #schedule:
+  #  - cron: '*/15 * 1-9,26-31 3,4 *'
+  workflow_dispatch:
+
+jobs:
+
+  api_test:
+    name: "Test API-PRD with TF-Provider"
+    uses: ./.github/workflows/test-api.yaml
+    secrets: inherit
+    with:
+      gitref: main
+      testenv: PRD
