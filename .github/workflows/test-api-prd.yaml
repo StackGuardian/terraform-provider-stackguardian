@@ -16,5 +16,5 @@ jobs:
     uses: ./.github/workflows/test-api.yaml
     secrets: inherit
     with:
-      gitref: main
+      gitref: devel  # FIXME(Release): Change to main after Backend release is deployed on PRD
       testenv: PRD
