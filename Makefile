@@ -33,10 +33,10 @@ test-acc:
 	TF_ACC=1 go test -parallel=1 $(TEST) -v $(TESTARGS) -timeout=15m
 
 test-examples-quickstart:
-	bash docs/guides/quickstart/test-quickstart.sh $(ARGS)
+	bash docs-guides-assets/quickstart/test-quickstart.sh $(ARGS)
 
 test-examples-onboarding:
-	bash examples/onboarding_team_example/project-test/test-onboarding.sh $(ARGS)
+	bash docs-guides-assets/onboarding/project-test/test-onboarding.sh $(ARGS)
 
 docs-generate:
 	tfplugindocs generate \
