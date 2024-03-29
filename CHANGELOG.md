@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.2.0] - Unreleased
+
+### Added
+
+- Resource and Data-Source for StackGuardian WorkflowGroup
+- Resource and Data-Source for StackGuardian Role
+- Resource and Data-Source for StackGuardian ConnectorCloud
+- Resource and Data-Source for StackGuardian ConnectorVcs
+- Resource and Data-Source for StackGuardian Secret
+- Tests for new Resources
+- Docs-Examples for new Resources
+- Onboarding-Examples with one simple scenario
+- API_URI as parameter to Provider
+- Docs generated from templates
+
+### Fixed
+
+- Quickstart Example Test with WF template on STG & PRD
+- WF-Group for quickstart Example
+- Unit Tests compatible with PRD & STG envs
+- connector_cloud temporarily disabled for Example in onboarding/project-test
+
+
 ## [0.1.0] - 2024-03-14
 
 - First GA Release on the Terraform Registry
