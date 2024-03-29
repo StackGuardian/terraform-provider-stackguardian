@@ -39,14 +39,11 @@ test-examples-onboarding:
 	bash examples/onboarding_team_example/project-test/test-onboarding.sh $(ARGS)
 
 docs-generate:
-	mv docs/guides docs_guides
-	tfplugindocs generate
-	mv docs_guides docs/guides
+	tfplugindocs generate \
+		--website-source-dir docs-templates
 
 docs-validate:
-	mv docs/guides docs_guides
 	tfplugindocs validate
-	mv docs_guides docs/guides
 
 tools-install:
 	cd tools; go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
