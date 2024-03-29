@@ -17,19 +17,19 @@ func Provider() *schema.Provider {
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("STACKGUARDIAN_API_URI", default_api_uri),
-				Description: "Api Uri to use as base for StackGuardian API",
+				Description: "Api Uri to set as prefix URL for StackGuardian API",
 			},
 			"org_name": {
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("STACKGUARDIAN_ORG_NAME", nil),
-				Description: "Organization Name created in STACKGUARDIAN",
+				Description: "Organization Name to use on StackGuardian API",
 			},
 			"api_key": {
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("STACKGUARDIAN_API_KEY", nil),
-				Description: "Api Key to Authenticate to StackGuardian API",
+				Description: "Api Key to authenticate on StackGuardian API",
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
