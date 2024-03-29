@@ -17,7 +17,7 @@ development environments, short-lived testing and staging environments, and long
 environment.
 
 
-## Software Project project-02 (TBC)
+## Software Project project-02 (WIP/TBC)
 - Typical Hierarchical structure: Two teams FE & BE, with one team manager & developers for each team.
 Additionally one DevOps role is cross-functional and contributes to both teams.
 - They release once every 2 weeks on Thursday, through staging and production environments.
@@ -28,6 +28,6 @@ development environments, short-lived testing and staging environments, and long
 environment.
 
 
-## Software Project project-03 (TBD)
+## Software Project project-03 (WIP/TBD)
 - Smallest Team possible: one single developer with a full-stack profile working on frontend, backend and devops tasks.
 - The developer needs access every resources but requires automation to clean cloud resources
