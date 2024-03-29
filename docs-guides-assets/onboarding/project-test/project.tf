@@ -319,7 +319,9 @@ resource "stackguardian_policy" "TPS-OBT-T000000" {
   })
 }
 
-//
+/*
+// Disabled because API returns "Request Timed-Out Error" (504)
+// Issue: https://www.notion.so/stackguardian/Bug-some-TF-resource-requests-are-failing-with-504-status-code-64d6ec02438b4475abd1d5807d9a6d74
 resource "stackguardian_connector_cloud" "TPS-OBT-T000000" {
   data = jsonencode({
     "ResourceName" : "TPS-OBT-T000000",
@@ -337,7 +339,7 @@ resource "stackguardian_connector_cloud" "TPS-OBT-T000000" {
     }
   })
 }
-//
+*/
 
 resource "stackguardian_connector_vcs" "TPS-OBT-T000000" {
   data = jsonencode({
