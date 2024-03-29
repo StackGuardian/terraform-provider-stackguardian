@@ -27,7 +27,7 @@ resource "stackguardian_connector_vcs" "TPS-Test-ConnectorVcs" {
 `
 
 func TestAcc_ResourceSgConnectorVcs(t *testing.T) {
-	//t.Skipf("TODO: Fix DELETE: deletion of ConnectorVcs resource is not possible with API Key")  // TODO: clean after check in PROD
+	// t.Skipf("FIXME(Release): Fix DELETE for deletion of ConnectorVcs resource which is not possible with API Key")  // FIXME(Release): clean after check in PROD
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,

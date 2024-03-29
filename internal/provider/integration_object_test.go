@@ -27,7 +27,7 @@ resource "stackguardian_integration" "TPS-Test-Integration" {
 `
 
 func TestAcc_ResourceSgIntegration(t *testing.T) {
-	t.Skipf("TODO: Fix DELETE: deletion of Integration resource is not possible with API Key")
+	// t.Skipf("FIXME(Release): Fix DELETE for deletion of Integration resource which is not possible with API Key")  // FIXME(Release): clean after check in PROD
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testAccProviders,
