@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-  # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request
   pull_request:
     branches:
       - 'main'
@@ -33,7 +32,7 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
-          terraform_version: '1.5.7' # TODO: matrix of terraform & tofu versions
+          terraform_version: '1.5.7'
 
       - name: "Build Provider"
         run: make build
