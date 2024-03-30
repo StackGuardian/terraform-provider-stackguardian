@@ -49,5 +49,6 @@ jobs:
         shell: bash
         env:
           STACKGUARDIAN_API_KEY: '${{ secrets.SG_STG_API_KEY }}'  # FIXME(Release): Revert to PRD
+          STACKGUARDIAN_API_URI: '${{ secrets.SG_STG_API_URI }}'  # FIXME(Release): Revert to PRD
           STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_STG_ORG_NAME }}'  # FIXME(Release): Revert to PRD
           GH_TOKEN: '${{ github.token }}'
