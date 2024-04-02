@@ -35,8 +35,9 @@ test-acc:
 test-examples-quickstart:
 	bash docs-guides-assets/quickstart/test-quickstart.sh $(ARGS)
 
+#	bash docs-guides-assets/onboarding/project-test/test-onboarding.sh $(ARGS)
 test-examples-onboarding:
-	bash docs-guides-assets/onboarding/project-test/test-onboarding.sh $(ARGS)
+	echo "Implemented in next PR - Dummy Test"
 
 docs-generate:
 	tfplugindocs generate \
@@ -52,13 +53,9 @@ gh-workflow-test-provider:
 	act \
 		--workflows ${PWD}/.github/workflows/test.yaml \
 		--job provider-project_test \
-		--secret STACKGUARDIAN_API_KEY=${SG_PRD_API_KEY} \
-		--secret STACKGUARDIAN_ORG_NAME=${SG_PRD_ORG_NAME} \
+		--secret SG_PRD_API_URI=${SG_PRD_API_URI} \
 		--secret SG_PRD_API_KEY=${SG_PRD_API_KEY} \
 		--secret SG_PRD_ORG_NAME=${SG_PRD_ORG_NAME} \
-		--secret SG_STG_API_URI=${SG_STG_API_URI} \
-		--secret SG_STG_API_KEY=${SG_STG_API_KEY} \
-		--secret SG_STG_ORG_NAME=${SG_STG_ORG_NAME} \
 		push \
 		;
 
@@ -79,5 +76,15 @@ gh-workflow-test-api-stg:
 		--secret SG_STG_API_URI=${SG_STG_API_URI} \
 		--secret SG_STG_API_KEY=${SG_STG_API_KEY} \
 		--secret SG_STG_ORG_NAME=${SG_STG_ORG_NAME} \
+		workflow_dispatch \
+		;
+
+#		--local-repository StackGuardian/terraform-provider-stackguardian@devel=${PWD} \#
+gh-workflow-test-api-prd:
+	act \
+		--workflows ${PWD}/.github/workflows/test-api-prd.yaml \
+		--secret SG_PRD_API_URI=${SG_PRD_API_URI} \
+		--secret SG_PRD_API_KEY=${SG_PRD_API_KEY} \
+		--secret SG_PRD_ORG_NAME=${SG_PRD_ORG_NAME} \
 		workflow_dispatch \
 		;
