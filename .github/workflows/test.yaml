@@ -40,9 +40,9 @@ jobs:
       - name: "Test Provider with acceptance tests"
         run: make test-acc
         env:
-          STACKGUARDIAN_API_URI: '${{ secrets.SG_STG_API_URI }}'  # FIXME(Release): Revert to PRD
-          STACKGUARDIAN_API_KEY: '${{ secrets.SG_STG_API_KEY }}'  # FIXME(Release): Revert to PRD
-          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_STG_ORG_NAME }}'  # FIXME(Release): Revert to PRD
+          STACKGUARDIAN_API_URI: '${{ secrets.SG_PRD_API_URI }}'
+          STACKGUARDIAN_API_KEY: '${{ secrets.SG_PRD_API_KEY }}'
+          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'
 
       - name: "Test Provider with quickstart example"
         run: |
@@ -51,9 +51,9 @@ jobs:
           make test-examples-quickstart ARGS="-f local-build";
         shell: bash
         env:
-          STACKGUARDIAN_API_KEY: '${{ secrets.SG_STG_API_KEY }}'  # FIXME(Release): Revert to PRD
-          STACKGUARDIAN_API_URI: '${{ secrets.SG_STG_API_URI }}'  # FIXME(Release): Revert to PRD
-          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_STG_ORG_NAME }}'  # FIXME(Release): Revert to PRD
+          STACKGUARDIAN_API_KEY: '${{ secrets.SG_PRD_API_KEY }}'
+          STACKGUARDIAN_API_URI: '${{ secrets.SG_PRD_API_URI }}'
+          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'
 
       - name: "Test Provider with onboarding example"
         run: |
@@ -62,9 +62,9 @@ jobs:
           make test-examples-onboarding ARGS="-f local-build";
         shell: bash
         env:
-          STACKGUARDIAN_API_KEY: '${{ secrets.SG_STG_API_KEY }}'  # FIXME(Release): Revert to PRD
-          STACKGUARDIAN_API_URI: '${{ secrets.SG_STG_API_URI }}'  # FIXME(Release): Revert to PRD
-          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_STG_ORG_NAME }}'  # FIXME(Release): Revert to PRD
+          STACKGUARDIAN_API_KEY: '${{ secrets.SG_PRD_API_KEY }}'
+          STACKGUARDIAN_API_URI: '${{ secrets.SG_PRD_API_URI }}'
+          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'
 
       - name: "Check Provider docs"
         run: |
