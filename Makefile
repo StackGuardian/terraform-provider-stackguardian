@@ -8,6 +8,13 @@ OS_ARCH=linux_amd64
 
 default: install
 
+clean: clean-examples
+
+clean-examples:
+	find examples/ -type d -name '.terraform' -exec rm -rv {} \+
+	find examples/ -type f -name '.terraform.lock.hcl' -exec rm -v {} \+
+	find examples/ -type f -regextype posix-extended -regex '.+.tfstate(.[[:digit:]]+)?(.backup)?' -exec rm -v {} \+
+
 build:
 	go build -o ${BINARY}
 
@@ -23,29 +30,61 @@ test:
 	echo $(TEST) | xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
 
 test-acc:
-	TF_ACC=1 STACKGUARDIAN_ORG_NAME=wicked-hop go test -parallel=1 $(TEST) -v $(TESTARGS) -timeout=15m
+	TF_ACC=1 go test -parallel=1 $(TEST) -v $(TESTARGS) -timeout=15m
 
-test-example:
-	bash docs/guides/quickstart/test-quickstart.sh $(ARGS)
+test-examples-quickstart:
+	bash docs-guides-assets/quickstart/test-quickstart.sh $(ARGS)
+
+#	bash docs-guides-assets/onboarding/project-test/test-onboarding.sh $(ARGS)
+test-examples-onboarding:
+	echo "Implemented in next PR - Dummy Test"
 
 docs-generate:
-	mv docs/guides docs_guides
-	tfplugindocs generate
-	mv docs_guides docs/guides
+	tfplugindocs generate \
+		--website-source-dir docs-templates
 
 docs-validate:
-	mv docs/guides docs_guides
 	tfplugindocs validate
-	mv docs_guides docs/guides
 
 tools-install:
 	cd tools; go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
 
-gh-workflow:
+gh-workflow-test-provider:
 	act \
 		--workflows ${PWD}/.github/workflows/test.yaml \
 		--job provider-project_test \
-		--secret STACKGUARDIAN_ORG_NAME=${STACKGUARDIAN_ORG_NAME} \
-		--secret STACKGUARDIAN_API_KEY=${STACKGUARDIAN_API_KEY} \
+		--secret SG_PRD_API_URI=${SG_PRD_API_URI} \
+		--secret SG_PRD_API_KEY=${SG_PRD_API_KEY} \
+		--secret SG_PRD_ORG_NAME=${SG_PRD_ORG_NAME} \
 		push \
+		;
+
+gh-workflow-test-provider-mock-stg-as-prd:
+	act \
+		--workflows ${PWD}/.github/workflows/test.yaml \
+		--job provider-project_test \
+		--secret SG_PRD_API_URI=${SG_STG_API_URI} \
+		--secret SG_PRD_API_KEY=${SG_STG_API_KEY} \
+		--secret SG_PRD_ORG_NAME=${SG_STG_ORG_NAME} \
+		push \
+		;
+
+#		--local-repository StackGuardian/terraform-provider-stackguardian@devel=${PWD} \#
+gh-workflow-test-api-stg:
+	act \
+		--workflows ${PWD}/.github/workflows/test-api-stg.yaml \
+		--secret SG_STG_API_URI=${SG_STG_API_URI} \
+		--secret SG_STG_API_KEY=${SG_STG_API_KEY} \
+		--secret SG_STG_ORG_NAME=${SG_STG_ORG_NAME} \
+		workflow_dispatch \
+		;
+
+#		--local-repository StackGuardian/terraform-provider-stackguardian@devel=${PWD} \#
+gh-workflow-test-api-prd:
+	act \
+		--workflows ${PWD}/.github/workflows/test-api-prd.yaml \
+		--secret SG_PRD_API_URI=${SG_PRD_API_URI} \
+		--secret SG_PRD_API_KEY=${SG_PRD_API_KEY} \
+		--secret SG_PRD_ORG_NAME=${SG_PRD_ORG_NAME} \
+		workflow_dispatch \
 		;

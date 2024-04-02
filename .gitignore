@@ -36,6 +36,8 @@ override.tf.json
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
+examples/**.png
+examples/**.dot
 
 # Terraform provider build files
 terraform-provider-stackguardian

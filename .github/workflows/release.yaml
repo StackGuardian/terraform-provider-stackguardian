@@ -38,16 +38,17 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
-          terraform_version: '1.5.7' # TODO: matrix of terraform & tofu versions
+          terraform_version: '1.5.7'
 
       - name: "Test Provider with quickstart example"
         run: |
           set -eu -x;
           TAG=${{ github.ref_name }};
           VERSION=${TAG#v};
-          make test-example ARGS="-v ${VERSION} -f github-release-draft";
+          make test-examples-quickstart ARGS="-v ${VERSION} -f github-release-draft";
         shell: bash
         env:
-          STACKGUARDIAN_API_KEY: ${{ secrets.STACKGUARDIAN_API_KEY }}
-          STACKGUARDIAN_ORG_NAME: ${{ secrets.STACKGUARDIAN_ORG_NAME }}
-          GH_TOKEN: ${{ github.token }}
+          STACKGUARDIAN_API_KEY: '${{ secrets.SG_PRD_API_KEY }}'
+          STACKGUARDIAN_API_URI: '${{ secrets.SG_PRD_API_URI }}'
+          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'
+          GH_TOKEN: '${{ github.token }}'

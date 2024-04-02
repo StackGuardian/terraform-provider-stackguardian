@@ -27,7 +27,7 @@ func resourceStackGuardianIntegrationAPI() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"data": {
 				Type:        schema.TypeString,
-				Description: "Valid JSON data that this provider will manage with the API server.",
+				Description: "Valid JSON data that this provider will manage with the API server. Please refer to the API Docs: https://docs.stackguardian.io/api#tag/Integrations",
 				Required:    true,
 				Sensitive:   is_data_sensitive,
 			},
@@ -78,7 +78,7 @@ func resourceStackGuardianIntegrationAPIImport(d *schema.ResourceData, meta inte
 	d.Set("data", fmt.Sprintf(`{ "id": "%s" }`, id))
 	d.SetId(id)
 
-	obj, err := make_api_object_stack(d, meta)
+	obj, err := make_api_object_integration(d, meta)
 	if err != nil {
 		return imported, err
 	}

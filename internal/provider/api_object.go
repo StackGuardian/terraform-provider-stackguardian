@@ -291,6 +291,62 @@ func (obj *api_object) read_object() error {
 	return err
 }
 
+func (obj *api_object) read_object_from_listall() error {
+	var err error
+	if obj.ResourceName == "" {
+		return errors.New("cannot read an object unless the ID has been set")
+	}
+
+	res_str, err := obj.api_client.send_request(obj.read_method, obj.get_path, "")
+	if err != nil {
+		if strings.Contains(err.Error(), "Unexpected response code '404'") {
+			log.Printf("api_object.go: 404 error while refreshing state for '%s' at path '%s'. Removing from state.", obj.ResourceName, obj.get_path)
+			obj.ResourceName = ""
+			return nil
+		}
+		return err
+	}
+
+	// NOTE: If another resource beyond Secret need to use the listall path for read purposes,
+	// a type switch deriving the resource type from the get_path shall be added here.
+
+	type secretListAllResponse struct {
+		Msg []struct {
+			ResourceName     string `json:"ResourceName"`
+			LastModifiedDate int    `json:"LastModifiedDate"`
+			Attributes       []struct {
+				Key   string `json:"Key"`
+				Value string `json:"Value"`
+			} `json:"Attributes"`
+		} `json:"msg"`
+	}
+
+	var secretListAllResponseRaw secretListAllResponse
+	err = json.Unmarshal([]byte(res_str), &secretListAllResponseRaw)
+	if err != nil {
+		msg := "failure to Unmarshal res_str"
+		log.Printf("ERROR: " + msg)
+		return fmt.Errorf("api_object.go: " + msg)
+	}
+
+	if secretListAllResponseRaw.Msg == nil {
+		log.Printf("api_object.go: resource not found: empty list of resource looking for '%s' at path '%s'; removing from state", obj.ResourceName, obj.get_path)
+		obj.ResourceName = ""
+		return nil
+	}
+	for _, secret := range secretListAllResponseRaw.Msg {
+		if secret.ResourceName == obj.ResourceName {
+			return nil
+		}
+	}
+
+	// err = obj.update_state(res_str)
+
+	log.Printf("api_object.go: resource not found: looking in list for '%s' at path '%s'; removing from state", obj.ResourceName, obj.get_path)
+	obj.ResourceName = ""
+	return fmt.Errorf("")
+}
+
 func (obj *api_object) update_object() error {
 	if obj.ResourceName == "" {
 		return errors.New("cannot update an object unless the ID has been set")

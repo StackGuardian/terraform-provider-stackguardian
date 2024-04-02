@@ -1,0 +1,16 @@
+name: "Test API-STG with TF-Provider"  # for API High-Load with examples on API-STG
+
+on:
+  schedule:
+    - cron: '*/10 * 1-10 4 *'
+  workflow_dispatch:
+
+jobs:
+
+  api_test:
+    name: "Test API-STG with TF-Provider"
+    uses: ./.github/workflows/test-api.yaml
+    secrets: inherit
+    with:
+      gitref: devel
+      testenv: STG
