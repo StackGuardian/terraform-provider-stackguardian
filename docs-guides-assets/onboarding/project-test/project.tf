@@ -21,12 +21,12 @@ resource "stackguardian_role" "TPS-OBT-Dv-T000000" {
     //"Description" : "Onboarding test of terraform-provider-stackguardian for Role Developer",
     "Tags" : ["tf-provider-test", "onboarding"],
     "Actions" : [
-      "wicked-hop",
+      "tps-test-01",
     ],
     "AllowedPermissions" : {
 
       // WF-GROUP
-      "GET/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/" : {
+      "GET/api/v1/orgs/tps-test-01/wfgrps/<wfGrp>/" : {
         "name" : "GetWorkflowGroup",
         "paths" : {
           "<wfGrp>" : [
@@ -38,7 +38,7 @@ resource "stackguardian_role" "TPS-OBT-Dv-T000000" {
       },
 
       // WF
-      "GET/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/" : {
+      "GET/api/v1/orgs/tps-test-01/wfgrps/<wfGrp>/wfs/<wf>/" : {
         "name" : "GetWorkflow",
         "paths" : {
           "<wfGrp>" : [
@@ -51,7 +51,7 @@ resource "stackguardian_role" "TPS-OBT-Dv-T000000" {
           ]
         }
       },
-      "POST/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/" : {
+      "POST/api/v1/orgs/tps-test-01/wfgrps/<wfGrp>/wfs/" : {
         "name" : "CreateWorkflow",
         "paths" : {
           "<wfGrp>" : [
@@ -61,7 +61,7 @@ resource "stackguardian_role" "TPS-OBT-Dv-T000000" {
           ]
         }
       },
-      "PATCH/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/" : {
+      "PATCH/api/v1/orgs/tps-test-01/wfgrps/<wfGrp>/wfs/<wf>/" : {
         "name" : "UpdateWorkflow",
         "paths" : {
           "<wfGrp>" : [
@@ -74,7 +74,7 @@ resource "stackguardian_role" "TPS-OBT-Dv-T000000" {
           ]
         }
       },
-      "DELETE/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/" : {
+      "DELETE/api/v1/orgs/tps-test-01/wfgrps/<wfGrp>/wfs/<wf>/" : {
         "name" : "DeleteWorkflow",
         "paths" : {
           "<wfGrp>" : [
@@ -89,7 +89,7 @@ resource "stackguardian_role" "TPS-OBT-Dv-T000000" {
       },
 
       // WF-RUN
-      "GET/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/" : {
+      "GET/api/v1/orgs/tps-test-01/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/" : {
         "name" : "GetWorkflowRun",
         "paths" : {
           "<wfRun>" : [
@@ -105,7 +105,7 @@ resource "stackguardian_role" "TPS-OBT-Dv-T000000" {
           ]
         }
       },
-      "POST/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/wfruns/" : {
+      "POST/api/v1/orgs/tps-test-01/wfgrps/<wfGrp>/wfs/<wf>/wfruns/" : {
         "name" : "CreateWorkflowRun",
         "paths" : {
           "<wfGrp>" : [
@@ -118,7 +118,7 @@ resource "stackguardian_role" "TPS-OBT-Dv-T000000" {
           ]
         }
       },
-      "DELETE/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/" : {
+      "DELETE/api/v1/orgs/tps-test-01/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/" : {
         "name" : "UpdateWorkflowRun",
         "paths" : {
           "<wfRun>" : [
@@ -134,7 +134,7 @@ resource "stackguardian_role" "TPS-OBT-Dv-T000000" {
           ]
         }
       },
-      "POST/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/resume/" : {
+      "POST/api/v1/orgs/tps-test-01/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/resume/" : {
         "name" : "ResumeWorkflowRun",
         "paths" : {
           "<wfRun>" : [
@@ -150,7 +150,7 @@ resource "stackguardian_role" "TPS-OBT-Dv-T000000" {
           ]
         }
       },
-      "GET/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/logs/" : {
+      "GET/api/v1/orgs/tps-test-01/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/logs/" : {
         "name" : "GetWorkflowRunLogs",
         "paths" : {
           "<wfRun>" : [
@@ -168,7 +168,7 @@ resource "stackguardian_role" "TPS-OBT-Dv-T000000" {
       },
 
       // WF-RUN-FACTS
-      "GET/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/wfrunfacts/<wfRunFacts>/" : {
+      "GET/api/v1/orgs/tps-test-01/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/wfrunfacts/<wfRunFacts>/" : {
         "name" : "GetWorkflowRunFact",
         "paths" : {
           "<wfGrp>" : [
@@ -189,7 +189,7 @@ resource "stackguardian_role" "TPS-OBT-Dv-T000000" {
       },
 
       // WF-ARTIFACTS
-      "GET/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/listall_artifacts/" : {
+      "GET/api/v1/orgs/tps-test-01/wfgrps/<wfGrp>/wfs/<wf>/listall_artifacts/" : {
         "name" : "ListWorkflowArtifacts",
         "paths" : {
           "<wfGrp>" : [
@@ -204,7 +204,7 @@ resource "stackguardian_role" "TPS-OBT-Dv-T000000" {
       },
 
       // WF-OUTPUTS
-      "GET/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/outputs/" : {
+      "GET/api/v1/orgs/tps-test-01/wfgrps/<wfGrp>/wfs/<wf>/outputs/" : {
         "name" : "GetWorkflowOutputs",
         "paths" : {
           "<wfGrp>" : [
@@ -219,13 +219,13 @@ resource "stackguardian_role" "TPS-OBT-Dv-T000000" {
       },
 
       // AUDIT
-      "GET/api/v1/orgs/wicked-hop/audit_logs/" : {
+      "GET/api/v1/orgs/tps-test-01/audit_logs/" : {
         "name" : "GetAuditLogs",
         "paths" : {}
       },
 
       // POLICY
-      "GET/api/v1/orgs/wicked-hop/policies/<policy>/" : {
+      "GET/api/v1/orgs/tps-test-01/policies/<policy>/" : {
         "name" : "GetPolicy",
         "paths" : {
           "<policy>" : [
@@ -235,25 +235,25 @@ resource "stackguardian_role" "TPS-OBT-Dv-T000000" {
       }
 
       // SECRET
-      "GET/api/v1/orgs/wicked-hop/secrets/listall/" : {
+      "GET/api/v1/orgs/tps-test-01/secrets/listall/" : {
         "name" : "ListSecrets",
         "paths" : {}
       },
-      "POST/api/v1/orgs/wicked-hop/secrets/" : {
+      "POST/api/v1/orgs/tps-test-01/secrets/" : {
         "name" : "CreateSecret",
         "paths" : {}
       },
-      "PATCH/api/v1/orgs/wicked-hop/secrets/<secret>/" : {
+      "PATCH/api/v1/orgs/tps-test-01/secrets/<secret>/" : {
         "name" : "UpdateSecret",
         "paths" : {}
       },
-      "DELETE/api/v1/orgs/wicked-hop/secrets/<secret>/" : {
+      "DELETE/api/v1/orgs/tps-test-01/secrets/<secret>/" : {
         "name" : "DeleteSecret",
         "paths" : {}
       },
 
       // INTEGRATION
-      "GET/api/v1/orgs/wicked-hop/integrationgroups/<integrationgroup>/" : {
+      "GET/api/v1/orgs/tps-test-01/integrationgroups/<integrationgroup>/" : {
         "name" : "GetIntegrationGroup",
         "paths" : {
           "<integrationgroup>" : [
@@ -261,7 +261,7 @@ resource "stackguardian_role" "TPS-OBT-Dv-T000000" {
           ]
         }
       },
-      "GET/api/v1/orgs/wicked-hop/integrationgroups/<integrationgroup>/integrations/<integration>/" : {
+      "GET/api/v1/orgs/tps-test-01/integrationgroups/<integrationgroup>/integrations/<integration>/" : {
         "name" : "GetIntegrationGroupChild",
         "paths" : {
           "<integration>" : [
