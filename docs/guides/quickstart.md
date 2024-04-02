@@ -4,15 +4,16 @@ subcategory: "" # Quickstart
 ---
 
 
-# Quickstart Instructions for the StackGuardian Provider
+# Quickstart Instructions
 
 Those quickstart instructions lets you setup a new IaC project with the Terraform Provider for StackGuardian.
 
 
 ## Provider Installation
 
-_For now, the StackGuardian Provider is not available on the Terraform Registry,
-so it is necessary to add it manually on your system to be able to use it in your IaC Terraform project._
+
+<!--- TODO: offer quickstart with registry and with local/github release --->
+
 
 A platform label, with an OS name and an architecture name, matching the system platform where you will run the terraform provider on, must be selected from the start. <br/>
 Please select one among the following options:
