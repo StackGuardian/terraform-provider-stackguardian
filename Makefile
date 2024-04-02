@@ -35,9 +35,8 @@ test-acc:
 test-examples-quickstart:
 	bash docs-guides-assets/quickstart/test-quickstart.sh $(ARGS)
 
-#	bash docs-guides-assets/onboarding/project-test/test-onboarding.sh $(ARGS)
 test-examples-onboarding:
-	echo "Implemented in next PR - Dummy Test"
+	bash docs-guides-assets/onboarding/project-test/test-onboarding.sh $(ARGS)
 
 docs-generate:
 	tfplugindocs generate \
