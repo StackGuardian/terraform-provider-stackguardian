@@ -16,7 +16,7 @@ The [StackGuardian Terraform Provider](https://github.com/StackGuardian/terrafor
 
 The **reference documentation** of the Provider releases is available on the [Terraform Registry](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs)
 
-A **quickstart step-by-step guide** can be found on the Terraform Registry or in this [repository](docs/guides/quickstart/quickstart.md).
+A **quickstart step-by-step guide** can be found on the Terraform Registry or in this [repository](docs/guides/quickstart.md).
 
 
 ## Contributing
