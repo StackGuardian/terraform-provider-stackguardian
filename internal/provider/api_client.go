@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -38,7 +39,12 @@ func NewAPIClient(opt *apiClientOpt) (*api_client, error) {
 	if opt.api_uri == "" {
 		return nil, errors.New("uri must be set to construct an API client")
 	} else {
-		opt.api_uri = opt.api_uri + "orgs/" + opt.org_name + "/"
+		uri, err := url.JoinPath(opt.api_uri, "orgs", opt.org_name)
+		if err != nil {
+			return nil, err
+		}
+
+		opt.api_uri = uri
 	}
 
 	/* Sane default */
@@ -96,9 +102,13 @@ Helper function that handles sending/receiving and handling
 	of HTTP data in and out.
 */
 func (client *api_client) send_request(method string, path string, data string) (string, error) {
-	full_uri := client.api_uri + path
 	var req *http.Request
 	var err error
+
+	full_uri, err := url.JoinPath(client.api_uri, path)
+	if err != nil {
+		return "", err
+	}
 
 	if true {
 		log.Printf("api_client.go: method='%s', path='%s', full uri (derived)='%s', data='%s'\n", method, path, full_uri, data)
