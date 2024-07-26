@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -8,28 +9,23 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-const default_api_uri = "https://api.app.stackguardian.io/api/v1/"
-
 func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"api_uri": {
 				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc("STACKGUARDIAN_API_URI", default_api_uri),
-				Description: "Api Uri to set as prefix URL for StackGuardian API",
+				Optional:    true,
+				Description: "Api Uri to set as prefix URL for StackGuardian API. Required if not using environment variable STACKGUARDIAN_API_URI",
 			},
 			"org_name": {
 				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc("STACKGUARDIAN_ORG_NAME", nil),
-				Description: "Organization Name to use on StackGuardian API",
+				Optional:    true,
+				Description: "Organization Name to use on StackGuardian API. Required if not using environment variable STACKGUARDIAN_API_KEY",
 			},
 			"api_key": {
 				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc("STACKGUARDIAN_API_KEY", nil),
-				Description: "Api Key to authenticate on StackGuardian API",
+				Optional:    true,
+				Description: "Api Key to authenticate on StackGuardian API. Required if not using environment variable STACKGUARDIAN_ORG_NAME",
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
@@ -60,11 +56,30 @@ func Provider() *schema.Provider {
 }
 
 func configureProvider(d *schema.ResourceData) (interface{}, error) {
+
+	// Fetch backend api key from provider block, or the environment. If not found
+	// return an error
+	providerFieldsValue := map[string]string{}
+
+	for providerField, envVar := range map[string]string{
+		"api_uri":  "STACKGUARDIAN_API_URI",
+		"api_key":  "STACKGUARDIAN_API_KEY",
+		"org_name": "STACKGUARDIAN_ORG_NAME"} {
+
+		if d.Get(providerField).(string) != "" {
+			providerFieldsValue[providerField] = d.Get(providerField).(string)
+		} else if os.Getenv(envVar) != "" {
+			providerFieldsValue[providerField] = os.Getenv(envVar)
+		} else {
+			return nil, fmt.Errorf("define %s in the provider block or %s environment variable", providerField, envVar)
+		}
+	}
+
 	opt := &apiClientOpt{
-		api_uri:  d.Get("api_uri").(string),
-		org_name: d.Get("org_name").(string),
+		api_uri:  providerFieldsValue["api_uri"],
+		org_name: providerFieldsValue["org_name"],
 		headers: map[string]string{
-			"Authorization": "apikey " + d.Get("api_key").(string),
+			"Authorization": "apikey " + providerFieldsValue["api_key"],
 		},
 		id_attribute: "ResourceName",
 	}
