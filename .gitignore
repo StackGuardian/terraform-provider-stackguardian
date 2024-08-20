@@ -42,7 +42,6 @@ examples/**.dot
 # Terraform provider build files
 terraform-provider-stackguardian
 
-
 ### Go ###
 dist
 

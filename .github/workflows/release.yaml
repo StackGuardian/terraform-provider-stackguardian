@@ -18,7 +18,7 @@ jobs:
   provider-release_build:
     name: "Build Release of the Provider"
     needs: provider-release_pre-test
-    uses: hashicorp/ghaction-terraform-provider-release/.github/workflows/community.yml@v3
+    uses: ./.github/workflows/community.yml
     secrets:
       gpg-private-key: '${{ secrets.GPG_PRIVATE_KEY }}'
     with:
