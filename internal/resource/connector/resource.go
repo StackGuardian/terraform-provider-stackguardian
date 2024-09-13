@@ -90,10 +90,10 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	// Get refreshed state from client
-	connector, err := r.client.Connectors.ReadConnector(ctx, state.Name.ValueString(), state.Organization.ValueString())
+	connector, err := r.client.Connectors.ReadConnector(ctx, state.ResourceName.ValueString(), state.Organization.ValueString())
 	if err != nil {
 		tflog.Error(ctx, err.Error())
-		resp.Diagnostics.AddError("Error reading connector", "Could not read connector "+state.Name.ValueString()+": "+err.Error())
+		resp.Diagnostics.AddError("Error reading connector", "Could not read connector "+state.ResourceName.ValueString()+": "+err.Error())
 		return
 	}
 

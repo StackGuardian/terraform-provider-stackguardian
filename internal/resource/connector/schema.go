@@ -14,24 +14,20 @@ import (
 func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"organization": schema.StringAttribute{
+				Required: true,
+			},
 			"resource_name": schema.StringAttribute{
 				Required: true,
 			},
 			"description": schema.StringAttribute{
-				Required: true,
+				Optional: true,
 			},
-			"settings": schema.MapNestedAttribute{
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"config": schema.StringAttribute{
-							Required: true,
-						},
-						"kind": schema.StringAttribute{
-							Required: true,
-							// TODO: Add validator for kind here
-						},
-					},
-				},
+			"settings": schema.MapAttribute{
+				Required:    true,
+				ElementType: types.StringType,
+				//TODO: replace xyz with api docs
+				Description: "Kind and Config keys are required. Refer documentation at xyz",
 			},
 			"discovery_settings": schema.MapNestedAttribute{
 				Optional: true,

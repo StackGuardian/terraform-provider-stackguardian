@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 )
 
-const version = "0.0.1"
+const Version = "0.0.1"
 
 func main() {
 	var debug bool
@@ -27,7 +27,7 @@ func main() {
 		Debug:   debug,
 	}
 
-	err := providerserver.Serve(context.Background(), provider.New(version), opts)
+	err := providerserver.Serve(context.Background(), provider.New(Version), opts)
 
 	if err != nil {
 		log.Fatal(err.Error())
