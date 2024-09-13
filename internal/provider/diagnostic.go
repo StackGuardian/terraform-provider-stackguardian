@@ -1,0 +1,5 @@
+package provider
+
+func CreateDiagnostic() {
+
+}
