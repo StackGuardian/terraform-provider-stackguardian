@@ -7,7 +7,9 @@ import (
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	sgoption "github.com/StackGuardian/sg-sdk-go/option"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/connector"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflowGroups"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -40,9 +42,9 @@ type stackguardianProvider struct {
 }
 
 type stackguardianProviderModel struct {
-	api_uri  types.String `tfsdk:"api_key"`
-	org_name types.String `tfsdk:"org_name"`
-	api_key  types.String `tfsdk:"api_key"`
+	Api_key  types.String `tfsdk:"api_key"`
+	Api_uri  types.String `tfsdk:"api_uri"`
+	Org_name types.String `tfsdk:"org_name"`
 }
 
 // Metadata returns the provider type name.
@@ -83,7 +85,7 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 		return
 	}
 
-	if config.org_name.IsUnknown() {
+	if config.Org_name.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("org_name"),
 			"Unknown Stackguardian Organization Name",
@@ -92,7 +94,7 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 		)
 	}
 
-	if config.api_key.IsUnknown() {
+	if config.Api_key.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("api_key"),
 			"Unknown Stackguardian API Key",
@@ -101,7 +103,7 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 		)
 	}
 
-	if config.api_uri.IsUnknown() {
+	if config.Api_uri.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("api_uri"),
 			"Unknown Stackguardian API URI",
@@ -120,16 +122,16 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 
 	// Default values to environment variables, but override
 	// with Terraform configuration value if set.
-	if !config.org_name.IsNull() {
-		org_name = config.org_name.ValueString()
+	if !config.Org_name.IsNull() {
+		org_name = config.Org_name.ValueString()
 	}
 
-	if !config.api_key.IsNull() {
-		api_key = config.api_key.ValueString()
+	if !config.Api_key.IsNull() {
+		api_key = config.Api_key.ValueString()
 	}
 
-	if !config.api_uri.IsNull() {
-		api_uri = config.api_uri.String()
+	if !config.Api_uri.IsNull() {
+		api_uri = config.Api_uri.ValueString()
 	}
 
 	// If any of the expected configurations are missing, return
@@ -160,13 +162,18 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 	}
 
 	client := sgclient.NewClient(
-		sgoption.WithApiKey(api_key),
+		sgoption.WithApiKey("apikey "+api_key),
 		sgoption.WithBaseURL(api_uri),
 	)
+	//Set the values in our struct
+	provInfo := customTypes.ProviderInfo{
+		Org_name: org_name,
+		Client:   client,
+	}
 	// Make the HashiCups client available during DataSource and Resource
 	// type Configure methods.
-	resp.DataSourceData = client
-	resp.ResourceData = client
+	resp.DataSourceData = &provInfo
+	resp.ResourceData = &provInfo
 
 	// Create a new client using the API key and base URL
 	tflog.Debug(ctx, fmt.Sprintf("Organization: %s", org_name))
@@ -187,5 +194,6 @@ func (p *stackguardianProvider) DataSources(_ context.Context) []func() datasour
 func (p *stackguardianProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		connector.NewResource,
+		workflowGroups.NewResource,
 	}
 }
