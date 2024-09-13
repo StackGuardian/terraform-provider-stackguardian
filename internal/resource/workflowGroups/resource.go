@@ -37,7 +37,7 @@ func (r *workflowGroupResource) Configure(_ context.Context, req resource.Config
 		return
 	}
 
-	client, ok := req.ProviderData.(*customTypes.ProviderInfo)
+	provider, ok := req.ProviderData.(*customTypes.ProviderInfo)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -48,8 +48,8 @@ func (r *workflowGroupResource) Configure(_ context.Context, req resource.Config
 		return
 	}
 
-	r.client = client.Client
-	r.org_name = client.Org_name
+	r.client = provider.Client
+	r.org_name = provider.Org_name
 }
 
 // Create creates the resource and sets the initial Terraform state.

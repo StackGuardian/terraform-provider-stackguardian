@@ -25,3 +25,11 @@ func String(in string) basetypes.StringValue {
 	}
 	return types.StringValue(in)
 }
+
+func StringPtr(in *string) basetypes.StringValue {
+	str := *in
+	if str == "" {
+		return types.StringNull()
+	}
+	return types.StringValue(str)
+}
