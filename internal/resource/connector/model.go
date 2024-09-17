@@ -15,7 +15,6 @@ import (
 )
 
 type ConnectorResourceModel struct {
-<<<<<<< HEAD
 	Organization      types.String `tfsdk:"organization"`
 	ResourceName      types.String `tfsdk:"resource_name"`
 	Description       types.String `tfsdk:"description"`
@@ -28,15 +27,6 @@ type ConnectorResourceModel struct {
 type ConnectorSettingsModel struct {
 	Kind   types.String `tfsdk:"kind"`
 	Config types.String `tfsdk:"config"`
-=======
-	Organization      types.String       `tfsdk:"organization"`
-	ResourceName      types.String       `tfsdk:"resource_name"`
-	Description       types.String       `tfsdk:"description"`
-	Settings          types.Map          `tfsdk:"settings"`
-	DiscoverySettings *DiscoverySettings `tfsdk:"discovery_settings"`
-	IsActive          types.String       `tfsdk:"is_active"`
-	Scope             types.List         `tfsdk:"scope"`
->>>>>>> 44075f5 (Initial commit for terraform plugin framework)
 }
 
 func (ConnectorSettingsModel) AttributeTypes() map[string]attr.Type {
@@ -123,7 +113,6 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 	}
 
 	// Set kind and config in Settings
-<<<<<<< HEAD
 	var settingsModelValue *ConnectorSettingsModel
 	diags := m.Settings.As(context.Background(), &settingsModelValue, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
 	if diags.HasError() {
@@ -136,32 +125,10 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 
 	var settingsConfig []map[string]interface{}
 	err := json.Unmarshal([]byte(settingsModelValue.Config.ValueString()), &settingsConfig)
-=======
-	apiSettigns := sgsdkgo.Settings{}
-
-	settings := make(map[string]types.String, len(m.Settings.Elements()))
-	diags := m.Settings.ElementsAs(ctx, &settings, false)
-	if diags.HasError() {
-		tflog.Debug(ctx, "Connector kind not found")
-		return nil, diags
-	}
-	kindValue := settings["kind"]
-	if !kindValue.IsNull() {
-		kind, err := sgsdkgo.NewSettingsKindEnumFromString(kindValue.ValueString())
-		if err != nil {
-			return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Cannot parse api response", "Error while parsing settings kind: "+err.Error())}
-		}
-		apiSettigns.Kind = kind
-	}
-
-	var settingsConfig []map[string]interface{}
-	err := json.Unmarshal([]byte(*settings["config"].ValueStringPointer()), &settingsConfig)
->>>>>>> 44075f5 (Initial commit for terraform plugin framework)
 	if err != nil {
 		tflog.Debug(ctx, err.Error())
 		return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Invalid attribute", "Settings.Config is invalid")}
 	}
-<<<<<<< HEAD
 	settings.Config = settingsConfig
 	apiModel.Settings = settings
 
@@ -263,37 +230,6 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 		discoverySettingsAPIModel.Benchmarks = benchmarksAPIModel
 
 		apiModel.DiscoverySettings = discoverySettingsAPIModel
-=======
-	apiSettigns.Config = settingsConfig
-
-	apiModel.Settings = &apiSettigns
-
-	// Convert discovery settings
-	if m.DiscoverySettings != nil {
-		if !m.DiscoverySettings.DiscoveryInterval.IsNull() {
-			apiModel.DiscoverySettings = &sgsdkgo.Discoverysettings{
-				DiscoveryInterval: m.DiscoverySettings.DiscoveryInterval.ValueFloat64(),
-			}
-		}
-
-		var regions []*sgsdkgo.DiscoverySettingsRegions
-		for _, region := range m.DiscoverySettings.Regions {
-			regions = append(regions, &sgsdkgo.DiscoverySettingsRegions{Region: region.region.ValueString()})
-		}
-		apiModel.DiscoverySettings.Regions = regions
-
-		var benchmarks map[string]interface{}
-		err = json.Unmarshal([]byte(m.DiscoverySettings.Benchmarks.ValueString()), &benchmarks)
-		if err != nil {
-			tflog.Debug(ctx, err.Error())
-			diag.NewErrorDiagnostic("Invalid DiscoverySettings", "Error decoding json for benchmarks")
-		}
-	}
-
-	// Set isActive
-	if !m.IsActive.IsNull() {
-		apiModel.IsActive = (*sgsdkgo.IsArchiveEnum)(m.IsActive.ValueStringPointer())
->>>>>>> 44075f5 (Initial commit for terraform plugin framework)
 	}
 
 	// Parse Scope
@@ -318,14 +254,7 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 	connectorModel := &ConnectorResourceModel{
 		ResourceName: flatteners.String(apiResponse.ResourceName),
 		Description:  flatteners.String(apiResponse.Description),
-<<<<<<< HEAD
 		IsActive:     flatteners.String(apiResponse.IsActive),
-=======
-		DiscoverySettings: &DiscoverySettings{
-			DiscoveryInterval: flatteners.Float64(apiResponse.DiscoverySettings.DiscoveryInterval),
-		},
-		IsActive: flatteners.String(apiResponse.IsActive),
->>>>>>> 44075f5 (Initial commit for terraform plugin framework)
 	}
 	org := strings.Split(apiResponse.OrgId, "/")[2]
 	connectorModel.Organization = flatteners.String(org)
@@ -335,7 +264,6 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 	if err != nil {
 		return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Unmarshal error", "Cannot unmarhsal Connector.Settings.Config object in response from sdk")}
 	}
-<<<<<<< HEAD
 	connectorSettingsModel := ConnectorSettingsModel{
 		Kind:   flatteners.String(apiResponse.Settings.Kind),
 		Config: flatteners.String(string(settingsConfig)),
@@ -343,29 +271,6 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 	var settings, diags = types.ObjectValueFrom(context.Background(), connectorSettingsModel.AttributeTypes(), connectorSettingsModel)
 	if diags.HasError() {
 		return nil, diags
-=======
-	config := string(settingsConfig)
-	settings["config"] = &config
-	settings["kind"] = &apiResponse.Settings.Kind
-	settingsModel, diags := types.MapValueFrom(context.Background(), types.StringType, &settings)
-	if diags.HasError() {
-		return nil, diags
-	}
-	connectorModel.Settings = settingsModel
-
-	// Discovery Settings
-	var regions []Region
-	if apiResponse.DiscoverySettings.Regions != nil {
-		for _, r := range apiResponse.DiscoverySettings.Regions {
-			regions = append(regions, Region{region: flatteners.String(r.Region)})
-		}
-		connectorModel.DiscoverySettings.Regions = regions
-	}
-
-	benchmarks, err := json.Marshal(apiResponse.DiscoverySettings.Benchmarks)
-	if err != nil {
-		return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Unmarshal error", "Cannot unmarhsal Connector.DiscoverySettings.Benchmarks object in response from sdk")}
->>>>>>> 44075f5 (Initial commit for terraform plugin framework)
 	}
 	connectorModel.Settings = settings
 
