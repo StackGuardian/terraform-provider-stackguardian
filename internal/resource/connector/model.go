@@ -6,32 +6,65 @@ import (
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	flatteners "github.com/StackGuardian/terraform-provider-stackguardian/internal/flattners"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 type ConnectorResourceModel struct {
-	Organization      types.String       `tfsdk:"organization"`
-	ResourceName      types.String       `tfsdk:"resource_name"`
-	Description       types.String       `tfsdk:"description"`
-	Settings          types.Map          `tfsdk:"settings"`
-	DiscoverySettings *DiscoverySettings `tfsdk:"discovery_settings"`
-	IsActive          types.String       `tfsdk:"is_active"`
-	Scope             types.List         `tfsdk:"scope"`
+	Organization      types.String `tfsdk:"organization"`
+	ResourceName      types.String `tfsdk:"resource_name"`
+	Description       types.String `tfsdk:"description"`
+	Settings          types.Object `tfsdk:"settings"`
+	DiscoverySettings types.Object `tfsdk:"discovery_settings"`
+	IsActive          types.String `tfsdk:"is_active"`
+	Scope             types.List   `tfsdk:"scope"`
 }
 
-type DiscoverySettings struct {
+type ConnectorSettingsModel struct {
+	Kind   types.String `tfsdk:"kind"`
+	Config types.String `tfsdk:"config"`
+}
+
+func (ConnectorSettingsModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"kind":   types.StringType,
+		"config": types.StringType,
+	}
+}
+
+type ConnectorDiscoverySettingsModel struct {
 	DiscoveryInterval types.Float64 `tfsdk:"discovery_interval"`
 
 	// Convert to []Region
-	Regions []Region `tfsdk:"regions"`
+	Regions types.List `tfsdk:"regions"`
 
 	// Convert to map[string]interface{}
-	Benchmarks types.String `tfsdk:"benchmarks"`
+	//Benchmarks types.Map `tfsdk:"benchmarks"`
 }
-type Region struct {
-	region types.String `tfsdk:"region"`
+
+type ConnectorDiscoverySettingsRegionModel struct {
+	Region types.String `tfsdk:"region"`
+}
+
+type ConnectorDiscoverySettingsBenchmarksModel struct {
+	Active             types.String `tfsdk:"active"`
+	Description        types.String `tfsdk:"description"`
+	Label              types.String `tfsdk:"label"`
+	Runtime_source     types.String `tfsdk:"runtime_source"`
+	SummaryDescription types.String `tfsdk:"summary_description"`
+	SummaryTitle       types.String `tfsdk:"summary_title"`
+	DiscoveryInterval  types.String `tfsdk:"discovery_interval"`
+	LastDiscoveryTime  types.String `tfsdk:"last_discovery_time"`
+	IsCustomCheck      types.Bool   `tfsdk:"is_custom_check"`
+	Checks             types.List   `tfsdk:"checks"`
+	Regions            types.Map    `tfsdk:"regions"`
+}
+
+type ConnectorDiscoverySettingsBenchmarksRegionsModel struct {
+	Emails types.String `tfsdk:"emails"`
 }
 
 func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integration, diag.Diagnostics) {
@@ -41,58 +74,49 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 	}
 
 	// Set kind and config in Settings
-	apiSettigns := sgsdkgo.Settings{}
-
-	settings := make(map[string]types.String, len(m.Settings.Elements()))
-	diags := m.Settings.ElementsAs(ctx, &settings, false)
+	var settingsModelValue *ConnectorSettingsModel
+	diags := m.Settings.As(context.Background(), &settingsModelValue, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
 	if diags.HasError() {
-		tflog.Debug(ctx, "Connector kind not found")
 		return nil, diags
 	}
-	kindValue := settings["kind"]
-	if !kindValue.IsNull() {
-		kind, err := sgsdkgo.NewSettingsKindEnumFromString(kindValue.ValueString())
-		if err != nil {
-			return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Cannot parse api response", "Error while parsing settings kind: "+err.Error())}
-		}
-		apiSettigns.Kind = kind
+
+	settings := &sgsdkgo.Settings{
+		Kind: sgsdkgo.SettingsKindEnum(settingsModelValue.Kind.ValueString()),
 	}
 
 	var settingsConfig []map[string]interface{}
-	err := json.Unmarshal([]byte(*settings["config"].ValueStringPointer()), &settingsConfig)
+	err := json.Unmarshal([]byte(settingsModelValue.Config.ValueString()), &settingsConfig)
 	if err != nil {
 		tflog.Debug(ctx, err.Error())
 		return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Invalid attribute", "Settings.Config is invalid")}
 	}
-	apiSettigns.Config = settingsConfig
-
-	apiModel.Settings = &apiSettigns
+	settings.Config = settingsConfig
+	apiModel.Settings = settings
 
 	// Convert discovery settings
-	if m.DiscoverySettings != nil {
-		if !m.DiscoverySettings.DiscoveryInterval.IsNull() {
-			apiModel.DiscoverySettings = &sgsdkgo.Discoverysettings{
-				DiscoveryInterval: m.DiscoverySettings.DiscoveryInterval.ValueFloat64(),
+	discoverySettingsAPIModel := &sgsdkgo.Discoverysettings{}
+	var discoverySettingsModel *ConnectorDiscoverySettingsModel
+	if !m.DiscoverySettings.IsNull() {
+		diags := m.DiscoverySettings.As(context.Background(), &discoverySettingsModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
+		if diags.HasError() {
+			return nil, diags
+		}
+		discoverySettingsAPIModel.DiscoveryInterval = discoverySettingsModel.DiscoveryInterval.ValueFloat64()
+
+		var regionsModel []*ConnectorDiscoverySettingsRegionModel
+		if !discoverySettingsModel.Regions.IsNull() {
+			diags = discoverySettingsModel.Regions.ElementsAs(context.Background(), &regionsModel, false)
+			if diags.HasError() {
+				return nil, diags
 			}
 		}
-
-		var regions []*sgsdkgo.DiscoverySettingsRegions
-		for _, region := range m.DiscoverySettings.Regions {
-			regions = append(regions, &sgsdkgo.DiscoverySettingsRegions{Region: region.region.ValueString()})
+		regions := []*sgsdkgo.DiscoverySettingsRegions{}
+		for _, region := range regionsModel {
+			regions = append(regions, &sgsdkgo.DiscoverySettingsRegions{Region: region.Region.ValueString()})
 		}
-		apiModel.DiscoverySettings.Regions = regions
+		discoverySettingsAPIModel.Regions = regions
 
-		var benchmarks map[string]interface{}
-		err = json.Unmarshal([]byte(m.DiscoverySettings.Benchmarks.ValueString()), &benchmarks)
-		if err != nil {
-			tflog.Debug(ctx, err.Error())
-			diag.NewErrorDiagnostic("Invalid DiscoverySettings", "Error decoding json for benchmarks")
-		}
-	}
-
-	// Set isActive
-	if !m.IsActive.IsNull() {
-		apiModel.IsActive = (*sgsdkgo.IsArchiveEnum)(m.IsActive.ValueStringPointer())
+		apiModel.DiscoverySettings = discoverySettingsAPIModel
 	}
 
 	return &apiModel, nil
@@ -103,40 +127,37 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 		Organization: flatteners.String(apiResponse.OrgId),
 		ResourceName: flatteners.String(apiResponse.ResourceName),
 		Description:  flatteners.String(apiResponse.Description),
-		DiscoverySettings: &DiscoverySettings{
-			DiscoveryInterval: flatteners.Float64(apiResponse.DiscoverySettings.DiscoveryInterval),
-		},
-		IsActive: flatteners.String(apiResponse.IsActive),
+		IsActive:     flatteners.String(apiResponse.IsActive),
 	}
 
-	settings := map[string]*string{}
 	settingsConfig, err := json.Marshal(apiResponse.Settings.Config)
 	if err != nil {
 		return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Unmarshal error", "Cannot unmarhsal Connector.Settings.Config object in response from sdk")}
 	}
-	config := string(settingsConfig)
-	settings["config"] = &config
-	settings["kind"] = &apiResponse.Settings.Kind
-	settingsModel, diags := types.MapValueFrom(context.Background(), types.StringType, &settings)
+	connectorSettingsModel := ConnectorSettingsModel{
+		Kind:   flatteners.String(apiResponse.Settings.Kind),
+		Config: flatteners.String(string(settingsConfig)),
+	}
+	var settings, diags = types.ObjectValueFrom(context.Background(), connectorSettingsModel.AttributeTypes(), connectorSettingsModel)
 	if diags.HasError() {
 		return nil, diags
 	}
-	connectorModel.Settings = settingsModel
+	connectorModel.Settings = settings
 
 	// Discovery Settings
-	var regions []Region
-	if apiResponse.DiscoverySettings.Regions != nil {
-		for _, r := range apiResponse.DiscoverySettings.Regions {
-			regions = append(regions, Region{region: flatteners.String(r.Region)})
-		}
-		connectorModel.DiscoverySettings.Regions = regions
-	}
+	//var regions []Region
+	//if apiResponse.DiscoverySettings.Regions != nil {
+	//	for _, r := range apiResponse.DiscoverySettings.Regions {
+	//		regions = append(regions, Region{region: flatteners.String(r.Region)})
+	//	}
+	//	connectorModel.DiscoverySettings.Regions = regions
+	//}
 
-	benchmarks, err := json.Marshal(apiResponse.DiscoverySettings.Benchmarks)
-	if err != nil {
-		return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Unmarshal error", "Cannot unmarhsal Connector.DiscoverySettings.Benchmarks object in response from sdk")}
-	}
-	connectorModel.DiscoverySettings.Benchmarks = flatteners.String(string(benchmarks))
+	//benchmarks, err := json.Marshal(apiResponse.DiscoverySettings.Benchmarks)
+	//if err != nil {
+	//	return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Unmarshal error", "Cannot unmarhsal Connector.DiscoverySettings.Benchmarks object in response from sdk")}
+	//}
+	//connectorModel.DiscoverySettings.Benchmarks = flatteners.String(string(benchmarks))
 
 	//TODO: process scope
 	return connectorModel, nil
