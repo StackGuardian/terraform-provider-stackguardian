@@ -49,7 +49,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						Required: true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"active": schema.StringAttribute{
+								"active": schema.BoolAttribute{
 									Required: true,
 								},
 								"description": schema.StringAttribute{
@@ -84,8 +84,9 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 									Required: true,
 									NestedObject: schema.NestedAttributeObject{
 										Attributes: map[string]schema.Attribute{
-											"emails": schema.StringAttribute{
-												Required: true,
+											"emails": schema.ListAttribute{
+												ElementType: types.StringType,
+												Required:    true,
 											},
 										},
 									},
