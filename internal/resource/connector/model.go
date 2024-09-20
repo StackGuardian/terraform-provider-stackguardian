@@ -45,8 +45,22 @@ type ConnectorDiscoverySettingsModel struct {
 	Benchmarks types.Map `tfsdk:"benchmarks"`
 }
 
+func (ConnectorDiscoverySettingsModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"discovery_interval": types.Float64Type,
+		"regions":            types.ListType{ElemType: ConnectorDiscoverySettingsRegionModel{}.AttributeTypes()},
+		"benchmarks":         types.MapType{ElemType: ConnectorDiscoverySettingsBenchmarksModel{}.AttributeTypes()},
+	}
+}
+
 type ConnectorDiscoverySettingsRegionModel struct {
 	Region types.String `tfsdk:"region"`
+}
+
+func (ConnectorDiscoverySettingsRegionModel) AttributeTypes() attr.Type {
+	return types.ObjectType{AttrTypes: map[string]attr.Type{
+		"region": types.StringType,
+	}}
 }
 
 type ConnectorDiscoverySettingsBenchmarksModel struct {
@@ -63,8 +77,32 @@ type ConnectorDiscoverySettingsBenchmarksModel struct {
 	Regions            types.Map     `tfsdk:"regions"`
 }
 
+func (ConnectorDiscoverySettingsBenchmarksModel) AttributeTypes() attr.Type {
+	return types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"description":         types.StringType,
+			"label":               types.StringType,
+			"runtime_source":      types.StringType,
+			"summary_description": types.StringType,
+			"summary_title":       types.StringType,
+			"discovery_interval":  types.Float64Type,
+			"last_discovery_time": types.Float64Type,
+			"is_custom_check":     types.BoolType,
+			"active":              types.BoolType,
+			"checks":              types.ListType{ElemType: types.StringType},
+			"regions":             types.MapType{ElemType: types.ObjectType{AttrTypes: ConnectorDiscoverySettingsBenchmarksRegionsModel{}.AttributeTypes()}},
+		},
+	}
+}
+
 type ConnectorDiscoverySettingsBenchmarksRegionsModel struct {
 	Emails types.List `tfsdk:"emails"`
+}
+
+func (ConnectorDiscoverySettingsBenchmarksRegionsModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"emails": types.ListType{ElemType: types.StringType},
+	}
 }
 
 func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integration, diag.Diagnostics) {
@@ -139,11 +177,12 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 			}
 
 			var benchmarkRegionsModel map[string]*ConnectorDiscoverySettingsBenchmarksRegionsModel
-			benchmarkRegions := map[string]*sgsdkgo.DiscoveryRegion{}
 			diags = benchmark.Regions.ElementsAs(context.Background(), &benchmarkRegionsModel, false)
 			if diags.HasError() {
 				return nil, diags
 			}
+
+			benchmarkRegions := map[string]*sgsdkgo.DiscoveryRegion{}
 			for region, regionValue := range benchmarkRegionsModel {
 				var emailsModel []types.String
 				var emailsAPIModel []string
@@ -181,6 +220,21 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 		apiModel.DiscoverySettings = discoverySettingsAPIModel
 	}
 
+	// Parse Scope
+	if !m.Scope.IsNull() {
+		var scopeModel []types.String
+		diags = m.Scope.ElementsAs(context.TODO(), &scopeModel, false)
+		if diags.HasError() {
+			return nil, diags
+		}
+
+		var scopeAPIModel []string
+		for _, scope := range scopeModel {
+			scopeAPIModel = append(scopeAPIModel, scope.ValueString())
+		}
+		apiModel.Scope = scopeAPIModel
+	}
+
 	return &apiModel, nil
 }
 
@@ -207,20 +261,84 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 	connectorModel.Settings = settings
 
 	// Discovery Settings
+	if apiResponse.DiscoverySettings == nil {
+		connectorModel.DiscoverySettings = types.ObjectNull(ConnectorDiscoverySettingsModel{}.AttributeTypes())
+	} else {
+		DiscoverySettingsModel := &ConnectorDiscoverySettingsModel{}
+		// discovery interval
+		DiscoverySettingsModel.DiscoveryInterval = types.Float64Value(apiResponse.DiscoverySettings.DiscoveryInterval)
 
-	//var regions []Region
-	//if apiResponse.DiscoverySettings.Regions != nil {
-	//	for _, r := range apiResponse.DiscoverySettings.Regions {
-	//		regions = append(regions, Region{region: flatteners.String(r.Region)})
-	//	}
-	//	connectorModel.DiscoverySettings.Regions = regions
-	//}
+		// benchmarks
+		if apiResponse.DiscoverySettings.Benchmarks == nil || len(apiResponse.DiscoverySettings.Benchmarks) == 0 {
+			DiscoverySettingsModel.Benchmarks = types.MapNull(ConnectorDiscoverySettingsBenchmarksModel{}.AttributeTypes())
+		} else {
+			// if benchmarks is not nil
+			benchmarks := make(map[string]*ConnectorDiscoverySettingsBenchmarksModel, len(apiResponse.DiscoverySettings.Benchmarks))
+			for benchmarkKey, benchmark := range apiResponse.DiscoverySettings.Benchmarks {
+				benchmarksModel := &ConnectorDiscoverySettingsBenchmarksModel{}
+				benchmarksModel.Description = types.StringValue(benchmark.Description)
+				benchmarksModel.Label = types.StringValue(benchmark.Label)
+				benchmarksModel.RuntimeSource = types.StringValue(*benchmark.RuntimeSource)
+				benchmarksModel.SummaryDescription = types.StringValue(benchmark.SummaryDesc)
+				benchmarksModel.SummaryTitle = types.StringValue(benchmark.SummaryTitle)
+				benchmarksModel.DiscoveryInterval = types.Float64Value(benchmark.DiscoveryInterval)
+				benchmarksModel.LastDiscoveryTime = types.Float64Value(benchmark.LastDiscoveryTime)
+				benchmarksModel.IsCustomCheck = types.BoolValue(benchmark.IsCustomCheck)
+				benchmarksModel.Active = types.BoolValue(benchmark.Active)
 
-	//benchmarks, err := json.Marshal(apiResponse.DiscoverySettings.Benchmarks)
-	//if err != nil {
-	//	return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Unmarshal error", "Cannot unmarhsal Connector.DiscoverySettings.Benchmarks object in response from sdk")}
-	//}
-	//connectorModel.DiscoverySettings.Benchmarks = flatteners.String(string(benchmarks))
+				// regions
+				regions := map[string]types.Object{}
+				for regionsKey, regionsValue := range benchmark.Regions {
+					var emailsModel []types.String
+					for _, email := range regionsValue.Emails {
+						emailsModel = append(emailsModel, flatteners.String(email))
+					}
+					emailTerraType, diags := types.ListValueFrom(context.Background(), types.StringType, &emailsModel)
+					if diags.HasError() {
+						return nil, diags
+					}
+					regionsModel := &ConnectorDiscoverySettingsBenchmarksRegionsModel{
+						Emails: emailTerraType,
+					}
+					regionsTerraObject, diags := types.ObjectValueFrom(context.Background(), regionsModel.AttributeTypes(), &regionsModel)
+					if diags.HasError() {
+						return nil, diags
+					}
+					regions[regionsKey] = regionsTerraObject
+				}
+				regionsTerraType, diags := types.MapValueFrom(context.Background(), types.ObjectType{}, &regions)
+				if diags.HasError() {
+					return nil, diags
+				}
+				benchmarksModel.Regions = regionsTerraType
+
+				// checks
+				checksModel := make([]types.String, len(benchmark.Checks))
+				for _, check := range benchmark.Checks {
+					checksModel = append(checksModel, types.StringValue(check))
+				}
+				checkTerraType, diags := types.ListValueFrom(context.TODO(), types.StringType, &checksModel)
+				if diags.HasError() {
+					return nil, diags
+				}
+				benchmarksModel.Checks = checkTerraType
+
+				benchmarks[benchmarkKey] = benchmarksModel
+			}
+			benchmarksTerraType, diags := types.MapValueFrom(context.TODO(), ConnectorDiscoverySettingsBenchmarksModel{}.AttributeTypes(), &benchmarks)
+			if diags.HasError() {
+				return nil, diags
+			}
+			DiscoverySettingsModel.Benchmarks = benchmarksTerraType
+		}
+
+		connectorModel.DiscoverySettings, diags = types.ObjectValueFrom(context.TODO(), ConnectorDiscoverySettingsModel{}.AttributeTypes(), DiscoverySettingsModel)
+		if diags.HasError() {
+			return nil, diags
+		}
+	}
+
+	connectorModel.Scope = types.ListNull(types.StringType)
 
 	//TODO: process scope
 	return connectorModel, nil
