@@ -96,6 +96,24 @@ func (ConnectorDiscoverySettingsBenchmarksModel) AttributeTypes() attr.Type {
 	}
 }
 
+func (ConnectorDiscoverySettingsBenchmarksModel) AttributeTypes() attr.Type {
+	return types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"description":         types.StringType,
+			"label":               types.StringType,
+			"runtime_source":      types.StringType,
+			"summary_description": types.StringType,
+			"summary_title":       types.StringType,
+			"discovery_interval":  types.Float64Type,
+			"last_discovery_time": types.Float64Type,
+			"is_custom_check":     types.BoolType,
+			"active":              types.BoolType,
+			"checks":              types.ListType{ElemType: types.StringType},
+			"regions":             types.MapType{ElemType: types.ObjectType{AttrTypes: ConnectorDiscoverySettingsBenchmarksRegionsModel{}.AttributeTypes()}},
+		},
+	}
+}
+
 type ConnectorDiscoverySettingsBenchmarksRegionsModel struct {
 	Emails types.List `tfsdk:"emails"`
 }
