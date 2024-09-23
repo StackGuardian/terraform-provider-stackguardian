@@ -158,6 +158,7 @@ type ConnectorDiscoverySettingsBenchmarksModel struct {
 	Regions            types.Map    `tfsdk:"regions"`
 }
 
+<<<<<<< HEAD
 func (ConnectorDiscoverySettingsBenchmarksModel) AttributeTypes() attr.Type {
 	return types.ObjectType{
 		AttrTypes: map[string]attr.Type{
@@ -177,6 +178,8 @@ func (ConnectorDiscoverySettingsBenchmarksModel) AttributeTypes() attr.Type {
 >>>>>>> 51b8a42 (merge connector branch)
 }
 
+=======
+>>>>>>> 3a30145 (connector changes)
 type ConnectorDiscoverySettingsBenchmarksRegionsModel struct {
 	Emails types.List `tfsdk:"emails"`
 <<<<<<< HEAD
