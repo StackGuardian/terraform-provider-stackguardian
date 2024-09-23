@@ -15,9 +15,6 @@ import (
 func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"organization": schema.StringAttribute{
-				Required: true,
-			},
 			"resource_name": schema.StringAttribute{
 				Required: true,
 			},
@@ -121,6 +118,10 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				},
 			},
 			"scope": schema.ListAttribute{
+				ElementType: types.StringType,
+				Optional:    true,
+			},
+			"tags": schema.ListAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
 			},
