@@ -17,9 +17,6 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"organization": schema.StringAttribute{
 				Required: true,
 			},
-			"organization": schema.StringAttribute{
-				Required: true,
-			},
 			"resource_name": schema.StringAttribute{
 				Required: true,
 			},
@@ -45,7 +42,6 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				//TODO: replace xyz with api docs
 				Description: "Kind and Config keys are required. Refer documentation at xyz",
 			},
-			"discovery_settings": schema.SingleNestedAttribute{
 			"discovery_settings": schema.SingleNestedAttribute{
 				Optional: true,
 				Attributes: map[string]schema.Attribute{
