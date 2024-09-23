@@ -3,7 +3,6 @@ package connector
 import (
 	"context"
 	"encoding/json"
-	"strings"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	flatteners "github.com/StackGuardian/terraform-provider-stackguardian/internal/flattners"
@@ -16,9 +15,12 @@ import (
 
 type ConnectorResourceModel struct {
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 	Organization      types.String `tfsdk:"organization"`
 >>>>>>> 69e1bd4 (Implement WorkflowGroups (#21))
+=======
+>>>>>>> 5c8e7e9 (push fix for resource not found, added tags attribute and fixed scope schema conversions)
 	ResourceName      types.String `tfsdk:"resource_name"`
 	Description       types.String `tfsdk:"description"`
 	Settings          types.Object `tfsdk:"settings"`
@@ -26,9 +28,13 @@ type ConnectorResourceModel struct {
 	IsActive          types.String `tfsdk:"is_active"`
 	Scope             types.List   `tfsdk:"scope"`
 <<<<<<< HEAD
+<<<<<<< HEAD
 	Tags              types.List   `tfsdk:"tags"`
 =======
 >>>>>>> 69e1bd4 (Implement WorkflowGroups (#21))
+=======
+	Tags              types.List   `tfsdk:"tags"`
+>>>>>>> 5c8e7e9 (push fix for resource not found, added tags attribute and fixed scope schema conversions)
 }
 
 type ConnectorSettingsModel struct {
@@ -197,13 +203,19 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 	}
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 5c8e7e9 (push fix for resource not found, added tags attribute and fixed scope schema conversions)
 	// is active
 	if !m.IsActive.IsNull() {
 		apiModel.IsActive = (*sgsdkgo.IsArchiveEnum)(m.IsActive.ValueStringPointer())
 	}
 
+<<<<<<< HEAD
 =======
 >>>>>>> 69e1bd4 (Implement WorkflowGroups (#21))
+=======
+>>>>>>> 5c8e7e9 (push fix for resource not found, added tags attribute and fixed scope schema conversions)
 	// Set kind and config in Settings
 	var settingsModelValue *ConnectorSettingsModel
 	diags := m.Settings.As(context.Background(), &settingsModelValue, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
@@ -628,6 +640,189 @@ func (m *ConnectorResourceModel) ToAPIPatchedModel(ctx context.Context) (*sgsdkg
 		apiPatchedModel.IsActive = (*sgsdkgo.IsArchiveEnum)(m.IsActive.ValueStringPointer())
 	}
 
+<<<<<<< HEAD
+	return apiPatchedModel, nil
+=======
+	// Parse tags
+	if !m.Tags.IsNull() {
+		var tagsModel []types.String
+		diags = m.Tags.ElementsAs(context.TODO(), &tagsModel, false)
+		if diags.HasError() {
+			return nil, diags
+		}
+
+		var tagsAPIModel []string
+		for _, scope := range tagsModel {
+			tagsAPIModel = append(tagsAPIModel, scope.ValueString())
+		}
+		apiModel.Tags = tagsAPIModel
+	}
+
+	return &apiModel, nil
+>>>>>>> 5c8e7e9 (push fix for resource not found, added tags attribute and fixed scope schema conversions)
+}
+
+func (m *ConnectorResourceModel) ToAPIPatchedModel(ctx context.Context) (*sgsdkgo.PatchedIntegration, diag.Diagnostics) {
+	apiPatchedModel := &sgsdkgo.PatchedIntegration{
+		ResourceName: m.ResourceName.ValueStringPointer(),
+		Description:  m.Description.ValueStringPointer(),
+	}
+
+	// Parse Scope
+	if !m.Scope.IsNull() {
+		var scopeModel []types.String
+		diags := m.Scope.ElementsAs(context.TODO(), &scopeModel, false)
+		if diags.HasError() {
+			return nil, diags
+		}
+
+		var scopeAPIModel []string
+		for _, scope := range scopeModel {
+			scopeAPIModel = append(scopeAPIModel, scope.ValueString())
+		}
+		apiPatchedModel.Scope = scopeAPIModel
+	}
+
+	// Parse tags
+	if !m.Tags.IsNull() {
+		var tagsModel []types.String
+		diags := m.Tags.ElementsAs(context.TODO(), &tagsModel, false)
+		if diags.HasError() {
+			return nil, diags
+		}
+
+		var tagsAPIModel []string
+		for _, scope := range tagsModel {
+			tagsAPIModel = append(tagsAPIModel, scope.ValueString())
+		}
+		apiPatchedModel.Tags = tagsAPIModel
+	}
+
+	// Parse Settings
+	var settingsModelValue *ConnectorSettingsModel
+	diags := m.Settings.As(context.Background(), &settingsModelValue, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	settings := &sgsdkgo.Settings{
+		Kind: sgsdkgo.SettingsKindEnum(settingsModelValue.Kind.ValueString()),
+	}
+
+	var settingsConfig []map[string]interface{}
+	err := json.Unmarshal([]byte(settingsModelValue.Config.ValueString()), &settingsConfig)
+	if err != nil {
+		tflog.Debug(ctx, err.Error())
+		return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Invalid attribute", "Settings.Config is invalid")}
+	}
+	settings.Config = settingsConfig
+	apiPatchedModel.Settings = settings
+
+	// Parse discovery settings
+	discoverySettingsAPIModel := &sgsdkgo.Discoverysettings{}
+	var discoverySettingsModel *ConnectorDiscoverySettingsModel
+	if !m.DiscoverySettings.IsNull() {
+		diags := m.DiscoverySettings.As(context.Background(), &discoverySettingsModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
+		if diags.HasError() {
+			return nil, diags
+		}
+
+		// Parse discovery interval
+		discoveryInterval := int(*discoverySettingsModel.DiscoveryInterval.ValueInt64Pointer())
+		discoverySettingsAPIModel.DiscoveryInterval = &discoveryInterval
+
+		// Parse regions
+		var regionsModel []*ConnectorDiscoverySettingsRegionModel
+		if !discoverySettingsModel.Regions.IsNull() {
+			diags = discoverySettingsModel.Regions.ElementsAs(context.Background(), &regionsModel, false)
+			if diags.HasError() {
+				return nil, diags
+			}
+		}
+		regions := []*sgsdkgo.DiscoverySettingsRegions{}
+		for _, region := range regionsModel {
+			regions = append(regions, &sgsdkgo.DiscoverySettingsRegions{Region: region.Region.ValueString()})
+		}
+		discoverySettingsAPIModel.Regions = regions
+
+		// Parse benchmarks
+		var benchmarksModel map[string]*ConnectorDiscoverySettingsBenchmarksModel
+		diags = discoverySettingsModel.Benchmarks.ElementsAs(context.Background(), &benchmarksModel, false)
+		if diags.HasError() {
+			return nil, diags
+		}
+
+		benchmarksAPIModel := map[string]*sgsdkgo.DiscoveryBenchmark{}
+		for benchmarkName, benchmark := range benchmarksModel {
+			var benchmarkChecksModel []types.String
+			diags = benchmark.Checks.ElementsAs(context.Background(), &benchmarkChecksModel, false)
+			if diags.HasError() {
+				return nil, diags
+			}
+			var benchmarkChecks []string
+			for _, check := range benchmarkChecksModel {
+				benchmarkChecks = append(benchmarkChecks, check.ValueString())
+			}
+
+			var benchmarkRegionsModel map[string]*ConnectorDiscoverySettingsBenchmarksRegionsModel
+			diags = benchmark.Regions.ElementsAs(context.Background(), &benchmarkRegionsModel, false)
+			if diags.HasError() {
+				return nil, diags
+			}
+
+			benchmarkRegions := map[string]*sgsdkgo.DiscoveryRegion{}
+			for region, regionValue := range benchmarkRegionsModel {
+				var emailsModel []types.String
+				var emailsAPIModel []string
+				diags = regionValue.Emails.ElementsAs(context.Background(), &emailsModel, false)
+				if diags.HasError() {
+					return nil, diags
+				}
+				for _, email := range emailsModel {
+					if email.ValueString() != "" {
+						emailsAPIModel = append(emailsAPIModel, email.ValueString())
+					}
+				}
+
+				benchmarkRegions[region] = &sgsdkgo.DiscoveryRegion{
+					Emails: emailsAPIModel,
+				}
+			}
+
+			benchmarksModel := &sgsdkgo.DiscoveryBenchmark{
+				RuntimeSource: benchmark.RuntimeSource.ValueStringPointer(),
+				Description:   benchmark.Description.ValueStringPointer(),
+				SummaryDesc:   benchmark.SummaryDescription.ValueStringPointer(),
+				SummaryTitle:  benchmark.SummaryTitle.ValueStringPointer(),
+				Label:         benchmark.Label.ValueStringPointer(),
+				Active:        benchmark.Active.ValueBoolPointer(),
+				IsCustomCheck: benchmark.IsCustomCheck.ValueBoolPointer(),
+				Checks:        benchmarkChecks,
+				Regions:       benchmarkRegions,
+			}
+
+			if !benchmark.LastDiscoveryTime.IsNull() {
+				intValue := int(benchmark.LastDiscoveryTime.ValueInt64())
+				benchmarksModel.LastDiscoveryTime = &intValue
+			}
+
+			if !benchmark.DiscoveryInterval.IsNull() {
+				intValue := int(benchmark.DiscoveryInterval.ValueInt64())
+				benchmarksModel.DiscoveryInterval = &intValue
+			}
+
+			benchmarksAPIModel[benchmarkName] = benchmarksModel
+		}
+		discoverySettingsAPIModel.Benchmarks = benchmarksAPIModel
+
+		apiPatchedModel.DiscoverySettings = discoverySettingsAPIModel
+	}
+
+	// IsActive
+	if !m.IsActive.IsNull() {
+		apiPatchedModel.IsActive = (*sgsdkgo.IsArchiveEnum)(m.IsActive.ValueStringPointer())
+	}
+
 	return apiPatchedModel, nil
 }
 
@@ -644,8 +839,6 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 		Description:  flatteners.String(apiResponse.Description),
 		IsActive:     flatteners.String(apiResponse.IsActive),
 	}
-	org := strings.Split(apiResponse.OrgId, "/")[2]
-	connectorModel.Organization = flatteners.String(org)
 
 	settings := map[string]*string{}
 	settingsConfig, err := json.Marshal(apiResponse.Settings.Config)
@@ -782,6 +975,7 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 		}
 		connectorModel.Tags = tagTerraType
 	}
+<<<<<<< HEAD
 =======
 	}
 	var settings, diags = types.ObjectValueFrom(context.Background(), connectorSettingsModel.AttributeTypes(), connectorSettingsModel)
@@ -891,6 +1085,8 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 
 	connectorModel.Scope = types.ListNull(types.StringType)
 >>>>>>> 51b8a42 (merge connector branch)
+=======
+>>>>>>> 5c8e7e9 (push fix for resource not found, added tags attribute and fixed scope schema conversions)
 
 	return connectorModel, nil
 }

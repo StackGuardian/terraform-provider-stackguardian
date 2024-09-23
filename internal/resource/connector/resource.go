@@ -65,6 +65,8 @@ func (r *connectorResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	payload, diags := plan.ToAPIModel(ctx)
+	payloadStr, _ := json.Marshal(payload)
+	fmt.Println(string(payloadStr))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
