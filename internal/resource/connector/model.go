@@ -3,6 +3,7 @@ package connector
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	flatteners "github.com/StackGuardian/terraform-provider-stackguardian/internal/flattners"
@@ -439,6 +440,8 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 		Description:  flatteners.String(apiResponse.Description),
 		IsActive:     flatteners.String(apiResponse.IsActive),
 	}
+	org := strings.Split(apiResponse.OrgId, "/")[2]
+	connectorModel.Organization = flatteners.String(org)
 
 	settingsConfig, err := json.Marshal(apiResponse.Settings.Config)
 	if err != nil {
