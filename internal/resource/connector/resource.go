@@ -104,7 +104,6 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, connectorResourceModel)...)
-
 }
 
 // Update updates the resource and sets the updated Terraform state on success.

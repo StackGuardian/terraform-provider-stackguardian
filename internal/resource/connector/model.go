@@ -3,6 +3,7 @@ package connector
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	flatteners "github.com/StackGuardian/terraform-provider-stackguardian/internal/flattners"
@@ -36,7 +37,7 @@ func (ConnectorSettingsModel) AttributeTypes() map[string]attr.Type {
 }
 
 type ConnectorDiscoverySettingsModel struct {
-	DiscoveryInterval types.Float64 `tfsdk:"discovery_interval"`
+	DiscoveryInterval types.Int64 `tfsdk:"discovery_interval"`
 
 	// Convert to []Region
 	Regions types.List `tfsdk:"regions"`
@@ -47,7 +48,7 @@ type ConnectorDiscoverySettingsModel struct {
 
 func (ConnectorDiscoverySettingsModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
-		"discovery_interval": types.Float64Type,
+		"discovery_interval": types.Int64Type,
 		"regions":            types.ListType{ElemType: ConnectorDiscoverySettingsRegionModel{}.AttributeTypes()},
 		"benchmarks":         types.MapType{ElemType: ConnectorDiscoverySettingsBenchmarksModel{}.AttributeTypes()},
 	}
@@ -64,17 +65,17 @@ func (ConnectorDiscoverySettingsRegionModel) AttributeTypes() attr.Type {
 }
 
 type ConnectorDiscoverySettingsBenchmarksModel struct {
-	Description        types.String  `tfsdk:"description"`
-	Label              types.String  `tfsdk:"label"`
-	RuntimeSource      types.String  `tfsdk:"runtime_source"`
-	SummaryDescription types.String  `tfsdk:"summary_description"`
-	SummaryTitle       types.String  `tfsdk:"summary_title"`
-	DiscoveryInterval  types.Float64 `tfsdk:"discovery_interval"`
-	LastDiscoveryTime  types.Float64 `tfsdk:"last_discovery_time"`
-	IsCustomCheck      types.Bool    `tfsdk:"is_custom_check"`
-	Active             types.Bool    `tfsdk:"active"`
-	Checks             types.List    `tfsdk:"checks"`
-	Regions            types.Map     `tfsdk:"regions"`
+	Description        types.String `tfsdk:"description"`
+	Label              types.String `tfsdk:"label"`
+	RuntimeSource      types.String `tfsdk:"runtime_source"`
+	SummaryDescription types.String `tfsdk:"summary_description"`
+	SummaryTitle       types.String `tfsdk:"summary_title"`
+	DiscoveryInterval  types.Int64  `tfsdk:"discovery_interval"`
+	LastDiscoveryTime  types.Int64  `tfsdk:"last_discovery_time"`
+	IsCustomCheck      types.Bool   `tfsdk:"is_custom_check"`
+	Active             types.Bool   `tfsdk:"active"`
+	Checks             types.List   `tfsdk:"checks"`
+	Regions            types.Map    `tfsdk:"regions"`
 }
 
 func (ConnectorDiscoverySettingsBenchmarksModel) AttributeTypes() attr.Type {
@@ -85,8 +86,8 @@ func (ConnectorDiscoverySettingsBenchmarksModel) AttributeTypes() attr.Type {
 			"runtime_source":      types.StringType,
 			"summary_description": types.StringType,
 			"summary_title":       types.StringType,
-			"discovery_interval":  types.Float64Type,
-			"last_discovery_time": types.Float64Type,
+			"discovery_interval":  types.Int64Type,
+			"last_discovery_time": types.Int64Type,
 			"is_custom_check":     types.BoolType,
 			"active":              types.BoolType,
 			"checks":              types.ListType{ElemType: types.StringType},
@@ -141,7 +142,8 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 		}
 
 		// Parse discovery interval
-		discoverySettingsAPIModel.DiscoveryInterval = discoverySettingsModel.DiscoveryInterval.ValueFloat64Pointer()
+		discoveryInterval := int(*discoverySettingsModel.DiscoveryInterval.ValueInt64Pointer())
+		discoverySettingsAPIModel.DiscoveryInterval = &discoveryInterval
 
 		// Parse regions
 		var regionsModel []*ConnectorDiscoverySettingsRegionModel
@@ -201,19 +203,29 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 				}
 			}
 
-			benchmarksAPIModel[benchmarkName] = &sgsdkgo.DiscoveryBenchmark{
-				RuntimeSource:     benchmark.RuntimeSource.ValueStringPointer(),
-				Description:       benchmark.Description.ValueStringPointer(),
-				SummaryDesc:       benchmark.SummaryDescription.ValueStringPointer(),
-				SummaryTitle:      benchmark.SummaryTitle.ValueStringPointer(),
-				Label:             benchmark.Label.ValueStringPointer(),
-				LastDiscoveryTime: benchmark.LastDiscoveryTime.ValueFloat64Pointer(),
-				DiscoveryInterval: benchmark.DiscoveryInterval.ValueFloat64Pointer(),
-				Active:            benchmark.Active.ValueBoolPointer(),
-				IsCustomCheck:     benchmark.IsCustomCheck.ValueBoolPointer(),
-				Checks:            benchmarkChecks,
-				Regions:           benchmarkRegions,
+			benchmarksModel := &sgsdkgo.DiscoveryBenchmark{
+				RuntimeSource: benchmark.RuntimeSource.ValueStringPointer(),
+				Description:   benchmark.Description.ValueStringPointer(),
+				SummaryDesc:   benchmark.SummaryDescription.ValueStringPointer(),
+				SummaryTitle:  benchmark.SummaryTitle.ValueStringPointer(),
+				Label:         benchmark.Label.ValueStringPointer(),
+				Active:        benchmark.Active.ValueBoolPointer(),
+				IsCustomCheck: benchmark.IsCustomCheck.ValueBoolPointer(),
+				Checks:        benchmarkChecks,
+				Regions:       benchmarkRegions,
 			}
+
+			if !benchmark.LastDiscoveryTime.IsNull() {
+				intValue := int(benchmark.LastDiscoveryTime.ValueInt64())
+				benchmarksModel.LastDiscoveryTime = &intValue
+			}
+
+			if !benchmark.DiscoveryInterval.IsNull() {
+				intValue := int(benchmark.DiscoveryInterval.ValueInt64())
+				benchmarksModel.DiscoveryInterval = &intValue
+			}
+
+			benchmarksAPIModel[benchmarkName] = benchmarksModel
 		}
 		discoverySettingsAPIModel.Benchmarks = benchmarksAPIModel
 
@@ -240,11 +252,12 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 
 func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadResponseMsg) (*ConnectorResourceModel, diag.Diagnostics) {
 	connectorModel := &ConnectorResourceModel{
-		Organization: flatteners.String(apiResponse.OrgId),
 		ResourceName: flatteners.String(apiResponse.ResourceName),
 		Description:  flatteners.String(apiResponse.Description),
 		IsActive:     flatteners.String(apiResponse.IsActive),
 	}
+	org := strings.Split(apiResponse.OrgId, "/")[2]
+	connectorModel.Organization = flatteners.String(org)
 
 	settingsConfig, err := json.Marshal(apiResponse.Settings.Config)
 	if err != nil {
@@ -266,7 +279,7 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 	} else {
 		DiscoverySettingsModel := &ConnectorDiscoverySettingsModel{}
 		// discovery interval
-		DiscoverySettingsModel.DiscoveryInterval = types.Float64Value(apiResponse.DiscoverySettings.DiscoveryInterval)
+		DiscoverySettingsModel.DiscoveryInterval = flatteners.Int64(int64(*apiResponse.DiscoverySettings.DiscoveryInterval))
 
 		// benchmarks
 		if apiResponse.DiscoverySettings.Benchmarks == nil || len(apiResponse.DiscoverySettings.Benchmarks) == 0 {
@@ -276,20 +289,20 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 			benchmarks := make(map[string]*ConnectorDiscoverySettingsBenchmarksModel, len(apiResponse.DiscoverySettings.Benchmarks))
 			for benchmarkKey, benchmark := range apiResponse.DiscoverySettings.Benchmarks {
 				benchmarksModel := &ConnectorDiscoverySettingsBenchmarksModel{}
-				benchmarksModel.Description = types.StringValue(benchmark.Description)
-				benchmarksModel.Label = types.StringValue(benchmark.Label)
-				benchmarksModel.RuntimeSource = types.StringValue(*benchmark.RuntimeSource)
-				benchmarksModel.SummaryDescription = types.StringValue(benchmark.SummaryDesc)
-				benchmarksModel.SummaryTitle = types.StringValue(benchmark.SummaryTitle)
-				benchmarksModel.DiscoveryInterval = types.Float64Value(benchmark.DiscoveryInterval)
-				benchmarksModel.LastDiscoveryTime = types.Float64Value(benchmark.LastDiscoveryTime)
-				benchmarksModel.IsCustomCheck = types.BoolValue(benchmark.IsCustomCheck)
+				benchmarksModel.Description = types.StringPointerValue(benchmark.Description)
+				benchmarksModel.Label = types.StringPointerValue(benchmark.Label)
+				benchmarksModel.RuntimeSource = types.StringPointerValue(benchmark.RuntimeSource)
+				benchmarksModel.SummaryDescription = types.StringPointerValue(benchmark.SummaryDesc)
+				benchmarksModel.SummaryTitle = types.StringPointerValue(benchmark.SummaryTitle)
+				benchmarksModel.DiscoveryInterval = flatteners.Int64(int64(*benchmark.DiscoveryInterval))
+				benchmarksModel.LastDiscoveryTime = flatteners.Int64(int64(*benchmark.LastDiscoveryTime))
+				benchmarksModel.IsCustomCheck = types.BoolPointerValue(benchmark.IsCustomCheck)
 				benchmarksModel.Active = types.BoolValue(benchmark.Active)
 
 				// regions
 				regions := map[string]types.Object{}
 				for regionsKey, regionsValue := range benchmark.Regions {
-					var emailsModel []types.String
+					emailsModel := []types.String{}
 					for _, email := range regionsValue.Emails {
 						emailsModel = append(emailsModel, flatteners.String(email))
 					}
@@ -306,14 +319,14 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 					}
 					regions[regionsKey] = regionsTerraObject
 				}
-				regionsTerraType, diags := types.MapValueFrom(context.Background(), types.ObjectType{}, &regions)
+				regionsTerraType, diags := types.MapValueFrom(context.Background(), types.ObjectType{AttrTypes: ConnectorDiscoverySettingsBenchmarksRegionsModel{}.AttributeTypes()}, &regions)
 				if diags.HasError() {
 					return nil, diags
 				}
 				benchmarksModel.Regions = regionsTerraType
 
 				// checks
-				checksModel := make([]types.String, len(benchmark.Checks))
+				checksModel := []types.String{}
 				for _, check := range benchmark.Checks {
 					checksModel = append(checksModel, types.StringValue(check))
 				}
@@ -331,6 +344,19 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 			}
 			DiscoverySettingsModel.Benchmarks = benchmarksTerraType
 		}
+
+		// regions
+		var regionModel []*ConnectorDiscoverySettingsRegionModel
+		for _, regionAPIModel := range apiResponse.DiscoverySettings.Regions {
+			regionModel = append(regionModel, &ConnectorDiscoverySettingsRegionModel{
+				Region: flatteners.String(regionAPIModel.Region),
+			})
+		}
+		regionTerraType, diags := types.ListValueFrom(context.TODO(), ConnectorDiscoverySettingsRegionModel{}.AttributeTypes(), &regionModel)
+		if diags.HasError() {
+			return nil, diags
+		}
+		DiscoverySettingsModel.Regions = regionTerraType
 
 		connectorModel.DiscoverySettings, diags = types.ObjectValueFrom(context.TODO(), ConnectorDiscoverySettingsModel{}.AttributeTypes(), DiscoverySettingsModel)
 		if diags.HasError() {
