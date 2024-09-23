@@ -9,6 +9,7 @@ import (
 	sgoption "github.com/StackGuardian/sg-sdk-go/option"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/connector"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflowGroups"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -195,5 +196,6 @@ func (p *stackguardianProvider) Resources(_ context.Context) []func() resource.R
 	return []func() resource.Resource{
 		connector.NewResource,
 		workflowGroups.NewResource,
+		role.NewResource,
 	}
 }
