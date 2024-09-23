@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -36,7 +37,8 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						},
 					},
 					"config": schema.StringAttribute{
-						Required: true,
+						Required:      true,
+						PlanModifiers: []planmodifier.String{},
 					},
 				},
 				//TODO: replace xyz with api docs
@@ -59,7 +61,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 									Required: true,
 								},
 								"runtime_source": schema.StringAttribute{
-									Required: true,
+									Optional: true,
 								},
 								"summary_description": schema.StringAttribute{
 									Required: true,
@@ -67,11 +69,11 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								"summary_title": schema.StringAttribute{
 									Required: true,
 								},
-								"discovery_interval": schema.Float64Attribute{
+								"discovery_interval": schema.Int64Attribute{
 									Required: true,
 								},
-								"last_discovery_time": schema.Float64Attribute{
-									Required: true,
+								"last_discovery_time": schema.Int64Attribute{
+									Optional: true,
 								},
 								"is_custom_check": schema.BoolAttribute{
 									Required: true,
@@ -94,7 +96,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 							},
 						},
 					},
-					"discovery_interval": schema.Float64Attribute{
+					"discovery_interval": schema.Int64Attribute{
 						Required: true,
 					},
 					"regions": schema.ListNestedAttribute{
