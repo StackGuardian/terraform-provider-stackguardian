@@ -7,7 +7,9 @@ import (
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	sgoption "github.com/StackGuardian/sg-sdk-go/option"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/connector"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflowGroups"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -163,10 +165,15 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 		sgoption.WithApiKey("apikey "+api_key),
 		sgoption.WithBaseURL(api_uri),
 	)
+	//Set the values in our struct
+	provInfo := customTypes.ProviderInfo{
+		Org_name: org_name,
+		Client:   client,
+	}
 	// Make the HashiCups client available during DataSource and Resource
 	// type Configure methods.
-	resp.DataSourceData = client
-	resp.ResourceData = client
+	resp.DataSourceData = &provInfo
+	resp.ResourceData = &provInfo
 
 	// Create a new client using the API key and base URL
 	tflog.Debug(ctx, fmt.Sprintf("Organization: %s", org_name))
@@ -187,5 +194,6 @@ func (p *stackguardianProvider) DataSources(_ context.Context) []func() datasour
 func (p *stackguardianProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		connector.NewResource,
+		workflowGroups.NewResource,
 	}
 }
