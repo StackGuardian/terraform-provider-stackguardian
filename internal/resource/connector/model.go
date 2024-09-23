@@ -259,7 +259,6 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 	org := strings.Split(apiResponse.OrgId, "/")[2]
 	connectorModel.Organization = flatteners.String(org)
 
-	settings := map[string]*string{}
 	settingsConfig, err := json.Marshal(apiResponse.Settings.Config)
 	if err != nil {
 		return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Unmarshal error", "Cannot unmarhsal Connector.Settings.Config object in response from sdk")}
