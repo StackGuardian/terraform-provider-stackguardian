@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
+	core "github.com/StackGuardian/sg-sdk-go/core"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -103,6 +104,13 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	// Get refreshed state from client
 	user, err := r.client.UsersRoles.GetUser(ctx, r.org_name, payload)
 	if err != nil {
+		// If a managed resource is no longer found then remove it from the state
+		if apiErr, ok := err.(*core.APIError); ok {
+			if apiErr.StatusCode == 404 {
+				resp.State.RemoveResource(ctx)
+				return
+			}
+		}
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error reading user", "Could not read user "+state.UserId.ValueString()+": "+err.Error())
 		return
