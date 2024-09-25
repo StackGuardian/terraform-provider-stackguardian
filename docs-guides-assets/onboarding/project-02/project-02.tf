@@ -114,6 +114,24 @@ resource "stackguardian_workflow_group" "ONBOARDING-Project02-DevOps" {
     tags = ["tf-provider-example", "onboarding"]
 }
 
+resource "stackguardian_user" "ONBOARDING-Project02-Frontend-Manager" {
+  user_id = "frontend.manager.p02@dummy.com"
+  entity_type = "EMAIL"
+  role = resource.stackguardian_role.ONBOARDING-Project02-Manager-Frontend.resource_name
+}
+
+resource "stackguardian_user" "ONBOARDING-Project02-Backend-Developer" {
+  user_id = "backend.developer.p02@dummy.com"
+  entity_type = "EMAIL"
+  role = resource.stackguardian_role.ONBOARDING-Project02-Developer-Backend.resource_name
+}
+
+resource "stackguardian_user" "ONBOARDING-Project02-DevOps-Developer" {
+  user_id = "devops.developer.p02@dummy.com"
+  entity_type = "EMAIL"
+  role = resource.stackguardian_role.ONBOARDING-Project02-Developer-DevOps.resource_name
+}
+
 #Commented until connectors is ready for testing
 
 # resource "stackguardian_connector" "ONBOARDING-Project02-Cloud-Connector" {

@@ -288,6 +288,12 @@ resource "stackguardian_workflow_group" "ONBOARDING-Project01-DevOps" {
     tags = ["tf-provider-example", "onboarding"]
 }
 
+resource "stackguardian_user" "ONBOARDING-Project01-Frontend-Developer" {
+  user_id = "frontend.developer.p01@dummy.com"
+  entity_type = "EMAIL"
+  role = resource.stackguardian_role.ONBOARDING-Project01-Developer.resource_name
+}
+
 
 #Commented until connectors is ready for testing
 
