@@ -7,6 +7,7 @@ import (
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
+	core "github.com/StackGuardian/sg-sdk-go/core"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -121,6 +122,13 @@ func (r *workflowGroupResource) Read(ctx context.Context, req resource.ReadReque
 	// Get refreshed state from client
 	workflowGroup, err := r.client.WorkflowGroups.ReadWorkflowGroup(ctx, r.org_name, state.ResourceName.ValueString())
 	if err != nil {
+		// If a managed resource is no longer found then remove it from the state
+		if apiErr, ok := err.(*core.APIError); ok {
+			if apiErr.StatusCode == 404 {
+				resp.State.RemoveResource(ctx)
+				return
+			}
+		}
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error reading workflowGroup", "Could not read workflowGroup "+state.ResourceName.ValueString()+": "+err.Error())
 		return
