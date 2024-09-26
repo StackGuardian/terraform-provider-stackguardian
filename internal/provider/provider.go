@@ -10,7 +10,7 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/connector"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role"
-	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/user"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/roleAssignment"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflowGroups"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -198,6 +198,6 @@ func (p *stackguardianProvider) Resources(_ context.Context) []func() resource.R
 		connector.NewResource,
 		workflowGroups.NewResource,
 		role.NewResource,
-		user.NewResource,
+		roleAssignment.NewResource,
 	}
 }
