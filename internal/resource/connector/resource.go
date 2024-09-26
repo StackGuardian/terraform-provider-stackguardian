@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	core "github.com/StackGuardian/sg-sdk-go/core"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -62,8 +65,6 @@ func (r *connectorResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	payload, diags := plan.ToAPIModel(ctx)
-	payloadStr, _ := json.Marshal(payload)
-	fmt.Println(string(payloadStr))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -74,6 +75,15 @@ func (r *connectorResource) Create(ctx context.Context, req resource.CreateReque
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error creating connector", "Error in creating connector API call: "+err.Error())
 		return
+	}
+
+	secretKeys := []string{"awsAccessKeyId", "awsDefaultRegion", "awsSecretAccessKey", "armClientSecret", "gcpConfigFileContent", "azureCreds", "gitlabCreds", "bitbucketCreds"}
+	for configIndex, config := range reqResp.Data.Settings.Config {
+		for key, _ := range config {
+			if slices.Contains(secretKeys, key) {
+				config[key] = payload.Settings.Config[configIndex][key]
+			}
+		}
 	}
 
 	connectorModel, diags := buildAPIModelToConnectorModel(reqResp.Data)
@@ -97,7 +107,7 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	// Get refreshed state from client
-	connector, err := r.client.Connectors.ReadConnector(ctx, state.ResourceName.ValueString(), r.org_name)
+	reqResp, err := r.client.Connectors.ReadConnector(ctx, state.ResourceName.ValueString(), r.org_name)
 	if err != nil {
 		apiErr := err.(*core.APIError)
 		if apiErr.StatusCode == 404 {
@@ -109,7 +119,31 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	connectorResourceModel, diags := buildAPIModelToConnectorModel(connector.Msg)
+	var settingsModelValue *ConnectorSettingsModel
+	diags = state.Settings.As(context.Background(), &settingsModelValue, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var settingsConfig []map[string]interface{}
+	err = json.Unmarshal([]byte(settingsModelValue.Config.ValueString()), &settingsConfig)
+	if err != nil {
+		tflog.Debug(ctx, err.Error())
+		resp.Diagnostics.Append(diag.NewErrorDiagnostic("Invalid attribute", "Settings.Config is invalid"))
+		return
+	}
+
+	secretKeys := []string{"awsSecretAccessKey", "armClientSecret", "gcpConfigFileContent", "azureCreds", "gitlabCreds", "bitbucketCreds"}
+	for configIndex, config := range reqResp.Msg.Settings.Config {
+		for key, _ := range config {
+			if slices.Contains(secretKeys, key) {
+				config[key] = settingsConfig[configIndex][key]
+			}
+		}
+	}
+
+	connectorResourceModel, diags := buildAPIModelToConnectorModel(reqResp.Msg)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -152,4 +186,33 @@ func (r *connectorResource) Update(ctx context.Context, req resource.UpdateReque
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *connectorResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state ConnectorResourceModel
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	_, err := r.client.Connectors.DeleteConnector(ctx, state.ResourceName.ValueString(), r.org_name)
+	if err != nil {
+		apiErr := err.(*core.APIError)
+		if apiErr.StatusCode == 404 {
+			return
+		}
+		resp.Diagnostics.AddError(
+			"Error Deleting Connector",
+			"Could not delete connector, unexpected error: "+err.Error(),
+		)
+		return
+	}
 }
+
+//func (r *connectorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+//	if req.State.Raw.IsNull() {
+//		defaultScope := types.ListValueMust(types.StringType, []attr.Value{types.StringValue("*")})
+//		diags := resp.Plan.SetAttribute(ctx, path.Root("scope"), &defaultScope)
+//		resp.Diagnostics.Append(diags...)
+//		if resp.Diagnostics.HasError() {
+//			return
+//		}
+//	}
+//}
