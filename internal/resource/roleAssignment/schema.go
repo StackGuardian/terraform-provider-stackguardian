@@ -1,4 +1,4 @@
-package user
+package roleAssignment
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 )
 
 // Schema defines the schema for the resource.
-func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"user_id": schema.StringAttribute{

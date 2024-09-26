@@ -1,4 +1,4 @@
-package user
+package roleAssignment
 
 import (
 	"context"
@@ -11,26 +11,26 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-var _ resource.Resource = &userResource{}
+var _ resource.Resource = &roleAssignmentResource{}
 
-type userResource struct {
+type roleAssignmentResource struct {
 	resource.Resource
 	client   *sgclient.Client
 	org_name string
 }
 
-// NewUserResource is a helper function to simplify the provider implementation.
+// NewroleAssignmentResource is a helper function to simplify the provider implementation.
 func NewResource() resource.Resource {
-	return &userResource{}
+	return &roleAssignmentResource{}
 }
 
 // Metadata returns the resource type name.
-func (r *userResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_user"
+func (r *roleAssignmentResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_role_assignment"
 }
 
 // Configure adds the provider configured client to the resource.
-func (r *userResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *roleAssignmentResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Add a nil check when handling ProviderData because Terraform
 	// sets that data after it calls the ConfigureProvider RPC.
 	if req.ProviderData == nil {
@@ -53,8 +53,8 @@ func (r *userResource) Configure(_ context.Context, req resource.ConfigureReques
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan UserResourceModel
+func (r *roleAssignmentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan roleAssignmentResourceModel
 
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -71,24 +71,24 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	reqResp, err := r.client.UsersRoles.AddUser(ctx, r.org_name, payload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
-		resp.Diagnostics.AddError("Error creating User", "Error in creating User via API call: "+err.Error())
+		resp.Diagnostics.AddError("Error creating Role Assignment", "Error in creating Role Assignment via API call: "+err.Error())
 		return
 	}
 
-	userModel, diags := buildAPIModelToUserModel(reqResp.Data)
+	roleAssignmentModel, diags := buildAPIModelToRoleAssignmentModel(reqResp.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Set state to fully populated data
-	resp.Diagnostics.Append(resp.State.Set(ctx, &userModel)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &roleAssignmentModel)...)
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// Get current state
-	var state UserResourceModel
+	var state roleAssignmentResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -112,11 +112,11 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 			}
 		}
 		tflog.Error(ctx, err.Error())
-		resp.Diagnostics.AddError("Error reading user", "Could not read user "+state.UserId.ValueString()+": "+err.Error())
+		resp.Diagnostics.AddError("Error reading Role Assignment", "Could not read Role Assignment for "+state.UserId.ValueString()+": "+err.Error())
 		return
 	}
 
-	roleResourceModel, diags := buildAPIModelToUserModel(user.Data)
+	roleResourceModel, diags := buildAPIModelToRoleAssignmentModel(user.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -127,8 +127,8 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan UserResourceModel
+func (r *roleAssignmentResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan roleAssignmentResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -144,7 +144,7 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	_, err := r.client.UsersRoles.UpdateUser(ctx, r.org_name, payload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
-		resp.Diagnostics.AddError("Error updating user", "Error in updating user "+
+		resp.Diagnostics.AddError("Error updating Role Assignment", "Error in updating Role Assignment "+
 			plan.UserId.ValueString()+": "+err.Error())
 		return
 	}
@@ -159,12 +159,12 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	updatedUser, err := r.client.UsersRoles.GetUser(ctx, r.org_name, getPayload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
-		resp.Diagnostics.AddError("Error reading the updated state of user",
-			"Could not read the updated state of user "+plan.UserId.ValueString()+": "+err.Error())
+		resp.Diagnostics.AddError("Error reading the updated state of Role Assignment",
+			"Could not read the updated state of Role Assignment "+plan.UserId.ValueString()+": "+err.Error())
 		return
 	}
 
-	roleResourceModel, diags := buildAPIModelToUserModel(updatedUser.Data)
+	roleResourceModel, diags := buildAPIModelToRoleAssignmentModel(updatedUser.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -174,8 +174,8 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state UserResourceModel
+func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state roleAssignmentResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -191,7 +191,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	_, err := r.client.UsersRoles.RemoveUser(ctx, r.org_name, removePayload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
-		resp.Diagnostics.AddError("Error deleting user", "Error in deleting user "+state.UserId.ValueString()+": "+err.Error())
+		resp.Diagnostics.AddError("Error deleting Role Assignment", "Error in deleting Role Assignment "+state.UserId.ValueString()+": "+err.Error())
 		return
 	}
 	//TODO: check if we need to update the state
