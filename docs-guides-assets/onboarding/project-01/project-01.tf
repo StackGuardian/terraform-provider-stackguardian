@@ -3,7 +3,7 @@
 terraform {
   required_providers {
     stackguardian = {
-      source  = "terraform/provider/stackguardian"
+      source  = "StackGuardian/stackguardian"
       version = "0.0.1"
     }
   }
@@ -20,11 +20,11 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
     resource_name = "ONBOARDING-Project01-Developer"
     description = "Onboarding example of terraform-provider-stackguardian for Role Developer"
     tags = [
-      "wicked-hop",
+      "demo-org",
     ]
     allowed_permissions = {
       // WF-GROUP
-      "GET/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/" : {
+      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/" : {
         "name" : "GetWorkflowGroup",
         "paths" : {
           "<wfGrp>" : [
@@ -36,7 +36,7 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
       },
 
       // WF
-      "GET/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/" : {
+      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/" : {
         "name" : "GetWorkflow",
         "paths" : {
           "<wfGrp>" : [
@@ -49,7 +49,7 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
           ]
         }
       },
-      "POST/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/" : {
+      "POST/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/" : {
         "name" : "CreateWorkflow",
         "paths" : {
           "<wfGrp>" : [
@@ -59,7 +59,7 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
           ]
         }
       },
-      "PATCH/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/" : {
+      "PATCH/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/" : {
         "name" : "UpdateWorkflow",
         "paths" : {
           "<wfGrp>" : [
@@ -72,7 +72,7 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
           ]
         }
       },
-      "DELETE/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/" : {
+      "DELETE/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/" : {
         "name" : "DeleteWorkflow",
         "paths" : {
           "<wfGrp>" : [
@@ -87,7 +87,7 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
       },
 
       // WF-RUN
-      "GET/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/" : {
+      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/" : {
         "name" : "GetWorkflowRun",
         "paths" : {
           "<wfRun>" : [
@@ -103,7 +103,7 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
           ]
         }
       },
-      "POST/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/wfruns/" : {
+      "POST/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/wfruns/" : {
         "name" : "CreateWorkflowRun",
         "paths" : {
           "<wfGrp>" : [
@@ -116,7 +116,7 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
           ]
         }
       },
-      "DELETE/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/" : {
+      "DELETE/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/" : {
         "name" : "UpdateWorkflowRun",
         "paths" : {
           "<wfRun>" : [
@@ -132,7 +132,7 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
           ]
         }
       },
-      "POST/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/resume/" : {
+      "POST/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/resume/" : {
         "name" : "ResumeWorkflowRun",
         "paths" : {
           "<wfRun>" : [
@@ -148,7 +148,7 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
           ]
         }
       },
-      "GET/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/logs/" : {
+      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/logs/" : {
         "name" : "GetWorkflowRunLogs",
         "paths" : {
           "<wfRun>" : [
@@ -166,7 +166,7 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
       },
 
       // WF-RUN-FACTS
-      "GET/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/wfrunfacts/<wfRunFacts>/" : {
+      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/wfrunfacts/<wfRunFacts>/" : {
         "name" : "GetWorkflowRunFact",
         "paths" : {
           "<wfGrp>" : [
@@ -187,7 +187,7 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
       },
 
       // WF-ARTIFACTS
-      "GET/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/listall_artifacts/" : {
+      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/listall_artifacts/" : {
         "name" : "ListWorkflowArtifacts",
         "paths" : {
           "<wfGrp>" : [
@@ -202,7 +202,7 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
       },
 
       // WF-OUTPUTS
-      "GET/api/v1/orgs/wicked-hop/wfgrps/<wfGrp>/wfs/<wf>/outputs/" : {
+      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/outputs/" : {
         "name" : "GetWorkflowOutputs",
         "paths" : {
           "<wfGrp>" : [
@@ -217,31 +217,31 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
       },
 
       // AUDIT
-      "GET/api/v1/orgs/wicked-hop/audit_logs/" : {
+      "GET/api/v1/orgs/demo-org/audit_logs/" : {
         "name" : "GetAuditLogs",
         "paths" : {}
       },
 
       // SECRET
-      "GET/api/v1/orgs/wicked-hop/secrets/listall/" : {
+      "GET/api/v1/orgs/demo-org/secrets/listall/" : {
         "name" : "ListSecrets",
         "paths" : {}
       },
-      "POST/api/v1/orgs/wicked-hop/secrets/" : {
+      "POST/api/v1/orgs/demo-org/secrets/" : {
         "name" : "CreateSecret",
         "paths" : {}
       },
-      "PATCH/api/v1/orgs/wicked-hop/secrets/<secret>/" : {
+      "PATCH/api/v1/orgs/demo-org/secrets/<secret>/" : {
         "name" : "UpdateSecret",
         "paths" : {}
       },
-      "DELETE/api/v1/orgs/wicked-hop/secrets/<secret>/" : {
+      "DELETE/api/v1/orgs/demo-org/secrets/<secret>/" : {
         "name" : "DeleteSecret",
         "paths" : {}
       },
 
       // INTEGRATION
-      "GET/api/v1/orgs/wicked-hop/integrationgroups/<integrationgroup>/" : {
+      "GET/api/v1/orgs/demo-org/integrationgroups/<integrationgroup>/" : {
         "name" : "GetIntegrationGroup",
         "paths" : {
           "<integrationgroup>" : [
@@ -249,7 +249,7 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
           ]
         }
       },
-      "GET/api/v1/orgs/wicked-hop/integrationgroups/<integrationgroup>/integrations/<integration>/" : {
+      "GET/api/v1/orgs/demo-org/integrationgroups/<integrationgroup>/integrations/<integration>/" : {
         "name" : "GetIntegrationGroupChild",
         "paths" : {
           "<integration>" : [
