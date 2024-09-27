@@ -4,8 +4,10 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -19,7 +21,8 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Required: true,
 			},
 			"resource_name": schema.StringAttribute{
-				Required: true,
+				Description: "Name of the Connector",
+				Required:    true,
 			},
 			"description": schema.StringAttribute{
 				Optional: true,
@@ -122,15 +125,12 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			},
 			"scope": schema.ListAttribute{
 				ElementType: types.StringType,
-				Optional:    true,
-				//PlanModifiers: []planmodifier.List{
-				//	scopePlanModifier{},
-				//},
+				Computed:    true,
+				Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{types.StringValue("*")})),
 			},
 			"tags": schema.ListAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				//Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aws"), types.StringValue("static"), types.StringValue("external"), types.StringValue("account")})),
 			},
 		},
 	}

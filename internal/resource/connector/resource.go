@@ -111,7 +111,7 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 	if err != nil {
 		apiErr := err.(*core.APIError)
 		if apiErr.StatusCode == 404 {
-			resp.State.Set(context.TODO(), nil)
+			resp.State.RemoveResource(ctx)
 			return
 		}
 		tflog.Error(ctx, err.Error())
@@ -167,12 +167,23 @@ func (r *connectorResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	reqResp, err := r.client.Connectors.UpdateConnector(ctx, plan.ResourceName.String(), r.org_name, payload)
+	reqResp, err := r.client.Connectors.UpdateConnector(ctx, plan.ResourceName.ValueString(), r.org_name, payload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error updating connector", "Error in updating connector API call: "+err.Error())
 		return
 	}
+
+	secretKeys := []string{"awsAccessKeyId", "awsDefaultRegion", "awsSecretAccessKey", "armClientSecret", "gcpConfigFileContent", "azureCreds", "gitlabCreds", "bitbucketCreds"}
+	for configIndex, config := range reqResp.Data.Settings.Config {
+		for key := range config {
+			if slices.Contains(secretKeys, key) {
+				config[key] = payload.Settings.Config[configIndex][key]
+			}
+		}
+	}
+
+	reqResp.Data.ResourceName = plan.ResourceName.ValueString()
 
 	connectorModel, diags := buildAPIModelToConnectorModel(reqResp.Data)
 	resp.Diagnostics.Append(diags...)
@@ -205,14 +216,3 @@ func (r *connectorResource) Delete(ctx context.Context, req resource.DeleteReque
 		return
 	}
 }
-
-//func (r *connectorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-//	if req.State.Raw.IsNull() {
-//		defaultScope := types.ListValueMust(types.StringType, []attr.Value{types.StringValue("*")})
-//		diags := resp.Plan.SetAttribute(ctx, path.Root("scope"), &defaultScope)
-//		resp.Diagnostics.Append(diags...)
-//		if resp.Diagnostics.HasError() {
-//			return
-//		}
-//	}
-//}
