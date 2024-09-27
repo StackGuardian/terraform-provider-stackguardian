@@ -2,7 +2,6 @@ package connector
 
 import (
 	"context"
-	"encoding/json"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	flatteners "github.com/StackGuardian/terraform-provider-stackguardian/internal/flattners"
@@ -10,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 type ConnectorResourceModel struct {
@@ -25,13 +23,69 @@ type ConnectorResourceModel struct {
 
 type ConnectorSettingsModel struct {
 	Kind   types.String `tfsdk:"kind"`
-	Config types.String `tfsdk:"config"`
+	Config types.List   `tfsdk:"config"`
 }
 
 func (ConnectorSettingsModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"kind":   types.StringType,
-		"config": types.StringType,
+		"config": types.ListType{ElemType: types.ObjectType{AttrTypes: ConnectorSettingsConfigModel{}.AttributeTypes()}},
+	}
+}
+
+type ConnectorSettingsConfigModel struct {
+	InstallationId          types.String `tfsdk:"installation_id"`
+	GithubAppId             types.String `tfsdk:"github_app_id"`
+	GithubAppWebhookSecret  types.String `tfsdk:"github_app_webhook_secret"`
+	GithubApiUrl            types.String `tfsdk:"github_api_url"`
+	GithubHttpUrl           types.String `tfsdk:"github_http_url"`
+	GithubAppClientId       types.String `tfsdk:"github_app_client_id"`
+	GithubAppClientSecret   types.String `tfsdk:"github_app_client_secret"`
+	GithubAppPemFileContent types.String `tfsdk:"github_app_pem_file_content"`
+	GithubAppWebhookURL     types.String `tfsdk:"github_app_webhook_url"`
+	GitlabCreds             types.String `tfsdk:"gitlab_creds"`
+	GitlabHttpUrl           types.String `tfsdk:"gitlab_http_url"`
+	GitlabApiUrl            types.String `tfsdk:"gitlab_api_url"`
+	AzureCreds              types.String `tfsdk:"azure_creds"`
+	AzureDevopsHttpUrl      types.String `tfsdk:"azure_devops_http_url"`
+	AzureDevopsApiUrl       types.String `tfsdk:"azure_devops_api_url"`
+	BitbucketCreds          types.String `tfsdk:"bitbucket_creds"`
+	AwsAccessKeyId          types.String `tfsdk:"aws_access_key_id"`
+	AwsSecretAccessKey      types.String `tfsdk:"aws_secret_access_key"`
+	AwsDefaultRegion        types.String `tfsdk:"aws_default_region"`
+	ArmTenantId             types.String `tfsdk:"arm_tenant_id"`
+	ArmSubscriptionId       types.String `tfsdk:"arm_subscription_id"`
+	ArmClientId             types.String `tfsdk:"arm_client_id"`
+	ArmClientSecret         types.String `tfsdk:"arm_client_secret"`
+	GcpConfigFileContent    types.String `tfsdk:"gcp_config_file_content"`
+}
+
+func (m ConnectorSettingsConfigModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"installation_id":             types.StringType,
+		"github_app_id":               types.StringType,
+		"github_app_webhook_secret":   types.StringType,
+		"github_api_url":              types.StringType,
+		"github_http_url":             types.StringType,
+		"github_app_client_id":        types.StringType,
+		"github_app_client_secret":    types.StringType,
+		"github_app_pem_file_content": types.StringType,
+		"github_app_webhook_url":      types.StringType,
+		"gitlab_creds":                types.StringType,
+		"gitlab_http_url":             types.StringType,
+		"gitlab_api_url":              types.StringType,
+		"azure_creds":                 types.StringType,
+		"azure_devops_http_url":       types.StringType,
+		"azure_devops_api_url":        types.StringType,
+		"bitbucket_creds":             types.StringType,
+		"aws_access_key_id":           types.StringType,
+		"aws_secret_access_key":       types.StringType,
+		"aws_default_region":          types.StringType,
+		"arm_tenant_id":               types.StringType,
+		"arm_subscription_id":         types.StringType,
+		"arm_client_id":               types.StringType,
+		"arm_client_secret":           types.StringType,
+		"gcp_config_file_content":     types.StringType,
 	}
 }
 
@@ -123,17 +177,43 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 		return nil, diags
 	}
 
-	settings := &sgsdkgo.Settings{
-		Kind: sgsdkgo.SettingsKindEnum(settingsModelValue.Kind.ValueString()),
+	var settingsConfigModel []*ConnectorSettingsConfigModel
+	diags = settingsModelValue.Config.ElementsAs(context.TODO(), &settingsConfigModel, false)
+	if diags.HasError() {
+		return nil, diags
 	}
 
-	var settingsConfig []map[string]interface{}
-	err := json.Unmarshal([]byte(settingsModelValue.Config.ValueString()), &settingsConfig)
-	if err != nil {
-		tflog.Debug(ctx, err.Error())
-		return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Invalid attribute", "Settings.Config is invalid")}
+	settingsConfigAPIValue := []*sgsdkgo.SettingsConfig{{
+		InstallationId:          settingsConfigModel[0].InstallationId.ValueStringPointer(),
+		GithubAppId:             settingsConfigModel[0].GithubAppId.ValueStringPointer(),
+		GithubAppWebhookSecret:  settingsConfigModel[0].GithubAppWebhookSecret.ValueStringPointer(),
+		GithubApiUrl:            settingsConfigModel[0].GithubApiUrl.ValueStringPointer(),
+		GithubHttpUrl:           settingsConfigModel[0].GithubHttpUrl.ValueStringPointer(),
+		GithubAppClientId:       settingsConfigModel[0].GithubAppClientId.ValueStringPointer(),
+		GithubAppClientSecret:   settingsConfigModel[0].GithubAppClientSecret.ValueStringPointer(),
+		GithubAppPemFileContent: settingsConfigModel[0].GithubAppPemFileContent.ValueStringPointer(),
+		GithubAppWebhookUrl:     settingsConfigModel[0].GithubAppWebhookURL.ValueStringPointer(),
+		GitlabCreds:             settingsConfigModel[0].GitlabCreds.ValueStringPointer(),
+		GitlabHttpUrl:           settingsConfigModel[0].GitlabHttpUrl.ValueStringPointer(),
+		GitlabApiUrl:            settingsConfigModel[0].GitlabApiUrl.ValueStringPointer(),
+		AzureCreds:              settingsConfigModel[0].AzureCreds.ValueStringPointer(),
+		AzureDevopsHttpUrl:      settingsConfigModel[0].AzureDevopsHttpUrl.ValueStringPointer(),
+		AzureDevopsApiUrl:       settingsConfigModel[0].AzureDevopsApiUrl.ValueStringPointer(),
+		BitbucketCreds:          settingsConfigModel[0].BitbucketCreds.ValueStringPointer(),
+		AwsAccessKeyId:          settingsConfigModel[0].AwsAccessKeyId.ValueStringPointer(),
+		AwsSecretAccessKey:      settingsConfigModel[0].AwsSecretAccessKey.ValueStringPointer(),
+		AwsDefaultRegion:        settingsConfigModel[0].AwsDefaultRegion.ValueStringPointer(),
+		ArmTenantId:             settingsConfigModel[0].ArmTenantId.ValueStringPointer(),
+		ArmSubscriptionId:       settingsConfigModel[0].ArmSubscriptionId.ValueStringPointer(),
+		ArmClientId:             settingsConfigModel[0].ArmClientId.ValueStringPointer(),
+		ArmClientSecret:         settingsConfigModel[0].ArmClientSecret.ValueStringPointer(),
+		GcpConfigFileContent:    settingsConfigModel[0].GcpConfigFileContent.ValueStringPointer(),
+	}}
+
+	settings := &sgsdkgo.Settings{
+		Kind:   sgsdkgo.SettingsKindEnum(settingsModelValue.Kind.ValueString()),
+		Config: settingsConfigAPIValue,
 	}
-	settings.Config = settingsConfig
 	apiModel.Settings = settings
 
 	// Parse discovery settings
@@ -312,17 +392,42 @@ func (m *ConnectorResourceModel) ToAPIPatchedModel(ctx context.Context) (*sgsdkg
 		return nil, diags
 	}
 
-	settings := &sgsdkgo.Settings{
-		Kind: sgsdkgo.SettingsKindEnum(settingsModelValue.Kind.ValueString()),
+	var settingsConfigModel []*ConnectorSettingsConfigModel
+	diags = settingsModelValue.Config.ElementsAs(context.TODO(), &settingsConfigModel, false)
+	if diags.HasError() {
+		return nil, diags
 	}
+	settingsConfigAPIValue := []*sgsdkgo.SettingsConfig{{
+		InstallationId:          settingsConfigModel[0].InstallationId.ValueStringPointer(),
+		GithubAppId:             settingsConfigModel[0].GithubAppId.ValueStringPointer(),
+		GithubAppWebhookSecret:  settingsConfigModel[0].GithubAppWebhookSecret.ValueStringPointer(),
+		GithubApiUrl:            settingsConfigModel[0].GithubApiUrl.ValueStringPointer(),
+		GithubHttpUrl:           settingsConfigModel[0].GithubHttpUrl.ValueStringPointer(),
+		GithubAppClientId:       settingsConfigModel[0].GithubAppClientId.ValueStringPointer(),
+		GithubAppClientSecret:   settingsConfigModel[0].GithubAppClientSecret.ValueStringPointer(),
+		GithubAppPemFileContent: settingsConfigModel[0].GithubAppPemFileContent.ValueStringPointer(),
+		GithubAppWebhookUrl:     settingsConfigModel[0].GithubAppWebhookURL.ValueStringPointer(),
+		GitlabCreds:             settingsConfigModel[0].GitlabCreds.ValueStringPointer(),
+		GitlabHttpUrl:           settingsConfigModel[0].GitlabHttpUrl.ValueStringPointer(),
+		GitlabApiUrl:            settingsConfigModel[0].GitlabApiUrl.ValueStringPointer(),
+		AzureCreds:              settingsConfigModel[0].AzureCreds.ValueStringPointer(),
+		AzureDevopsHttpUrl:      settingsConfigModel[0].AzureDevopsHttpUrl.ValueStringPointer(),
+		AzureDevopsApiUrl:       settingsConfigModel[0].AzureDevopsApiUrl.ValueStringPointer(),
+		BitbucketCreds:          settingsConfigModel[0].BitbucketCreds.ValueStringPointer(),
+		AwsAccessKeyId:          settingsConfigModel[0].AwsAccessKeyId.ValueStringPointer(),
+		AwsSecretAccessKey:      settingsConfigModel[0].AwsSecretAccessKey.ValueStringPointer(),
+		AwsDefaultRegion:        settingsConfigModel[0].AwsDefaultRegion.ValueStringPointer(),
+		ArmTenantId:             settingsConfigModel[0].ArmTenantId.ValueStringPointer(),
+		ArmSubscriptionId:       settingsConfigModel[0].ArmSubscriptionId.ValueStringPointer(),
+		ArmClientId:             settingsConfigModel[0].ArmClientId.ValueStringPointer(),
+		ArmClientSecret:         settingsConfigModel[0].ArmClientSecret.ValueStringPointer(),
+		GcpConfigFileContent:    settingsConfigModel[0].GcpConfigFileContent.ValueStringPointer(),
+	}}
 
-	var settingsConfig []map[string]interface{}
-	err := json.Unmarshal([]byte(settingsModelValue.Config.ValueString()), &settingsConfig)
-	if err != nil {
-		tflog.Debug(ctx, err.Error())
-		return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Invalid attribute", "Settings.Config is invalid")}
+	settings := &sgsdkgo.Settings{
+		Kind:   sgsdkgo.SettingsKindEnum(settingsModelValue.Kind.ValueString()),
+		Config: settingsConfigAPIValue,
 	}
-	settings.Config = settingsConfig
 	apiPatchedModel.Settings = settings
 
 	// Parse discovery settings
@@ -440,15 +545,44 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 		IsActive:     flatteners.String(apiResponse.IsActive),
 	}
 
-	settingsConfig, err := json.Marshal(apiResponse.Settings.Config)
-	if err != nil {
-		return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Unmarshal error", "Cannot unmarhsal Connector.Settings.Config object in response from sdk")}
+	settingsConfigModel := []*ConnectorSettingsConfigModel{
+		{
+			InstallationId:          flatteners.StringPtr(apiResponse.Settings.Config[0].InstallationId),
+			GithubAppId:             flatteners.StringPtr(apiResponse.Settings.Config[0].GithubAppId),
+			GithubAppWebhookSecret:  flatteners.StringPtr(apiResponse.Settings.Config[0].GithubAppWebhookSecret),
+			GithubApiUrl:            flatteners.StringPtr(apiResponse.Settings.Config[0].GithubApiUrl),
+			GithubHttpUrl:           flatteners.StringPtr(apiResponse.Settings.Config[0].GithubHttpUrl),
+			GithubAppClientId:       flatteners.StringPtr(apiResponse.Settings.Config[0].GithubAppClientId),
+			GithubAppClientSecret:   flatteners.StringPtr(apiResponse.Settings.Config[0].GithubAppClientSecret),
+			GithubAppPemFileContent: flatteners.StringPtr(apiResponse.Settings.Config[0].GithubAppPemFileContent),
+			GithubAppWebhookURL:     flatteners.StringPtr(apiResponse.Settings.Config[0].GithubAppWebhookUrl),
+			GitlabCreds:             flatteners.StringPtr(apiResponse.Settings.Config[0].GitlabCreds),
+			GitlabHttpUrl:           flatteners.StringPtr(apiResponse.Settings.Config[0].GitlabHttpUrl),
+			GitlabApiUrl:            flatteners.StringPtr(apiResponse.Settings.Config[0].GitlabApiUrl),
+			AzureCreds:              flatteners.StringPtr(apiResponse.Settings.Config[0].AzureCreds),
+			AzureDevopsHttpUrl:      flatteners.StringPtr(apiResponse.Settings.Config[0].AzureDevopsHttpUrl),
+			AzureDevopsApiUrl:       flatteners.StringPtr(apiResponse.Settings.Config[0].AzureDevopsApiUrl),
+			BitbucketCreds:          flatteners.StringPtr(apiResponse.Settings.Config[0].BitbucketCreds),
+			AwsAccessKeyId:          flatteners.StringPtr(apiResponse.Settings.Config[0].AwsAccessKeyId),
+			AwsSecretAccessKey:      flatteners.StringPtr(apiResponse.Settings.Config[0].AwsSecretAccessKey),
+			AwsDefaultRegion:        flatteners.StringPtr(apiResponse.Settings.Config[0].AwsDefaultRegion),
+			ArmTenantId:             flatteners.StringPtr(apiResponse.Settings.Config[0].ArmTenantId),
+			ArmSubscriptionId:       flatteners.StringPtr(apiResponse.Settings.Config[0].ArmSubscriptionId),
+			ArmClientId:             flatteners.StringPtr(apiResponse.Settings.Config[0].ArmClientId),
+			ArmClientSecret:         flatteners.StringPtr(apiResponse.Settings.Config[0].ArmClientSecret),
+			GcpConfigFileContent:    flatteners.StringPtr(apiResponse.Settings.Config[0].GcpConfigFileContent),
+		},
+	}
+
+	settingsConfigTerraType, diags := types.ListValueFrom(context.TODO(), types.ObjectType{AttrTypes: ConnectorSettingsConfigModel{}.AttributeTypes()}, &settingsConfigModel)
+	if diags.HasError() {
+		return nil, diags
 	}
 	connectorSettingsModel := ConnectorSettingsModel{
 		Kind:   flatteners.String(apiResponse.Settings.Kind),
-		Config: flatteners.String(string(settingsConfig)),
+		Config: settingsConfigTerraType,
 	}
-	var settings, diags = types.ObjectValueFrom(context.Background(), connectorSettingsModel.AttributeTypes(), connectorSettingsModel)
+	settings, diags := types.ObjectValueFrom(context.Background(), connectorSettingsModel.AttributeTypes(), connectorSettingsModel)
 	if diags.HasError() {
 		return nil, diags
 	}

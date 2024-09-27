@@ -27,6 +27,9 @@ func String(in string) basetypes.StringValue {
 }
 
 func StringPtr(in *string) basetypes.StringValue {
+	if in == nil {
+		return types.StringNull()
+	}
 	str := *in
 	if str == "" {
 		return types.StringNull()

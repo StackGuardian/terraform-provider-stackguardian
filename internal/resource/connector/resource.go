@@ -4,12 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"slices"
 
+	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	core "github.com/StackGuardian/sg-sdk-go/core"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -79,14 +78,7 @@ func (r *connectorResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	secretKeys := []string{"awsAccessKeyId", "awsDefaultRegion", "awsSecretAccessKey", "armClientSecret", "gcpConfigFileContent", "azureCreds", "gitlabCreds", "bitbucketCreds"}
-	for configIndex, config := range reqResp.Data.Settings.Config {
-		for key, _ := range config {
-			if slices.Contains(secretKeys, key) {
-				config[key] = payload.Settings.Config[configIndex][key]
-			}
-		}
-	}
+	reqResp.Data.Settings.Config = payload.Settings.Config
 
 	connectorModel, diags := buildAPIModelToConnectorModel(reqResp.Data)
 	resp.Diagnostics.Append(diags...)
@@ -128,21 +120,38 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	var settingsConfig []map[string]interface{}
-	err = json.Unmarshal([]byte(settingsModelValue.Config.ValueString()), &settingsConfig)
-	if err != nil {
-		tflog.Debug(ctx, err.Error())
-		resp.Diagnostics.Append(diag.NewErrorDiagnostic("Invalid attribute", "Settings.Config is invalid"))
+	var settingsConfigValue []*ConnectorSettingsConfigModel
+	diags = settingsModelValue.Config.ElementsAs(ctx, &settingsConfigValue, false)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	secretKeys := []string{"awsSecretAccessKey", "armClientSecret", "gcpConfigFileContent", "azureCreds", "gitlabCreds", "bitbucketCreds"}
-	for configIndex, config := range reqResp.Msg.Settings.Config {
-		for key, _ := range config {
-			if slices.Contains(secretKeys, key) {
-				config[key] = settingsConfig[configIndex][key]
-			}
-		}
+	reqResp.Msg.Settings.Config[0] = &sgsdkgo.SettingsConfig{
+		InstallationId:          settingsConfigValue[0].InstallationId.ValueStringPointer(),
+		GithubAppId:             settingsConfigValue[0].GithubAppId.ValueStringPointer(),
+		GithubAppWebhookSecret:  settingsConfigValue[0].GithubAppWebhookSecret.ValueStringPointer(),
+		GithubApiUrl:            settingsConfigValue[0].GithubApiUrl.ValueStringPointer(),
+		GithubHttpUrl:           settingsConfigValue[0].GithubHttpUrl.ValueStringPointer(),
+		GithubAppClientId:       settingsConfigValue[0].GithubAppClientId.ValueStringPointer(),
+		GithubAppClientSecret:   settingsConfigValue[0].GithubAppClientSecret.ValueStringPointer(),
+		GithubAppPemFileContent: settingsConfigValue[0].GithubAppPemFileContent.ValueStringPointer(),
+		GithubAppWebhookUrl:     settingsConfigValue[0].GithubAppWebhookURL.ValueStringPointer(),
+		GitlabCreds:             settingsConfigValue[0].GitlabCreds.ValueStringPointer(),
+		GitlabHttpUrl:           settingsConfigValue[0].GitlabHttpUrl.ValueStringPointer(),
+		GitlabApiUrl:            settingsConfigValue[0].GitlabApiUrl.ValueStringPointer(),
+		AzureCreds:              settingsConfigValue[0].AzureCreds.ValueStringPointer(),
+		AzureDevopsHttpUrl:      settingsConfigValue[0].AzureDevopsHttpUrl.ValueStringPointer(),
+		AzureDevopsApiUrl:       settingsConfigValue[0].AzureDevopsApiUrl.ValueStringPointer(),
+		BitbucketCreds:          settingsConfigValue[0].BitbucketCreds.ValueStringPointer(),
+		AwsAccessKeyId:          settingsConfigValue[0].AwsAccessKeyId.ValueStringPointer(),
+		AwsSecretAccessKey:      settingsConfigValue[0].AwsSecretAccessKey.ValueStringPointer(),
+		AwsDefaultRegion:        settingsConfigValue[0].AwsDefaultRegion.ValueStringPointer(),
+		ArmTenantId:             settingsConfigValue[0].ArmTenantId.ValueStringPointer(),
+		ArmSubscriptionId:       settingsConfigValue[0].ArmSubscriptionId.ValueStringPointer(),
+		ArmClientId:             settingsConfigValue[0].ArmClientId.ValueStringPointer(),
+		ArmClientSecret:         settingsConfigValue[0].ArmClientSecret.ValueStringPointer(),
+		GcpConfigFileContent:    settingsConfigValue[0].GcpConfigFileContent.ValueStringPointer(),
 	}
 
 	connectorResourceModel, diags := buildAPIModelToConnectorModel(reqResp.Msg)
@@ -176,14 +185,7 @@ func (r *connectorResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	secretKeys := []string{"awsAccessKeyId", "awsDefaultRegion", "awsSecretAccessKey", "armClientSecret", "gcpConfigFileContent", "azureCreds", "gitlabCreds", "bitbucketCreds"}
-	for configIndex, config := range reqResp.Data.Settings.Config {
-		for key := range config {
-			if slices.Contains(secretKeys, key) {
-				config[key] = payload.Settings.Config[configIndex][key]
-			}
-		}
-	}
+	reqResp.Data.Settings.Config = payload.Settings.Config
 
 	reqResp.Data.ResourceName = plan.ResourceName.ValueString()
 
