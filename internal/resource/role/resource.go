@@ -68,6 +68,27 @@ func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	reqResp, err := r.client.UsersRoles.CreateRole(ctx, r.org_name, payload)
 	if err != nil {
+		if apiErr, ok := err.(*core.APIError); ok {
+			// Check if resource already exists
+			if apiErr.StatusCode == 400 {
+				role, readErr := r.client.UsersRoles.ReadRole(ctx, r.org_name, plan.ResourceName.ValueString())
+				if readErr != nil {
+					tflog.Error(ctx, readErr.Error())
+					//Return the original error if read also fails
+					resp.Diagnostics.AddError("Error creating Role", "Could not create Role "+plan.ResourceName.ValueString()+": "+err.Error())
+					return
+				}
+
+				roleResourceModel, diags := buildAPIModelToRoleModel(role.Msg)
+				resp.Diagnostics.Append(diags...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				resp.Diagnostics.Append(resp.State.Set(ctx, roleResourceModel)...)
+				return
+			}
+		}
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error creating Role", "Error in creating Role API call: "+err.Error())
 		return

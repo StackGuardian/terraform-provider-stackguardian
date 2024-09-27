@@ -70,6 +70,34 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 
 	reqResp, err := r.client.UsersRoles.AddUser(ctx, r.org_name, payload)
 	if err != nil {
+		if apiErr, ok := err.(*core.APIError); ok {
+			// Check if resource already exists
+			if apiErr.StatusCode == 400 {
+				payload, paylodDiags := plan.ToGetAPIModel(ctx)
+				resp.Diagnostics.Append(paylodDiags...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				// Get refreshed state from client
+				user, getErr := r.client.UsersRoles.GetUser(ctx, r.org_name, payload)
+				if getErr != nil {
+					//Return the original error if read also fails
+					tflog.Error(ctx, getErr.Error())
+					resp.Diagnostics.AddError("Error creating Role Assignment", "Could not create Role Assignment for "+plan.UserId.ValueString()+": "+err.Error())
+					return
+				}
+
+				roleResourceModel, diags := buildAPIModelToRoleAssignmentModel(user.Data)
+				resp.Diagnostics.Append(diags...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				resp.Diagnostics.Append(resp.State.Set(ctx, roleResourceModel)...)
+				return
+			}
+		}
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error creating Role Assignment", "Error in creating Role Assignment via API call: "+err.Error())
 		return
