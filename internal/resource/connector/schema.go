@@ -6,7 +6,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -15,6 +14,9 @@ import (
 func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"organization": schema.StringAttribute{
+				Required: true,
+			},
 			"resource_name": schema.StringAttribute{
 				Required: true,
 			},
@@ -34,8 +36,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						},
 					},
 					"config": schema.StringAttribute{
-						Required:      true,
-						PlanModifiers: []planmodifier.String{},
+						Required: true,
 					},
 				},
 				//TODO: replace xyz with api docs
