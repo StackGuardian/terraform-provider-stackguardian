@@ -288,7 +288,7 @@ resource "stackguardian_workflow_group" "ONBOARDING-Project01-DevOps" {
     tags = ["tf-provider-example", "onboarding"]
 }
 
-resource "stackguardian_user" "ONBOARDING-Project01-Frontend-Developer" {
+resource "stackguardian_role_assignment" "ONBOARDING-Project01-Frontend-Developer" {
   user_id = "frontend.developer.p01@dummy.com"
   entity_type = "EMAIL"
   role = resource.stackguardian_role.ONBOARDING-Project01-Developer.resource_name
@@ -298,7 +298,6 @@ resource "stackguardian_user" "ONBOARDING-Project01-Frontend-Developer" {
 #Commented until connectors is ready for testing
 
 # resource "stackguardian_connector" "ONBOARDING-Project01-Cloud-Connector" {
-#   organization = "demo-org"
 #   resource_name = "ONBOARDING-Project01"
 #   description = "Onboarding example  of terraform-provider-stackguardian for ConnectorCloud"
 #   settings = {
@@ -315,7 +314,6 @@ resource "stackguardian_user" "ONBOARDING-Project01-Frontend-Developer" {
 
 
 # resource "stackguardian_connector" "ONBOARDING-Project01-VCS-Connector" {
-#   organization = "demo-org"
 #   resource_name = "ONBOARDING-Project01"
 #   description = "Onboarding example of terraform-provider-stackguardian for ConnectorVcs"
 #   settings = {
