@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
@@ -163,14 +162,9 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 				"Either set the value statically in the configuration, or use the STACKGUARDIAN_API_URI environment variable.",
 		)
 	}
-
-	principalIdHeader := http.Header{}
-	principalIdHeader.Add("X-Principal-ID", "test")
-
 	client := sgclient.NewClient(
 		sgoption.WithApiKey("apikey "+api_key),
 		sgoption.WithBaseURL(api_uri),
-		sgoption.WithHTTPHeader(principalIdHeader),
 	)
 	//Set the values in our struct
 	provInfo := customTypes.ProviderInfo{
