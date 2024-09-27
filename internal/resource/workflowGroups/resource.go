@@ -7,14 +7,7 @@ import (
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
-<<<<<<< HEAD
 	core "github.com/StackGuardian/sg-sdk-go/core"
-=======
-<<<<<<< HEAD
->>>>>>> 69e1bd4 (Implement WorkflowGroups (#21))
-=======
->>>>>>> bf83f22 (Implement WorkflowGroups (#21))
->>>>>>> 682f890 (Implement WorkflowGroups (#21))
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -45,15 +38,7 @@ func (r *workflowGroupResource) Configure(_ context.Context, req resource.Config
 		return
 	}
 
-<<<<<<< HEAD
 	provider, ok := req.ProviderData.(*customTypes.ProviderInfo)
-=======
-	client, ok := req.ProviderData.(*customTypes.ProviderInfo)
-<<<<<<< HEAD
->>>>>>> 69e1bd4 (Implement WorkflowGroups (#21))
-=======
->>>>>>> bf83f22 (Implement WorkflowGroups (#21))
->>>>>>> 682f890 (Implement WorkflowGroups (#21))
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -64,17 +49,8 @@ func (r *workflowGroupResource) Configure(_ context.Context, req resource.Config
 		return
 	}
 
-<<<<<<< HEAD
 	r.client = provider.Client
 	r.org_name = provider.Org_name
-=======
-	r.client = client.Client
-	r.org_name = client.Org_name
-<<<<<<< HEAD
->>>>>>> 69e1bd4 (Implement WorkflowGroups (#21))
-=======
->>>>>>> bf83f22 (Implement WorkflowGroups (#21))
->>>>>>> 682f890 (Implement WorkflowGroups (#21))
 }
 
 // Create creates the resource and sets the initial Terraform state.
@@ -146,7 +122,6 @@ func (r *workflowGroupResource) Read(ctx context.Context, req resource.ReadReque
 	// Get refreshed state from client
 	workflowGroup, err := r.client.WorkflowGroups.ReadWorkflowGroup(ctx, r.org_name, state.ResourceName.ValueString())
 	if err != nil {
-<<<<<<< HEAD
 		// If a managed resource is no longer found then remove it from the state
 		if apiErr, ok := err.(*core.APIError); ok {
 			if apiErr.StatusCode == 404 {
@@ -154,12 +129,6 @@ func (r *workflowGroupResource) Read(ctx context.Context, req resource.ReadReque
 				return
 			}
 		}
-=======
-<<<<<<< HEAD
->>>>>>> 69e1bd4 (Implement WorkflowGroups (#21))
-=======
->>>>>>> bf83f22 (Implement WorkflowGroups (#21))
->>>>>>> 682f890 (Implement WorkflowGroups (#21))
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error reading workflowGroup", "Could not read workflowGroup "+state.ResourceName.ValueString()+": "+err.Error())
 		return

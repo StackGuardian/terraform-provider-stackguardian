@@ -129,32 +129,6 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				ElementType: types.StringType,
 				Optional:    true,
 			},
-			"tags": schema.ListAttribute{
-				ElementType: types.StringType,
-				Optional:    true,
-			},
 		},
 	}
 }
-
-//// useStateForUnknownModifier implements the plan modifier.
-//type scopePlanModifier struct{}
-//
-//// Description returns a human-readable description of the plan modifier.
-//func (m scopePlanModifier) Description(_ context.Context) string {
-//	return "Set default value for scope while creating"
-//}
-//
-//// MarkdownDescription returns a markdown description of the plan modifier.
-//func (m scopePlanModifier) MarkdownDescription(_ context.Context) string {
-//	return "Set default value for scope while creating"
-//}
-//
-//// PlanModifyBool implements the plan modification logic.
-//func (m scopePlanModifier) PlanModifyList(ctx context.Context, req planmodifier.ListRequest, resp *planmodifier.ListResponse) {
-//	// Do nothing if there is a known planned value.
-//	if req.State.Raw.IsNull() {
-//		defaultScope := types.ListValueMust(types.StringType, []attr.Value{types.StringValue("*")})
-//		resp.PlanValue = defaultScope
-//	}
-//}
