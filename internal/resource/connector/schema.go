@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -32,20 +31,112 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Attributes: map[string]schema.Attribute{
 					"kind": schema.StringAttribute{
 						Required: true,
-						Validators: []validator.String{
-							stringvalidator.OneOf(
-								"AWS_STATIC",
-								"GITHUB_COM",
-							),
+					},
+					"config": schema.ListNestedAttribute{
+						Required: true,
+						NestedObject: schema.NestedAttributeObject{
+
+							Attributes: map[string]schema.Attribute{
+								"installation_id": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"github_app_id": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"github_app_webhook_secret": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"github_api_url": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"github_http_url": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"github_app_client_id": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"github_app_client_secret": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"github_app_pem_file_content": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"github_app_webhook_url": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"gitlab_creds": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"gitlab_http_url": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"gitlab_api_url": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"azure_creds": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"azure_devops_http_url": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"azure_devops_api_url": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"bitbucket_creds": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"aws_access_key_id": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"aws_secret_access_key": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"aws_default_region": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"arm_tenant_id": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"arm_subscription_id": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"arm_client_id": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"arm_client_secret": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+								"gcp_config_file_content": schema.StringAttribute{
+									Optional:    true,
+									Description: "",
+								},
+							},
 						},
 					},
-					"config": schema.StringAttribute{
-						Required:      true,
-						PlanModifiers: []planmodifier.String{},
-					},
 				},
-				//TODO: replace xyz with api docs
-				Description: "Kind and Config keys are required. Refer documentation at xyz",
 			},
 			"discovery_settings": schema.SingleNestedAttribute{
 				Optional: true,
