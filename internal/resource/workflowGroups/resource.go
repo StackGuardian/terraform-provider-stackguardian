@@ -79,6 +79,33 @@ func (r *workflowGroupResource) Create(ctx context.Context, req resource.CreateR
 		reqResp, err := r.client.WorkflowGroups.CreateChildWorkflowGroup(ctx, r.org_name,
 			ParentWfg, payload)
 		if err != nil {
+			// Check if resource already exists
+			if apiErr, ok := err.(*core.APIError); ok {
+				if apiErr.StatusCode == 400 {
+					workflowGroup, readErr := r.client.WorkflowGroups.ReadWorkflowGroup(ctx, r.org_name, plan.ResourceName.ValueString())
+					if readErr != nil {
+						// If read also fails return the original error
+						tflog.Error(ctx, readErr.Error())
+						resp.Diagnostics.AddError("Error creating child workflowGroup", "Could not create child workflowGroup "+plan.ResourceName.ValueString()+": "+err.Error())
+						return
+					}
+
+					//For cases where WFG is a nested one, the resource name is returned as the full path to match the resource_name in resource definition
+					if workflowGroup.Msg.SubResourceId != "" {
+						fullResourceName := strings.Replace(workflowGroup.Msg.SubResourceId, "/wfgrps/", "", 1)
+						workflowGroup.Msg.ResourceName = &fullResourceName
+					}
+
+					workflowGroupResourceModel, diags := buildAPIModelToWorkflowGroupModel(workflowGroup.Msg)
+					resp.Diagnostics.Append(diags...)
+					if resp.Diagnostics.HasError() {
+						return
+					}
+
+					resp.Diagnostics.Append(resp.State.Set(ctx, workflowGroupResourceModel)...)
+					return
+				}
+			}
 			tflog.Error(ctx, err.Error())
 			resp.Diagnostics.AddError("Error creating child workflowGroup", "Error in creating child workflowGroup API call: "+err.Error())
 			return
@@ -92,6 +119,33 @@ func (r *workflowGroupResource) Create(ctx context.Context, req resource.CreateR
 	} else { //If not, create a normal workflow group
 		reqResp, err := r.client.WorkflowGroups.CreateWorkflowGroup(ctx, r.org_name, payload)
 		if err != nil {
+			// Check if resource already exists
+			if apiErr, ok := err.(*core.APIError); ok {
+				if apiErr.StatusCode == 400 {
+					workflowGroup, readErr := r.client.WorkflowGroups.ReadWorkflowGroup(ctx, r.org_name, plan.ResourceName.ValueString())
+					if readErr != nil {
+						// If read also fails return the original error
+						tflog.Error(ctx, readErr.Error())
+						resp.Diagnostics.AddError("Error creating workflowGroup", "Could not create workflowGroup "+plan.ResourceName.ValueString()+": "+err.Error())
+						return
+					}
+
+					//For cases where WFG is a nested one, the resource name is returned as the full path to match the resource_name in resource definition
+					if workflowGroup.Msg.SubResourceId != "" {
+						fullResourceName := strings.Replace(workflowGroup.Msg.SubResourceId, "/wfgrps/", "", 1)
+						workflowGroup.Msg.ResourceName = &fullResourceName
+					}
+
+					workflowGroupResourceModel, diags := buildAPIModelToWorkflowGroupModel(workflowGroup.Msg)
+					resp.Diagnostics.Append(diags...)
+					if resp.Diagnostics.HasError() {
+						return
+					}
+
+					resp.Diagnostics.Append(resp.State.Set(ctx, workflowGroupResourceModel)...)
+					return
+				}
+			}
 			tflog.Error(ctx, err.Error())
 			resp.Diagnostics.AddError("Error creating workflowGroup", "Error in creating workflowGroup API call: "+err.Error())
 			return
