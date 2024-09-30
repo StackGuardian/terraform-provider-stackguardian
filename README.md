@@ -7,7 +7,7 @@
 
 _**DISCLAIMER:** This Terraform Provider project is currently in pre-release mode and is intended to be used with StackGuardian test servers and not in production environments_.
 
-The [StackGuardian Terraform Provider](https://github.com/StackGuardian/terraform-provider-stackguardian) allows [Terraform](https://www.terraform.io/) to programmatically interact with the [StackGuardian Orchestrator](https://docs.stackguardian.io/) [API](https://docs.qa.stackguardian.io/docs/api/overview) to help you manage resources on StackGaudian platform and ultimatelty enabling organizations to manage cloud infrastructure in a cost-efficient, secure, and compliant way.
+The [StackGuardian Terraform Provider](https://github.com/StackGuardian/terraform-provider-stackguardian) allows [Terraform](https://www.terraform.io/) to programmatically interact with the [StackGuardian Orchestrator Test API](https://docs.qa.stackguardian.io/docs/api/overview) to help you manage resources on StackGaudian platform and ultimatelty enabling organizations to manage cloud infrastructure in a cost-efficient, secure, and compliant way.
 
 
 
