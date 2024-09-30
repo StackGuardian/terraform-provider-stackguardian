@@ -4,13 +4,9 @@
 
 # StackGuardian Terraform Provider
 
-
 _*WARNING:* This Terraform Provider project is currently in pre-production mode._
 
-
 The [StackGuardian Terraform Provider](https://github.com/StackGuardian/terraform-provider-stackguardian) allows [Terraform](https://www.terraform.io/) to programmatically interact with the [StackGuardian Orchestrator](https://docs.stackguardian.io/) [API](https://docs.stackguardian.io/docs/api/overview) to help you manage your cloud infrastructure in a cost-efficient, secure, and compliant way.
-
-
 
 ## Documentation
 
@@ -18,7 +14,16 @@ The **reference documentation** of the Provider releases is available on the [Te
 
 A **quickstart step-by-step guide** can be found on the Terraform Registry or in this [repository](docs/guides/quickstart.md).
 
+## Documentation v1.0.0-beta
+
+### Resources
+
+- Connector: https://docs.qa.stackguardian.io/api/#tag/Connectors/operation/Create%20Connector
+- Role: https://docs.qa.stackguardian.io/api/#tag/Users-and-Roles/operation/Create%20Role
+- Role Assignment: https://docs.qa.stackguardian.io/api/#tag/Users-and-Roles/operation/Add%20User
+- Workflow Groups: https://docs.qa.stackguardian.io/api/#tag/Workflow-Groups/operation/Create%20Workflow%20Group
 
 ## Contributing
+
 This project is currently not able to accept external contributions.
 It will become possible after releasing a stable version later on.
