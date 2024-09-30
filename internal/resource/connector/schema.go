@@ -4,10 +4,8 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -16,9 +14,6 @@ import (
 func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"organization": schema.StringAttribute{
-				Required: true,
-			},
 			"resource_name": schema.StringAttribute{
 				Description: "Name of the Connector",
 				Required:    true,
@@ -154,8 +149,51 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								"label": schema.StringAttribute{
 									Required: true,
 								},
-								"runtime_source": schema.StringAttribute{
+								"runtime_source": schema.SingleNestedAttribute{
 									Optional: true,
+									Computed: true,
+									Attributes: map[string]schema.Attribute{
+										"custom_source": schema.SingleNestedAttribute{
+											Optional: true,
+											Computed: true,
+											Attributes: map[string]schema.Attribute{
+												"source_config_dest_kind": schema.StringAttribute{
+													Optional: true,
+												},
+												"config": schema.SingleNestedAttribute{
+													Optional: true,
+													Computed: true,
+													Attributes: map[string]schema.Attribute{
+														"include_sub_module": schema.BoolAttribute{
+															Optional: true,
+															Computed: true,
+														},
+														"ref": schema.StringAttribute{
+															Optional: true,
+														},
+														"git_core_auto_crlf": schema.BoolAttribute{
+															Optional: true,
+															Computed: true,
+														},
+														"auth": schema.StringAttribute{
+															Computed: true,
+															Optional: true,
+														},
+														"working_dir": schema.StringAttribute{
+															Optional: true,
+														},
+														"repo": schema.StringAttribute{
+															Optional: true,
+														},
+														"is_private": schema.BoolAttribute{
+															Optional: true,
+															Computed: true,
+														},
+													},
+												},
+											},
+										},
+									},
 								},
 								"summary_description": schema.StringAttribute{
 									Required: true,
@@ -217,7 +255,8 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"scope": schema.ListAttribute{
 				ElementType: types.StringType,
 				Computed:    true,
-				Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{types.StringValue("*")})),
+				Optional:    true,
+				//Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{types.StringValue("*")})),
 			},
 			"tags": schema.ListAttribute{
 				ElementType: types.StringType,

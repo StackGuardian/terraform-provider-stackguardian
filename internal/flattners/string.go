@@ -30,9 +30,5 @@ func StringPtr(in *string) basetypes.StringValue {
 	if in == nil {
 		return types.StringNull()
 	}
-	str := *in
-	if str == "" {
-		return types.StringNull()
-	}
-	return types.StringValue(str)
+	return String(*in)
 }

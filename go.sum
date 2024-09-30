@@ -1,3 +1,5 @@
+github.com/StackGuardian/sg-sdk-go v0.0.0-20240927131727-6f261a5467bd h1:NtER2MgLdHBEX4vE/CL1SxiRObEp4ulKkNrEtx0b1VQ=
+github.com/StackGuardian/sg-sdk-go v0.0.0-20240927131727-6f261a5467bd/go.mod h1:iCrgHE0WbxEaaLx6ATsRe81Qjp82kahCwLGJ2t66mZ0=
 github.com/bufbuild/protocompile v0.4.0 h1:LbFKd2XowZvQ/kajzguUp2DC9UEIQhIq77fZZlaQsNA=
 github.com/bufbuild/protocompile v0.4.0/go.mod h1:3v93+mbWn/v3xzN+31nwkJfrEpAUwp+BagBSZWx+TP8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

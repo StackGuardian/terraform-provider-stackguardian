@@ -120,7 +120,7 @@ func (ConnectorDiscoverySettingsRegionModel) AttributeTypes() attr.Type {
 type ConnectorDiscoverySettingsBenchmarksModel struct {
 	Description        types.String `tfsdk:"description"`
 	Label              types.String `tfsdk:"label"`
-	RuntimeSource      types.String `tfsdk:"runtime_source"`
+	RuntimeSource      types.Object `tfsdk:"runtime_source"`
 	SummaryDescription types.String `tfsdk:"summary_description"`
 	SummaryTitle       types.String `tfsdk:"summary_title"`
 	DiscoveryInterval  types.Int64  `tfsdk:"discovery_interval"`
@@ -136,7 +136,7 @@ func (ConnectorDiscoverySettingsBenchmarksModel) AttributeTypes() attr.Type {
 		AttrTypes: map[string]attr.Type{
 			"description":         types.StringType,
 			"label":               types.StringType,
-			"runtime_source":      types.StringType,
+			"runtime_source":      types.ObjectType{AttrTypes: ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel{}.AttributeTypes()},
 			"summary_description": types.StringType,
 			"summary_title":       types.StringType,
 			"discovery_interval":  types.Int64Type,
@@ -146,6 +146,50 @@ func (ConnectorDiscoverySettingsBenchmarksModel) AttributeTypes() attr.Type {
 			"checks":              types.ListType{ElemType: types.StringType},
 			"regions":             types.MapType{ElemType: types.ObjectType{AttrTypes: ConnectorDiscoverySettingsBenchmarksRegionsModel{}.AttributeTypes()}},
 		},
+	}
+}
+
+type ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel struct {
+	CustomSource types.Object `tfsdk:"custom_source"`
+}
+
+func (m ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"custom_source": types.ObjectType{AttrTypes: ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceModel{}.AttributeTypes()},
+	}
+}
+
+type ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceModel struct {
+	SourceConfigDestKind types.String `tfsdk:"source_config_dest_kind"`
+	Config               types.Object `tfsdk:"config"`
+}
+
+func (m ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"source_config_dest_kind": types.StringType,
+		"config":                  types.ObjectType{AttrTypes: ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel{}.AttributeTypes()},
+	}
+}
+
+type ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel struct {
+	IncludeSubModule types.Bool   `tfsdk:"include_sub_module"`
+	Ref              types.String `tfsdk:"ref"`
+	GitCoreAutoCRLF  types.Bool   `tfsdk:"git_core_auto_crlf"`
+	Auth             types.String `tfsdk:"auth"`
+	WorkingDir       types.String `tfsdk:"working_dir"`
+	Repo             types.String `tfsdk:"repo"`
+	IsPrivate        types.Bool   `tfsdk:"is_private"`
+}
+
+func (m ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"include_sub_module": types.BoolType,
+		"ref":                types.StringType,
+		"git_core_auto_crlf": types.BoolType,
+		"auth":               types.StringType,
+		"working_dir":        types.StringType,
+		"repo":               types.StringType,
+		"is_private":         types.BoolType,
 	}
 }
 
@@ -285,10 +329,46 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 				benchmarkRegions[region] = &sgsdkgo.DiscoveryRegion{
 					Emails: emailsAPIModel,
 				}
+
 			}
 
-			benchmarksModel := &sgsdkgo.DiscoveryBenchmark{
-				RuntimeSource: benchmark.RuntimeSource.ValueStringPointer(),
+			// runtime resource
+			benchmarkRuntimeResource := sgsdkgo.DiscoveryBenchmarkRuntimeSource{}
+			if !benchmark.RuntimeSource.IsNull() && !benchmark.RuntimeSource.IsUnknown() {
+				var customSourceModel ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceModel
+				customSourceAPIModel := &sgsdkgo.CustomSource{}
+
+				diags = benchmark.RuntimeSource.As(context.TODO(), &customSourceModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
+				if diags.HasError() {
+					return nil, diags
+				}
+
+				customSourceAPIModel.SourceConfigDestKind = customSourceModel.SourceConfigDestKind.ValueStringPointer()
+
+				if !customSourceModel.Config.IsNull() && customSourceModel.Config.IsUnknown() {
+					var customSourceConfigModel ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel
+					diags = customSourceModel.Config.As(context.TODO(), &customSourceConfigModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
+					if diags.HasError() {
+						return nil, diags
+					}
+
+					customSourceConfigAPIModel := &sgsdkgo.CustomSourceConfig{
+						Auth:             customSourceConfigModel.Auth.ValueStringPointer(),
+						IncludeSubModule: customSourceConfigModel.IncludeSubModule.ValueBoolPointer(),
+						Ref:              customSourceConfigModel.Ref.ValueStringPointer(),
+						GitCoreAutoCrlf:  customSourceConfigModel.GitCoreAutoCRLF.ValueBoolPointer(),
+						WorkingDir:       customSourceConfigModel.WorkingDir.ValueStringPointer(),
+						Repo:             customSourceConfigModel.Repo.ValueStringPointer(),
+						IsPrivate:        customSourceConfigModel.IsPrivate.ValueBoolPointer(),
+					}
+
+					customSourceAPIModel.Config = customSourceConfigAPIModel
+				}
+
+				benchmarkRuntimeResource.CustomSource = customSourceAPIModel
+			}
+
+			benchmarkAPIModel := &sgsdkgo.DiscoveryBenchmark{
 				Description:   benchmark.Description.ValueStringPointer(),
 				SummaryDesc:   benchmark.SummaryDescription.ValueStringPointer(),
 				SummaryTitle:  benchmark.SummaryTitle.ValueStringPointer(),
@@ -297,19 +377,20 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 				IsCustomCheck: benchmark.IsCustomCheck.ValueBoolPointer(),
 				Checks:        benchmarkChecks,
 				Regions:       benchmarkRegions,
+				RuntimeSource: &benchmarkRuntimeResource,
 			}
 
 			if !benchmark.LastDiscoveryTime.IsNull() {
 				intValue := int(benchmark.LastDiscoveryTime.ValueInt64())
-				benchmarksModel.LastDiscoveryTime = &intValue
+				benchmarkAPIModel.LastDiscoveryTime = &intValue
 			}
 
 			if !benchmark.DiscoveryInterval.IsNull() {
 				intValue := int(benchmark.DiscoveryInterval.ValueInt64())
-				benchmarksModel.DiscoveryInterval = &intValue
+				benchmarkAPIModel.DiscoveryInterval = &intValue
 			}
 
-			benchmarksAPIModel[benchmarkName] = benchmarksModel
+			benchmarksAPIModel[benchmarkName] = benchmarkAPIModel
 		}
 		discoverySettingsAPIModel.Benchmarks = benchmarksAPIModel
 
@@ -317,7 +398,7 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 	}
 
 	// Parse Scope
-	if !m.Scope.IsNull() {
+	if !m.Scope.IsNull() && !m.Scope.IsUnknown() {
 		var scopeModel []types.String
 		diags = m.Scope.ElementsAs(context.TODO(), &scopeModel, false)
 		if diags.HasError() {
@@ -356,7 +437,7 @@ func (m *ConnectorResourceModel) ToAPIPatchedModel(ctx context.Context) (*sgsdkg
 	}
 
 	// Parse Scope
-	if !m.Scope.IsNull() {
+	if !m.Scope.IsNull() && !m.Scope.IsUnknown() {
 		var scopeModel []types.String
 		diags := m.Scope.ElementsAs(context.TODO(), &scopeModel, false)
 		if diags.HasError() {
@@ -501,8 +582,43 @@ func (m *ConnectorResourceModel) ToAPIPatchedModel(ctx context.Context) (*sgsdkg
 				}
 			}
 
+			// runtime resource
+			benchmarkRuntimeResource := sgsdkgo.DiscoveryBenchmarkRuntimeSource{}
+			if !benchmark.RuntimeSource.IsNull() && !benchmark.RuntimeSource.IsUnknown() {
+				var customSourceModel ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceModel
+				customSourceAPIModel := &sgsdkgo.CustomSource{}
+
+				diags = benchmark.RuntimeSource.As(context.TODO(), &customSourceModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
+				if diags.HasError() {
+					return nil, diags
+				}
+
+				customSourceAPIModel.SourceConfigDestKind = customSourceModel.SourceConfigDestKind.ValueStringPointer()
+
+				if !customSourceModel.Config.IsNull() && !customSourceModel.Config.IsUnknown() {
+					var customSourceConfigModel ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel
+					diags = customSourceModel.Config.As(context.TODO(), &customSourceConfigModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
+					if diags.HasError() {
+						return nil, diags
+					}
+
+					customSourceConfigAPIModel := &sgsdkgo.CustomSourceConfig{
+						Auth:             customSourceConfigModel.Auth.ValueStringPointer(),
+						IncludeSubModule: customSourceConfigModel.IncludeSubModule.ValueBoolPointer(),
+						Ref:              customSourceConfigModel.Ref.ValueStringPointer(),
+						GitCoreAutoCrlf:  customSourceConfigModel.GitCoreAutoCRLF.ValueBoolPointer(),
+						WorkingDir:       customSourceConfigModel.WorkingDir.ValueStringPointer(),
+						Repo:             customSourceConfigModel.Repo.ValueStringPointer(),
+						IsPrivate:        customSourceConfigModel.IsPrivate.ValueBoolPointer(),
+					}
+
+					customSourceAPIModel.Config = customSourceConfigAPIModel
+				}
+
+				benchmarkRuntimeResource.CustomSource = customSourceAPIModel
+			}
+
 			benchmarksModel := &sgsdkgo.DiscoveryBenchmark{
-				RuntimeSource: benchmark.RuntimeSource.ValueStringPointer(),
 				Description:   benchmark.Description.ValueStringPointer(),
 				SummaryDesc:   benchmark.SummaryDescription.ValueStringPointer(),
 				SummaryTitle:  benchmark.SummaryTitle.ValueStringPointer(),
@@ -511,6 +627,7 @@ func (m *ConnectorResourceModel) ToAPIPatchedModel(ctx context.Context) (*sgsdkg
 				IsCustomCheck: benchmark.IsCustomCheck.ValueBoolPointer(),
 				Checks:        benchmarkChecks,
 				Regions:       benchmarkRegions,
+				RuntimeSource: &benchmarkRuntimeResource,
 			}
 
 			if !benchmark.LastDiscoveryTime.IsNull() {
@@ -604,15 +721,53 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 			benchmarks := make(map[string]*ConnectorDiscoverySettingsBenchmarksModel, len(apiResponse.DiscoverySettings.Benchmarks))
 			for benchmarkKey, benchmark := range apiResponse.DiscoverySettings.Benchmarks {
 				benchmarksModel := &ConnectorDiscoverySettingsBenchmarksModel{}
-				benchmarksModel.Description = types.StringPointerValue(benchmark.Description)
-				benchmarksModel.Label = types.StringPointerValue(benchmark.Label)
-				benchmarksModel.RuntimeSource = types.StringPointerValue(benchmark.RuntimeSource)
-				benchmarksModel.SummaryDescription = types.StringPointerValue(benchmark.SummaryDesc)
-				benchmarksModel.SummaryTitle = types.StringPointerValue(benchmark.SummaryTitle)
+				benchmarksModel.Description = flatteners.StringPtr(benchmark.Description)
+				benchmarksModel.Label = flatteners.StringPtr(benchmark.Label)
+				benchmarksModel.SummaryDescription = flatteners.StringPtr(benchmark.SummaryDesc)
+				benchmarksModel.SummaryTitle = flatteners.StringPtr(benchmark.SummaryTitle)
 				benchmarksModel.DiscoveryInterval = flatteners.Int64(int64(*benchmark.DiscoveryInterval))
 				benchmarksModel.LastDiscoveryTime = flatteners.Int64(int64(*benchmark.LastDiscoveryTime))
 				benchmarksModel.IsCustomCheck = types.BoolPointerValue(benchmark.IsCustomCheck)
 				benchmarksModel.Active = types.BoolValue(benchmark.Active)
+
+				// TODO: runtime resource
+				if benchmark.RuntimeSource != nil {
+					runtimeSourceModel := ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel{}
+					if benchmark.RuntimeSource.CustomSource != nil {
+						customSourceModel := ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceModel{
+							SourceConfigDestKind: flatteners.StringPtr(benchmark.RuntimeSource.CustomSource.SourceConfigDestKind),
+						}
+						if benchmark.RuntimeSource.CustomSource.Config != nil {
+							configModel := ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel{
+								IncludeSubModule: types.BoolValue(*benchmark.RuntimeSource.CustomSource.Config.IncludeSubModule),
+								Ref:              flatteners.StringPtr(benchmark.RuntimeSource.CustomSource.Config.Ref),
+								GitCoreAutoCRLF:  types.BoolValue(*benchmark.RuntimeSource.CustomSource.Config.GitCoreAutoCrlf),
+								Auth:             flatteners.StringPtr(benchmark.RuntimeSource.CustomSource.Config.Auth),
+								WorkingDir:       flatteners.StringPtr(benchmark.RuntimeSource.CustomSource.Config.WorkingDir),
+								Repo:             flatteners.StringPtr(benchmark.RuntimeSource.CustomSource.Config.Repo),
+								IsPrivate:        types.BoolValue(*benchmark.RuntimeSource.CustomSource.Config.IsPrivate),
+							}
+							customSourceModel.Config, diags = types.ObjectValueFrom(context.TODO(), configModel.AttributeTypes(), &configModel)
+							if diags.HasError() {
+								return nil, diags
+							}
+						} else {
+							customSourceModel.Config = types.ObjectNull(ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel{}.AttributeTypes())
+						}
+						runtimeSourceModel.CustomSource, diags = types.ObjectValueFrom(context.TODO(), customSourceModel.AttributeTypes(), &customSourceModel)
+						if diags.HasError() {
+							return nil, diags
+						}
+					} else {
+						runtimeSourceModel.CustomSource = types.ObjectNull(ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceModel{}.AttributeTypes())
+					}
+					benchmarksModel.RuntimeSource, diags = types.ObjectValueFrom(context.TODO(), runtimeSourceModel.AttributeTypes(), runtimeSourceModel)
+					if diags.HasError() {
+						return nil, diags
+					}
+				} else {
+					benchmarksModel.RuntimeSource = types.ObjectNull(ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel{}.AttributeTypes())
+				}
 
 				// regions
 				regions := map[string]types.Object{}
