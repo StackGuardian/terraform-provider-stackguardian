@@ -210,7 +210,7 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 	}
 
 	// is active
-	if !m.IsActive.IsNull() {
+	if !m.IsActive.IsNull() && !m.IsActive.IsUnknown() {
 		apiModel.IsActive = (*sgsdkgo.IsArchiveEnum)(m.IsActive.ValueStringPointer())
 	}
 
@@ -263,7 +263,7 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 	// Parse discovery settings
 	discoverySettingsAPIModel := &sgsdkgo.Discoverysettings{}
 	var discoverySettingsModel *ConnectorDiscoverySettingsModel
-	if !m.DiscoverySettings.IsNull() {
+	if !m.DiscoverySettings.IsNull() && !m.DiscoverySettings.IsUnknown() {
 		diags := m.DiscoverySettings.As(context.Background(), &discoverySettingsModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
 		if diags.HasError() {
 			return nil, diags
@@ -514,7 +514,7 @@ func (m *ConnectorResourceModel) ToAPIPatchedModel(ctx context.Context) (*sgsdkg
 	// Parse discovery settings
 	discoverySettingsAPIModel := &sgsdkgo.Discoverysettings{}
 	var discoverySettingsModel *ConnectorDiscoverySettingsModel
-	if !m.DiscoverySettings.IsNull() {
+	if !m.DiscoverySettings.IsNull() && !m.DiscoverySettings.IsUnknown() {
 		diags := m.DiscoverySettings.As(context.Background(), &discoverySettingsModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
 		if diags.HasError() {
 			return nil, diags
@@ -711,7 +711,7 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 	} else {
 		DiscoverySettingsModel := &ConnectorDiscoverySettingsModel{}
 		// discovery interval
-		DiscoverySettingsModel.DiscoveryInterval = flatteners.Int64(int64(*apiResponse.DiscoverySettings.DiscoveryInterval))
+		DiscoverySettingsModel.DiscoveryInterval = flatteners.Int64Ptr(apiResponse.DiscoverySettings.DiscoveryInterval)
 
 		// benchmarks
 		if apiResponse.DiscoverySettings.Benchmarks == nil || len(apiResponse.DiscoverySettings.Benchmarks) == 0 {

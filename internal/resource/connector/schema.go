@@ -134,6 +134,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				},
 			},
 			"discovery_settings": schema.SingleNestedAttribute{
+				Computed: true,
 				Optional: true,
 				Attributes: map[string]schema.Attribute{
 					"benchmarks": schema.MapNestedAttribute{
@@ -244,6 +245,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				},
 			},
 			"is_active": schema.StringAttribute{
+				Computed: true,
 				Optional: true,
 				Validators: []validator.String{
 					stringvalidator.OneOf(

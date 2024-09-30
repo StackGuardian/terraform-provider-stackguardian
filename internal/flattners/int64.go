@@ -25,3 +25,10 @@ func Int64(in int64) basetypes.Int64Value {
 	}
 	return types.Int64Value(in)
 }
+
+func Int64Ptr(in *int) basetypes.Int64Value {
+	if in == nil {
+		return types.Int64Null()
+	}
+	return Int64(int64(*in))
+}
