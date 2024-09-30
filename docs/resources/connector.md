@@ -40,9 +40,6 @@ resource "stackguardian_connector" "ONBOARDING-Project01-Cloud-Connector" {
 - `is_active` (String) If this connector is to be actively used or not. Should be one of <span style="background-color: #eff0f0; color: #e53835;">0</span>
 					<span style="background-color: #eff0f0; color: #e53835;">1</span>
 - `scope` (List of String)
-
-### Read-Only
-
 - `tags` (List of String)
 
 <a id="nestedatt--settings"></a>
