@@ -23,7 +23,8 @@ func (r *roleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				ElementType: types.StringType,
 			},
 			"allowed_permissions": schema.MapNestedAttribute{
-				Required: true,
+				Optional: true,
+				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"name": schema.StringAttribute{
