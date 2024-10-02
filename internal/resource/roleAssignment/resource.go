@@ -7,6 +7,7 @@ import (
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	core "github.com/StackGuardian/sg-sdk-go/core"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -50,6 +51,10 @@ func (r *roleAssignmentResource) Configure(_ context.Context, req resource.Confi
 
 	r.client = providerInfo.Client
 	r.org_name = providerInfo.Org_name
+}
+
+func (r *roleAssignmentResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), req.ID)...)
 }
 
 // Create creates the resource and sets the initial Terraform state.

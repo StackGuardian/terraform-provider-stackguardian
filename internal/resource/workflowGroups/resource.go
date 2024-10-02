@@ -9,6 +9,7 @@ import (
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	core "github.com/StackGuardian/sg-sdk-go/core"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -51,6 +52,10 @@ func (r *workflowGroupResource) Configure(_ context.Context, req resource.Config
 
 	r.client = provider.Client
 	r.org_name = provider.Org_name
+}
+
+func (r *workflowGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("resource_name"), req.ID)...)
 }
 
 // Create creates the resource and sets the initial Terraform state.

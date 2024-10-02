@@ -263,6 +263,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"tags": schema.ListAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 		},
 	}

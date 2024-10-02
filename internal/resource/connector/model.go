@@ -413,7 +413,7 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 	}
 
 	// Parse tags
-	if !m.Tags.IsNull() {
+	if !m.Tags.IsNull() && !m.Tags.IsUnknown() {
 		var tagsModel []types.String
 		diags = m.Tags.ElementsAs(context.TODO(), &tagsModel, false)
 		if diags.HasError() {

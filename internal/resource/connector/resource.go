@@ -2,13 +2,13 @@ package connector
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	core "github.com/StackGuardian/sg-sdk-go/core"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -54,6 +54,10 @@ func (r *connectorResource) Configure(_ context.Context, req resource.ConfigureR
 	r.org_name = provider.Org_name
 }
 
+func (r *connectorResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("resource_name"), req.ID)...)
+}
+
 // Create creates the resource and sets the initial Terraform state.
 func (r *connectorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan ConnectorResourceModel
@@ -64,8 +68,6 @@ func (r *connectorResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	payload, diags := plan.ToAPIModel(ctx)
-	payloadStr, _ := json.Marshal(payload)
-	fmt.Println(string(payloadStr))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -113,45 +115,46 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	var settingsModelValue *ConnectorSettingsModel
-	diags = state.Settings.As(context.Background(), &settingsModelValue, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	if !state.Settings.IsNull() {
+		var settingsModelValue *ConnectorSettingsModel
+		diags = state.Settings.As(context.Background(), &settingsModelValue, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		var settingsConfigValue []*ConnectorSettingsConfigModel
+		diags = settingsModelValue.Config.ElementsAs(ctx, &settingsConfigValue, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 
-	var settingsConfigValue []*ConnectorSettingsConfigModel
-	diags = settingsModelValue.Config.ElementsAs(ctx, &settingsConfigValue, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	reqResp.Msg.Settings.Config[0] = &sgsdkgo.SettingsConfig{
-		InstallationId:          settingsConfigValue[0].InstallationId.ValueStringPointer(),
-		GithubAppId:             settingsConfigValue[0].GithubAppId.ValueStringPointer(),
-		GithubAppWebhookSecret:  settingsConfigValue[0].GithubAppWebhookSecret.ValueStringPointer(),
-		GithubApiUrl:            settingsConfigValue[0].GithubApiUrl.ValueStringPointer(),
-		GithubHttpUrl:           settingsConfigValue[0].GithubHttpUrl.ValueStringPointer(),
-		GithubAppClientId:       settingsConfigValue[0].GithubAppClientId.ValueStringPointer(),
-		GithubAppClientSecret:   settingsConfigValue[0].GithubAppClientSecret.ValueStringPointer(),
-		GithubAppPemFileContent: settingsConfigValue[0].GithubAppPemFileContent.ValueStringPointer(),
-		GithubAppWebhookUrl:     settingsConfigValue[0].GithubAppWebhookURL.ValueStringPointer(),
-		GitlabCreds:             settingsConfigValue[0].GitlabCreds.ValueStringPointer(),
-		GitlabHttpUrl:           settingsConfigValue[0].GitlabHttpUrl.ValueStringPointer(),
-		GitlabApiUrl:            settingsConfigValue[0].GitlabApiUrl.ValueStringPointer(),
-		AzureCreds:              settingsConfigValue[0].AzureCreds.ValueStringPointer(),
-		AzureDevopsHttpUrl:      settingsConfigValue[0].AzureDevopsHttpUrl.ValueStringPointer(),
-		AzureDevopsApiUrl:       settingsConfigValue[0].AzureDevopsApiUrl.ValueStringPointer(),
-		BitbucketCreds:          settingsConfigValue[0].BitbucketCreds.ValueStringPointer(),
-		AwsAccessKeyId:          settingsConfigValue[0].AwsAccessKeyId.ValueStringPointer(),
-		AwsSecretAccessKey:      settingsConfigValue[0].AwsSecretAccessKey.ValueStringPointer(),
-		AwsDefaultRegion:        settingsConfigValue[0].AwsDefaultRegion.ValueStringPointer(),
-		ArmTenantId:             settingsConfigValue[0].ArmTenantId.ValueStringPointer(),
-		ArmSubscriptionId:       settingsConfigValue[0].ArmSubscriptionId.ValueStringPointer(),
-		ArmClientId:             settingsConfigValue[0].ArmClientId.ValueStringPointer(),
-		ArmClientSecret:         settingsConfigValue[0].ArmClientSecret.ValueStringPointer(),
-		GcpConfigFileContent:    settingsConfigValue[0].GcpConfigFileContent.ValueStringPointer(),
+		reqResp.Msg.Settings.Config[0] = &sgsdkgo.SettingsConfig{
+			InstallationId:          settingsConfigValue[0].InstallationId.ValueStringPointer(),
+			GithubAppId:             settingsConfigValue[0].GithubAppId.ValueStringPointer(),
+			GithubAppWebhookSecret:  settingsConfigValue[0].GithubAppWebhookSecret.ValueStringPointer(),
+			GithubApiUrl:            settingsConfigValue[0].GithubApiUrl.ValueStringPointer(),
+			GithubHttpUrl:           settingsConfigValue[0].GithubHttpUrl.ValueStringPointer(),
+			GithubAppClientId:       settingsConfigValue[0].GithubAppClientId.ValueStringPointer(),
+			GithubAppClientSecret:   settingsConfigValue[0].GithubAppClientSecret.ValueStringPointer(),
+			GithubAppPemFileContent: settingsConfigValue[0].GithubAppPemFileContent.ValueStringPointer(),
+			GithubAppWebhookUrl:     settingsConfigValue[0].GithubAppWebhookURL.ValueStringPointer(),
+			GitlabCreds:             settingsConfigValue[0].GitlabCreds.ValueStringPointer(),
+			GitlabHttpUrl:           settingsConfigValue[0].GitlabHttpUrl.ValueStringPointer(),
+			GitlabApiUrl:            settingsConfigValue[0].GitlabApiUrl.ValueStringPointer(),
+			AzureCreds:              settingsConfigValue[0].AzureCreds.ValueStringPointer(),
+			AzureDevopsHttpUrl:      settingsConfigValue[0].AzureDevopsHttpUrl.ValueStringPointer(),
+			AzureDevopsApiUrl:       settingsConfigValue[0].AzureDevopsApiUrl.ValueStringPointer(),
+			BitbucketCreds:          settingsConfigValue[0].BitbucketCreds.ValueStringPointer(),
+			AwsAccessKeyId:          settingsConfigValue[0].AwsAccessKeyId.ValueStringPointer(),
+			AwsSecretAccessKey:      settingsConfigValue[0].AwsSecretAccessKey.ValueStringPointer(),
+			AwsDefaultRegion:        settingsConfigValue[0].AwsDefaultRegion.ValueStringPointer(),
+			ArmTenantId:             settingsConfigValue[0].ArmTenantId.ValueStringPointer(),
+			ArmSubscriptionId:       settingsConfigValue[0].ArmSubscriptionId.ValueStringPointer(),
+			ArmClientId:             settingsConfigValue[0].ArmClientId.ValueStringPointer(),
+			ArmClientSecret:         settingsConfigValue[0].ArmClientSecret.ValueStringPointer(),
+			GcpConfigFileContent:    settingsConfigValue[0].GcpConfigFileContent.ValueStringPointer(),
+		}
 	}
 
 	connectorResourceModel, diags := buildAPIModelToConnectorModel(reqResp.Msg)
