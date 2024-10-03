@@ -15,26 +15,37 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"resource_name": schema.StringAttribute{
-				Description: "Name of the Connector",
-				Required:    true,
+				MarkdownDescription: "Connector name. Must be less than 100 characters. Allowed characters are ^[-a-zA-Z0-9_]+$",
+				Required:            true,
 			},
 			"description": schema.StringAttribute{
-				Optional: true,
+				MarkdownDescription: "Must be less than 256 characters",
+				Optional:            true,
 			},
 			"settings": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"kind": schema.StringAttribute{
+						MarkdownDescription: `Type of connector. Should be one of <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>
+							<span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>
+							<span style="background-color: #eff0f0; color: #e53835;">AWS_STATIC</span>
+							<span style="background-color: #eff0f0; color: #e53835;">GCP_STATIC</span>
+							<span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC</span>
+							<span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC</span>
+							<span style="background-color: #eff0f0; color: #e53835;">AZURE_STATIC</span>
+							<span style="background-color: #eff0f0; color: #e53835;">AZURE_OIDC</span>
+							<span style="background-color: #eff0f0; color: #e53835;">BITBUCKET_ORG</span>
+							<span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>
+							<span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS</span>`,
 						Required: true,
 					},
 					"config": schema.ListNestedAttribute{
 						Required: true,
 						NestedObject: schema.NestedAttributeObject{
-
 							Attributes: map[string]schema.Attribute{
 								"installation_id": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"github_app_id": schema.StringAttribute{
 									Optional:    true,
@@ -247,6 +258,8 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"is_active": schema.StringAttribute{
 				Computed: true,
 				Optional: true,
+				MarkdownDescription: `If this connector is to be actively used or not. Should be one of <span style="background-color: #eff0f0; color: #e53835;">0</span>
+					<span style="background-color: #eff0f0; color: #e53835;">1</span>`,
 				Validators: []validator.String{
 					stringvalidator.OneOf(
 						"0",
@@ -258,7 +271,6 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				ElementType: types.StringType,
 				Computed:    true,
 				Optional:    true,
-				//Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{types.StringValue("*")})),
 			},
 			"tags": schema.ListAttribute{
 				ElementType: types.StringType,
