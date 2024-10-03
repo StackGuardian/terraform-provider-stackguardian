@@ -40,7 +40,7 @@ test-examples-onboarding:
 
 docs-generate:
 	tfplugindocs generate \
-		--website-source-dir docs-templates
+		--provider-name stackguardian --website-source-dir docs-templates
 
 docs-validate:
 	tfplugindocs validate
