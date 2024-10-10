@@ -24,10 +24,10 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
     ]
     allowed_permissions = {
       // WF-GROUP
-      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/" : {
-        "name" : "GetWorkflowGroup",
-        "paths" : {
-          "<wfGrp>" : [
+      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/" = {
+        name = "GetWorkflowGroup",
+        paths = {
+          "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Frontend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Backend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-DevOps.resource_name,
@@ -36,226 +36,226 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
       },
 
       // WF
-      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/" : {
-        "name" : "GetWorkflow",
-        "paths" : {
-          "<wfGrp>" : [
+      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/" = {
+        name = "GetWorkflow",
+        paths = {
+          "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Frontend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Backend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-DevOps.resource_name,
           ],
-          "<wf>" : [
+          "<wf>" = [
             ".*"
           ]
         }
       },
-      "POST/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/" : {
-        "name" : "CreateWorkflow",
-        "paths" : {
-          "<wfGrp>" : [
+      "POST/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/" = {
+        name = "CreateWorkflow",
+        paths = {
+          "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Frontend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Backend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-DevOps.resource_name,
           ]
         }
       },
-      "PATCH/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/" : {
-        "name" : "UpdateWorkflow",
-        "paths" : {
-          "<wfGrp>" : [
+      "PATCH/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/" = {
+        name = "UpdateWorkflow",
+        paths = {
+          "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Frontend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Backend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-DevOps.resource_name,
           ],
-          "<wf>" : [
+          "<wf>" = [
             ".*"
           ]
         }
       },
-      "DELETE/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/" : {
-        "name" : "DeleteWorkflow",
-        "paths" : {
-          "<wfGrp>" : [
+      "DELETE/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/" = {
+        name = "DeleteWorkflow",
+        paths = {
+          "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Frontend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Backend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-DevOps.resource_name,
           ],
-          "<wf>" : [
+          "<wf>" = [
             ".*"
           ]
         }
       },
 
       // WF-RUN
-      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/" : {
-        "name" : "GetWorkflowRun",
-        "paths" : {
-          "<wfRun>" : [
+      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/" = {
+        name = "GetWorkflowRun",
+        paths = {
+          "<wfRun>" = [
             ".*"
           ],
-          "<wfGrp>" : [
+          "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Frontend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Backend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-DevOps.resource_name,
           ],
-          "<wf>" : [
+          "<wf>" = [
             ".*"
           ]
         }
       },
-      "POST/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/wfruns/" : {
-        "name" : "CreateWorkflowRun",
-        "paths" : {
-          "<wfGrp>" : [
+      "POST/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/wfruns/" = {
+        name = "CreateWorkflowRun",
+        paths = {
+          "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Frontend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Backend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-DevOps.resource_name,
           ],
-          "<wf>" : [
+          "<wf>" = [
             ".*"
           ]
         }
       },
-      "DELETE/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/" : {
-        "name" : "UpdateWorkflowRun",
-        "paths" : {
-          "<wfRun>" : [
+      "DELETE/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/" = {
+        name = "UpdateWorkflowRun",
+        paths = {
+          "<wfRun>" = [
             ".*"
           ],
-          "<wfGrp>" : [
+          "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Frontend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Backend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-DevOps.resource_name,
           ],
-          "<wf>" : [
+          "<wf>" = [
             ".*"
           ]
         }
       },
-      "POST/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/resume/" : {
-        "name" : "ResumeWorkflowRun",
-        "paths" : {
-          "<wfRun>" : [
+      "POST/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/resume/" = {
+        name = "ResumeWorkflowRun",
+        paths = {
+          "<wfRun>" = [
             ".*"
           ],
-          "<wfGrp>" : [
+          "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Frontend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Backend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-DevOps.resource_name,
           ],
-          "<wf>" : [
+          "<wf>" = [
             ".*"
           ]
         }
       },
-      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/logs/" : {
-        "name" : "GetWorkflowRunLogs",
-        "paths" : {
-          "<wfRun>" : [
+      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/logs/" = {
+        name = "GetWorkflowRunLogs",
+        paths = {
+          "<wfRun>" = [
             ".*"
           ],
-          "<wfGrp>" : [
+          "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Frontend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Backend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-DevOps.resource_name,
           ],
-          "<wf>" : [
+          "<wf>" = [
             ".*"
           ]
         }
       },
 
       // WF-RUN-FACTS
-      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/wfrunfacts/<wfRunFacts>/" : {
-        "name" : "GetWorkflowRunFact",
-        "paths" : {
-          "<wfGrp>" : [
+      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/wfruns/<wfRun>/wfrunfacts/<wfRunFacts>/" = {
+        name = "GetWorkflowRunFact",
+        paths = {
+          "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Frontend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Backend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-DevOps.resource_name,
           ],
-          "<wfRun>" : [
+          "<wfRun>" = [
             ".*"
           ],
-          "<wf>" : [
+          "<wf>" = [
             ".*"
           ],
-          "<wfRunFacts>" : [
+          "<wfRunFacts>" = [
             ".*"
           ]
         }
       },
 
       // WF-ARTIFACTS
-      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/listall_artifacts/" : {
-        "name" : "ListWorkflowArtifacts",
-        "paths" : {
-          "<wfGrp>" : [
+      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/listall_artifacts/" = {
+        name = "ListWorkflowArtifacts",
+        paths = {
+          "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Frontend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Backend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-DevOps.resource_name,
           ],
-          "<wf>" : [
+          "<wf>" = [
             ".*"
           ]
         }
       },
 
       // WF-OUTPUTS
-      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/outputs/" : {
-        "name" : "GetWorkflowOutputs",
-        "paths" : {
-          "<wfGrp>" : [
+      "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/wfs/<wf>/outputs/" = {
+        name = "GetWorkflowOutputs",
+        paths = {
+          "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Frontend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-Backend.resource_name,
             resource.stackguardian_workflow_group.ONBOARDING-Project01-DevOps.resource_name,
           ],
-          "<wf>" : [
+          "<wf>" = [
             ".*"
           ]
         }
       },
 
       // AUDIT
-      "GET/api/v1/orgs/demo-org/audit_logs/" : {
-        "name" : "GetAuditLogs",
-        "paths" : {}
+      "GET/api/v1/orgs/demo-org/audit_logs/" = {
+        name = "GetAuditLogs",
+        paths = {}
       },
 
       // SECRET
-      "GET/api/v1/orgs/demo-org/secrets/listall/" : {
-        "name" : "ListSecrets",
-        "paths" : {}
+      "GET/api/v1/orgs/demo-org/secrets/listall/" = {
+        name = "ListSecrets",
+        paths = {}
       },
-      "POST/api/v1/orgs/demo-org/secrets/" : {
-        "name" : "CreateSecret",
-        "paths" : {}
+      "POST/api/v1/orgs/demo-org/secrets/" = {
+        name = "CreateSecret",
+        paths = {}
       },
-      "PATCH/api/v1/orgs/demo-org/secrets/<secret>/" : {
-        "name" : "UpdateSecret",
-        "paths" : {}
+      "PATCH/api/v1/orgs/demo-org/secrets/<secret>/" = {
+        name = "UpdateSecret",
+        paths = {}
       },
-      "DELETE/api/v1/orgs/demo-org/secrets/<secret>/" : {
-        "name" : "DeleteSecret",
-        "paths" : {}
+      "DELETE/api/v1/orgs/demo-org/secrets/<secret>/" = {
+        name = "DeleteSecret",
+        paths = {}
       },
 
       // INTEGRATION
-      "GET/api/v1/orgs/demo-org/integrationgroups/<integrationgroup>/" : {
-        "name" : "GetIntegrationGroup",
-        "paths" : {
-          "<integrationgroup>" : [
+      "GET/api/v1/orgs/demo-org/integrationgroups/<integrationgroup>/" = {
+        name = "GetIntegrationGroup",
+        paths = {
+          "<integrationgroup>" = [
             ".*"
           ]
         }
       },
-      "GET/api/v1/orgs/demo-org/integrationgroups/<integrationgroup>/integrations/<integration>/" : {
-        "name" : "GetIntegrationGroupChild",
-        "paths" : {
-          "<integration>" : [
+      "GET/api/v1/orgs/demo-org/integrationgroups/<integrationgroup>/integrations/<integration>/" = {
+        name = "GetIntegrationGroupChild",
+        paths = {
+          "<integration>" = [
             "ONBOARDING-Project01"
           ],
-          "<integrationgroup>" : [
+          "<integrationgroup>" = [
             ".*"
           ]
         }
