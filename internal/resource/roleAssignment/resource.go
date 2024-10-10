@@ -227,5 +227,4 @@ func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.Delete
 		resp.Diagnostics.AddError("Error deleting Role Assignment", "Error in deleting Role Assignment "+state.UserId.ValueString()+": "+err.Error())
 		return
 	}
-	//TODO: check if we need to update the state
 }
