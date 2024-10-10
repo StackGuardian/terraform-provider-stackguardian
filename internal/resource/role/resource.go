@@ -141,7 +141,6 @@ func (r *roleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, roleResourceModel)...)
-
 }
 
 // Update updates the resource and sets the updated Terraform state on success.

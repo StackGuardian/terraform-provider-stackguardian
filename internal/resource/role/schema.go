@@ -19,10 +19,12 @@ func (r *roleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"description": schema.StringAttribute{
 				MarkdownDescription: "Must be less than 256 characters",
 				Optional:            true,
+				Computed:            true,
 			},
 			"tags": schema.ListAttribute{
 				MarkdownDescription: "Atmost 10 tags are allowed",
 				Optional:            true,
+				Computed:            true,
 				ElementType:         types.StringType,
 			},
 			"allowed_permissions": schema.MapNestedAttribute{
@@ -34,7 +36,8 @@ func (r *roleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 							Required: true,
 						},
 						"paths": schema.MapAttribute{
-							Required: true,
+							Optional: true,
+							Computed: true,
 							ElementType: types.ListType{
 								ElemType: types.StringType,
 							},

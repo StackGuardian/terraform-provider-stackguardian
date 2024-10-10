@@ -3,10 +3,8 @@ package connector
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -149,101 +147,106 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Optional: true,
 				Attributes: map[string]schema.Attribute{
 					"benchmarks": schema.MapNestedAttribute{
-						Required: true,
+						Optional: true,
+						Computed: true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"active": schema.BoolAttribute{
-									Required: true,
-								},
-								"description": schema.StringAttribute{
-									Required: true,
-								},
-								"label": schema.StringAttribute{
-									Required: true,
+								"checks": schema.ListAttribute{
+									Required:    true,
+									ElementType: types.StringType,
 								},
 								"runtime_source": schema.SingleNestedAttribute{
 									Optional: true,
-									Computed: true,
 									Attributes: map[string]schema.Attribute{
-										"custom_source": schema.SingleNestedAttribute{
+										"source_config_dest_kind": schema.StringAttribute{
+											Optional: true,
+											Computed: true,
+										},
+										"config": schema.SingleNestedAttribute{
 											Optional: true,
 											Computed: true,
 											Attributes: map[string]schema.Attribute{
-												"source_config_dest_kind": schema.StringAttribute{
-													Optional: true,
-												},
-												"config": schema.SingleNestedAttribute{
+												"include_sub_module": schema.BoolAttribute{
 													Optional: true,
 													Computed: true,
-													Attributes: map[string]schema.Attribute{
-														"include_sub_module": schema.BoolAttribute{
-															Optional: true,
-															Computed: true,
-														},
-														"ref": schema.StringAttribute{
-															Optional: true,
-														},
-														"git_core_auto_crlf": schema.BoolAttribute{
-															Optional: true,
-															Computed: true,
-														},
-														"auth": schema.StringAttribute{
-															Computed: true,
-															Optional: true,
-														},
-														"working_dir": schema.StringAttribute{
-															Optional: true,
-														},
-														"repo": schema.StringAttribute{
-															Optional: true,
-														},
-														"is_private": schema.BoolAttribute{
-															Optional: true,
-															Computed: true,
-														},
-													},
+												},
+												"ref": schema.StringAttribute{
+													Optional: true,
+												},
+												"git_core_auto_crlf": schema.BoolAttribute{
+													Optional: true,
+													Computed: true,
+												},
+												"auth": schema.StringAttribute{
+													Computed: true,
+													Optional: true,
+												},
+												"working_dir": schema.StringAttribute{
+													Optional: true,
+													Computed: true,
+												},
+												"repo": schema.StringAttribute{
+													Optional: true,
+													Computed: true,
+												},
+												"is_private": schema.BoolAttribute{
+													Optional: true,
+													Computed: true,
 												},
 											},
 										},
 									},
 								},
+								"regions": schema.MapNestedAttribute{
+									Optional: true,
+									Computed: true,
+									NestedObject: schema.NestedAttributeObject{
+										Attributes: map[string]schema.Attribute{
+											"emails": schema.ListAttribute{
+												ElementType: types.StringType,
+												Optional:    true,
+												Computed:    true,
+											},
+										},
+									},
+								},
+								"last_discovery_time": schema.Int64Attribute{
+									Optional: true,
+									Computed: true,
+								},
+								"description": schema.StringAttribute{
+									Optional: true,
+								},
 								"summary_description": schema.StringAttribute{
-									Required: true,
+									Optional: true,
+								},
+								"active": schema.BoolAttribute{
+									Optional: true,
+									Computed: true,
+								},
+								"label": schema.StringAttribute{
+									Optional: true,
+								},
+								"is_custom_check": schema.BoolAttribute{
+									Optional: true,
+									Computed: true,
 								},
 								"summary_title": schema.StringAttribute{
 									Required: true,
 								},
 								"discovery_interval": schema.Int64Attribute{
-									Required: true,
-								},
-								"last_discovery_time": schema.Int64Attribute{
 									Optional: true,
-								},
-								"is_custom_check": schema.BoolAttribute{
-									Required: true,
-								},
-								"checks": schema.ListAttribute{
-									Required:    true,
-									ElementType: types.StringType,
-								},
-								"regions": schema.MapNestedAttribute{
-									Required: true,
-									NestedObject: schema.NestedAttributeObject{
-										Attributes: map[string]schema.Attribute{
-											"emails": schema.ListAttribute{
-												ElementType: types.StringType,
-												Required:    true,
-											},
-										},
-									},
+									Computed: true,
 								},
 							},
 						},
 					},
 					"discovery_interval": schema.Int64Attribute{
-						Required: true,
+						Optional: true,
 					},
 					"regions": schema.ListNestedAttribute{
+						Optional: true,
+						Computed: true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"region": schema.StringAttribute{
@@ -251,20 +254,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								},
 							},
 						},
-						Required: true,
 					},
-				},
-			},
-			"is_active": schema.StringAttribute{
-				Computed: true,
-				Optional: true,
-				MarkdownDescription: `If this connector is to be actively used or not. Should be one of <span style="background-color: #eff0f0; color: #e53835;">0</span>
-					<span style="background-color: #eff0f0; color: #e53835;">1</span>`,
-				Validators: []validator.String{
-					stringvalidator.OneOf(
-						"0",
-						"1",
-					),
 				},
 			},
 			"scope": schema.ListAttribute{

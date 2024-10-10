@@ -80,7 +80,7 @@ func (r *connectorResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	reqResp.Data.Settings.Config = payload.Settings.Config
+	reqResp.Data.Settings.Config = payload.Settings.Value.Config
 
 	connectorModel, diags := buildAPIModelToConnectorModel(reqResp.Data)
 	resp.Diagnostics.Append(diags...)
@@ -188,7 +188,7 @@ func (r *connectorResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	reqResp.Data.Settings.Config = payload.Settings.Config
+	reqResp.Data.Settings.Config = payload.Settings.Value.Config
 
 	reqResp.Data.ResourceName = plan.ResourceName.ValueString()
 
