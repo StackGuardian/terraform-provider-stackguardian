@@ -22,8 +22,8 @@ resource "stackguardian_role" "ONBOARDING-Project02-Manager-Frontend" {
     tags = ["tf-provider-example", "onboarding"]
     allowed_permissions = {
       "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" = {
-        "name" = "GetWorkflowGroup"
-        "paths" = {
+        name = "GetWorkflowGroup"
+        paths = {
           "<wfGrp>" = [
             "resource.stackguardian_workflow_group.ONBOARDING-Project02-Frontend.resource_name",
           ]
@@ -38,8 +38,8 @@ resource "stackguardian_role" "ONBOARDING-Project02-Developer-Frontend" {
     tags = ["tf-provider-example", "onboarding"]
     allowed_permissions = {
       "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" = {
-        "name" = "GetWorkflowGroup",
-        "paths" = {
+        name = "GetWorkflowGroup",
+        paths = {
           "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project02-Frontend.resource_name,
           ]
@@ -54,8 +54,8 @@ resource "stackguardian_role" "ONBOARDING-Project02-Manager-Backend" {
     tags = ["tf-provider-example", "onboarding"]
     allowed_permissions = {
       "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" = {
-        "name" = "GetWorkflowGroup",
-        "paths" = {
+        name = "GetWorkflowGroup",
+        paths = {
           "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project02-Backend.resource_name,
           ]
@@ -70,8 +70,8 @@ resource "stackguardian_role" "ONBOARDING-Project02-Developer-Backend" {
     tags = ["tf-provider-example", "onboarding"]
     allowed_permissions = {
       "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" = {
-        "name" = "GetWorkflowGroup",
-        "paths" = {
+        name = "GetWorkflowGroup",
+        paths = {
           "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project02-Backend.resource_name,
           ]
@@ -86,8 +86,8 @@ resource "stackguardian_role" "ONBOARDING-Project02-Developer-DevOps" {
     tags = ["tf-provider-example", "onboarding"]
     allowed_permissions = {
       "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" = {
-        "name" = "GetWorkflowGroup",
-        "paths" = {
+        name = "GetWorkflowGroup",
+        paths = {
           "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project02-DevOps.resource_name,
           ]
