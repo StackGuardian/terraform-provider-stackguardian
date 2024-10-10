@@ -21,11 +21,11 @@ resource "stackguardian_role" "ONBOARDING-Project02-Manager-Frontend" {
     description = "Onboarding example of terraform-provider-stackguardian for Role Manager of Frontend team" 
     tags = ["tf-provider-example", "onboarding"]
     allowed_permissions = {
-      "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" : {
-        "name" : "GetWorkflowGroup",
-        "paths" : {
-          "<wfGrp>" : [
-            resource.stackguardian_workflow_group.ONBOARDING-Project02-Frontend.resource_name,
+      "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" = {
+        "name" = "GetWorkflowGroup"
+        "paths" = {
+          "<wfGrp>" = [
+            "resource.stackguardian_workflow_group.ONBOARDING-Project02-Frontend.resource_name",
           ]
         }
       },
@@ -37,10 +37,10 @@ resource "stackguardian_role" "ONBOARDING-Project02-Developer-Frontend" {
     description = "Onboarding example of terraform-provider-stackguardian for Role Developer of Frontend team" 
     tags = ["tf-provider-example", "onboarding"]
     allowed_permissions = {
-      "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" : {
-        "name" : "GetWorkflowGroup",
-        "paths" : {
-          "<wfGrp>" : [
+      "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" = {
+        "name" = "GetWorkflowGroup",
+        "paths" = {
+          "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project02-Frontend.resource_name,
           ]
         }
@@ -53,10 +53,10 @@ resource "stackguardian_role" "ONBOARDING-Project02-Manager-Backend" {
     description = "Onboarding example of terraform-provider-stackguardian for Role Manager of Backend team" 
     tags = ["tf-provider-example", "onboarding"]
     allowed_permissions = {
-      "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" : {
-        "name" : "GetWorkflowGroup",
-        "paths" : {
-          "<wfGrp>" : [
+      "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" = {
+        "name" = "GetWorkflowGroup",
+        "paths" = {
+          "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project02-Backend.resource_name,
           ]
         }
@@ -69,10 +69,10 @@ resource "stackguardian_role" "ONBOARDING-Project02-Developer-Backend" {
     description = "Onboarding example of terraform-provider-stackguardian for Role Developer of Backend team" 
     tags = ["tf-provider-example", "onboarding"]
     allowed_permissions = {
-      "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" : {
-        "name" : "GetWorkflowGroup",
-        "paths" : {
-          "<wfGrp>" : [
+      "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" = {
+        "name" = "GetWorkflowGroup",
+        "paths" = {
+          "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project02-Backend.resource_name,
           ]
         }
@@ -85,10 +85,10 @@ resource "stackguardian_role" "ONBOARDING-Project02-Developer-DevOps" {
     description = "Onboarding example of terraform-provider-stackguardian for Role Developer of DevOps team" 
     tags = ["tf-provider-example", "onboarding"]
     allowed_permissions = {
-      "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" : {
-        "name" : "GetWorkflowGroup",
-        "paths" : {
-          "<wfGrp>" : [
+      "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" = {
+        "name" = "GetWorkflowGroup",
+        "paths" = {
+          "<wfGrp>" = [
             resource.stackguardian_workflow_group.ONBOARDING-Project02-DevOps.resource_name,
           ]
         }
