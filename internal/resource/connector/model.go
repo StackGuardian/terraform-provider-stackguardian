@@ -116,7 +116,6 @@ type ConnectorDiscoverySettingsBenchmarksModel struct {
 	SummaryDescription types.String `tfsdk:"summary_description"`
 	SummaryTitle       types.String `tfsdk:"summary_title"`
 	DiscoveryInterval  types.Int64  `tfsdk:"discovery_interval"`
-	LastDiscoveryTime  types.Int64  `tfsdk:"last_discovery_time"`
 	IsCustomCheck      types.Bool   `tfsdk:"is_custom_check"`
 	Active             types.Bool   `tfsdk:"active"`
 	Checks             types.List   `tfsdk:"checks"`
@@ -132,7 +131,6 @@ func (ConnectorDiscoverySettingsBenchmarksModel) AttributeTypes() attr.Type {
 			"summary_description": types.StringType,
 			"summary_title":       types.StringType,
 			"discovery_interval":  types.Int64Type,
-			"last_discovery_time": types.Int64Type,
 			"is_custom_check":     types.BoolType,
 			"active":              types.BoolType,
 			"checks":              types.ListType{ElemType: types.StringType},
@@ -349,10 +347,6 @@ func discoverSettingsToAPIModel(m types.Object) (*sgsdkgo.Discoverysettings, dia
 				benchmarkAPIModel.Regions = benchmarkRegions
 			}
 
-			if !benchmark.LastDiscoveryTime.IsUnknown() {
-				benchmarkAPIModel.LastDiscoveryTime = int(benchmark.LastDiscoveryTime.ValueInt64())
-			}
-
 			if !benchmark.DiscoveryInterval.IsUnknown() {
 				intValue := int(benchmark.DiscoveryInterval.ValueInt64())
 				benchmarkAPIModel.DiscoveryInterval = &intValue
@@ -369,7 +363,12 @@ func discoverSettingsToAPIModel(m types.Object) (*sgsdkgo.Discoverysettings, dia
 func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integration, diag.Diagnostics) {
 	apiModel := sgsdkgo.Integration{
 		ResourceName: sgsdkgo.Optional(*m.ResourceName.ValueStringPointer()),
-		Description:  sgsdkgo.Optional(*m.Description.ValueStringPointer()),
+	}
+
+	if !m.Description.IsUnknown() {
+		apiModel.Description = sgsdkgo.Optional(*m.Description.ValueStringPointer())
+	} else {
+		apiModel.Description = sgsdkgo.Null[string]()
 	}
 
 	settings, diags := settingsToAPIModel(m.Settings)
@@ -422,7 +421,9 @@ func (m *ConnectorResourceModel) ToAPIPatchedModel(ctx context.Context) (*sgsdkg
 		ResourceName: sgsdkgo.Optional(*m.ResourceName.ValueStringPointer()),
 	}
 
-	if m.Description.IsUnknown() {
+	if !m.Description.IsUnknown() {
+		apiPatchedModel.Description = sgsdkgo.Optional(m.Description.ValueString())
+	} else {
 		apiPatchedModel.Description = sgsdkgo.Null[string]()
 	}
 
@@ -533,7 +534,6 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 				benchmarksModel.SummaryDescription = flatteners.StringPtr(benchmark.SummaryDesc)
 				benchmarksModel.SummaryTitle = flatteners.StringPtr(benchmark.SummaryTitle)
 				benchmarksModel.DiscoveryInterval = flatteners.Int64(int64(*benchmark.DiscoveryInterval))
-				benchmarksModel.LastDiscoveryTime = flatteners.Int64(int64(*benchmark.LastDiscoveryTime))
 				benchmarksModel.IsCustomCheck = types.BoolPointerValue(benchmark.IsCustomCheck)
 				benchmarksModel.Active = types.BoolValue(benchmark.Active)
 
