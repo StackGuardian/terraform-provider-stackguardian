@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
-	flatteners "github.com/StackGuardian/terraform-provider-stackguardian/internal/flattners"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/flatteners"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -23,16 +23,10 @@ var (
 	}
 )
 
-func ParseString(str string) (*sgsdkgo.EntityTypeEnum, bool) {
-	c, ok := capabilitiesMap[strings.ToUpper(str)]
-	return c, ok
-}
-
 func (m *roleAssignmentResourceModel) ToCreateAPIModel(ctx context.Context) (*sgsdkgo.AddUserToOrganization, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
 
-	entityVal := m.EntityType.ValueString()
-	entity, ok := ParseString(entityVal)
+	entity, ok := capabilitiesMap[strings.ToUpper(m.EntityType.ValueString())]
 	if !ok {
 		diags.AddError("entityType", "Invalid entityType value")
 		return nil, diags

@@ -21,7 +21,7 @@ func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequ
 				Required: true,
 			},
 			"role": schema.StringAttribute{
-				MarkdownDescription: "<= 255 characters",
+				MarkdownDescription: "Role name. Must be ess than 255 characters",
 				Required:            true,
 			},
 		},

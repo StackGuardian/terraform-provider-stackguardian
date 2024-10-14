@@ -3,10 +3,8 @@ package connector
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -21,6 +19,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"description": schema.StringAttribute{
 				MarkdownDescription: "Must be less than 256 characters",
 				Optional:            true,
+				Computed:            true,
 			},
 			"settings": schema.SingleNestedAttribute{
 				Required: true,
@@ -40,7 +39,8 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						Required: true,
 					},
 					"config": schema.ListNestedAttribute{
-						Required: true,
+						MarkdownDescription: "Connector secrets configuration",
+						Required:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"installation_id": schema.StringAttribute{
@@ -48,96 +48,96 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 									MarkdownDescription: "",
 								},
 								"github_app_id": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"github_app_webhook_secret": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"github_api_url": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"github_http_url": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"github_app_client_id": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"github_app_client_secret": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"github_app_pem_file_content": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"github_app_webhook_url": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"gitlab_creds": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"gitlab_http_url": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"gitlab_api_url": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"azure_creds": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"azure_devops_http_url": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"azure_devops_api_url": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"bitbucket_creds": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"aws_access_key_id": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"aws_secret_access_key": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"aws_default_region": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"arm_tenant_id": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"arm_subscription_id": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"arm_client_id": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"arm_client_secret": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 								"gcp_config_file_content": schema.StringAttribute{
-									Optional:    true,
-									Description: "",
+									Optional:            true,
+									MarkdownDescription: "",
 								},
 							},
 						},
@@ -145,137 +145,139 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				},
 			},
 			"discovery_settings": schema.SingleNestedAttribute{
-				Computed: true,
-				Optional: true,
+				MarkdownDescription: "Settings for insights",
+				Optional:            true,
+				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"benchmarks": schema.MapNestedAttribute{
-						Required: true,
+						MarkdownDescription: "Statistics for different stackguardian resources",
+						Optional:            true,
+						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"active": schema.BoolAttribute{
-									Required: true,
-								},
-								"description": schema.StringAttribute{
-									Required: true,
-								},
-								"label": schema.StringAttribute{
-									Required: true,
+								"checks": schema.ListAttribute{
+									MarkdownDescription: "",
+									Required:            true,
+									ElementType:         types.StringType,
 								},
 								"runtime_source": schema.SingleNestedAttribute{
-									Optional: true,
-									Computed: true,
+									MarkdownDescription: "",
+									Optional:            true,
 									Attributes: map[string]schema.Attribute{
-										"custom_source": schema.SingleNestedAttribute{
-											Optional: true,
-											Computed: true,
+										"source_config_dest_kind": schema.StringAttribute{
+											MarkdownDescription: "",
+											Optional:            true,
+											Computed:            true,
+										},
+										"config": schema.SingleNestedAttribute{
+											MarkdownDescription: "",
+											Optional:            true,
+											Computed:            true,
 											Attributes: map[string]schema.Attribute{
-												"source_config_dest_kind": schema.StringAttribute{
-													Optional: true,
+												"include_sub_module": schema.BoolAttribute{
+													MarkdownDescription: "",
+													Optional:            true,
+													Computed:            true,
 												},
-												"config": schema.SingleNestedAttribute{
-													Optional: true,
-													Computed: true,
-													Attributes: map[string]schema.Attribute{
-														"include_sub_module": schema.BoolAttribute{
-															Optional: true,
-															Computed: true,
-														},
-														"ref": schema.StringAttribute{
-															Optional: true,
-														},
-														"git_core_auto_crlf": schema.BoolAttribute{
-															Optional: true,
-															Computed: true,
-														},
-														"auth": schema.StringAttribute{
-															Computed: true,
-															Optional: true,
-														},
-														"working_dir": schema.StringAttribute{
-															Optional: true,
-														},
-														"repo": schema.StringAttribute{
-															Optional: true,
-														},
-														"is_private": schema.BoolAttribute{
-															Optional: true,
-															Computed: true,
-														},
-													},
+												"ref": schema.StringAttribute{
+													MarkdownDescription: "",
+													Optional:            true,
+													Computed:            true,
+												},
+												"git_core_auto_crlf": schema.BoolAttribute{
+													MarkdownDescription: "",
+													Optional:            true,
+													Computed:            true,
+												},
+												"auth": schema.StringAttribute{
+													MarkdownDescription: "",
+													Optional:            true,
+													Computed:            true,
+												},
+												"working_dir": schema.StringAttribute{
+													MarkdownDescription: "",
+													Optional:            true,
+													Computed:            true,
+												},
+												"repo": schema.StringAttribute{
+													MarkdownDescription: "",
+													Optional:            true,
+													Computed:            true,
+												},
+												"is_private": schema.BoolAttribute{
+													MarkdownDescription: "",
+													Optional:            true,
+													Computed:            true,
 												},
 											},
 										},
 									},
 								},
-								"summary_description": schema.StringAttribute{
-									Required: true,
-								},
-								"summary_title": schema.StringAttribute{
-									Required: true,
-								},
-								"discovery_interval": schema.Int64Attribute{
-									Required: true,
-								},
-								"last_discovery_time": schema.Int64Attribute{
-									Optional: true,
-								},
-								"is_custom_check": schema.BoolAttribute{
-									Required: true,
-								},
-								"checks": schema.ListAttribute{
-									Required:    true,
-									ElementType: types.StringType,
-								},
 								"regions": schema.MapNestedAttribute{
-									Required: true,
+									MarkdownDescription: "",
+									Optional:            true,
+									Computed:            true,
 									NestedObject: schema.NestedAttributeObject{
 										Attributes: map[string]schema.Attribute{
 											"emails": schema.ListAttribute{
 												ElementType: types.StringType,
-												Required:    true,
+												Optional:    true,
+												Computed:    true,
 											},
 										},
 									},
 								},
-							},
-						},
-					},
-					"discovery_interval": schema.Int64Attribute{
-						Required: true,
-					},
-					"regions": schema.ListNestedAttribute{
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"region": schema.StringAttribute{
-									Required: true,
+								"last_discovery_time": schema.Int64Attribute{
+									MarkdownDescription: "",
+									Optional:            true,
+								},
+								"description": schema.StringAttribute{
+									MarkdownDescription: "",
+									Optional:            true,
+								},
+								"summary_description": schema.StringAttribute{
+									MarkdownDescription: "",
+									Optional:            true,
+								},
+								"active": schema.BoolAttribute{
+									MarkdownDescription: "",
+									Optional:            true,
+									Computed:            true,
+								},
+								"label": schema.StringAttribute{
+									MarkdownDescription: "",
+									Optional:            true,
+								},
+								"is_custom_check": schema.BoolAttribute{
+									MarkdownDescription: "",
+									Optional:            true,
+									Computed:            true,
+								},
+								"summary_title": schema.StringAttribute{
+									MarkdownDescription: "",
+									Required:            true,
+								},
+								"discovery_interval": schema.Int64Attribute{
+									MarkdownDescription: "",
+									Optional:            true,
+									Computed:            true,
 								},
 							},
 						},
-						Required: true,
 					},
 				},
 			},
-			"is_active": schema.StringAttribute{
-				Computed: true,
-				Optional: true,
-				MarkdownDescription: `If this connector is to be actively used or not. Should be one of <span style="background-color: #eff0f0; color: #e53835;">0</span>
-					<span style="background-color: #eff0f0; color: #e53835;">1</span>`,
-				Validators: []validator.String{
-					stringvalidator.OneOf(
-						"0",
-						"1",
-					),
-				},
-			},
 			"scope": schema.ListAttribute{
-				ElementType: types.StringType,
-				Computed:    true,
-				Optional:    true,
+				MarkdownDescription: "Which resources can use this connector",
+				ElementType:         types.StringType,
+				Computed:            true,
+				Optional:            true,
 			},
 			"tags": schema.ListAttribute{
-				ElementType: types.StringType,
-				Optional:    true,
-				Computed:    true,
+				MarkdownDescription: "Tags for connector",
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
 			},
 		},
 	}

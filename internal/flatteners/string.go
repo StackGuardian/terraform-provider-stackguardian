@@ -20,9 +20,9 @@ import (
 //
 // nolint: contextcheck
 func String(in string) basetypes.StringValue {
-	if in == "" {
-		return types.StringNull()
-	}
+	//if in == "" {
+	//	return types.StringNull()
+	//}
 	return types.StringValue(in)
 }
 

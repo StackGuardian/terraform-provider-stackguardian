@@ -4,7 +4,8 @@ import (
 	"context"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
-	flatteners "github.com/StackGuardian/terraform-provider-stackguardian/internal/flattners"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/expanders"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/flatteners"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -16,7 +17,6 @@ type ConnectorResourceModel struct {
 	Description       types.String `tfsdk:"description"`
 	Settings          types.Object `tfsdk:"settings"`
 	DiscoverySettings types.Object `tfsdk:"discovery_settings"`
-	IsActive          types.String `tfsdk:"is_active"`
 	Scope             types.List   `tfsdk:"scope"`
 	Tags              types.List   `tfsdk:"tags"`
 }
@@ -90,20 +90,12 @@ func (m ConnectorSettingsConfigModel) AttributeTypes() map[string]attr.Type {
 }
 
 type ConnectorDiscoverySettingsModel struct {
-	DiscoveryInterval types.Int64 `tfsdk:"discovery_interval"`
-
-	// Convert to []Region
-	Regions types.List `tfsdk:"regions"`
-
-	// Convert to map[string]interface{}
 	Benchmarks types.Map `tfsdk:"benchmarks"`
 }
 
 func (ConnectorDiscoverySettingsModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
-		"discovery_interval": types.Int64Type,
-		"regions":            types.ListType{ElemType: ConnectorDiscoverySettingsRegionModel{}.AttributeTypes()},
-		"benchmarks":         types.MapType{ElemType: ConnectorDiscoverySettingsBenchmarksModel{}.AttributeTypes()},
+		"benchmarks": types.MapType{ElemType: ConnectorDiscoverySettingsBenchmarksModel{}.AttributeTypes()},
 	}
 }
 
@@ -150,21 +142,11 @@ func (ConnectorDiscoverySettingsBenchmarksModel) AttributeTypes() attr.Type {
 }
 
 type ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel struct {
-	CustomSource types.Object `tfsdk:"custom_source"`
-}
-
-func (m ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"custom_source": types.ObjectType{AttrTypes: ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceModel{}.AttributeTypes()},
-	}
-}
-
-type ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceModel struct {
 	SourceConfigDestKind types.String `tfsdk:"source_config_dest_kind"`
 	Config               types.Object `tfsdk:"config"`
 }
 
-func (m ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceModel) AttributeTypes() map[string]attr.Type {
+func (m ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"source_config_dest_kind": types.StringType,
 		"config":                  types.ObjectType{AttrTypes: ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel{}.AttributeTypes()},
@@ -203,20 +185,10 @@ func (ConnectorDiscoverySettingsBenchmarksRegionsModel) AttributeTypes() map[str
 	}
 }
 
-func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integration, diag.Diagnostics) {
-	apiModel := sgsdkgo.Integration{
-		ResourceName: m.ResourceName.ValueStringPointer(),
-		Description:  m.Description.ValueStringPointer(),
-	}
-
-	// is active
-	if !m.IsActive.IsNull() && !m.IsActive.IsUnknown() {
-		apiModel.IsActive = (*sgsdkgo.IsArchiveEnum)(m.IsActive.ValueStringPointer())
-	}
-
+func settingsToAPIModel(m types.Object) (*sgsdkgo.Settings, diag.Diagnostics) {
 	// Set kind and config in Settings
 	var settingsModelValue *ConnectorSettingsModel
-	diags := m.Settings.As(context.Background(), &settingsModelValue, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
+	diags := m.As(context.Background(), &settingsModelValue, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -225,6 +197,10 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 	diags = settingsModelValue.Config.ElementsAs(context.TODO(), &settingsConfigModel, false)
 	if diags.HasError() {
 		return nil, diags
+	}
+
+	settings := &sgsdkgo.Settings{
+		Kind: sgsdkgo.SettingsKindEnum(settingsModelValue.Kind.ValueString()),
 	}
 
 	settingsConfigAPIValue := []*sgsdkgo.SettingsConfig{{
@@ -254,40 +230,26 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 		GcpConfigFileContent:    settingsConfigModel[0].GcpConfigFileContent.ValueStringPointer(),
 	}}
 
-	settings := &sgsdkgo.Settings{
-		Kind:   sgsdkgo.SettingsKindEnum(settingsModelValue.Kind.ValueString()),
-		Config: settingsConfigAPIValue,
-	}
-	apiModel.Settings = settings
+	settings.Config = settingsConfigAPIValue
 
+	return settings, nil
+}
+
+func discoverSettingsToAPIModel(m types.Object) (*sgsdkgo.Discoverysettings, diag.Diagnostics) {
 	// Parse discovery settings
+	if m.IsUnknown() {
+		return nil, nil
+	}
+
 	discoverySettingsAPIModel := &sgsdkgo.Discoverysettings{}
 	var discoverySettingsModel *ConnectorDiscoverySettingsModel
-	if !m.DiscoverySettings.IsNull() && !m.DiscoverySettings.IsUnknown() {
-		diags := m.DiscoverySettings.As(context.Background(), &discoverySettingsModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
-		if diags.HasError() {
-			return nil, diags
-		}
+	diags := m.As(context.Background(), &discoverySettingsModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
+	if diags.HasError() {
+		return nil, diags
+	}
 
-		// Parse discovery interval
-		discoveryInterval := int(*discoverySettingsModel.DiscoveryInterval.ValueInt64Pointer())
-		discoverySettingsAPIModel.DiscoveryInterval = &discoveryInterval
-
-		// Parse regions
-		var regionsModel []*ConnectorDiscoverySettingsRegionModel
-		if !discoverySettingsModel.Regions.IsNull() {
-			diags = discoverySettingsModel.Regions.ElementsAs(context.Background(), &regionsModel, false)
-			if diags.HasError() {
-				return nil, diags
-			}
-		}
-		regions := []*sgsdkgo.DiscoverySettingsRegions{}
-		for _, region := range regionsModel {
-			regions = append(regions, &sgsdkgo.DiscoverySettingsRegions{Region: region.Region.ValueString()})
-		}
-		discoverySettingsAPIModel.Regions = regions
-
-		// Parse benchmarks
+	// Parse benchmarks
+	if !discoverySettingsModel.Benchmarks.IsUnknown() {
 		var benchmarksModel map[string]*ConnectorDiscoverySettingsBenchmarksModel
 		diags = discoverySettingsModel.Benchmarks.ElementsAs(context.Background(), &benchmarksModel, false)
 		if diags.HasError() {
@@ -296,63 +258,54 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 
 		benchmarksAPIModel := map[string]*sgsdkgo.DiscoveryBenchmark{}
 		for benchmarkName, benchmark := range benchmarksModel {
+
+			benchmarkAPIModel := &sgsdkgo.DiscoveryBenchmark{
+				Description:   benchmark.Description.ValueStringPointer(),
+				SummaryDesc:   benchmark.SummaryDescription.ValueStringPointer(),
+				SummaryTitle:  benchmark.SummaryTitle.ValueString(),
+				Label:         benchmark.Label.ValueString(),
+				Active:        benchmark.Active.ValueBoolPointer(),
+				IsCustomCheck: benchmark.IsCustomCheck.ValueBoolPointer(),
+			}
+
+			// checks
 			var benchmarkChecksModel []types.String
 			diags = benchmark.Checks.ElementsAs(context.Background(), &benchmarkChecksModel, false)
 			if diags.HasError() {
 				return nil, diags
 			}
+
 			var benchmarkChecks []string
 			for _, check := range benchmarkChecksModel {
 				benchmarkChecks = append(benchmarkChecks, check.ValueString())
 			}
 
-			var benchmarkRegionsModel map[string]*ConnectorDiscoverySettingsBenchmarksRegionsModel
-			diags = benchmark.Regions.ElementsAs(context.Background(), &benchmarkRegionsModel, false)
-			if diags.HasError() {
-				return nil, diags
-			}
-
-			benchmarkRegions := map[string]*sgsdkgo.DiscoveryRegion{}
-			for region, regionValue := range benchmarkRegionsModel {
-				var emailsModel []types.String
-				var emailsAPIModel []string
-				diags = regionValue.Emails.ElementsAs(context.Background(), &emailsModel, false)
-				if diags.HasError() {
-					return nil, diags
-				}
-				for _, email := range emailsModel {
-					if email.ValueString() != "" {
-						emailsAPIModel = append(emailsAPIModel, email.ValueString())
-					}
-				}
-
-				benchmarkRegions[region] = &sgsdkgo.DiscoveryRegion{
-					Emails: emailsAPIModel,
-				}
-
-			}
+			benchmarkAPIModel.Checks = benchmarkChecks
 
 			// runtime resource
-			benchmarkRuntimeResource := sgsdkgo.DiscoveryBenchmarkRuntimeSource{}
-			if !benchmark.RuntimeSource.IsNull() && !benchmark.RuntimeSource.IsUnknown() {
-				var customSourceModel ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceModel
-				customSourceAPIModel := &sgsdkgo.CustomSource{}
-
-				diags = benchmark.RuntimeSource.As(context.TODO(), &customSourceModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
+			if !benchmark.RuntimeSource.IsNull() {
+				var runtimeSourceModel ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel
+				diags = benchmark.RuntimeSource.As(context.TODO(), &runtimeSourceModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
 				if diags.HasError() {
 					return nil, diags
 				}
 
-				customSourceAPIModel.SourceConfigDestKind = customSourceModel.SourceConfigDestKind.ValueStringPointer()
+				destKind, err := sgsdkgo.NewCustomSourceSourceConfigDestKindEnumFromString(runtimeSourceModel.SourceConfigDestKind.ValueString())
+				if err != nil {
+					return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Error in converting sourceConfigDestKind", err.Error())}
+				}
+				benchmarkRuntimeResource := sgsdkgo.CustomSource{
+					SourceConfigDestKind: destKind,
+				}
 
-				if !customSourceModel.Config.IsNull() && customSourceModel.Config.IsUnknown() {
+				if runtimeSourceModel.Config.IsUnknown() {
 					var customSourceConfigModel ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel
-					diags = customSourceModel.Config.As(context.TODO(), &customSourceConfigModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
+					diags = runtimeSourceModel.Config.As(context.TODO(), &customSourceConfigModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
 					if diags.HasError() {
 						return nil, diags
 					}
 
-					customSourceConfigAPIModel := &sgsdkgo.CustomSourceConfig{
+					configAPIModel := &sgsdkgo.CustomSourceConfig{
 						Auth:             customSourceConfigModel.Auth.ValueStringPointer(),
 						IncludeSubModule: customSourceConfigModel.IncludeSubModule.ValueBoolPointer(),
 						Ref:              customSourceConfigModel.Ref.ValueStringPointer(),
@@ -362,30 +315,45 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 						IsPrivate:        customSourceConfigModel.IsPrivate.ValueBoolPointer(),
 					}
 
-					customSourceAPIModel.Config = customSourceConfigAPIModel
+					benchmarkRuntimeResource.Config = configAPIModel
+				}
+				benchmarkAPIModel.RuntimeSource = &benchmarkRuntimeResource
+			}
+
+			// regions
+			if !benchmark.Regions.IsUnknown() {
+				var benchmarkRegionsModel map[string]*ConnectorDiscoverySettingsBenchmarksRegionsModel
+				diags = benchmark.Regions.ElementsAs(context.Background(), &benchmarkRegionsModel, false)
+				if diags.HasError() {
+					return nil, diags
 				}
 
-				benchmarkRuntimeResource.CustomSource = customSourceAPIModel
+				benchmarkRegions := map[string]*sgsdkgo.DiscoveryRegion{}
+				for region, regionValue := range benchmarkRegionsModel {
+					benchmarkRegions[region] = &sgsdkgo.DiscoveryRegion{}
+					if !regionValue.Emails.IsUnknown() {
+						var emailsModel []types.String
+						var emailsAPIModel []string
+						diags = regionValue.Emails.ElementsAs(context.Background(), &emailsModel, false)
+						if diags.HasError() {
+							return nil, diags
+						}
+						for _, email := range emailsModel {
+							if email.ValueString() != "" {
+								emailsAPIModel = append(emailsAPIModel, email.ValueString())
+							}
+						}
+						benchmarkRegions[region].Emails = emailsAPIModel
+					}
+				}
+				benchmarkAPIModel.Regions = benchmarkRegions
 			}
 
-			benchmarkAPIModel := &sgsdkgo.DiscoveryBenchmark{
-				Description:   benchmark.Description.ValueStringPointer(),
-				SummaryDesc:   benchmark.SummaryDescription.ValueStringPointer(),
-				SummaryTitle:  benchmark.SummaryTitle.ValueStringPointer(),
-				Label:         benchmark.Label.ValueStringPointer(),
-				Active:        benchmark.Active.ValueBoolPointer(),
-				IsCustomCheck: benchmark.IsCustomCheck.ValueBoolPointer(),
-				Checks:        benchmarkChecks,
-				Regions:       benchmarkRegions,
-				RuntimeSource: &benchmarkRuntimeResource,
+			if !benchmark.LastDiscoveryTime.IsUnknown() {
+				benchmarkAPIModel.LastDiscoveryTime = int(benchmark.LastDiscoveryTime.ValueInt64())
 			}
 
-			if !benchmark.LastDiscoveryTime.IsNull() {
-				intValue := int(benchmark.LastDiscoveryTime.ValueInt64())
-				benchmarkAPIModel.LastDiscoveryTime = &intValue
-			}
-
-			if !benchmark.DiscoveryInterval.IsNull() {
+			if !benchmark.DiscoveryInterval.IsUnknown() {
 				intValue := int(benchmark.DiscoveryInterval.ValueInt64())
 				benchmarkAPIModel.DiscoveryInterval = &intValue
 			}
@@ -393,38 +361,57 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 			benchmarksAPIModel[benchmarkName] = benchmarkAPIModel
 		}
 		discoverySettingsAPIModel.Benchmarks = benchmarksAPIModel
+	}
 
-		apiModel.DiscoverySettings = discoverySettingsAPIModel
+	return discoverySettingsAPIModel, nil
+}
+
+func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integration, diag.Diagnostics) {
+	apiModel := sgsdkgo.Integration{
+		ResourceName: sgsdkgo.Optional(*m.ResourceName.ValueStringPointer()),
+		Description:  sgsdkgo.Optional(*m.Description.ValueStringPointer()),
+	}
+
+	settings, diags := settingsToAPIModel(m.Settings)
+	if diags.HasError() {
+		return nil, diags
+	}
+	if settings == nil {
+		apiModel.Settings = sgsdkgo.Null[sgsdkgo.Settings]()
+	} else {
+		apiModel.Settings = sgsdkgo.Optional(*settings)
+	}
+
+	discoverySettings, diags := discoverSettingsToAPIModel(m.DiscoverySettings)
+	if diags.HasError() {
+		return nil, diags
+	}
+	if discoverySettings == nil {
+		apiModel.DiscoverySettings = sgsdkgo.Null[sgsdkgo.Discoverysettings]()
+	} else {
+		apiModel.DiscoverySettings = sgsdkgo.Optional(*discoverySettings)
 	}
 
 	// Parse Scope
-	if !m.Scope.IsNull() && !m.Scope.IsUnknown() {
-		var scopeModel []types.String
-		diags = m.Scope.ElementsAs(context.TODO(), &scopeModel, false)
-		if diags.HasError() {
-			return nil, diags
-		}
-
-		var scopeAPIModel []string
-		for _, scope := range scopeModel {
-			scopeAPIModel = append(scopeAPIModel, scope.ValueString())
-		}
-		apiModel.Scope = scopeAPIModel
+	scope, diags := expanders.StringList(context.TODO(), m.Scope)
+	if diags.HasError() {
+		return nil, diags
+	}
+	if scope == nil {
+		apiModel.Scope = sgsdkgo.Null[[]string]()
+	} else {
+		apiModel.Scope = sgsdkgo.Optional(scope)
 	}
 
 	// Parse tags
-	if !m.Tags.IsNull() && !m.Tags.IsUnknown() {
-		var tagsModel []types.String
-		diags = m.Tags.ElementsAs(context.TODO(), &tagsModel, false)
-		if diags.HasError() {
-			return nil, diags
-		}
-
-		var tagsAPIModel []string
-		for _, scope := range tagsModel {
-			tagsAPIModel = append(tagsAPIModel, scope.ValueString())
-		}
-		apiModel.Tags = tagsAPIModel
+	tags, diags := expanders.StringList(context.TODO(), m.Tags)
+	if diags.HasError() {
+		return nil, diags
+	}
+	if tags == nil {
+		apiModel.Tags = sgsdkgo.Null[[]string]()
+	} else {
+		apiModel.Tags = sgsdkgo.Optional(tags)
 	}
 
 	return &apiModel, nil
@@ -432,225 +419,48 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 
 func (m *ConnectorResourceModel) ToAPIPatchedModel(ctx context.Context) (*sgsdkgo.PatchedIntegration, diag.Diagnostics) {
 	apiPatchedModel := &sgsdkgo.PatchedIntegration{
-		ResourceName: m.ResourceName.ValueStringPointer(),
-		Description:  m.Description.ValueStringPointer(),
+		ResourceName: sgsdkgo.Optional(*m.ResourceName.ValueStringPointer()),
+	}
+
+	if m.Description.IsUnknown() {
+		apiPatchedModel.Description = sgsdkgo.Null[string]()
 	}
 
 	// Parse Scope
-	if !m.Scope.IsNull() && !m.Scope.IsUnknown() {
-		var scopeModel []types.String
-		diags := m.Scope.ElementsAs(context.TODO(), &scopeModel, false)
-		if diags.HasError() {
-			return nil, diags
-		}
-
-		var scopeAPIModel []string
-		for _, scope := range scopeModel {
-			scopeAPIModel = append(scopeAPIModel, scope.ValueString())
-		}
-		apiPatchedModel.Scope = scopeAPIModel
+	scope, diags := expanders.StringList(context.TODO(), m.Scope)
+	if diags.HasError() {
+		return nil, diags
+	}
+	if scope == nil {
+		apiPatchedModel.Scope = sgsdkgo.Null[[]string]()
+	} else {
+		apiPatchedModel.Scope = sgsdkgo.Optional(scope)
 	}
 
 	// Parse tags
-	if !m.Tags.IsNull() {
-		var tagsModel []types.String
-		diags := m.Tags.ElementsAs(context.TODO(), &tagsModel, false)
-		if diags.HasError() {
-			return nil, diags
-		}
-
-		var tagsAPIModel []string
-		for _, scope := range tagsModel {
-			tagsAPIModel = append(tagsAPIModel, scope.ValueString())
-		}
-		apiPatchedModel.Tags = tagsAPIModel
+	tags, diags := expanders.StringList(context.TODO(), m.Tags)
+	if diags.HasError() {
+		return nil, diags
+	}
+	if tags == nil {
+		apiPatchedModel.Tags = sgsdkgo.Null[[]string]()
+	} else {
+		apiPatchedModel.Tags = sgsdkgo.Optional(tags)
 	}
 
 	// Parse Settings
-	var settingsModelValue *ConnectorSettingsModel
-	diags := m.Settings.As(context.Background(), &settingsModelValue, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
+	settings, diags := settingsToAPIModel(m.Settings)
 	if diags.HasError() {
 		return nil, diags
 	}
-
-	var settingsConfigModel []*ConnectorSettingsConfigModel
-	diags = settingsModelValue.Config.ElementsAs(context.TODO(), &settingsConfigModel, false)
-	if diags.HasError() {
-		return nil, diags
-	}
-	settingsConfigAPIValue := []*sgsdkgo.SettingsConfig{{
-		InstallationId:          settingsConfigModel[0].InstallationId.ValueStringPointer(),
-		GithubAppId:             settingsConfigModel[0].GithubAppId.ValueStringPointer(),
-		GithubAppWebhookSecret:  settingsConfigModel[0].GithubAppWebhookSecret.ValueStringPointer(),
-		GithubApiUrl:            settingsConfigModel[0].GithubApiUrl.ValueStringPointer(),
-		GithubHttpUrl:           settingsConfigModel[0].GithubHttpUrl.ValueStringPointer(),
-		GithubAppClientId:       settingsConfigModel[0].GithubAppClientId.ValueStringPointer(),
-		GithubAppClientSecret:   settingsConfigModel[0].GithubAppClientSecret.ValueStringPointer(),
-		GithubAppPemFileContent: settingsConfigModel[0].GithubAppPemFileContent.ValueStringPointer(),
-		GithubAppWebhookUrl:     settingsConfigModel[0].GithubAppWebhookURL.ValueStringPointer(),
-		GitlabCreds:             settingsConfigModel[0].GitlabCreds.ValueStringPointer(),
-		GitlabHttpUrl:           settingsConfigModel[0].GitlabHttpUrl.ValueStringPointer(),
-		GitlabApiUrl:            settingsConfigModel[0].GitlabApiUrl.ValueStringPointer(),
-		AzureCreds:              settingsConfigModel[0].AzureCreds.ValueStringPointer(),
-		AzureDevopsHttpUrl:      settingsConfigModel[0].AzureDevopsHttpUrl.ValueStringPointer(),
-		AzureDevopsApiUrl:       settingsConfigModel[0].AzureDevopsApiUrl.ValueStringPointer(),
-		BitbucketCreds:          settingsConfigModel[0].BitbucketCreds.ValueStringPointer(),
-		AwsAccessKeyId:          settingsConfigModel[0].AwsAccessKeyId.ValueStringPointer(),
-		AwsSecretAccessKey:      settingsConfigModel[0].AwsSecretAccessKey.ValueStringPointer(),
-		AwsDefaultRegion:        settingsConfigModel[0].AwsDefaultRegion.ValueStringPointer(),
-		ArmTenantId:             settingsConfigModel[0].ArmTenantId.ValueStringPointer(),
-		ArmSubscriptionId:       settingsConfigModel[0].ArmSubscriptionId.ValueStringPointer(),
-		ArmClientId:             settingsConfigModel[0].ArmClientId.ValueStringPointer(),
-		ArmClientSecret:         settingsConfigModel[0].ArmClientSecret.ValueStringPointer(),
-		GcpConfigFileContent:    settingsConfigModel[0].GcpConfigFileContent.ValueStringPointer(),
-	}}
-
-	settings := &sgsdkgo.Settings{
-		Kind:   sgsdkgo.SettingsKindEnum(settingsModelValue.Kind.ValueString()),
-		Config: settingsConfigAPIValue,
-	}
-	apiPatchedModel.Settings = settings
+	apiPatchedModel.Settings = sgsdkgo.Optional(*settings)
 
 	// Parse discovery settings
-	discoverySettingsAPIModel := &sgsdkgo.Discoverysettings{}
-	var discoverySettingsModel *ConnectorDiscoverySettingsModel
-	if !m.DiscoverySettings.IsNull() && !m.DiscoverySettings.IsUnknown() {
-		diags := m.DiscoverySettings.As(context.Background(), &discoverySettingsModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
-		if diags.HasError() {
-			return nil, diags
-		}
-
-		// Parse discovery interval
-		discoveryInterval := int(*discoverySettingsModel.DiscoveryInterval.ValueInt64Pointer())
-		discoverySettingsAPIModel.DiscoveryInterval = &discoveryInterval
-
-		// Parse regions
-		var regionsModel []*ConnectorDiscoverySettingsRegionModel
-		if !discoverySettingsModel.Regions.IsNull() {
-			diags = discoverySettingsModel.Regions.ElementsAs(context.Background(), &regionsModel, false)
-			if diags.HasError() {
-				return nil, diags
-			}
-		}
-		regions := []*sgsdkgo.DiscoverySettingsRegions{}
-		for _, region := range regionsModel {
-			regions = append(regions, &sgsdkgo.DiscoverySettingsRegions{Region: region.Region.ValueString()})
-		}
-		discoverySettingsAPIModel.Regions = regions
-
-		// Parse benchmarks
-		var benchmarksModel map[string]*ConnectorDiscoverySettingsBenchmarksModel
-		diags = discoverySettingsModel.Benchmarks.ElementsAs(context.Background(), &benchmarksModel, false)
-		if diags.HasError() {
-			return nil, diags
-		}
-
-		benchmarksAPIModel := map[string]*sgsdkgo.DiscoveryBenchmark{}
-		for benchmarkName, benchmark := range benchmarksModel {
-			var benchmarkChecksModel []types.String
-			diags = benchmark.Checks.ElementsAs(context.Background(), &benchmarkChecksModel, false)
-			if diags.HasError() {
-				return nil, diags
-			}
-			var benchmarkChecks []string
-			for _, check := range benchmarkChecksModel {
-				benchmarkChecks = append(benchmarkChecks, check.ValueString())
-			}
-
-			var benchmarkRegionsModel map[string]*ConnectorDiscoverySettingsBenchmarksRegionsModel
-			diags = benchmark.Regions.ElementsAs(context.Background(), &benchmarkRegionsModel, false)
-			if diags.HasError() {
-				return nil, diags
-			}
-
-			benchmarkRegions := map[string]*sgsdkgo.DiscoveryRegion{}
-			for region, regionValue := range benchmarkRegionsModel {
-				var emailsModel []types.String
-				var emailsAPIModel []string
-				diags = regionValue.Emails.ElementsAs(context.Background(), &emailsModel, false)
-				if diags.HasError() {
-					return nil, diags
-				}
-				for _, email := range emailsModel {
-					if email.ValueString() != "" {
-						emailsAPIModel = append(emailsAPIModel, email.ValueString())
-					}
-				}
-
-				benchmarkRegions[region] = &sgsdkgo.DiscoveryRegion{
-					Emails: emailsAPIModel,
-				}
-			}
-
-			// runtime resource
-			benchmarkRuntimeResource := sgsdkgo.DiscoveryBenchmarkRuntimeSource{}
-			if !benchmark.RuntimeSource.IsNull() && !benchmark.RuntimeSource.IsUnknown() {
-				var customSourceModel ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceModel
-				customSourceAPIModel := &sgsdkgo.CustomSource{}
-
-				diags = benchmark.RuntimeSource.As(context.TODO(), &customSourceModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
-				if diags.HasError() {
-					return nil, diags
-				}
-
-				customSourceAPIModel.SourceConfigDestKind = customSourceModel.SourceConfigDestKind.ValueStringPointer()
-
-				if !customSourceModel.Config.IsNull() && !customSourceModel.Config.IsUnknown() {
-					var customSourceConfigModel ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel
-					diags = customSourceModel.Config.As(context.TODO(), &customSourceConfigModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
-					if diags.HasError() {
-						return nil, diags
-					}
-
-					customSourceConfigAPIModel := &sgsdkgo.CustomSourceConfig{
-						Auth:             customSourceConfigModel.Auth.ValueStringPointer(),
-						IncludeSubModule: customSourceConfigModel.IncludeSubModule.ValueBoolPointer(),
-						Ref:              customSourceConfigModel.Ref.ValueStringPointer(),
-						GitCoreAutoCrlf:  customSourceConfigModel.GitCoreAutoCRLF.ValueBoolPointer(),
-						WorkingDir:       customSourceConfigModel.WorkingDir.ValueStringPointer(),
-						Repo:             customSourceConfigModel.Repo.ValueStringPointer(),
-						IsPrivate:        customSourceConfigModel.IsPrivate.ValueBoolPointer(),
-					}
-
-					customSourceAPIModel.Config = customSourceConfigAPIModel
-				}
-
-				benchmarkRuntimeResource.CustomSource = customSourceAPIModel
-			}
-
-			benchmarksModel := &sgsdkgo.DiscoveryBenchmark{
-				Description:   benchmark.Description.ValueStringPointer(),
-				SummaryDesc:   benchmark.SummaryDescription.ValueStringPointer(),
-				SummaryTitle:  benchmark.SummaryTitle.ValueStringPointer(),
-				Label:         benchmark.Label.ValueStringPointer(),
-				Active:        benchmark.Active.ValueBoolPointer(),
-				IsCustomCheck: benchmark.IsCustomCheck.ValueBoolPointer(),
-				Checks:        benchmarkChecks,
-				Regions:       benchmarkRegions,
-				RuntimeSource: &benchmarkRuntimeResource,
-			}
-
-			if !benchmark.LastDiscoveryTime.IsNull() {
-				intValue := int(benchmark.LastDiscoveryTime.ValueInt64())
-				benchmarksModel.LastDiscoveryTime = &intValue
-			}
-
-			if !benchmark.DiscoveryInterval.IsNull() {
-				intValue := int(benchmark.DiscoveryInterval.ValueInt64())
-				benchmarksModel.DiscoveryInterval = &intValue
-			}
-
-			benchmarksAPIModel[benchmarkName] = benchmarksModel
-		}
-		discoverySettingsAPIModel.Benchmarks = benchmarksAPIModel
-
-		apiPatchedModel.DiscoverySettings = discoverySettingsAPIModel
+	discoverySettings, diags := discoverSettingsToAPIModel(m.DiscoverySettings)
+	if diags.HasError() {
+		return nil, diags
 	}
-
-	// IsActive
-	if !m.IsActive.IsNull() {
-		apiPatchedModel.IsActive = (*sgsdkgo.IsArchiveEnum)(m.IsActive.ValueStringPointer())
-	}
+	apiPatchedModel.DiscoverySettings = sgsdkgo.Optional(*discoverySettings)
 
 	return apiPatchedModel, nil
 }
@@ -659,7 +469,6 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 	connectorModel := &ConnectorResourceModel{
 		ResourceName: flatteners.String(apiResponse.ResourceName),
 		Description:  flatteners.String(apiResponse.Description),
-		IsActive:     flatteners.String(apiResponse.IsActive),
 	}
 
 	settingsConfigModel := []*ConnectorSettingsConfigModel{
@@ -710,11 +519,9 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 		connectorModel.DiscoverySettings = types.ObjectNull(ConnectorDiscoverySettingsModel{}.AttributeTypes())
 	} else {
 		DiscoverySettingsModel := &ConnectorDiscoverySettingsModel{}
-		// discovery interval
-		DiscoverySettingsModel.DiscoveryInterval = flatteners.Int64Ptr(apiResponse.DiscoverySettings.DiscoveryInterval)
 
 		// benchmarks
-		if apiResponse.DiscoverySettings.Benchmarks == nil || len(apiResponse.DiscoverySettings.Benchmarks) == 0 {
+		if apiResponse.DiscoverySettings.Benchmarks == nil {
 			DiscoverySettingsModel.Benchmarks = types.MapNull(ConnectorDiscoverySettingsBenchmarksModel{}.AttributeTypes())
 		} else {
 			// if benchmarks is not nil
@@ -730,38 +537,28 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 				benchmarksModel.IsCustomCheck = types.BoolPointerValue(benchmark.IsCustomCheck)
 				benchmarksModel.Active = types.BoolValue(benchmark.Active)
 
-				// TODO: runtime resource
 				if benchmark.RuntimeSource != nil {
-					runtimeSourceModel := ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel{}
-					if benchmark.RuntimeSource.CustomSource != nil {
-						customSourceModel := ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceModel{
-							SourceConfigDestKind: flatteners.StringPtr(benchmark.RuntimeSource.CustomSource.SourceConfigDestKind),
+					runtimeSourceModelValue := ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel{
+						SourceConfigDestKind: flatteners.String(string(benchmark.RuntimeSource.SourceConfigDestKind)),
+					}
+					if benchmark.RuntimeSource.Config != nil {
+						configModel := ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel{
+							IncludeSubModule: flatteners.BoolPtr(benchmark.RuntimeSource.Config.IncludeSubModule),
+							Ref:              flatteners.StringPtr(benchmark.RuntimeSource.Config.Ref),
+							GitCoreAutoCRLF:  flatteners.BoolPtr(benchmark.RuntimeSource.Config.GitCoreAutoCrlf),
+							Auth:             flatteners.StringPtr(benchmark.RuntimeSource.Config.Auth),
+							WorkingDir:       flatteners.StringPtr(benchmark.RuntimeSource.Config.WorkingDir),
+							Repo:             flatteners.StringPtr(benchmark.RuntimeSource.Config.Repo),
+							IsPrivate:        flatteners.BoolPtr(benchmark.RuntimeSource.Config.IsPrivate),
 						}
-						if benchmark.RuntimeSource.CustomSource.Config != nil {
-							configModel := ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel{
-								IncludeSubModule: types.BoolValue(*benchmark.RuntimeSource.CustomSource.Config.IncludeSubModule),
-								Ref:              flatteners.StringPtr(benchmark.RuntimeSource.CustomSource.Config.Ref),
-								GitCoreAutoCRLF:  types.BoolValue(*benchmark.RuntimeSource.CustomSource.Config.GitCoreAutoCrlf),
-								Auth:             flatteners.StringPtr(benchmark.RuntimeSource.CustomSource.Config.Auth),
-								WorkingDir:       flatteners.StringPtr(benchmark.RuntimeSource.CustomSource.Config.WorkingDir),
-								Repo:             flatteners.StringPtr(benchmark.RuntimeSource.CustomSource.Config.Repo),
-								IsPrivate:        types.BoolValue(*benchmark.RuntimeSource.CustomSource.Config.IsPrivate),
-							}
-							customSourceModel.Config, diags = types.ObjectValueFrom(context.TODO(), configModel.AttributeTypes(), &configModel)
-							if diags.HasError() {
-								return nil, diags
-							}
-						} else {
-							customSourceModel.Config = types.ObjectNull(ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel{}.AttributeTypes())
-						}
-						runtimeSourceModel.CustomSource, diags = types.ObjectValueFrom(context.TODO(), customSourceModel.AttributeTypes(), &customSourceModel)
+						runtimeSourceModelValue.Config, diags = types.ObjectValueFrom(context.TODO(), configModel.AttributeTypes(), &configModel)
 						if diags.HasError() {
 							return nil, diags
 						}
 					} else {
-						runtimeSourceModel.CustomSource = types.ObjectNull(ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceModel{}.AttributeTypes())
+						runtimeSourceModelValue.Config = types.ObjectNull(ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel{}.AttributeTypes())
 					}
-					benchmarksModel.RuntimeSource, diags = types.ObjectValueFrom(context.TODO(), runtimeSourceModel.AttributeTypes(), runtimeSourceModel)
+					benchmarksModel.RuntimeSource, diags = types.ObjectValueFrom(context.TODO(), runtimeSourceModelValue.AttributeTypes(), &runtimeSourceModelValue)
 					if diags.HasError() {
 						return nil, diags
 					}
@@ -770,31 +567,34 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 				}
 
 				// regions
-				regions := map[string]types.Object{}
-				for regionsKey, regionsValue := range benchmark.Regions {
-					emailsModel := []types.String{}
-					for _, email := range regionsValue.Emails {
-						emailsModel = append(emailsModel, flatteners.String(email))
+				if benchmark.Regions == nil {
+					benchmarksModel.Regions = types.MapNull(types.ObjectType{AttrTypes: ConnectorDiscoverySettingsBenchmarksRegionsModel{}.AttributeTypes()})
+				} else {
+					regions := map[string]types.Object{}
+					for regionsKey, regionsValue := range benchmark.Regions {
+						emailsModel := []types.String{}
+						for _, email := range regionsValue.Emails {
+							emailsModel = append(emailsModel, flatteners.String(email))
+						}
+						emailTerraType, diags := types.ListValueFrom(context.Background(), types.StringType, &emailsModel)
+						if diags.HasError() {
+							return nil, diags
+						}
+						regionsModel := &ConnectorDiscoverySettingsBenchmarksRegionsModel{
+							Emails: emailTerraType,
+						}
+						regionsTerraObject, diags := types.ObjectValueFrom(context.Background(), regionsModel.AttributeTypes(), &regionsModel)
+						if diags.HasError() {
+							return nil, diags
+						}
+						regions[regionsKey] = regionsTerraObject
 					}
-					emailTerraType, diags := types.ListValueFrom(context.Background(), types.StringType, &emailsModel)
+					regionsTerraType, diags := types.MapValueFrom(context.Background(), types.ObjectType{AttrTypes: ConnectorDiscoverySettingsBenchmarksRegionsModel{}.AttributeTypes()}, &regions)
 					if diags.HasError() {
 						return nil, diags
 					}
-					regionsModel := &ConnectorDiscoverySettingsBenchmarksRegionsModel{
-						Emails: emailTerraType,
-					}
-					regionsTerraObject, diags := types.ObjectValueFrom(context.Background(), regionsModel.AttributeTypes(), &regionsModel)
-					if diags.HasError() {
-						return nil, diags
-					}
-					regions[regionsKey] = regionsTerraObject
+					benchmarksModel.Regions = regionsTerraType
 				}
-				regionsTerraType, diags := types.MapValueFrom(context.Background(), types.ObjectType{AttrTypes: ConnectorDiscoverySettingsBenchmarksRegionsModel{}.AttributeTypes()}, &regions)
-				if diags.HasError() {
-					return nil, diags
-				}
-				benchmarksModel.Regions = regionsTerraType
-
 				// checks
 				checksModel := []types.String{}
 				for _, check := range benchmark.Checks {
@@ -815,26 +615,13 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 			DiscoverySettingsModel.Benchmarks = benchmarksTerraType
 		}
 
-		// regions
-		var regionModel []*ConnectorDiscoverySettingsRegionModel
-		for _, regionAPIModel := range apiResponse.DiscoverySettings.Regions {
-			regionModel = append(regionModel, &ConnectorDiscoverySettingsRegionModel{
-				Region: flatteners.String(regionAPIModel.Region),
-			})
-		}
-		regionTerraType, diags := types.ListValueFrom(context.TODO(), ConnectorDiscoverySettingsRegionModel{}.AttributeTypes(), &regionModel)
-		if diags.HasError() {
-			return nil, diags
-		}
-		DiscoverySettingsModel.Regions = regionTerraType
-
 		connectorModel.DiscoverySettings, diags = types.ObjectValueFrom(context.TODO(), ConnectorDiscoverySettingsModel{}.AttributeTypes(), DiscoverySettingsModel)
 		if diags.HasError() {
 			return nil, diags
 		}
 	}
 
-	if apiResponse.Scope == nil || len(apiResponse.Scope) == 0 {
+	if apiResponse.Scope == nil {
 		connectorModel.Scope = types.ListNull(types.StringType)
 	} else {
 		scopeModel := []types.String{}
@@ -848,7 +635,7 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 		connectorModel.Scope = scopeTerraType
 	}
 
-	if apiResponse.Tags == nil || len(apiResponse.Tags) == 0 {
+	if apiResponse.Tags == nil {
 		connectorModel.Tags = types.ListNull(types.StringType)
 	} else {
 		tagModel := []types.String{}

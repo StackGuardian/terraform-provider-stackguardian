@@ -19,11 +19,13 @@ func (r *workflowGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 			"description": schema.StringAttribute{
 				MarkdownDescription: "Must be less than 256 characters",
 				Optional:            true,
+				Computed:            true,
 			},
 			"tags": schema.ListAttribute{
 				MarkdownDescription: "Atmost 10 tags are allowed",
 				ElementType:         types.StringType,
 				Optional:            true,
+				Computed:            true,
 			},
 		},
 	}

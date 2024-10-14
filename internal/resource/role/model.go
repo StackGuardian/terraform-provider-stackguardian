@@ -4,7 +4,8 @@ import (
 	"context"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
-	flatteners "github.com/StackGuardian/terraform-provider-stackguardian/internal/flattners"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/expanders"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/flatteners"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -17,6 +18,15 @@ type RoleAllowedPermissionsModel struct {
 	Paths types.Map    `tfsdk:"paths"`
 }
 
+func (m RoleAllowedPermissionsModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"name": types.StringType,
+		"paths": types.MapType{
+			ElemType: types.ListType{ElemType: types.StringType},
+		},
+	}
+}
+
 type RoleResourceModel struct {
 	ResourceName       types.String `tfsdk:"resource_name"`
 	Description        types.String `tfsdk:"description"`
@@ -24,181 +34,198 @@ type RoleResourceModel struct {
 	Tags               types.List   `tfsdk:"tags"`
 }
 
-func (m *RoleResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Role, diag.Diagnostics) {
-	diag := diag.Diagnostics{}
-	var allowedPermissionsModelValue map[string]*RoleAllowedPermissionsModel
-	var allowedPermissionsDiags = m.AllowedPermissions.ElementsAs(context.Background(), &allowedPermissionsModelValue, false)
-	if allowedPermissionsDiags.HasError() {
-		return nil, allowedPermissionsDiags
+func allowedPermissionsToAPIModel(m types.Map) (map[string]*sgsdkgo.AllowedPermissions, diag.Diagnostics) {
+	if m.IsNull() || m.IsUnknown() {
+		return nil, nil
 	}
-	var allowedPermissionsAPIValue = map[string]*sgsdkgo.AllowedPermissions{}
+
+	var allowedPermissionsModelValue map[string]*RoleAllowedPermissionsModel
+	diags := m.ElementsAs(context.Background(), &allowedPermissionsModelValue, false)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	allowedPermissionsAPIValue := map[string]*sgsdkgo.AllowedPermissions{}
 	for allowedPermissionName, allowedPermissionValue := range allowedPermissionsModelValue {
-		var allowedPermissionsPathsModelValue = map[string]types.List{}
-		var diags = allowedPermissionValue.Paths.ElementsAs(context.Background(), &allowedPermissionsPathsModelValue, false)
+
+		allowedPermissionsAPIMapValue := &sgsdkgo.AllowedPermissions{
+			Name: allowedPermissionValue.Name.ValueString(),
+		}
+
+		if !allowedPermissionValue.Paths.IsNull() {
+			var allowedPermissionsPathsModelValue map[string]types.List
+			diags := allowedPermissionValue.Paths.ElementsAs(context.Background(), &allowedPermissionsPathsModelValue, false)
+			if diags.HasError() {
+				return nil, diags
+			}
+
+			var allowedPermissionsPathsAPIValue = map[string][]string{}
+			for pathName, pathValue := range allowedPermissionsPathsModelValue {
+
+				allowedPermissionsPathsAPIListValue := []string{}
+				elements := make([]types.String, 0, len(pathValue.Elements()))
+
+				diags := pathValue.ElementsAs(context.TODO(), &elements, false)
+				if diags.HasError() {
+					return nil, diags
+				}
+				for _, path := range elements {
+					allowedPermissionsPathsAPIListValue = append(allowedPermissionsPathsAPIListValue, path.ValueString())
+				}
+				allowedPermissionsPathsAPIValue[pathName] = allowedPermissionsPathsAPIListValue
+			}
+			allowedPermissionsAPIMapValue.Paths = allowedPermissionsPathsAPIValue
+		}
+		allowedPermissionsAPIValue[allowedPermissionName] = allowedPermissionsAPIMapValue
+	}
+
+	return allowedPermissionsAPIValue, nil
+}
+
+func (m *RoleResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Role, diag.Diagnostics) {
+	apiModel := sgsdkgo.Role{
+		ResourceName: m.ResourceName.ValueString(),
+	}
+
+	if !m.Description.IsUnknown() {
+		apiModel.Description = sgsdkgo.Optional(m.Description.ValueString())
+	} else {
+		apiModel.Description = sgsdkgo.Null[string]()
+	}
+
+	if !m.Tags.IsUnknown() {
+		tags, diags := expanders.StringList(context.TODO(), m.Tags)
 		if diags.HasError() {
 			return nil, diags
 		}
-		var allowedPermissionsPathsAPIValue = map[string][]string{}
-		for pathName, pathValue := range allowedPermissionsPathsModelValue {
-			allowedPermissionsPathsAPIValue[pathName] = []string{}
-			elements := make([]types.String, 0, len(pathValue.Elements()))
-			diags := pathValue.ElementsAs(ctx, &elements, false)
-			diag.Append(diags...)
-			if diag.HasError() {
-				return nil, diag
-			}
-			for _, path := range elements {
-				allowedPermissionsPathsAPIValue[pathName] = append(allowedPermissionsPathsAPIValue[pathName], path.ValueString())
-			}
-		}
-		allowedPermissionsAPIValue[allowedPermissionName] = &sgsdkgo.AllowedPermissions{
-			Name:  allowedPermissionValue.Name.ValueString(),
-			Paths: allowedPermissionsPathsAPIValue,
-		}
+		apiModel.Tags = sgsdkgo.Optional(tags)
+	} else {
+		apiModel.Tags = sgsdkgo.Null[[]string]()
 	}
-	apiModel := sgsdkgo.Role{
-		ResourceName: m.ResourceName.ValueString(),
-		Description:  m.Description.ValueStringPointer(),
-	}
-	// Convert Tags from types.List to []string
-	elements := make([]types.String, 0, len(m.Tags.Elements()))
-	diags := m.Tags.ElementsAs(ctx, &elements, false)
-	diag.Append(diags...)
-	if diag.HasError() {
-		return nil, diag
-	}
-	var tags []string
-	for _, tag := range elements {
-		tags = append(tags, tag.ValueString())
-	}
-	apiModel.Tags = tags
 
-	apiModel.AllowedPermissions = allowedPermissionsAPIValue
+	if !m.AllowedPermissions.IsUnknown() {
+		allowedPermissionsAPIValue, diags := allowedPermissionsToAPIModel(m.AllowedPermissions)
+		if diags.HasError() {
+			return nil, diags
+		}
+		apiModel.AllowedPermissions = sgsdkgo.Optional(allowedPermissionsAPIValue)
+	} else {
+		apiModel.AllowedPermissions = sgsdkgo.Null[map[string]*sgsdkgo.AllowedPermissions]()
+	}
 
 	return &apiModel, nil
 }
 
 func (m *RoleResourceModel) ToPatchedAPIModel(ctx context.Context) (*sgsdkgo.PatchedRole, diag.Diagnostics) {
-	diag := diag.Diagnostics{}
-	var allowedPermissionsModelValue map[string]*RoleAllowedPermissionsModel
-	var allowedPermissionsDiags = m.AllowedPermissions.ElementsAs(context.Background(), &allowedPermissionsModelValue, false)
-	if allowedPermissionsDiags.HasError() {
-		return nil, allowedPermissionsDiags
+	apiPatchedModel := sgsdkgo.PatchedRole{
+		ResourceName: sgsdkgo.Optional(*m.ResourceName.ValueStringPointer()),
 	}
-	var allowedPermissionsAPIValue = map[string]*sgsdkgo.AllowedPermissions{}
-	for allowedPermissionName, allowedPermissionValue := range allowedPermissionsModelValue {
-		var allowedPermissionsPathsModelValue = map[string]types.List{}
-		var diags = allowedPermissionValue.Paths.ElementsAs(context.Background(), &allowedPermissionsPathsModelValue, false)
+
+	if !m.Description.IsUnknown() {
+		apiPatchedModel.Description = sgsdkgo.Null[string]()
+	} else {
+		apiPatchedModel.Description = sgsdkgo.Optional(*m.Description.ValueStringPointer())
+	}
+
+	if !m.Tags.IsUnknown() {
+		tags, diags := expanders.StringList(context.TODO(), m.Tags)
 		if diags.HasError() {
 			return nil, diags
 		}
-		var allowedPermissionsPathsAPIValue = map[string][]string{}
-		for pathName, pathValue := range allowedPermissionsPathsModelValue {
-			allowedPermissionsPathsAPIValue[pathName] = []string{}
-			elements := make([]types.String, 0, len(pathValue.Elements()))
-			diags := pathValue.ElementsAs(ctx, &elements, false)
-			diag.Append(diags...)
-			if diag.HasError() {
-				return nil, diag
-			}
-			for _, path := range elements {
-				allowedPermissionsPathsAPIValue[pathName] = append(allowedPermissionsPathsAPIValue[pathName], path.ValueString())
-			}
-		}
-		allowedPermissionsAPIValue[allowedPermissionName] = &sgsdkgo.AllowedPermissions{
-			Name:  allowedPermissionValue.Name.ValueString(),
-			Paths: allowedPermissionsPathsAPIValue,
-		}
+		apiPatchedModel.Tags = sgsdkgo.Optional(tags)
+	} else {
+		apiPatchedModel.Tags = sgsdkgo.Null[[]string]()
 	}
-	apiModel := sgsdkgo.PatchedRole{
-		ResourceName: m.ResourceName.ValueStringPointer(),
-		Description:  m.Description.ValueStringPointer(),
-	}
-	// Convert Tags from types.List to []string
-	elements := make([]types.String, 0, len(m.Tags.Elements()))
-	diags := m.Tags.ElementsAs(ctx, &elements, false)
-	diag.Append(diags...)
-	if diag.HasError() {
-		return nil, diag
-	}
-	var tags []string
-	for _, tag := range elements {
-		tags = append(tags, tag.ValueString())
-	}
-	apiModel.Tags = tags
 
-	apiModel.AllowedPermissions = allowedPermissionsAPIValue
+	if !m.AllowedPermissions.IsUnknown() {
+		allowedPermissionsAPIValue, diags := allowedPermissionsToAPIModel(m.AllowedPermissions)
+		if diags.HasError() {
+			return nil, diags
+		}
+		apiPatchedModel.AllowedPermissions = sgsdkgo.Optional(allowedPermissionsAPIValue)
+	} else {
+		apiPatchedModel.AllowedPermissions = sgsdkgo.Null[map[string]*sgsdkgo.AllowedPermissions]()
+	}
 
-	return &apiModel, nil
+	return &apiPatchedModel, nil
 }
 
-func buildAPIModelToRoleModel(apiResponse *sgsdkgo.Role) (*RoleResourceModel, diag.Diagnostics) {
-	diag := diag.Diagnostics{}
-	var allowedPermissions types.Map
-
-	allowedPermissionsElements := map[string]attr.Value{}
-	allowedPermissionsPathAttrType := map[string]attr.Type{
-		"name": types.StringType,
-		"paths": types.MapType{
-			ElemType: types.ListType{ElemType: types.StringType},
-		},
-	}
-
-	for allowedPermissionName, allowedPermissionValue := range apiResponse.AllowedPermissions {
-		allowedPermissionsPathsElements := map[string]attr.Value{}
-		for pathName, pathValue := range allowedPermissionValue.Paths {
-			var paths []attr.Value
-			for _, path := range pathValue {
-				paths = append(paths, flatteners.String(path))
-			}
-			pathsList, diags := types.ListValueFrom(context.Background(), types.StringType, paths)
-			diag.Append(diags...)
-			if diag.HasError() {
-				return nil, diag
-			}
-
-			allowedPermissionsPathsElements[pathName] = pathsList
-
-		}
-
-		allowedPermissionsPathsValue, _ := types.MapValueFrom(
-			context.Background(),
-			types.ListType{ElemType: types.StringType},
-			allowedPermissionsPathsElements)
-		allowedPermissionNameValue := map[string]attr.Value{}
-		allowedPermissionNameValue["name"] = flatteners.String(allowedPermissionValue.Name)
-		allowedPermissionNameValue["paths"] = allowedPermissionsPathsValue
-		allowedPermissionNameModelValue, diags := types.ObjectValue(
-			allowedPermissionsPathAttrType,
-			allowedPermissionNameValue)
-		diag.Append(diags...)
-		if diag.HasError() {
-			return nil, diag
-		}
-		allowedPermissionsElements[allowedPermissionName] = allowedPermissionNameModelValue
-	}
-	allowedPermissions, _ = types.MapValueFrom(
-		context.Background(),
-		types.ObjectType{
-			AttrTypes: allowedPermissionsPathAttrType,
-		},
-		allowedPermissionsElements)
-
+func buildAPIModelToRoleModel(apiResponse *sgsdkgo.RoleDataResponse) (*RoleResourceModel, diag.Diagnostics) {
 	roleModel := &RoleResourceModel{
-		ResourceName:       flatteners.String(apiResponse.ResourceName),
-		Description:        flatteners.StringPtr(apiResponse.Description),
-		AllowedPermissions: allowedPermissions,
+		ResourceName: flatteners.String(apiResponse.ResourceName),
+		Description:  flatteners.StringPtr(apiResponse.Description),
 	}
+
+	if apiResponse.AllowedPermissions != nil {
+		allowedPermissionsModelValue := map[string]types.Object{}
+		for allowedPermissionName, allowedPermissionValue := range apiResponse.AllowedPermissions {
+			allowedPermissionsMapModelValue := RoleAllowedPermissionsModel{}
+			if allowedPermissionValue.Paths != nil {
+				allowedPermissionsPathsModelValue := map[string]types.List{}
+				for pathName, pathValue := range allowedPermissionValue.Paths {
+					var paths []types.String
+					for _, path := range pathValue {
+						paths = append(paths, flatteners.String(path))
+					}
+					pathsList, diags := types.ListValueFrom(context.Background(), types.StringType, paths)
+					if diags.HasError() {
+						return nil, diags
+					}
+					allowedPermissionsPathsModelValue[pathName] = pathsList
+				}
+
+				allowedPermissionsPathTerraType, diags := types.MapValueFrom(
+					context.Background(),
+					types.ListType{ElemType: types.StringType},
+					allowedPermissionsPathsModelValue)
+				if diags.HasError() {
+					return nil, diags
+				}
+				allowedPermissionsMapModelValue.Paths = allowedPermissionsPathTerraType
+			} else {
+				allowedPermissionsMapModelValue.Paths = types.MapNull(types.ListType{ElemType: types.StringType})
+			}
+
+			allowedPermissionsMapModelValue.Name = flatteners.String(allowedPermissionValue.Name)
+
+			allowedPermissionMapModelTerraType, diags := types.ObjectValueFrom(context.TODO(),
+				allowedPermissionsMapModelValue.AttributeTypes(),
+				allowedPermissionsMapModelValue)
+			if diags.HasError() {
+				return nil, diags
+			}
+			allowedPermissionsModelValue[allowedPermissionName] = allowedPermissionMapModelTerraType
+		}
+
+		allowedPermissionsModelTerraType, diags := types.MapValueFrom(
+			context.Background(),
+			types.ObjectType{
+				AttrTypes: RoleAllowedPermissionsModel{}.AttributeTypes(),
+			},
+			allowedPermissionsModelValue)
+
+		if diags.HasError() {
+			return nil, diags
+		}
+
+		roleModel.AllowedPermissions = allowedPermissionsModelTerraType
+	} else {
+		roleModel.AllowedPermissions = types.MapNull(types.ObjectType{AttrTypes: RoleAllowedPermissionsModel{}.AttributeTypes()})
+	}
+
 	// Convert Tags from []string to types.List
-	var tags []attr.Value
-	for _, tag := range apiResponse.Tags {
-		tags = append(tags, flatteners.String(tag))
+	if apiResponse.Tags != nil {
+		tags := []types.String{}
+		for _, tag := range apiResponse.Tags {
+			tags = append(tags, flatteners.String(tag))
+		}
+		tagsList, diags := types.ListValueFrom(context.Background(), types.StringType, tags)
+		if diags.HasError() {
+			return nil, diags
+		}
+		roleModel.Tags = tagsList
+	} else {
+		roleModel.Tags = types.ListNull(types.StringType)
 	}
-	tagsList, diags := types.ListValueFrom(context.Background(), types.StringType, tags)
-	diag.Append(diags...)
-	if diag.HasError() {
-		return nil, diag
-	}
-	roleModel.Tags = tagsList
 	return roleModel, nil
 }
