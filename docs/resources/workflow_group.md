@@ -23,11 +23,11 @@ resource "stackguardian_workflow_group" "testing" {
 
 ### Required
 
-- `resource_name` (String) Role name. Must be less than 100 characters. Allowed characters are ^[-a-zA-Z0-9_]+$
+- `resource_name` (String) The name of the Workflow Group. Must be less than 100 characters and can only contain alphanumeric characters, dashes (-), and underscores (_).
 
 ### Optional
 
-- `description` (String) Must be less than 256 characters
-- `tags` (List of String) Atmost 10 tags are allowed
+- `description` (String) A description of the Workflow Group. Must be less than 256 characters.
+- `tags` (List of String) A list of tags associated with the Workflow Group. Up to 10 tags are allowed.
 
 
