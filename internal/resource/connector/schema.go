@@ -230,7 +230,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 									},
 								},
 								"description": schema.StringAttribute{
-									MarkdownDescription: "",
+									MarkdownDescription: "A description of the benchmark. It must be less than 256 characters.",
 									Optional:            true,
 								},
 								"summary_description": schema.StringAttribute{
