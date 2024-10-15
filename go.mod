@@ -2,12 +2,9 @@ module github.com/StackGuardian/terraform-provider-stackguardian
 
 go 1.21.4
 
-replace github.com/StackGuardian/sg-sdk-go => "../../sg-sdk/generated-sg-sdk-go"
-
 require (
-	github.com/StackGuardian/sg-sdk-go v0.0.0-20240927131727-6f261a5467bd
+	github.com/StackGuardian/sg-sdk-go v1.0.0-beta-2
 	github.com/hashicorp/terraform-plugin-framework v1.11.0
-	github.com/hashicorp/terraform-plugin-framework-validators v0.13.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 )
 

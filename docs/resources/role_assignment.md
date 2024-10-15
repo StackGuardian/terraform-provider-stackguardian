@@ -48,9 +48,10 @@ resource "stackguardian_workflow_group" "ONBOARDING-Project01-Frontend" {
 
 ### Required
 
-- `entity_type` (String) Should be one of <span style="background-color: #eff0f0; color: #e53835;">EMAIL</span>
-					<span style="background-color: #eff0f0; color: #e53835;">GROUP</span>
-- `role` (String) <= 255 characters
-- `user_id` (String) Must be less than 256 characters
+- `entity_type` (String) Should be one of:
+				- <span style="background-color: #eff0f0; color: #e53835;">EMAIL</span>
+				- <span style="background-color: #eff0f0; color: #e53835;">GROUP</span>
+- `role` (String) Role name. Must be less than 255 characters.
+- `user_id` (String) Identifier for the user or group. Must be less than 256 characters.
 
 

@@ -199,5 +199,4 @@ func (r *roleResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		resp.Diagnostics.AddError("Error deleting role", "Error in deleting role "+state.ResourceName.ValueString()+": "+err.Error())
 		return
 	}
-	//TODO: check if we need to update the state
 }
