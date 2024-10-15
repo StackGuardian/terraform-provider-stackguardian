@@ -216,29 +216,6 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
         }
       },
 
-      // AUDIT
-      "GET/api/v1/orgs/demo-org/audit_logs/" = {
-        name = "GetAuditLogs",
-        paths = {}
-      },
-
-      // SECRET
-      "GET/api/v1/orgs/demo-org/secrets/listall/" = {
-        name = "ListSecrets",
-        paths = {}
-      },
-      "POST/api/v1/orgs/demo-org/secrets/" = {
-        name = "CreateSecret",
-        paths = {}
-      },
-      "PATCH/api/v1/orgs/demo-org/secrets/<secret>/" = {
-        name = "UpdateSecret",
-        paths = {}
-      },
-      "DELETE/api/v1/orgs/demo-org/secrets/<secret>/" = {
-        name = "DeleteSecret",
-        paths = {}
-      },
 
       // INTEGRATION
       "GET/api/v1/orgs/demo-org/integrationgroups/<integrationgroup>/" = {
@@ -307,6 +284,7 @@ resource "stackguardian_connector" "ONBOARDING-Project01-Cloud-Connector" {
         aws_default_region = "us-west-2"
       }]
   }
+  scope = ["*"]
 }
 
 
@@ -319,4 +297,5 @@ resource "stackguardian_connector" "ONBOARDING-Project01-VCS-Connector" {
         gitlab_creds = "REPLACEME-example-user:REPLACEME-example-token"
       }]
   }
+  scope = ["*"]
 }
