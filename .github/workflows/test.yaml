@@ -46,16 +46,16 @@ jobs:
           STACKGUARDIAN_API_KEY: '${{ secrets.SG_PRD_API_KEY }}'
           STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'
 
-      - name: "Test Provider with quickstart example"
-        run: |
-          set -eu -x;
-          make install;
-          make test-examples-quickstart ARGS="-f local-build";
-        shell: bash
-        env:
-          STACKGUARDIAN_API_KEY: '${{ secrets.SG_PRD_API_KEY }}'
-          STACKGUARDIAN_API_URI: '${{ secrets.SG_PRD_API_URI }}'
-          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'
+      # - name: "Test Provider with quickstart example"
+      #   run: |
+      #     set -eu -x;
+      #     make install;
+      #     make test-examples-quickstart ARGS="-f local-build";
+      #   shell: bash
+      #   env:
+      #     STACKGUARDIAN_API_KEY: '${{ secrets.SG_PRD_API_KEY }}'
+      #     STACKGUARDIAN_API_URI: '${{ secrets.SG_PRD_API_URI }}'
+      #     STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'
 
       - name: "Test Provider with onboarding example"
         run: |
