@@ -13,32 +13,32 @@ func (r *roleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"resource_name": schema.StringAttribute{
-				MarkdownDescription: "Role name. Must be less than 100 characters. Allowed characters are ^[-a-zA-Z0-9_]+$",
+				MarkdownDescription: "The role name. It must be less than 100 characters and can only contain the following allowed characters: `^[-a-zA-Z0-9_]+$`.",
 				Required:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "Must be less than 256 characters",
+				MarkdownDescription: "A description of the role. It must be less than 256 characters.",
 				Optional:            true,
 				Computed:            true,
 			},
 			"tags": schema.ListAttribute{
-				MarkdownDescription: "Atmost 10 tags are allowed",
+				MarkdownDescription: "A list of tags associated with the role. A maximum of 10 tags are allowed.",
 				Optional:            true,
 				Computed:            true,
 				ElementType:         types.StringType,
 			},
 			"allowed_permissions": schema.MapNestedAttribute{
-				MarkdownDescription: "Permissions assigned to the role",
+				MarkdownDescription: "A map of permissions assigned to the role.",
 				Optional:            true,
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"name": schema.StringAttribute{
-							MarkdownDescription: "Name of the permission",
+							MarkdownDescription: "The name of the permission.",
 							Required:            true,
 						},
 						"paths": schema.MapAttribute{
-							MarkdownDescription: "Resource paths for which this permission is scoped to",
+							MarkdownDescription: "A map of resource paths to which this permission is scoped.",
 							Computed:            true,
 							Optional:            true,
 							ElementType: types.ListType{
