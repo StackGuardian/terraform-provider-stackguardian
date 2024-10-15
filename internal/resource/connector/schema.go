@@ -272,7 +272,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Optional:            true,
 			},
 			"tags": schema.ListAttribute{
-				MarkdownDescription: "Tags for the connector.",
+				MarkdownDescription: "A list of tags associated with the rolconnectore. Up to 10 tags are allowed.",
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
