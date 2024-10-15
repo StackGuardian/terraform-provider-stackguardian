@@ -1,8 +1,6 @@
-resource "stackguardian_workflow_group" "TPS-Example-WorkflowGroup" {
-  data = jsonencode({
-    "ResourceName" : "TPS-Example",
-    "Description" : "Example of terraform-provider-stackguardian for WorkflowGroup",
-    "Tags" : ["tf-provider-example"],
-    "IsActive" : 1,
-  })
+# Example for creating a Workflow Group in StackGuardian
+resource "stackguardian_workflow_group" "example_workflow_group" {
+  resource_name = "example-workflow-group"
+  description   = "Example of terraform-provider-stackguardian for Workflow Group"
+  tags          = ["example-tag"]
 }

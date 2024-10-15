@@ -1,26 +1,13 @@
-# https://goreleaser.com
+version: 2
 
-project_name: terraform-provider-stackguardian
-
-#  env_files:
-#    github_token: '{{ .Env.SG_GITHUB_KEY_FILEPATH }}'
-
-#  before:
-#    hooks:
-#      # This is just an example and not a requirement for provider building/publishing
-#      # Is it really required?
-#      - go mod tidy
+before:
+  hooks:
+    - go mod tidy
 
 builds:
   - env:
       - CGO_ENABLED=0
-      - GOPRIVATE='github.com/StackGuardian/terraform-provider-stackguardian'
-    mod_timestamp: '{{ .CommitTimestamp }}'
-    flags:
-      - '-trimpath'
-      - '-v'
-    ldflags:
-      - '-s -w -X main.version={{.Version}} -X main.commit={{.Commit}}'
+      - GOPRIVATE='github.com/StackGuardian/sg-sdk-go'
     goos:
       - darwin
       - linux
@@ -28,46 +15,25 @@ builds:
     goarch:
       - amd64
       - arm64
-    binary: '{{ .ProjectName }}_v{{ .Version }}'
+    binary: '{{ .ProjectName }}'
 
 archives:
-  - format: zip
-    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
-
-checksum:
-  name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
-  algorithm: sha256
-  extra_files:
-    - glob: 'terraform-registry-manifest.json'
-      name_template: '{{ .ProjectName }}_{{ .Version }}_manifest.json'
-
-signs:
-  - artifacts: checksum
-    args:
-      - "--batch"
-      - "--local-user"
-      - "{{ .Env.GPG_FINGERPRINT }}"
-      - "--output"
-      - "${signature}"
-      - "--detach-sign"
-      - "${artifact}"
-
-release:
-  name_template: 'v{{.Version}}'
-  github:
-    #owner: stackguardian
-    #owner: '{{ .Env.GITHUB_REPOSITORY_OWNER }}'
-    owner: '{{ if index .Env "GITHUB_REPOSITORY_OWNER" }}{{ .Env.GITHUB_REPOSITORY_OWNER }}{{ else }}stackguardian{{ end }}'
-    name: terraform-provider-stackguardian
-  extra_files:
-    - glob: 'terraform-registry-manifest.json'
-      name_template: '{{ .ProjectName }}_{{ .Version }}_manifest.json'
-  draft: true
-  replace_existing_draft: true
-  prerelease: auto
-  mode: append
-  skip_upload: false
+  - format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    # use zip for windows archives
+    format_overrides:
+      - goos: windows
+        format: zip
 
 changelog:
-  skip: true
-  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
