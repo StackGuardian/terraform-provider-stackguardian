@@ -64,30 +64,48 @@ Required:
 
 Optional:
 
+### Nested Schema for `settings.config` (Based on `kind`)
+
+#### If `kind = "AWS_STATIC"`
+- `aws_access_key_id` (String) AWS access key ID for authentication.
+- `aws_secret_access_key` (String) AWS secret access key for authentication.
+- `aws_default_region` (String) Default AWS region for resource operations.
+
+#### If `kind = "AZURE_STATIC"`
 - `arm_client_id` (String) Client ID for Azure Resource Manager.
 - `arm_client_secret` (String) Client secret for Azure Resource Manager.
 - `arm_subscription_id` (String) Azure Resource Manager subscription ID.
 - `arm_tenant_id` (String) Azure Resource Manager tenant ID.
-- `aws_access_key_id` (String) AWS access key ID for authentication.
-- `aws_default_region` (String) Default AWS region for resource operations.
-- `aws_secret_access_key` (String) AWS secret access key for authentication.
-- `azure_creds` (String) Credentials for Azure integration, if applicable.
+
+
+#### If `kind = "AZURE_DEVOPS"`
 - `azure_devops_api_url` (String) Base URL for Azure DevOps API.
 - `azure_devops_http_url` (String) HTTP URL for accessing Azure DevOps services.
-- `bitbucket_creds` (String) Credentials for Bitbucket integration, if applicable.
-- `gcp_config_file_content` (String) Content of the GCP configuration file.
-- `github_api_url` (String) Base URL for the GitHub API.
-- `github_app_client_id` (String) Client ID for the GitHub app, if applicable.
-- `github_app_client_secret` (String) Client secret for the GitHub app, if applicable.
-- `github_app_id` (String) The application ID for the GitHub app, if applicable.
-- `github_app_pem_file_content` (String) Content of the PEM file for the GitHub app, if applicable.
-- `github_app_webhook_secret` (String) Webhook secret for the GitHub app, if applicable.
-- `github_app_webhook_url` (String) Webhook URL for the GitHub app, if applicable.
-- `github_http_url` (String) HTTP URL for accessing the GitHub repository.
+- `azure_creds` (String) Credentials for Azure integration.
+
+#### If `kind = "GITHUB_APP_CUSTOM"`
+- `github_app_client_id` (String) Client ID for the GitHub app.
+- `github_app_client_secret` (String) Client secret for the GitHub app.
+- `github_app_id` (String) The application ID for the GitHub app.
+- `github_app_pem_file_content` (String) Content of the PEM file for the GitHub app.
+- `github_app_webhook_secret` (String) Webhook secret for the GitHub app.
+- `github_app_webhook_url` (String) Webhook URL for the GitHub app.
+
+#### If `kind = "GITLAB_COM"`
 - `gitlab_api_url` (String) Base URL for the GitLab API.
-- `gitlab_creds` (String) Credentials for GitLab integration, if applicable.
+- `gitlab_creds` (String) Credentials for GitLab integration.
 - `gitlab_http_url` (String) HTTP URL for accessing the GitLab repository.
-- `installation_id` (String) The installation ID for GitHub applications, if applicable.
+
+#### If `kind = "BITBUCKET_ORG"`
+- `bitbucket_creds` (String) Credentials for Bitbucket integration.
+
+#### If `kind = "GCP_STATIC"`
+- `gcp_config_file_content` (String) Content of the GCP configuration file.
+
+#### If `kind = "GITHUB_COM"`
+- `github_api_url` (String) Base URL for the GitHub API.
+- `github_http_url` (String) HTTP URL for accessing the GitHub repository.
+
 
 
 
@@ -134,7 +152,7 @@ Optional:
 - `source_config_dest_kind` (String) Kind of the source configuration destination. Valid examples include eg:- AWS_RBAC, AZURE_STATIC
 
 <a id="nestedatt--discovery_settings--benchmarks--runtime_source--config"></a>
-### Nested Schema for `discovery_settings.benchmarks.runtime_source.config`
+### Nested Schema for `discovery_settings.benchmarks.runtime_source.source_config_dest_kind`
 
 Optional:
 
@@ -145,9 +163,3 @@ Optional:
 - `ref` (String) Reference identifier for the repository.
 - `repo` (String) Repository name or URL.
 - `working_dir` (String) Working directory for operations.
-
-
-
-
-
-
