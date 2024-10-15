@@ -1,4 +1,11 @@
 # Example for defining a Role Assignment and associating it with a Role and Workflow Group in StackGuardian
+
+resource "stackguardian_workflow_group" "example_workflow_group" {
+  resource_name = "example-workflow-group"
+  description   = "Example of terraform-provider-stackguardian for Workflow Group"
+  tags          = ["example-tag"]
+}
+
 resource "stackguardian_role" "example_role" {
   resource_name = "example-role"
   description   = "Example of terraform-provider-stackguardian for a Role"
@@ -20,6 +27,7 @@ resource "stackguardian_role" "example_role" {
     }
   }
 }
+
 resource "stackguardian_role_assignment" "example_role_assignment" {
   user_id     = "example.user@domain.com"
   entity_type = "EMAIL"
