@@ -42,21 +42,24 @@ resource "stackguardian_workflow_group" "ONBOARDING-Project01-Frontend" {
 
 ### Required
 
-- `resource_name` (String) Role name. Must be less than 100 characters. Allowed characters are ^[-a-zA-Z0-9_]+$
+- `resource_name` (String) The role name. It must be less than 100 characters and can only contain the following allowed characters: `^[-a-zA-Z0-9_]+$`.
 
 ### Optional
 
-- `allowed_permissions` (Attributes Map) (see [below for nested schema](#nestedatt--allowed_permissions))
-- `description` (String) Must be less than 256 characters
-- `tags` (List of String) Atmost 10 tags are allowed
+- `allowed_permissions` (Attributes Map) A map of permissions assigned to the role. (see [below for nested schema](#nestedatt--allowed_permissions))
+- `description` (String) A description of the role. It must be less than 256 characters.
+- `tags` (List of String) A list of tags associated with the role. A maximum of 10 tags are allowed.
 
 <a id="nestedatt--allowed_permissions"></a>
 ### Nested Schema for `allowed_permissions`
 
 Required:
 
-- `name` (String)
-- `paths` (Map of List of String)
+- `name` (String) The name of the permission.
+
+Optional:
+
+- `paths` (Map of List of String) A map of resource paths to which this permission is scoped.
 
 
 
