@@ -1,24 +1,31 @@
-resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
-  resource_name = "ONBOARDING-Project01-Developer"
-  description   = "Onboarding example of terraform-provider-stackguardian for Role Developer"
+# Example for defining a Role and associating it with a Workflow Group in StackGuardian
+
+resource "stackguardian_workflow_group" "example_workflow_group" {
+  resource_name = "example-workflow-group"
+  description   = "Example of terraform-provider-stackguardian for Workflow Group"
+  tags          = ["example-tag"]
+}
+
+resource "stackguardian_role" "example_role" {
+  resource_name = "example-role"
+  description   = "Example of terraform-provider-stackguardian for Role"
+  
   tags = [
-    "demo-org",
+    "developer", "example-role",
   ]
+
+  # Defining permissions for the role
   allowed_permissions = {
-    // WF-GROUP
-    "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/" : {
+    # Permission for accessing a Workflow Group
+    "GET/api/v1/orgs/<organization>/wfgrps/<wfGrp>/": { # Replace with your organization name
       "name" : "GetWorkflowGroup",
-      "paths" : {
-        "<wfGrp>" : [
-          resource.stackguardian_workflow_group.ONBOARDING-Project01-Frontend.resource_name,
+      "paths": {
+        "<wfGrp>": [
+          # Referencing the workflow group resource
+          stackguardian_workflow_group.example_workflow_group.resource_name
         ]
       }
     }
   }
 }
 
-resource "stackguardian_workflow_group" "ONBOARDING-Project01-Frontend" {
-  resource_name = "ONBOARDING-Project01-Frontend"
-  description   = "Onboarding example  of terraform-provider-stackguardian for WorkflowGroup"
-  tags          = ["tf-provider-example", "onboarding"]
-}
