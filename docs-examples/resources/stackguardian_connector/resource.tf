@@ -1,14 +1,13 @@
-resource "stackguardian_connector" "aws-cloud-connector-example" {
-  resource_name = "aws-rbac-connector"
-  description   = "AWS Cloud Connector"
-
+resource "stackguardian_connector" "ONBOARDING-Project01-Cloud-Connector" {
+  resource_name = "ONBOARDING-Project01-Cloud-Connector"
+  description   = "Onboarding example  of terraform-provider-stackguardian for ConnectorCloud"
   settings = {
-    kind   = "AWS_RBAC"
-    
+    kind = "AWS_STATIC",
     config = [{
-      roleArn     = "arn:aws:iam::209502960327:role/StackGuardian"
-      externalId = "demo-org:ElfygiFglfldTwnDFpAScQkvgvHTGV "
-      durationSeconds    = "3600"
+      aws_access_key_id     = "REPLACEME-aws-key",
+      aws_secret_access_key = "REPLACEME-aws-key",
+      aws_default_region    = "us-west-2"
     }]
   }
+  scope = ["*"]
 }
