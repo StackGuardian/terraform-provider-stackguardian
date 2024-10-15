@@ -231,6 +231,8 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								},
 								"last_discovery_time": schema.Int64Attribute{
 									MarkdownDescription: "Timestamp of the last discovery.",
+								"description": schema.StringAttribute{
+									MarkdownDescription: "",
 									Optional:            true,
 								},
 								"summary_description": schema.StringAttribute{

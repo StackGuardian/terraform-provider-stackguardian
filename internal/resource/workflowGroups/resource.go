@@ -73,7 +73,7 @@ func (r *workflowGroupResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	var responseData *sgsdkgo.WorkflowGroup
+	var responseData *sgsdkgo.WorkflowGroupDataResponse
 
 	// Check if resource name is nested. If so, create a child workflow group
 	if workflows := strings.Split(*payload.ResourceName, "/"); len(workflows) > 1 {
@@ -96,8 +96,8 @@ func (r *workflowGroupResource) Create(ctx context.Context, req resource.CreateR
 					}
 
 					//For cases where WFG is a nested one, the resource name is returned as the full path to match the resource_name in resource definition
-					if workflowGroup.Msg.SubResourceId != "" {
-						fullResourceName := strings.Replace(workflowGroup.Msg.SubResourceId, "/wfgrps/", "", 1)
+					if workflowGroup.Msg.SubResourceId != nil {
+						fullResourceName := strings.Replace(*workflowGroup.Msg.SubResourceId, "/wfgrps/", "", 1)
 						workflowGroup.Msg.ResourceName = &fullResourceName
 					}
 
@@ -116,8 +116,8 @@ func (r *workflowGroupResource) Create(ctx context.Context, req resource.CreateR
 			return
 		}
 		//For cases where WFG is a nested one, the resource name is returned as the full path to match the resource_name in resource definition
-		if reqResp.Data.SubResourceId != "" {
-			fullResourceName := strings.Replace(reqResp.Data.SubResourceId, "/wfgrps/", "", 1)
+		if reqResp.Data.SubResourceId != nil {
+			fullResourceName := strings.Replace(*reqResp.Data.SubResourceId, "/wfgrps/", "", 1)
 			reqResp.Data.ResourceName = &fullResourceName
 		}
 		responseData = reqResp.Data
@@ -136,8 +136,8 @@ func (r *workflowGroupResource) Create(ctx context.Context, req resource.CreateR
 					}
 
 					//For cases where WFG is a nested one, the resource name is returned as the full path to match the resource_name in resource definition
-					if workflowGroup.Msg.SubResourceId != "" {
-						fullResourceName := strings.Replace(workflowGroup.Msg.SubResourceId, "/wfgrps/", "", 1)
+					if workflowGroup.Msg.SubResourceId != nil {
+						fullResourceName := strings.Replace(*workflowGroup.Msg.SubResourceId, "/wfgrps/", "", 1)
 						workflowGroup.Msg.ResourceName = &fullResourceName
 					}
 
@@ -194,7 +194,7 @@ func (r *workflowGroupResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	//For cases where WFG is a nested one, the resource name is returned as the full path to match the resource_name in resource definition
-	fullResourceName := strings.Replace(workflowGroup.Msg.SubResourceId, "/wfgrps/", "", 1)
+	fullResourceName := strings.Replace(*workflowGroup.Msg.SubResourceId, "/wfgrps/", "", 1)
 	workflowGroup.Msg.ResourceName = &fullResourceName
 
 	workflowGroupResourceModel, diags := buildAPIModelToWorkflowGroupModel(workflowGroup.Msg)
@@ -239,7 +239,7 @@ func (r *workflowGroupResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 	//For cases where WFG is a nested one, the resource name is returned as the full path to match the resource_name in resource definition
-	fullResourceName := strings.Replace(updatedWorkflowGroup.Msg.SubResourceId, "/wfgrps/", "", 1)
+	fullResourceName := strings.Replace(*updatedWorkflowGroup.Msg.SubResourceId, "/wfgrps/", "", 1)
 	updatedWorkflowGroup.Msg.ResourceName = &fullResourceName
 
 	workflowGroupResourceModel, diags := buildAPIModelToWorkflowGroupModel(updatedWorkflowGroup.Msg)
