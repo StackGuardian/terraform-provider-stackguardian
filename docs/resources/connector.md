@@ -72,11 +72,11 @@ Optional:
 - `aws_default_region` (String) Default AWS region for resource operations.
 
 #### If `kind = "AZURE_STATIC"`
+
 - `arm_client_id` (String) Client ID for Azure Resource Manager.
 - `arm_client_secret` (String) Client secret for Azure Resource Manager.
 - `arm_subscription_id` (String) Azure Resource Manager subscription ID.
 - `arm_tenant_id` (String) Azure Resource Manager tenant ID.
-
 
 #### If `kind = "AZURE_DEVOPS"`
 - `azure_devops_api_url` (String) Base URL for Azure DevOps API.
@@ -105,7 +105,6 @@ Optional:
 #### If `kind = "GITHUB_COM"`
 - `github_api_url` (String) Base URL for the GitHub API.
 - `github_http_url` (String) HTTP URL for accessing the GitHub repository.
-
 
 
 
@@ -152,6 +151,7 @@ Optional:
 - `source_config_dest_kind` (String) Kind of the source configuration destination. Valid examples include eg:- AWS_RBAC, AZURE_STATIC
 
 <a id="nestedatt--discovery_settings--benchmarks--runtime_source--config"></a>
+
 ### Nested Schema for `discovery_settings.benchmarks.runtime_source.source_config_dest_kind`
 
 Optional:

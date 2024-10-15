@@ -145,6 +145,7 @@ resource "stackguardian_connector" "ONBOARDING-Project02-Cloud-Connector" {
         aws_default_region = "us-west-2"
       }]
     }
+    scope = ["*"]
 }
 
 resource "stackguardian_connector" "ONBOARDING-Project02-VCS-Connector" {
@@ -157,4 +158,5 @@ resource "stackguardian_connector" "ONBOARDING-Project02-VCS-Connector" {
         gitlab_creds = "REPLACEME-example-user:REPLACEME-example-token"
       }]
     }
+    scope = ["*"]
 }
