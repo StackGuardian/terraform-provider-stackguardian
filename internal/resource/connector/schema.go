@@ -215,7 +215,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 									},
 								},
 								"regions": schema.MapNestedAttribute{
-									MarkdownDescription: "Regions associated with the discovery settings.",
+									MarkdownDescription: "Regions associated with the discovery.",
 									Optional:            true,
 									Computed:            true,
 									NestedObject: schema.NestedAttributeObject{
@@ -226,39 +226,39 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 												Optional:            true,
 												Computed:            true,
 											},
-											"last_discovery_time": schema.Int64Attribute{
-												MarkdownDescription: "Timestamp of the last discovery.",
-												Optional:            true,
-											},
-											"summary_description": schema.StringAttribute{
-												MarkdownDescription: "A brief summary of the discovery.",
-												Optional:            true,
-											},
-											"active": schema.BoolAttribute{
-												MarkdownDescription: "Indicates if the discovery is active.",
-												Optional:            true,
-												Computed:            true,
-											},
-											"label": schema.StringAttribute{
-												MarkdownDescription: "Label associated with the discovery.",
-												Optional:            true,
-											},
-											"is_custom_check": schema.BoolAttribute{
-												MarkdownDescription: "Indicates if the discovery is a custom check.",
-												Optional:            true,
-												Computed:            true,
-											},
-											"summary_title": schema.StringAttribute{
-												MarkdownDescription: "Title for the discovery summary.",
-												Required:            true,
-											},
-											"discovery_interval": schema.Int64Attribute{
-												MarkdownDescription: "Interval for the discovery process.",
-												Optional:            true,
-												Computed:            true,
-											},
 										},
 									},
+								},
+								"last_discovery_time": schema.Int64Attribute{
+									MarkdownDescription: "Timestamp of the last discovery.",
+									Optional:            true,
+								},
+								"summary_description": schema.StringAttribute{
+									MarkdownDescription: "A brief summary of the discovery.",
+									Optional:            true,
+								},
+								"active": schema.BoolAttribute{
+									MarkdownDescription: "Indicates if the discovery is active.",
+									Optional:            true,
+									Computed:            true,
+								},
+								"label": schema.StringAttribute{
+									MarkdownDescription: "Label associated with the discovery.",
+									Optional:            true,
+								},
+								"is_custom_check": schema.BoolAttribute{
+									MarkdownDescription: "Indicates if the discovery is a custom check.",
+									Optional:            true,
+									Computed:            true,
+								},
+								"summary_title": schema.StringAttribute{
+									MarkdownDescription: "Title for the discovery summary.",
+									Required:            true,
+								},
+								"discovery_interval": schema.Int64Attribute{
+									MarkdownDescription: "Interval for the discovery process.",
+									Optional:            true,
+									Computed:            true,
 								},
 							},
 						},
