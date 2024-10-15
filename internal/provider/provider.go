@@ -165,7 +165,6 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 
 	// TODO: Restrict usage of dash env for pre release. Uncomment before production release
 	api_uri = "https://testapi.qa.stackguardian.io"
-	api_uri = "http://localhost:8000"
 
 	client := sgclient.NewClient(
 		sgoption.WithApiKey("apikey "+api_key),

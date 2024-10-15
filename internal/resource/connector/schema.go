@@ -266,8 +266,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"scope": schema.ListAttribute{
 				MarkdownDescription: "Which resources can use this connector",
 				ElementType:         types.StringType,
-				Computed:            true,
-				Optional:            true,
+				Required:            true,
 			},
 			"tags": schema.ListAttribute{
 				MarkdownDescription: "Tags for connector",
