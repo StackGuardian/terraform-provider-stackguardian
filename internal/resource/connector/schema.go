@@ -162,11 +162,11 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 									ElementType:         types.StringType,
 								},
 								"runtime_source": schema.SingleNestedAttribute{
-									MarkdownDescription: "Configuration for the source of runtime statistics.",
+									MarkdownDescription: "",
 									Optional:            true,
 									Attributes: map[string]schema.Attribute{
 										"source_config_dest_kind": schema.StringAttribute{
-											MarkdownDescription: "Kind of the source configuration destination.",
+											MarkdownDescription: "Kind of the source configuration destination. Valid examples include eg:- AWS_RBAC, AZURE_STATIC",
 											Optional:            true,
 											Computed:            true,
 										},
