@@ -266,5 +266,4 @@ func (r *workflowGroupResource) Delete(ctx context.Context, req resource.DeleteR
 		resp.Diagnostics.AddError("Error deleting workflowGroup", "Error in deleting workflowGroup "+state.ResourceName.ValueString()+": "+err.Error())
 		return
 	}
-	//TODO: check if we need to update the state
 }
