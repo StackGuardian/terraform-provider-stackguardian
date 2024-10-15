@@ -37,9 +37,9 @@ func (r *roleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 							MarkdownDescription: "The name of the permission.",
 							Required:            true,
 						},
-						"paths": schema.MapAttribute{						
+						"paths": schema.MapAttribute{
 							MarkdownDescription: "A map of resource paths to which this permission is scoped.",
-              Required:            true,
+							Required:            true,
 							ElementType: types.ListType{
 								ElemType: types.StringType,
 							},
