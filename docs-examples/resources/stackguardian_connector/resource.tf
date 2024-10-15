@@ -4,9 +4,9 @@ resource "stackguardian_connector" "example-connector" {
   settings = {
     kind = "AWS_STATIC",
     config = [{
-      aws_access_key_id     = "REPLACEME-aws-key",
-      aws_secret_access_key = "REPLACEME-aws-key",
-      aws_default_region    = "us-west-2"
+      roleArn     = "arn:aws:iam::209502960327:role/StackGuardian"
+      externalId = "demo-org:ElfygiFglfldTwnDFpAScQkvgvHTGV "
+      durationSeconds    = "3600"
     }]
   }
   scope = ["*"]
