@@ -7,7 +7,7 @@ resource "stackguardian_connector" "aws-cloud-connector-example" {
     
     config = [{
       roleArn     = "arn:aws:iam::209502960327:role/StackGuardian"
-      externalId = "wicked-hop:ElfygiFglfldTwnDFpAScQkvgvHTGV "
+      externalId = "demo-org:ElfygiFglfldTwnDFpAScQkvgvHTGV "
       durationSeconds    = "3600"
     }]
   }
