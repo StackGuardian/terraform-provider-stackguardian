@@ -13,20 +13,21 @@ func (r *workflowGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"resource_name": schema.StringAttribute{
-				MarkdownDescription: "Role name. Must be less than 100 characters. Allowed characters are ^[-a-zA-Z0-9_]+$",
+				MarkdownDescription: "The name of the Workflow Group. Must be less than 100 characters and can only contain alphanumeric characters, dashes (-), and underscores (_).",
 				Required:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "Must be less than 256 characters",
+				MarkdownDescription: "A description of the Workflow Group. Must be less than 256 characters.",
 				Optional:            true,
 				Computed:            true,
 			},
 			"tags": schema.ListAttribute{
-				MarkdownDescription: "Atmost 10 tags are allowed",
+				MarkdownDescription: "A list of tags associated with the Workflow Group. Up to 10 tags are allowed.",
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
 			},
 		},
 	}
+
 }
