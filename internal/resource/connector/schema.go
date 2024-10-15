@@ -221,7 +221,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 									NestedObject: schema.NestedAttributeObject{
 										Attributes: map[string]schema.Attribute{
 											"emails": schema.ListAttribute{
-												MarkdownDescription: "List of emails associated with the regions.",
+												MarkdownDescription: "List of emails to notify about the discovery.",
 												ElementType:         types.StringType,
 												Optional:            true,
 												Computed:            true,
