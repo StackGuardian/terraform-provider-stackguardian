@@ -18,6 +18,8 @@ jobs:
   provider-project_test:
     name: "Test Provider project"
     runs-on: ubuntu-latest
+    env:
+      GOPRIVATE: github.com/StackGuardian/sg-sdk-go
     steps:
 
       - name: "Checkout code"

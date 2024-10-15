@@ -216,7 +216,6 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
         }
       },
 
-
       // INTEGRATION
       "GET/api/v1/orgs/demo-org/integrationgroups/<integrationgroup>/" = {
         name = "GetIntegrationGroup",
