@@ -1,5 +1,5 @@
-resource "stackguardian_connector" "ONBOARDING-Project01-Cloud-Connector" {
-  resource_name = "ONBOARDING-Project01-Cloud-Connector"
+resource "stackguardian_connector" "example-connector" {
+  resource_name = "example-connector"
   description   = "Onboarding example  of terraform-provider-stackguardian for ConnectorCloud"
   settings = {
     kind = "AWS_STATIC",

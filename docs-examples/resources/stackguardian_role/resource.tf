@@ -17,7 +17,7 @@ resource "stackguardian_role" "example_role" {
   # Defining permissions for the role
   allowed_permissions = {
     # Permission for accessing a Workflow Group
-    "GET/api/v1/orgs/demo-org/wfgrps/<wfGrp>/" = { # Replace with your organization name
+    "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" = { # Replace with your organization name
       name = "GetWorkflowGroup",
       paths = {
         "<wfGrp>" = [
