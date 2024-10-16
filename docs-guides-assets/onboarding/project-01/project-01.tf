@@ -216,6 +216,7 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
         }
       },
 
+<<<<<<< HEAD
       // AUDIT
       "GET/api/v1/orgs/demo-org/audit_logs/" = {
         name = "GetAuditLogs",
@@ -240,6 +241,8 @@ resource "stackguardian_role" "ONBOARDING-Project01-Developer" {
         paths = {}
       },
 
+=======
+>>>>>>> main
       // INTEGRATION
       "GET/api/v1/orgs/demo-org/integrationgroups/<integrationgroup>/" = {
         name = "GetIntegrationGroup",
@@ -307,6 +310,10 @@ resource "stackguardian_connector" "ONBOARDING-Project01-Cloud-Connector" {
         aws_default_region = "us-west-2"
       }]
   }
+<<<<<<< HEAD
+=======
+  scope = ["*"]
+>>>>>>> main
 }
 
 
@@ -319,4 +326,8 @@ resource "stackguardian_connector" "ONBOARDING-Project01-VCS-Connector" {
         gitlab_creds = "REPLACEME-example-user:REPLACEME-example-token"
       }]
   }
+<<<<<<< HEAD
+=======
+  scope = ["*"]
+>>>>>>> main
 }
