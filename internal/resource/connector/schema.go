@@ -46,6 +46,21 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						Required:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
+								"role_arn": schema.StringAttribute{
+									MarkdownDescription: "",
+									Optional:            true,
+									Computed:            true,
+								},
+								"external_id": schema.StringAttribute{
+									MarkdownDescription: "",
+									Optional:            true,
+									Computed:            true,
+								},
+								"duration_seconds": schema.StringAttribute{
+									MarkdownDescription: "",
+									Optional:            true,
+									Computed:            true,
+								},
 								"installation_id": schema.StringAttribute{
 									Optional:            true,
 									MarkdownDescription: "The installation ID for GitHub applications, if applicable.",
@@ -167,6 +182,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 									MarkdownDescription: "",
 									Optional:            true,
 									Attributes: map[string]schema.Attribute{
+
 										"source_config_dest_kind": schema.StringAttribute{
 											MarkdownDescription: "Kind of the source configuration destination. Valid examples include eg:- AWS_RBAC, AZURE_STATIC",
 											Optional:            true,

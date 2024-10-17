@@ -34,6 +34,9 @@ func (ConnectorSettingsModel) AttributeTypes() map[string]attr.Type {
 }
 
 type ConnectorSettingsConfigModel struct {
+	RoleArn                 types.String `tfsdk:"role_arn"`
+	ExternalId              types.String `tfsdk:"external_id"`
+	DurationSeconds         types.String `tfsdk:"duration_seconds"`
 	InstallationId          types.String `tfsdk:"installation_id"`
 	GithubAppId             types.String `tfsdk:"github_app_id"`
 	GithubAppWebhookSecret  types.String `tfsdk:"github_app_webhook_secret"`
@@ -62,6 +65,9 @@ type ConnectorSettingsConfigModel struct {
 
 func (m ConnectorSettingsConfigModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
+		"role_arn":                    types.StringType,
+		"external_id":                 types.StringType,
+		"duration_seconds":            types.StringType,
 		"installation_id":             types.StringType,
 		"github_app_id":               types.StringType,
 		"github_app_webhook_secret":   types.StringType,
@@ -202,6 +208,9 @@ func settingsToAPIModel(m types.Object) (*sgsdkgo.Settings, diag.Diagnostics) {
 	}
 
 	settingsConfigAPIValue := []*sgsdkgo.SettingsConfig{{
+		RoleArn:                 settingsConfigModel[0].RoleArn.ValueStringPointer(),
+		ExternalId:              settingsConfigModel[0].ExternalId.ValueStringPointer(),
+		DurationSeconds:         settingsConfigModel[0].DurationSeconds.ValueStringPointer(),
 		InstallationId:          settingsConfigModel[0].InstallationId.ValueStringPointer(),
 		GithubAppId:             settingsConfigModel[0].GithubAppId.ValueStringPointer(),
 		GithubAppWebhookSecret:  settingsConfigModel[0].GithubAppWebhookSecret.ValueStringPointer(),
@@ -474,6 +483,9 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 
 	settingsConfigModel := []*ConnectorSettingsConfigModel{
 		{
+			RoleArn:                 flatteners.StringPtr(apiResponse.Settings.Config[0].RoleArn),
+			ExternalId:              flatteners.StringPtr(apiResponse.Settings.Config[0].ExternalId),
+			DurationSeconds:         flatteners.StringPtr(apiResponse.Settings.Config[0].DurationSeconds),
 			InstallationId:          flatteners.StringPtr(apiResponse.Settings.Config[0].InstallationId),
 			GithubAppId:             flatteners.StringPtr(apiResponse.Settings.Config[0].GithubAppId),
 			GithubAppWebhookSecret:  flatteners.StringPtr(apiResponse.Settings.Config[0].GithubAppWebhookSecret),
