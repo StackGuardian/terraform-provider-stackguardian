@@ -11,5 +11,4 @@ resource "stackguardian_connector" "aws-cloud-connector-example" {
       durationSeconds    = "3600"
     }]
   }
-  scope = ["*"]
 }

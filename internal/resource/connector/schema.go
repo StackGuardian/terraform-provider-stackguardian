@@ -3,8 +3,10 @@ package connector
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -268,7 +270,9 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"scope": schema.ListAttribute{
 				MarkdownDescription: "Which resources can use this connector",
 				ElementType:         types.StringType,
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
+				Default:             listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{types.StringValue("*")})),
 			},
 			"tags": schema.ListAttribute{
 				MarkdownDescription: "A list of tags associated with the connectors. Up to 10 tags are allowed.",
