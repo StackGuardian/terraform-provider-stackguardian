@@ -9,5 +9,4 @@ resource "stackguardian_connector" "example-connector" {
       aws_default_region    = "us-west-2"
     }]
   }
-  scope = ["*"]
 }
