@@ -9,6 +9,7 @@ import (
 	sgoption "github.com/StackGuardian/sg-sdk-go/option"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/connector"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/policies"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/roleAssignment"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflowGroups"
@@ -202,5 +203,6 @@ func (p *stackguardianProvider) Resources(_ context.Context) []func() resource.R
 		workflowGroups.NewResource,
 		role.NewResource,
 		roleAssignment.NewResource,
+		policies.NewResource,
 	}
 }

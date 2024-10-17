@@ -127,7 +127,7 @@ func (ConnectorDiscoverySettingsBenchmarksModel) AttributeTypes() attr.Type {
 		AttrTypes: map[string]attr.Type{
 			"description":         types.StringType,
 			"label":               types.StringType,
-			"runtime_source":      types.ObjectType{AttrTypes: ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel{}.AttributeTypes()},
+			"runtime_source":      types.ObjectType{AttrTypes: RuntimeSourceModel{}.AttributeTypes()},
 			"summary_description": types.StringType,
 			"summary_title":       types.StringType,
 			"discovery_interval":  types.Int64Type,
@@ -139,19 +139,19 @@ func (ConnectorDiscoverySettingsBenchmarksModel) AttributeTypes() attr.Type {
 	}
 }
 
-type ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel struct {
+type RuntimeSourceModel struct {
 	SourceConfigDestKind types.String `tfsdk:"source_config_dest_kind"`
 	Config               types.Object `tfsdk:"config"`
 }
 
-func (m ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel) AttributeTypes() map[string]attr.Type {
+func (m RuntimeSourceModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"source_config_dest_kind": types.StringType,
-		"config":                  types.ObjectType{AttrTypes: ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel{}.AttributeTypes()},
+		"config":                  types.ObjectType{AttrTypes: RuntimeSourceConfigModel{}.AttributeTypes()},
 	}
 }
 
-type ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel struct {
+type RuntimeSourceConfigModel struct {
 	IncludeSubModule types.Bool   `tfsdk:"include_sub_module"`
 	Ref              types.String `tfsdk:"ref"`
 	GitCoreAutoCRLF  types.Bool   `tfsdk:"git_core_auto_crlf"`
@@ -161,7 +161,7 @@ type ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel st
 	IsPrivate        types.Bool   `tfsdk:"is_private"`
 }
 
-func (m ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel) AttributeTypes() map[string]attr.Type {
+func (m RuntimeSourceConfigModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"include_sub_module": types.BoolType,
 		"ref":                types.StringType,
@@ -281,23 +281,23 @@ func discoverSettingsToAPIModel(m types.Object) (*sgsdkgo.Discoverysettings, dia
 			benchmarkAPIModel.Checks = benchmarkChecks
 
 			// runtime resource
-			if !benchmark.RuntimeSource.IsNull() {
-				var runtimeSourceModel ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel
+			if !benchmark.RuntimeSource.IsNull() && !benchmark.RuntimeSource.IsUnknown() {
+				var runtimeSourceModel RuntimeSourceModel
 				diags = benchmark.RuntimeSource.As(context.TODO(), &runtimeSourceModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
 				if diags.HasError() {
 					return nil, diags
 				}
 
+				benchmarkRuntimeResource := sgsdkgo.CustomSource{}
+
 				destKind, err := sgsdkgo.NewCustomSourceSourceConfigDestKindEnumFromString(runtimeSourceModel.SourceConfigDestKind.ValueString())
 				if err != nil {
 					return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Error in converting sourceConfigDestKind", err.Error())}
 				}
-				benchmarkRuntimeResource := sgsdkgo.CustomSource{
-					SourceConfigDestKind: destKind,
-				}
+				benchmarkRuntimeResource.SourceConfigDestKind = destKind
 
 				if runtimeSourceModel.Config.IsUnknown() {
-					var customSourceConfigModel ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel
+					var customSourceConfigModel RuntimeSourceConfigModel
 					diags = runtimeSourceModel.Config.As(context.TODO(), &customSourceConfigModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
 					if diags.HasError() {
 						return nil, diags
@@ -533,16 +533,16 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 				benchmarksModel.Label = flatteners.StringPtr(benchmark.Label)
 				benchmarksModel.SummaryDescription = flatteners.StringPtr(benchmark.SummaryDesc)
 				benchmarksModel.SummaryTitle = flatteners.StringPtr(benchmark.SummaryTitle)
-				benchmarksModel.DiscoveryInterval = flatteners.Int64(int64(*benchmark.DiscoveryInterval))
+				benchmarksModel.DiscoveryInterval = flatteners.Int64Ptr(benchmark.DiscoveryInterval)
 				benchmarksModel.IsCustomCheck = types.BoolPointerValue(benchmark.IsCustomCheck)
 				benchmarksModel.Active = types.BoolValue(benchmark.Active)
 
 				if benchmark.RuntimeSource != nil {
-					runtimeSourceModelValue := ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel{
+					runtimeSourceModelValue := RuntimeSourceModel{
 						SourceConfigDestKind: flatteners.String(string(benchmark.RuntimeSource.SourceConfigDestKind)),
 					}
 					if benchmark.RuntimeSource.Config != nil {
-						configModel := ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel{
+						configModel := RuntimeSourceConfigModel{
 							IncludeSubModule: flatteners.BoolPtr(benchmark.RuntimeSource.Config.IncludeSubModule),
 							Ref:              flatteners.StringPtr(benchmark.RuntimeSource.Config.Ref),
 							GitCoreAutoCRLF:  flatteners.BoolPtr(benchmark.RuntimeSource.Config.GitCoreAutoCrlf),
@@ -556,14 +556,14 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 							return nil, diags
 						}
 					} else {
-						runtimeSourceModelValue.Config = types.ObjectNull(ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel{}.AttributeTypes())
+						runtimeSourceModelValue.Config = types.ObjectNull(RuntimeSourceConfigModel{}.AttributeTypes())
 					}
 					benchmarksModel.RuntimeSource, diags = types.ObjectValueFrom(context.TODO(), runtimeSourceModelValue.AttributeTypes(), &runtimeSourceModelValue)
 					if diags.HasError() {
 						return nil, diags
 					}
 				} else {
-					benchmarksModel.RuntimeSource = types.ObjectNull(ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel{}.AttributeTypes())
+					benchmarksModel.RuntimeSource = types.ObjectNull(RuntimeSourceModel{}.AttributeTypes())
 				}
 
 				// regions

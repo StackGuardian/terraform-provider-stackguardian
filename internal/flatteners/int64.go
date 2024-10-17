@@ -19,16 +19,30 @@ import (
 // Not recommended if you care about returning an empty string for the state.
 //
 // nolint: contextcheck
-func Int64(in int64) basetypes.Int64Value {
+func Int64(in int) basetypes.Int64Value {
 	if in == 0 {
 		return types.Int64Null()
 	}
-	return types.Int64Value(in)
+	return types.Int64Value(int64(in))
 }
 
 func Int64Ptr(in *int) basetypes.Int64Value {
 	if in == nil {
 		return types.Int64Null()
 	}
-	return Int64(int64(*in))
+	return Int64(*in)
+}
+
+func Int32(in int) basetypes.Int32Value {
+	if in == 0 {
+		return types.Int32Null()
+	}
+	return types.Int32Value(int32(in))
+}
+
+func Int32Ptr(in *int) basetypes.Int32Value {
+	if in == nil {
+		return types.Int32Null()
+	}
+	return Int32(*in)
 }
