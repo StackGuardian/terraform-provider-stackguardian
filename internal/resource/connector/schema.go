@@ -80,17 +80,17 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"role_arn": schema.StringAttribute{
-									MarkdownDescription: "",
+									MarkdownDescription: "The Amazon Resource Name (ARN) of the role that the caller is assuming.",
 									Optional:            true,
 									Computed:            true,
 								},
 								"external_id": schema.StringAttribute{
-									MarkdownDescription: "",
+									MarkdownDescription: "A unique identifier that is used by third parties to assume a role in their customers' accounts.",
 									Optional:            true,
 									Computed:            true,
 								},
 								"duration_seconds": schema.StringAttribute{
-									MarkdownDescription: "",
+									MarkdownDescription: "The duration, in seconds, of the role session. Default is 3600 seconds (1 hour).",
 									Optional:            true,
 									Computed:            true,
 								},
