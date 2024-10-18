@@ -120,19 +120,19 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								},
 								"github_app_client_secret": schema.StringAttribute{
 									Optional:            true,
-									MarkdownDescription: "Client secret for the GitHub app, .",
+									MarkdownDescription: "Client secret for the GitHub app.",
 								},
 								"github_app_pem_file_content": schema.StringAttribute{
 									Optional:            true,
-									MarkdownDescription: "Content of the PEM file for the GitHub app, .",
+									MarkdownDescription: "Content of the PEM file for the GitHub app.",
 								},
 								"github_app_webhook_url": schema.StringAttribute{
 									Optional:            true,
-									MarkdownDescription: "Webhook URL for the GitHub app, .",
+									MarkdownDescription: "Webhook URL for the GitHub app.",
 								},
 								"gitlab_creds": schema.StringAttribute{
 									Optional:            true,
-									MarkdownDescription: "Credentials for GitLab integration, .",
+									MarkdownDescription: "Credentials for GitLab integration.",
 								},
 								"gitlab_http_url": schema.StringAttribute{
 									Optional:            true,
@@ -144,7 +144,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								},
 								"azure_creds": schema.StringAttribute{
 									Optional:            true,
-									MarkdownDescription: "Credentials for Azure integration, .",
+									MarkdownDescription: "Credentials for Azure integration.",
 								},
 								"azure_devops_http_url": schema.StringAttribute{
 									Optional:            true,
@@ -156,7 +156,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								},
 								"bitbucket_creds": schema.StringAttribute{
 									Optional:            true,
-									MarkdownDescription: "Credentials for Bitbucket integration, .",
+									MarkdownDescription: "Credentials for Bitbucket integration.",
 								},
 								"aws_access_key_id": schema.StringAttribute{
 									Optional:            true,
@@ -180,7 +180,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								},
 								"arm_client_id": schema.StringAttribute{
 									Optional:            true,
-									MarkdownDescription: "(AZURE_OIDC) Client ID for Azure Resource Manager.",
+									MarkdownDescription: "Client ID for Azure Resource Manager.",
 								},
 								"arm_client_secret": schema.StringAttribute{
 									Optional:            true,
@@ -217,7 +217,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 									Attributes: map[string]schema.Attribute{
 
 										"source_config_dest_kind": schema.StringAttribute{
-											MarkdownDescription: "Kind of the source configuration destination. Valid examples include eg:- AWS_RBAC, AZURE_STATIC",
+											MarkdownDescription: "Kind of the source configuration destination. Valid examples include eg:- AWS_RBAC, AZURE_STATIC.",
 											Optional:            true,
 											Computed:            true,
 										},
