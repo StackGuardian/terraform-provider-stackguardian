@@ -17,7 +17,6 @@ type ConnectorResourceModel struct {
 	Description       types.String `tfsdk:"description"`
 	Settings          types.Object `tfsdk:"settings"`
 	DiscoverySettings types.Object `tfsdk:"discovery_settings"`
-	Scope             types.List   `tfsdk:"scope"`
 	Tags              types.List   `tfsdk:"tags"`
 }
 
@@ -400,17 +399,6 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 		apiModel.DiscoverySettings = sgsdkgo.Optional(*discoverySettings)
 	}
 
-	// Parse Scope
-	scope, diags := expanders.StringList(context.TODO(), m.Scope)
-	if diags.HasError() {
-		return nil, diags
-	}
-	if scope == nil {
-		apiModel.Scope = sgsdkgo.Null[[]string]()
-	} else {
-		apiModel.Scope = sgsdkgo.Optional(scope)
-	}
-
 	// Parse tags
 	tags, diags := expanders.StringList(context.TODO(), m.Tags)
 	if diags.HasError() {
@@ -434,17 +422,6 @@ func (m *ConnectorResourceModel) ToAPIPatchedModel(ctx context.Context) (*sgsdkg
 		apiPatchedModel.Description = sgsdkgo.Optional(m.Description.ValueString())
 	} else {
 		apiPatchedModel.Description = sgsdkgo.Null[string]()
-	}
-
-	// Parse Scope
-	scope, diags := expanders.StringList(context.TODO(), m.Scope)
-	if diags.HasError() {
-		return nil, diags
-	}
-	if scope == nil {
-		apiPatchedModel.Scope = sgsdkgo.Null[[]string]()
-	} else {
-		apiPatchedModel.Scope = sgsdkgo.Optional(scope)
 	}
 
 	// Parse tags
@@ -631,20 +608,6 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 		if diags.HasError() {
 			return nil, diags
 		}
-	}
-
-	if apiResponse.Scope == nil {
-		connectorModel.Scope = types.ListNull(types.StringType)
-	} else {
-		scopeModel := []types.String{}
-		for _, scope := range apiResponse.Scope {
-			scopeModel = append(scopeModel, flatteners.String(scope))
-		}
-		scopeTerraType, diags := types.ListValueFrom(context.TODO(), types.StringType, &scopeModel)
-		if diags.HasError() {
-			return nil, diags
-		}
-		connectorModel.Scope = scopeTerraType
 	}
 
 	if apiResponse.Tags == nil {

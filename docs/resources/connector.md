@@ -37,7 +37,6 @@ resource "stackguardian_connector" "example-connector" {
 
 - `description` (String) A brief description of the connector. Must be less than 256 characters.
 - `discovery_settings` (Attributes) Settings for discovery insights related to the connector. (see [below for nested schema](#nestedatt--discovery_settings))
-- `scope` (List of String) Which resources can use this connector
 - `tags` (List of String) A list of tags associated with the connectors. Up to 10 tags are allowed.
 
 <a id="nestedatt--settings"></a>
@@ -75,6 +74,8 @@ Optional:
 - `azure_devops_api_url` (String) Base URL for Azure DevOps API.
 - `azure_devops_http_url` (String) HTTP URL for accessing Azure DevOps services.
 - `bitbucket_creds` (String) Credentials for Bitbucket integration, if applicable.
+- `duration_seconds` (String)
+- `external_id` (String)
 - `gcp_config_file_content` (String) Content of the GCP configuration file.
 - `github_api_url` (String) Base URL for the GitHub API.
 - `github_app_client_id` (String) Client ID for the GitHub app, if applicable.
@@ -88,6 +89,7 @@ Optional:
 - `gitlab_creds` (String) Credentials for GitLab integration, if applicable.
 - `gitlab_http_url` (String) HTTP URL for accessing the GitLab repository.
 - `installation_id` (String) The installation ID for GitHub applications, if applicable.
+- `role_arn` (String)
 
 
 
