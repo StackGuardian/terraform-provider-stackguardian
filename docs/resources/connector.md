@@ -46,51 +46,82 @@ resource "stackguardian_connector" "aws-cloud-connector-example" {
 
 Required:
 
-- `config` (Attributes List) Configuration settings for the connector's secrets. (see [below for nested schema](#nestedatt--settings--config))
-- `kind` (String) The type of connector. Valid options include:
-							- <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">AWS_STATIC</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">GCP_STATIC</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">AZURE_STATIC</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">AZURE_OIDC</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">BITBUCKET_ORG</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS</span>
+- `config` (Attributes List) Configuration settings for the connector's secrets (see [below for nested schema](#nestedatt--settings--config))
+- `kind` (String) The type of connector<br>
+	Values with supported config fields:
+	- <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>
+		- github_com_url
+		- github_http_url
+	- <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>
+		- github_app_client_id
+		- github_app_client_secret
+		- github_app_id
+		- github_app_pem_file_content
+		- github_app_webhook_secret
+		- github_app_webhook_url
+	- <span style="background-color: #eff0f0; color: #e53835;">AWS_STATIC</span>
+		- aws_access_key_id
+		- aws_secret_access_key
+		- aws_default_region
+	- <span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC</span>
+		- role_arn
+		- exteranl_id
+		- arm_client_id
+	- <span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC</span>
+		- role_arn
+	- <span style="background-color: #eff0f0; color: #e53835;">GCP_STATIC</span>
+		- gcp_config_file_content
+	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_STATIC</span>
+		- arm_client_id
+		- arm_client_secret
+		- arm_subscription_id
+		- arm_tenant_id
+	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_OIDC</span>
+		- arm_tenant_id
+		- arm_subscription_id
+		- arm_client_id
+	- <span style="background-color: #eff0f0; color: #e53835;">BITBUCKET_ORG</span>
+		- bitbucket_creds
+	- <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>
+		- gitlab_api_url
+		- gitlab_creds
+		- gitlab_http_url
+	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS</span>
+		- azure_devops_api_url
+		- azure_devops_http_url
+		- azure_creds
 
 <a id="nestedatt--settings--config"></a>
 ### Nested Schema for `settings.config`
 
 Optional:
 
-- `arm_client_id` (String) Client ID for Azure Resource Manager.
+- `arm_client_id` (String) (AZURE_OIDC) Client ID for Azure Resource Manager.
 - `arm_client_secret` (String) Client secret for Azure Resource Manager.
 - `arm_subscription_id` (String) Azure Resource Manager subscription ID.
 - `arm_tenant_id` (String) Azure Resource Manager tenant ID.
 - `aws_access_key_id` (String) AWS access key ID for authentication.
 - `aws_default_region` (String) Default AWS region for resource operations.
 - `aws_secret_access_key` (String) AWS secret access key for authentication.
-- `azure_creds` (String) Credentials for Azure integration, if applicable.
+- `azure_creds` (String) Credentials for Azure integration, .
 - `azure_devops_api_url` (String) Base URL for Azure DevOps API.
 - `azure_devops_http_url` (String) HTTP URL for accessing Azure DevOps services.
-- `bitbucket_creds` (String) Credentials for Bitbucket integration, if applicable.
+- `bitbucket_creds` (String) Credentials for Bitbucket integration, .
 - `duration_seconds` (String)
 - `external_id` (String)
 - `gcp_config_file_content` (String) Content of the GCP configuration file.
 - `github_api_url` (String) Base URL for the GitHub API.
-- `github_app_client_id` (String) Client ID for the GitHub app, if applicable.
-- `github_app_client_secret` (String) Client secret for the GitHub app, if applicable.
-- `github_app_id` (String) The application ID for the GitHub app, if applicable.
-- `github_app_pem_file_content` (String) Content of the PEM file for the GitHub app, if applicable.
-- `github_app_webhook_secret` (String) Webhook secret for the GitHub app, if applicable.
-- `github_app_webhook_url` (String) Webhook URL for the GitHub app, if applicable.
+- `github_app_client_id` (String) Client ID for the GitHub app.
+- `github_app_client_secret` (String) Client secret for the GitHub app, .
+- `github_app_id` (String) The application ID for the GitHub app.
+- `github_app_pem_file_content` (String) Content of the PEM file for the GitHub app, .
+- `github_app_webhook_secret` (String) Webhook secret for the GitHub app.
+- `github_app_webhook_url` (String) Webhook URL for the GitHub app, .
 - `github_http_url` (String) HTTP URL for accessing the GitHub repository.
 - `gitlab_api_url` (String) Base URL for the GitLab API.
-- `gitlab_creds` (String) Credentials for GitLab integration, if applicable.
+- `gitlab_creds` (String) Credentials for GitLab integration, .
 - `gitlab_http_url` (String) HTTP URL for accessing the GitLab repository.
-- `installation_id` (String) The installation ID for GitHub applications, if applicable.
+- `installation_id` (String) The installation ID for GitHub applications.
 - `role_arn` (String)
 
 
