@@ -39,7 +39,6 @@ resource "stackguardian_connector" "aws-cloud-connector-example" {
 
 - `description` (String) A brief description of the connector. Must be less than 256 characters.
 - `discovery_settings` (Attributes) Settings for discovery insights related to the connector. (see [below for nested schema](#nestedatt--discovery_settings))
-- `scope` (List of String) Which resources can use this connector
 - `tags` (List of String) A list of tags associated with the connectors. Up to 10 tags are allowed.
 
 <a id="nestedatt--settings"></a>
