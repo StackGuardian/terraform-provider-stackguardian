@@ -6,9 +6,9 @@ resource "stackguardian_connector" "aws-cloud-connector-example" {
     kind = "AWS_RBAC"
 
     config = [{
-      roleArn         = "arn:aws:iam::209502960327:role/StackGuardian"
-      externalId      = "wicked-hop:ElfygiFglfldTwnDFpAScQkvgvHTGV "
-      durationSeconds = "3600"
+      role_arn         = "arn:aws:iam::209502960327:role/StackGuardian"
+      external_id      = "wicked-hop:ElfygiFglfldTwnDFpAScQkvgvHTGV "
+      duration_seconds = "3600"
     }]
   }
 }
