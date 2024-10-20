@@ -17,7 +17,6 @@ type ConnectorResourceModel struct {
 	Description       types.String `tfsdk:"description"`
 	Settings          types.Object `tfsdk:"settings"`
 	DiscoverySettings types.Object `tfsdk:"discovery_settings"`
-	Scope             types.List   `tfsdk:"scope"`
 	Tags              types.List   `tfsdk:"tags"`
 }
 
@@ -34,6 +33,9 @@ func (ConnectorSettingsModel) AttributeTypes() map[string]attr.Type {
 }
 
 type ConnectorSettingsConfigModel struct {
+	RoleArn                 types.String `tfsdk:"role_arn"`
+	ExternalId              types.String `tfsdk:"external_id"`
+	DurationSeconds         types.String `tfsdk:"duration_seconds"`
 	InstallationId          types.String `tfsdk:"installation_id"`
 	GithubAppId             types.String `tfsdk:"github_app_id"`
 	GithubAppWebhookSecret  types.String `tfsdk:"github_app_webhook_secret"`
@@ -62,6 +64,9 @@ type ConnectorSettingsConfigModel struct {
 
 func (m ConnectorSettingsConfigModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
+		"role_arn":                    types.StringType,
+		"external_id":                 types.StringType,
+		"duration_seconds":            types.StringType,
 		"installation_id":             types.StringType,
 		"github_app_id":               types.StringType,
 		"github_app_webhook_secret":   types.StringType,
@@ -202,6 +207,9 @@ func settingsToAPIModel(m types.Object) (*sgsdkgo.Settings, diag.Diagnostics) {
 	}
 
 	settingsConfigAPIValue := []*sgsdkgo.SettingsConfig{{
+		RoleArn:                 settingsConfigModel[0].RoleArn.ValueStringPointer(),
+		ExternalId:              settingsConfigModel[0].ExternalId.ValueStringPointer(),
+		DurationSeconds:         settingsConfigModel[0].DurationSeconds.ValueStringPointer(),
 		InstallationId:          settingsConfigModel[0].InstallationId.ValueStringPointer(),
 		GithubAppId:             settingsConfigModel[0].GithubAppId.ValueStringPointer(),
 		GithubAppWebhookSecret:  settingsConfigModel[0].GithubAppWebhookSecret.ValueStringPointer(),
@@ -391,17 +399,6 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 		apiModel.DiscoverySettings = sgsdkgo.Optional(*discoverySettings)
 	}
 
-	// Parse Scope
-	scope, diags := expanders.StringList(context.TODO(), m.Scope)
-	if diags.HasError() {
-		return nil, diags
-	}
-	if scope == nil {
-		apiModel.Scope = sgsdkgo.Null[[]string]()
-	} else {
-		apiModel.Scope = sgsdkgo.Optional(scope)
-	}
-
 	// Parse tags
 	tags, diags := expanders.StringList(context.TODO(), m.Tags)
 	if diags.HasError() {
@@ -425,17 +422,6 @@ func (m *ConnectorResourceModel) ToAPIPatchedModel(ctx context.Context) (*sgsdkg
 		apiPatchedModel.Description = sgsdkgo.Optional(m.Description.ValueString())
 	} else {
 		apiPatchedModel.Description = sgsdkgo.Null[string]()
-	}
-
-	// Parse Scope
-	scope, diags := expanders.StringList(context.TODO(), m.Scope)
-	if diags.HasError() {
-		return nil, diags
-	}
-	if scope == nil {
-		apiPatchedModel.Scope = sgsdkgo.Null[[]string]()
-	} else {
-		apiPatchedModel.Scope = sgsdkgo.Optional(scope)
 	}
 
 	// Parse tags
@@ -474,6 +460,9 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 
 	settingsConfigModel := []*ConnectorSettingsConfigModel{
 		{
+			RoleArn:                 flatteners.StringPtr(apiResponse.Settings.Config[0].RoleArn),
+			ExternalId:              flatteners.StringPtr(apiResponse.Settings.Config[0].ExternalId),
+			DurationSeconds:         flatteners.StringPtr(apiResponse.Settings.Config[0].DurationSeconds),
 			InstallationId:          flatteners.StringPtr(apiResponse.Settings.Config[0].InstallationId),
 			GithubAppId:             flatteners.StringPtr(apiResponse.Settings.Config[0].GithubAppId),
 			GithubAppWebhookSecret:  flatteners.StringPtr(apiResponse.Settings.Config[0].GithubAppWebhookSecret),
@@ -619,20 +608,6 @@ func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 		if diags.HasError() {
 			return nil, diags
 		}
-	}
-
-	if apiResponse.Scope == nil {
-		connectorModel.Scope = types.ListNull(types.StringType)
-	} else {
-		scopeModel := []types.String{}
-		for _, scope := range apiResponse.Scope {
-			scopeModel = append(scopeModel, flatteners.String(scope))
-		}
-		scopeTerraType, diags := types.ListValueFrom(context.TODO(), types.StringType, &scopeModel)
-		if diags.HasError() {
-			return nil, diags
-		}
-		connectorModel.Scope = scopeTerraType
 	}
 
 	if apiResponse.Tags == nil {

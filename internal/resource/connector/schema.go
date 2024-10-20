@@ -8,6 +8,52 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+const settingsKindMarkdownDoc = `
+	The type of connector<br>
+	Values with supported config fields:
+	- <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>
+		- github_com_url
+		- github_http_url
+	- <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>
+		- github_app_client_id
+		- github_app_client_secret
+		- github_app_id
+		- github_app_pem_file_content
+		- github_app_webhook_secret
+		- github_app_webhook_url
+	- <span style="background-color: #eff0f0; color: #e53835;">AWS_STATIC</span>
+		- aws_access_key_id
+		- aws_secret_access_key
+		- aws_default_region
+	- <span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC</span>
+		- role_arn
+		- exteranl_id
+		- arm_client_id
+	- <span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC</span>
+		- role_arn
+	- <span style="background-color: #eff0f0; color: #e53835;">GCP_STATIC</span>
+		- gcp_config_file_content
+	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_STATIC</span>
+		- arm_client_id
+		- arm_client_secret
+		- arm_subscription_id
+		- arm_tenant_id
+	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_OIDC</span>
+		- arm_tenant_id
+		- arm_subscription_id
+		- arm_client_id
+	- <span style="background-color: #eff0f0; color: #e53835;">BITBUCKET_ORG</span>
+		- bitbucket_creds
+	- <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>
+		- gitlab_api_url
+		- gitlab_creds
+		- gitlab_http_url
+	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS</span>
+		- azure_devops_api_url
+		- azure_devops_http_url
+		- azure_creds
+`
+
 // Schema defines the schema for the resource.
 func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
@@ -25,36 +71,40 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"kind": schema.StringAttribute{
-						MarkdownDescription: `The type of connector. Valid options include:
-							- <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">AWS_STATIC</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">GCP_STATIC</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">AZURE_STATIC</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">AZURE_OIDC</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">BITBUCKET_ORG</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>
-							- <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS</span>`,
-						Required: true,
+						MarkdownDescription: settingsKindMarkdownDoc,
+						Required:            true,
 					},
 					"config": schema.ListNestedAttribute{
-						MarkdownDescription: "Configuration settings for the connector's secrets.",
+						MarkdownDescription: "Configuration settings for the connector's secrets",
 						Required:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
+								"role_arn": schema.StringAttribute{
+									MarkdownDescription: "The Amazon Resource Name (ARN) of the role that the caller is assuming.",
+									Optional:            true,
+									Computed:            true,
+								},
+								"external_id": schema.StringAttribute{
+									MarkdownDescription: "A unique identifier that is used by third parties to assume a role in their customers' accounts.",
+									Optional:            true,
+									Computed:            true,
+								},
+								"duration_seconds": schema.StringAttribute{
+									MarkdownDescription: "The duration, in seconds, of the role session. Default is 3600 seconds (1 hour).",
+									Optional:            true,
+									Computed:            true,
+								},
 								"installation_id": schema.StringAttribute{
 									Optional:            true,
-									MarkdownDescription: "The installation ID for GitHub applications, if applicable.",
+									MarkdownDescription: "The installation ID for GitHub applications.",
 								},
 								"github_app_id": schema.StringAttribute{
 									Optional:            true,
-									MarkdownDescription: "The application ID for the GitHub app, if applicable.",
+									MarkdownDescription: "The application ID for the GitHub app.",
 								},
 								"github_app_webhook_secret": schema.StringAttribute{
 									Optional:            true,
-									MarkdownDescription: "Webhook secret for the GitHub app, if applicable.",
+									MarkdownDescription: "Webhook secret for the GitHub app.",
 								},
 								"github_api_url": schema.StringAttribute{
 									Optional:            true,
@@ -66,23 +116,23 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								},
 								"github_app_client_id": schema.StringAttribute{
 									Optional:            true,
-									MarkdownDescription: "Client ID for the GitHub app, if applicable.",
+									MarkdownDescription: "Client ID for the GitHub app.",
 								},
 								"github_app_client_secret": schema.StringAttribute{
 									Optional:            true,
-									MarkdownDescription: "Client secret for the GitHub app, if applicable.",
+									MarkdownDescription: "Client secret for the GitHub app.",
 								},
 								"github_app_pem_file_content": schema.StringAttribute{
 									Optional:            true,
-									MarkdownDescription: "Content of the PEM file for the GitHub app, if applicable.",
+									MarkdownDescription: "Content of the PEM file for the GitHub app.",
 								},
 								"github_app_webhook_url": schema.StringAttribute{
 									Optional:            true,
-									MarkdownDescription: "Webhook URL for the GitHub app, if applicable.",
+									MarkdownDescription: "Webhook URL for the GitHub app.",
 								},
 								"gitlab_creds": schema.StringAttribute{
 									Optional:            true,
-									MarkdownDescription: "Credentials for GitLab integration, if applicable.",
+									MarkdownDescription: "Credentials for GitLab integration.",
 								},
 								"gitlab_http_url": schema.StringAttribute{
 									Optional:            true,
@@ -94,7 +144,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								},
 								"azure_creds": schema.StringAttribute{
 									Optional:            true,
-									MarkdownDescription: "Credentials for Azure integration, if applicable.",
+									MarkdownDescription: "Credentials for Azure integration.",
 								},
 								"azure_devops_http_url": schema.StringAttribute{
 									Optional:            true,
@@ -106,7 +156,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								},
 								"bitbucket_creds": schema.StringAttribute{
 									Optional:            true,
-									MarkdownDescription: "Credentials for Bitbucket integration, if applicable.",
+									MarkdownDescription: "Credentials for Bitbucket integration.",
 								},
 								"aws_access_key_id": schema.StringAttribute{
 									Optional:            true,
@@ -165,8 +215,9 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 									MarkdownDescription: "",
 									Optional:            true,
 									Attributes: map[string]schema.Attribute{
+
 										"source_config_dest_kind": schema.StringAttribute{
-											MarkdownDescription: "Kind of the source configuration destination. Valid examples include eg:- AWS_RBAC, AZURE_STATIC",
+											MarkdownDescription: "Kind of the source configuration destination. Valid examples include eg:- AWS_RBAC, AZURE_STATIC.",
 											Optional:            true,
 											Computed:            true,
 										},
@@ -264,11 +315,6 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						},
 					},
 				},
-			},
-			"scope": schema.ListAttribute{
-				MarkdownDescription: "Which resources can use this connector",
-				ElementType:         types.StringType,
-				Required:            true,
 			},
 			"tags": schema.ListAttribute{
 				MarkdownDescription: "A list of tags associated with the connectors. Up to 10 tags are allowed.",
