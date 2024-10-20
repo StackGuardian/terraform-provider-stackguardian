@@ -107,8 +107,8 @@ Optional:
 - `azure_devops_api_url` (String) Base URL for Azure DevOps API.
 - `azure_devops_http_url` (String) HTTP URL for accessing Azure DevOps services.
 - `bitbucket_creds` (String) Credentials for Bitbucket integration.
-- `duration_seconds` (String)
-- `external_id` (String)
+- `duration_seconds` (String) The duration, in seconds, of the role session. Default is 3600 seconds (1 hour).
+- `external_id` (String) A unique identifier that is used by third parties to assume a role in their customers' accounts.
 - `gcp_config_file_content` (String) Content of the GCP configuration file.
 - `github_api_url` (String) Base URL for the GitHub API.
 - `github_app_client_id` (String) Client ID for the GitHub app.
@@ -122,7 +122,7 @@ Optional:
 - `gitlab_creds` (String) Credentials for GitLab integration.
 - `gitlab_http_url` (String) HTTP URL for accessing the GitLab repository.
 - `installation_id` (String) The installation ID for GitHub applications.
-- `role_arn` (String)
+- `role_arn` (String) The Amazon Resource Name (ARN) of the role that the caller is assuming.
 
 
 

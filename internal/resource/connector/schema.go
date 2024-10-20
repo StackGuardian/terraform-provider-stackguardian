@@ -75,7 +75,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						Required:            true,
 					},
 					"config": schema.ListNestedAttribute{
-						MarkdownDescription: `Configuration settings for the connector's secrets`,
+						MarkdownDescription: "Configuration settings for the connector's secrets",
 						Required:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
