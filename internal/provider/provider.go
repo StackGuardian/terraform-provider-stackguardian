@@ -10,6 +10,7 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	stackoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_outputs"
 	stackworkflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_workflow_outputs"
+	workflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_outputs"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/connector"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/roleAssignment"
@@ -197,6 +198,7 @@ func (p *stackguardianProvider) DataSources(_ context.Context) []func() datasour
 	return []func() datasource.DataSource{
 		stackoutputs.NewDataSource,
 		stackworkflowoutputs.NewDataSource,
+		workflowoutputs.NewDataSource,
 	}
 }
 
