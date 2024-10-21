@@ -8,6 +8,7 @@ import (
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	sgoption "github.com/StackGuardian/sg-sdk-go/option"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
+	stackoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_outputs"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/connector"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/roleAssignment"
@@ -192,7 +193,9 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 
 // DataSources defines the data sources implemented in the provider.
 func (p *stackguardianProvider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return nil
+	return []func() datasource.DataSource{
+		stackoutputs.NewDataSource,
+	}
 }
 
 // Resources defines the resources implemented in the provider.
