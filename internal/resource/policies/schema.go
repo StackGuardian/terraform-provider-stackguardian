@@ -91,7 +91,7 @@ func (r *policyResrouce) Schema(_ context.Context, _ resource.SchemaRequest, res
 						},
 						"policy_vcs_config": schema.SingleNestedAttribute{
 							MarkdownDescription: "Version control config",
-							Required:            true,
+							Optional:            true,
 							Attributes: map[string]schema.Attribute{
 								"use_marketplace_template": schema.BoolAttribute{
 									Required: true,

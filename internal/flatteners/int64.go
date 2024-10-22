@@ -20,9 +20,9 @@ import (
 //
 // nolint: contextcheck
 func Int64(in int) basetypes.Int64Value {
-	if in == 0 {
-		return types.Int64Null()
-	}
+	//if in == 0 {
+	//	return types.Int64Null()
+	//}
 	return types.Int64Value(int64(in))
 }
 
@@ -34,9 +34,9 @@ func Int64Ptr(in *int) basetypes.Int64Value {
 }
 
 func Int32(in int) basetypes.Int32Value {
-	if in == 0 {
-		return types.Int32Null()
-	}
+	//if in == 0 {
+	//	return types.Int32Null()
+	//}
 	return types.Int32Value(int32(in))
 }
 

@@ -76,8 +76,6 @@ func (r *policyResrouce) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	policy.Data.ResourceName = &payload.ResourceName.Value
-
 	policyResourceModel, diags := buildAPIModelToPolicyModel(policy.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

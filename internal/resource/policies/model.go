@@ -51,7 +51,7 @@ func (m *policyPoliciesConfigModel) ToAPIModel() (*sgsdkgo.PoliciesConfig, diag.
 		Skip: m.Skip.ValueBoolPointer(),
 	}
 
-	if !m.OnFail.IsNull() && !m.OnPass.IsUnknown() {
+	if !m.OnFail.IsNull() && !m.OnFail.IsUnknown() {
 		onFailEnum, err := sgsdkgo.NewOnFailEnumFromString(m.OnFail.ValueString())
 		if err != nil {
 			return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Fail to convert policyConfig terraform type to go type", err.Error())}
@@ -60,7 +60,7 @@ func (m *policyPoliciesConfigModel) ToAPIModel() (*sgsdkgo.PoliciesConfig, diag.
 	}
 
 	if !m.OnPass.IsNull() && !m.OnPass.IsUnknown() {
-		onPassEnum, err := sgsdkgo.NewOnPassEnumFromString(m.OnFail.ValueString())
+		onPassEnum, err := sgsdkgo.NewOnPassEnumFromString(m.OnPass.ValueString())
 		if err != nil {
 			return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Fail to convert policyConfig terraform type to go type", err.Error())}
 		}
@@ -112,7 +112,7 @@ func (m policyInputDataModel) AttributeTypes() map[string]attr.Type {
 func (m *policyInputDataModel) ToAPIModel() (*sgsdkgo.InputData, diag.Diagnostics) {
 	policyInputData := &sgsdkgo.InputData{}
 
-	if !m.SchemaType.IsNull() && m.SchemaType.IsUnknown() {
+	if !m.SchemaType.IsNull() && !m.SchemaType.IsUnknown() {
 		schemaType, err := sgsdkgo.NewInputDataSchemaTypeEnumFromString(m.SchemaType.ValueString())
 		if err != nil {
 			return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Fail to convert policyConfig terraform type to go type", err.Error())}
@@ -332,7 +332,7 @@ func (m *policyResourceModel) ToAPIModel() (*sgsdkgo.Policy, diag.Diagnostics) {
 	tags, diags := expanders.StringList(context.TODO(), m.Tags)
 	if diags.HasError() {
 		return nil, diags
-	} else if enforcedOn != nil {
+	} else if tags != nil {
 		policyAPIModel.Tags = sgsdkgo.Optional(tags)
 	} else {
 		policyAPIModel.Tags = sgsdkgo.Null[[]string]()
@@ -341,7 +341,7 @@ func (m *policyResourceModel) ToAPIModel() (*sgsdkgo.Policy, diag.Diagnostics) {
 	policiesConfig, diags := policiesConfigModelToAPIModel(m.PoliciesConfig)
 	if diags.HasError() {
 		return nil, diags
-	} else if enforcedOn != nil {
+	} else if policiesConfig != nil {
 		policyAPIModel.PoliciesConfig = sgsdkgo.Optional(policiesConfig)
 	} else {
 		policyAPIModel.PoliciesConfig = sgsdkgo.Null[[]*sgsdkgo.PoliciesConfig]()
@@ -389,7 +389,7 @@ func (m *policyResourceModel) ToPatchedAPIModel() (*sgsdkgo.PatchedPolicy, diag.
 	tags, diags := expanders.StringList(context.TODO(), m.Tags)
 	if diags.HasError() {
 		return nil, diags
-	} else if enforcedOn != nil {
+	} else if tags != nil {
 		policyAPIModel.Tags = sgsdkgo.Optional(tags)
 	} else {
 		policyAPIModel.Tags = sgsdkgo.Null[[]string]()
@@ -398,7 +398,7 @@ func (m *policyResourceModel) ToPatchedAPIModel() (*sgsdkgo.PatchedPolicy, diag.
 	policiesConfig, diags := policiesConfigModelToAPIModel(m.PoliciesConfig)
 	if diags.HasError() {
 		return nil, diags
-	} else if enforcedOn != nil {
+	} else if policiesConfig != nil {
 		policyAPIModel.PoliciesConfig = sgsdkgo.Optional(policiesConfig)
 	} else {
 		policyAPIModel.PoliciesConfig = sgsdkgo.Null[[]*sgsdkgo.PoliciesConfig]()
