@@ -14,7 +14,7 @@ To install the StackGuardian provider follow the instructions below.
     required_providers {
         stackguardian = {
         source = "StackGuardian/stackguardian"
-        version = "1.0.0-rc4"
+        version = "1.0.0-rc5"
         }
     }
     }
