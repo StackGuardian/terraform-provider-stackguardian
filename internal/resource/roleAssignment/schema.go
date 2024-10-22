@@ -12,7 +12,7 @@ func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequ
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"user_id": schema.StringAttribute{
-				MarkdownDescription: "Identifier for the user or group. Must be less than 256 characters.",
+				MarkdownDescription: "Fully qualified user email or group. Example: you@example.com for a local user, <SSO Login Method Identifier>/you@example.com for a SSO email when entity_type in EMAIL. <SSO Login Method Identifier>/group-devs when entity_type in GROUP.",
 				Required:            true,
 			},
 			"entity_type": schema.StringAttribute{
@@ -22,7 +22,7 @@ func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequ
 				Required: true,
 			},
 			"role": schema.StringAttribute{
-				MarkdownDescription: "Role name. Must be less than 255 characters.",
+				MarkdownDescription: "StackGuardian role name.",
 				Required:            true,
 			},
 		},

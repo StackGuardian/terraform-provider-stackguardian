@@ -32,3 +32,20 @@ resource "stackguardian_workflow_group" "example_workflow_group" {
 - `tags` (List of String) A list of tags associated with the Workflow Group. Up to 10 tags are allowed.
 
 
+
+## Import
+
+Import existing resource
+
+### Using Import block (terraform v1.5.0 and later)
+```terraform
+import {
+  to = "stackguardian_connector.example-workflow-group"
+  id = "workflow-group-name"
+}
+```
+
+### Using CLI
+```bash
+terraform import stackguardian_connector.example-workflow-group workflow-group-name
+```

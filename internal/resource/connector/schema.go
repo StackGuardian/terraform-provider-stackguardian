@@ -27,7 +27,7 @@ const settingsKindMarkdownDoc = `
 		- aws_default_region
 	- <span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC</span>
 		- role_arn
-		- exteranl_id
+		- external_id
 		- arm_client_id
 	- <span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC</span>
 		- role_arn
@@ -82,17 +82,14 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								"role_arn": schema.StringAttribute{
 									MarkdownDescription: "The Amazon Resource Name (ARN) of the role that the caller is assuming.",
 									Optional:            true,
-									Computed:            true,
 								},
 								"external_id": schema.StringAttribute{
 									MarkdownDescription: "A unique identifier that is used by third parties to assume a role in their customers' accounts.",
 									Optional:            true,
-									Computed:            true,
 								},
 								"duration_seconds": schema.StringAttribute{
 									MarkdownDescription: "The duration, in seconds, of the role session. Default is 3600 seconds (1 hour).",
 									Optional:            true,
-									Computed:            true,
 								},
 								"installation_id": schema.StringAttribute{
 									Optional:            true,
