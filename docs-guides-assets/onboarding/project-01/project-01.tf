@@ -3,8 +3,8 @@
 terraform {
   required_providers {
     stackguardian = {
-      source  = "terraform.local/local/StackGuardian"
-      version = "1.0.0-rc"
+      source  = "stackguardian/StackGuardian"
+      version = "1.0.0-rc5"
     }
   }
 }

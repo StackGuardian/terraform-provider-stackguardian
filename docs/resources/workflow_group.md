@@ -37,8 +37,8 @@ resource "stackguardian_workflow_group" "example_workflow_group" {
 
 Import existing resource
 
-### Using Import block
-```
+### Using Import block (terraform v1.5.0 and later)
+```terraform
 import {
   to = "stackguardian_connector.example-workflow-group"
   id = "workflow-group-name"
@@ -46,6 +46,6 @@ import {
 ```
 
 ### Using CLI
-```
+```bash
 terraform import stackguardian_connector.example-workflow-group workflow-group-name
 ```

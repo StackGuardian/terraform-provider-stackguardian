@@ -65,7 +65,7 @@ Required:
 		- aws_default_region
 	- <span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC</span>
 		- role_arn
-		- exteranl_id
+		- external_id
 		- arm_client_id
 	- <span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC</span>
 		- role_arn
@@ -191,8 +191,8 @@ Optional:
 
 Import existing resource
 
-### Using Import block
-```
+### Using Import block (terraform v1.5.0 and later)
+```terraform
 import {
   to = "stackguardian_connector.example-connector"
   id = "connector-name"
@@ -200,6 +200,6 @@ import {
 ```
 
 ### Using CLI
-```
+```bash
 terraform import stackguardian_connector.example-connector connector-name
 ```

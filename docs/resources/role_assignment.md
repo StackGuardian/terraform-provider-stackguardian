@@ -57,7 +57,7 @@ resource "stackguardian_role_assignment" "example_role_assignment" {
 	- <span style="background-color: #eff0f0; color: #e53835;">EMAIL</span>
 	- <span style="background-color: #eff0f0; color: #e53835;">GROUP</span>
 - `role` (String) StackGuardian role name.
-- `user_id` (String) Fully qualified user email or group. Example: you@exmaple.com for a local user, <SSO Login Method Identifier>/you@exmaple.com for a SSO email when entity_type in EMAIL. <SSO Login Method Identifier>/group-devs when entity_type in GROUP.
+- `user_id` (String) Fully qualified user email or group. Example: you@example.com for a local user, <SSO Login Method Identifier>/you@example.com for a SSO email when entity_type in EMAIL. <SSO Login Method Identifier>/group-devs when entity_type in GROUP.
 
 
 
@@ -65,8 +65,8 @@ resource "stackguardian_role_assignment" "example_role_assignment" {
 
 Import existing resource
 
-### Using Import block
-```
+### Using Import block (terraform v1.5.0 and later)
+```terraform
 import {
   to = "stackguardian_connector.example-role-assignment"
   id = "user-id"
@@ -74,6 +74,6 @@ import {
 ```
 
 ### Using CLI
-```
+```bash
 terraform import stackguardian_connector.example-role-assignment user-id
 ```
