@@ -2,7 +2,9 @@ package workflowGroups
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -13,16 +15,16 @@ func (r *workflowGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"resource_name": schema.StringAttribute{
-				MarkdownDescription: "The name of the Workflow Group. Must be less than 100 characters and can only contain alphanumeric characters, dashes (-), and underscores (_).",
+				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "workflow group"),
 				Required:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "A description of the Workflow Group. Must be less than 256 characters.",
+				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow group"),
 				Optional:            true,
 				Computed:            true,
 			},
 			"tags": schema.ListAttribute{
-				MarkdownDescription: "A list of tags associated with the Workflow Group. Up to 10 tags are allowed.",
+				MarkdownDescription: constants.Tags,
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
