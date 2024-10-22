@@ -143,6 +143,7 @@ func (r *policyResrouce) Update(ctx context.Context, req resource.UpdateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	policyResourceModel.ResourceName = plan.ResourceName
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, policyResourceModel)...)
 }
