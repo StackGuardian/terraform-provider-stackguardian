@@ -66,3 +66,20 @@ Required:
 
 
 
+
+## Import
+
+Import existing resource
+
+### Using Import block
+```
+import {
+  to = "stackguardian_connector.example-role"
+  id = "role-name"
+}
+```
+
+### Using CLI
+```
+terraform import stackguardian_connector.example-role role-name
+```

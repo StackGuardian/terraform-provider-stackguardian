@@ -186,3 +186,20 @@ Optional:
 
 
 
+
+## Import
+
+Import existing resource
+
+### Using Import block
+```
+import {
+  to = "stackguardian_connector.example-connector"
+  id = "connector-name"
+}
+```
+
+### Using CLI
+```
+terraform import stackguardian_connector.example-connector connector-name
+```

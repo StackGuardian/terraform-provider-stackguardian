@@ -56,7 +56,24 @@ resource "stackguardian_role_assignment" "example_role_assignment" {
 - `entity_type` (String) Should be one of:
 	- <span style="background-color: #eff0f0; color: #e53835;">EMAIL</span>
 	- <span style="background-color: #eff0f0; color: #e53835;">GROUP</span>
-- `role` (String) Role name. Must be less than 255 characters.
-- `user_id` (String) Identifier for the user or group. Must be less than 256 characters.
+- `role` (String) StackGuardian role name.
+- `user_id` (String) Fully qualified user email or group. Example: you@exmaple.com for a local user, <SSO Login Method Identifier>/you@exmaple.com for a SSO email when entity_type in EMAIL. <SSO Login Method Identifier>/group-devs when entity_type in GROUP.
 
 
+
+## Import
+
+Import existing resource
+
+### Using Import block
+```
+import {
+  to = "stackguardian_connector.example-role-assignment"
+  id = "user-id"
+}
+```
+
+### Using CLI
+```
+terraform import stackguardian_connector.example-role-assignment user-id
+```

@@ -13,3 +13,20 @@ description: |-
 {{tffile "docs-examples/resources/stackguardian_role_assignment/resource.tf"}}
 
 {{ .SchemaMarkdown }}
+
+## Import
+
+Import existing resource
+
+### Using Import block
+```
+import {
+  to = "stackguardian_connector.example-role-assignment"
+  id = "user-id"
+}
+```
+
+### Using CLI
+```
+terraform import stackguardian_connector.example-role-assignment user-id
+```

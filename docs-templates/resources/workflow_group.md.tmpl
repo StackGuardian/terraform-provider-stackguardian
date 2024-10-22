@@ -13,3 +13,20 @@ description: |-
 {{tffile "docs-examples/resources/stackguardian_workflow_group/resource.tf"}}
 
 {{ .SchemaMarkdown }}
+
+## Import
+
+Import existing resource
+
+### Using Import block
+```
+import {
+  to = "stackguardian_connector.example-workflow-group"
+  id = "workflow-group-name"
+}
+```
+
+### Using CLI
+```
+terraform import stackguardian_connector.example-workflow-group workflow-group-name
+```
