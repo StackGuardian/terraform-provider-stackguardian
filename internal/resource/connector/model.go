@@ -452,7 +452,7 @@ func (m *ConnectorResourceModel) ToAPIPatchedModel(ctx context.Context) (*sgsdkg
 	return apiPatchedModel, nil
 }
 
-func buildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadResponseMsg) (*ConnectorResourceModel, diag.Diagnostics) {
+func BuildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadResponseMsg) (*ConnectorResourceModel, diag.Diagnostics) {
 	connectorModel := &ConnectorResourceModel{
 		ResourceName: flatteners.String(apiResponse.ResourceName),
 		Description:  flatteners.String(apiResponse.Description),

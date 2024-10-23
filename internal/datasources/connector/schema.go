@@ -19,11 +19,10 @@ func (d *connectorDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.Description, "connector"),
-				Optional:            true,
 				Computed:            true,
 			},
 			"settings": schema.SingleNestedAttribute{
-				Required: true,
+				Computed: true,
 				Attributes: map[string]schema.Attribute{
 					"kind": schema.StringAttribute{
 						MarkdownDescription: constants.SettingsKindMarkdownDoc,
@@ -31,115 +30,115 @@ func (d *connectorDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 					},
 					"config": schema.ListNestedAttribute{
 						MarkdownDescription: constants.SettingsConfig,
-						Required:            true,
+						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"role_arn": schema.StringAttribute{
 									MarkdownDescription: constants.SettingsConfigRoleArn,
-									Optional:            true,
+									Computed:            true,
 								},
 								"external_id": schema.StringAttribute{
 									MarkdownDescription: constants.SettingsConfigExternalId,
-									Optional:            true,
+									Computed:            true,
 								},
 								"duration_seconds": schema.StringAttribute{
 									MarkdownDescription: constants.SettingsConfigDurationSeconds,
-									Optional:            true,
+									Computed:            true,
 								},
 								"installation_id": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigInstallationId,
 								},
 								"github_app_id": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigGithubAppId,
 								},
 								"github_app_webhook_secret": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigGithubAppWebhookSecret,
 								},
 								"github_api_url": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigGithubApiUrl,
 								},
 								"github_http_url": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigGithubHttpUrl,
 								},
 								"github_app_client_id": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigGithubAppClientId,
 								},
 								"github_app_client_secret": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigGithubAppClientSecret,
 								},
 								"github_app_pem_file_content": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigGithubAppPemFileContent,
 								},
 								"github_app_webhook_url": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigGithubAppWebhookUrl,
 								},
 								"gitlab_creds": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigGitlabCreds,
 								},
 								"gitlab_http_url": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigGitlabHttpUrl,
 								},
 								"gitlab_api_url": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigGitlabApiUrl,
 								},
 								"azure_creds": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigAzureCreds,
 								},
 								"azure_devops_http_url": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigAzureDevopsHttpUrl,
 								},
 								"azure_devops_api_url": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigAzureDevopsApiUrl,
 								},
 								"bitbucket_creds": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigBitbucketCreds,
 								},
 								"aws_access_key_id": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigAwsAccessKeyId,
 								},
 								"aws_secret_access_key": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigAwsSecretAccessKey,
 								},
 								"aws_default_region": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigAwsDefaultRegion,
 								},
 								"arm_tenant_id": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigArmTenantId,
 								},
 								"arm_subscription_id": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigArmSubscriptionId,
 								},
 								"arm_client_id": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigArmClientId,
 								},
 								"arm_client_secret": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigArmClientId,
 								},
 								"gcp_config_file_content": schema.StringAttribute{
-									Optional:            true,
+									Computed:            true,
 									MarkdownDescription: constants.SettingsConfigGcpConfigFileContent,
 								},
 							},
@@ -149,68 +148,57 @@ func (d *connectorDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 			},
 			"discovery_settings": schema.SingleNestedAttribute{
 				MarkdownDescription: constants.DiscoverySettings,
-				Optional:            true,
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"benchmarks": schema.MapNestedAttribute{
 						MarkdownDescription: constants.DiscoverySettingsBenchmarks,
-						Optional:            true,
 						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"checks": schema.ListAttribute{
 									MarkdownDescription: constants.DiscoverySettingsBenchmarksChecks,
-									Required:            true,
+									Computed:            true,
 									ElementType:         types.StringType,
 								},
 								"runtime_source": schema.SingleNestedAttribute{
 									MarkdownDescription: constants.DiscoverySettingsBenchmarksRuntimeSource,
-									Optional:            true,
+									Computed:            true,
 									Attributes: map[string]schema.Attribute{
 
 										"source_config_dest_kind": schema.StringAttribute{
 											MarkdownDescription: constants.DiscoverySettingsBenchmarksRuntimeSourceSourceConfigDestKind,
-											Optional:            true,
 											Computed:            true,
 										},
 										"config": schema.SingleNestedAttribute{
 											MarkdownDescription: constants.DiscoverySettingsBenchmarksRuntimeSourceConfig,
-											Optional:            true,
 											Computed:            true,
 											Attributes: map[string]schema.Attribute{
 												"include_sub_module": schema.BoolAttribute{
 													MarkdownDescription: constants.DiscoverySettingsBenchmarksRuntimeSourceConfigIncludeSubModule,
-													Optional:            true,
 													Computed:            true,
 												},
 												"ref": schema.StringAttribute{
 													MarkdownDescription: constants.DiscoverySettingsBenchmarksRuntimeSourceConfigRef,
-													Optional:            true,
 													Computed:            true,
 												},
 												"git_core_auto_crlf": schema.BoolAttribute{
 													MarkdownDescription: constants.DiscoverySettingsBenchmarksRuntimeSourceConfigGitCoreAutoCRLF,
-													Optional:            true,
 													Computed:            true,
 												},
 												"auth": schema.StringAttribute{
 													MarkdownDescription: constants.DiscoverySettingsBenchmarksRuntimeSourceConfigAuth,
-													Optional:            true,
 													Computed:            true,
 												},
 												"working_dir": schema.StringAttribute{
 													MarkdownDescription: constants.DiscoverySettingsBenchmarksRuntimeSourceConfigWorkingDir,
-													Optional:            true,
 													Computed:            true,
 												},
 												"repo": schema.StringAttribute{
 													MarkdownDescription: constants.DiscoverySettingsBenchmarksRuntimeSourceConfigRepo,
-													Optional:            true,
 													Computed:            true,
 												},
 												"is_private": schema.BoolAttribute{
 													MarkdownDescription: constants.DiscoverySettingsBenchmarksRuntimeSourceConfigIsPrivate,
-													Optional:            true,
 													Computed:            true,
 												},
 											},
@@ -219,14 +207,12 @@ func (d *connectorDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 								},
 								"regions": schema.MapNestedAttribute{
 									MarkdownDescription: constants.DiscoverySettingsBenchmarksRegions,
-									Optional:            true,
 									Computed:            true,
 									NestedObject: schema.NestedAttributeObject{
 										Attributes: map[string]schema.Attribute{
 											"emails": schema.ListAttribute{
 												MarkdownDescription: constants.DiscoverySettingsBenchmarksRegionsEmails,
 												ElementType:         types.StringType,
-												Optional:            true,
 												Computed:            true,
 											},
 										},
@@ -234,33 +220,30 @@ func (d *connectorDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 								},
 								"description": schema.StringAttribute{
 									MarkdownDescription: constants.DiscoverySettingsBenchmarksDescription,
-									Optional:            true,
+									Computed:            true,
 								},
 								"summary_description": schema.StringAttribute{
 									MarkdownDescription: constants.DiscoverySettingsBenchmarksSummaryDescription,
-									Optional:            true,
+									Computed:            true,
 								},
 								"active": schema.BoolAttribute{
 									MarkdownDescription: constants.DiscoverySettingsBenchmarksActive,
-									Optional:            true,
 									Computed:            true,
 								},
 								"label": schema.StringAttribute{
 									MarkdownDescription: constants.DiscoverySettingsBenchmarksLabel,
-									Optional:            true,
+									Computed:            true,
 								},
 								"is_custom_check": schema.BoolAttribute{
 									MarkdownDescription: constants.DiscoverySettingsBenchmarksIsCustomCheck,
-									Optional:            true,
 									Computed:            true,
 								},
 								"summary_title": schema.StringAttribute{
 									MarkdownDescription: constants.DiscoverySettingsBenchmarksSummaryTitle,
-									Required:            true,
+									Computed:            true,
 								},
 								"discovery_interval": schema.Int64Attribute{
 									MarkdownDescription: constants.DiscoverySettingsBenchmarksDiscoveryInterval,
-									Optional:            true,
 									Computed:            true,
 								},
 							},
@@ -271,7 +254,6 @@ func (d *connectorDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 			"tags": schema.ListAttribute{
 				MarkdownDescription: constants.Tags,
 				ElementType:         types.StringType,
-				Optional:            true,
 				Computed:            true,
 			},
 		},

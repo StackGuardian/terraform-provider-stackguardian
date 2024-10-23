@@ -82,7 +82,7 @@ func (r *connectorResource) Create(ctx context.Context, req resource.CreateReque
 
 	reqResp.Data.Settings.Config = payload.Settings.Value.Config
 
-	connectorModel, diags := buildAPIModelToConnectorModel(reqResp.Data)
+	connectorModel, diags := BuildAPIModelToConnectorModel(reqResp.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -157,7 +157,7 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 		}
 	}
 
-	connectorResourceModel, diags := buildAPIModelToConnectorModel(reqResp.Msg)
+	connectorResourceModel, diags := BuildAPIModelToConnectorModel(reqResp.Msg)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -192,7 +192,7 @@ func (r *connectorResource) Update(ctx context.Context, req resource.UpdateReque
 
 	reqResp.Data.ResourceName = plan.ResourceName.ValueString()
 
-	connectorModel, diags := buildAPIModelToConnectorModel(reqResp.Data)
+	connectorModel, diags := BuildAPIModelToConnectorModel(reqResp.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
