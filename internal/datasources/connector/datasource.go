@@ -6,6 +6,7 @@ import (
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/connector"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 )
 
@@ -13,6 +14,11 @@ var (
 	_ datasource.DataSource              = &connectorDataSource{}
 	_ datasource.DataSourceWithConfigure = &connectorDataSource{}
 )
+
+// NewDataSource is a helper function to simplify the provider implementation.
+func NewDataSource() datasource.DataSource {
+	return &connectorDataSource{}
+}
 
 type connectorDataSource struct {
 	client  *sgclient.Client
@@ -48,5 +54,23 @@ func (d *connectorDataSource) Read(ctx context.Context, req datasource.ReadReque
 	var config connectorDataSourceModel
 
 	diags := req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
+	readConnectorResponse, err := d.client.Connectors.ReadConnector(ctx, config.ResourceName.ValueString(), d.orgName)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to read connector.", err.Error())
+		return
+	}
+
+	connectorDataSourceModel, diags := connector.BuildAPIModelToConnectorModel(readConnectorResponse.Msg)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	connectorDataSourceModel.ResourceName = config.ResourceName
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, connectorDataSourceModel)...)
 }

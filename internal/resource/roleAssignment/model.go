@@ -48,7 +48,7 @@ func (m *roleAssignmentResourceModel) ToGetAPIModel(ctx context.Context) (*sgsdk
 	return &apiModel, nil
 }
 
-func buildAPIModelToRoleAssignmentModel(apiResponse *sgsdkgo.AddUserToOrganization) (*roleAssignmentResourceModel, diag.Diagnostics) {
+func BuildAPIModelToRoleAssignmentModel(apiResponse *sgsdkgo.AddUserToOrganization) (*roleAssignmentResourceModel, diag.Diagnostics) {
 	entityTypeValue := flatteners.String(string(*apiResponse.EntityType.Ptr()))
 	userID := strings.Split(apiResponse.UserId, "/")
 	RoleModel := &roleAssignmentResourceModel{

@@ -8,6 +8,8 @@ import (
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	sgoption "github.com/StackGuardian/sg-sdk-go/option"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
+	connectordatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/connector"
+	roleassignment "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/roleAssignment"
 	stackoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_outputs"
 	stackworkflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_workflow_outputs"
 	workflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_outputs"
@@ -199,6 +201,8 @@ func (p *stackguardianProvider) DataSources(_ context.Context) []func() datasour
 		stackoutputs.NewDataSource,
 		stackworkflowoutputs.NewDataSource,
 		workflowoutputs.NewDataSource,
+		connectordatasource.NewDataSource,
+		roleassignment.NewDataSource,
 	}
 }
 

@@ -114,7 +114,7 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 					return
 				}
 
-				roleResourceModel, diags := buildAPIModelToRoleAssignmentModel(user.Data)
+				roleResourceModel, diags := BuildAPIModelToRoleAssignmentModel(user.Data)
 				resp.Diagnostics.Append(diags...)
 				if resp.Diagnostics.HasError() {
 					return
@@ -129,7 +129,7 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	roleAssignmentModel, diags := buildAPIModelToRoleAssignmentModel(reqResp.Data)
+	roleAssignmentModel, diags := BuildAPIModelToRoleAssignmentModel(reqResp.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -170,7 +170,7 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	roleResourceModel, diags := buildAPIModelToRoleAssignmentModel(user.Data)
+	roleResourceModel, diags := BuildAPIModelToRoleAssignmentModel(user.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -218,7 +218,7 @@ func (r *roleAssignmentResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	roleResourceModel, diags := buildAPIModelToRoleAssignmentModel(updatedUser.Data)
+	roleResourceModel, diags := BuildAPIModelToRoleAssignmentModel(updatedUser.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
