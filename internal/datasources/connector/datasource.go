@@ -51,7 +51,7 @@ func (d *connectorDataSource) Configure(_ context.Context, req datasource.Config
 }
 
 func (d *connectorDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var config connectorDataSourceModel
+	var config connector.ConnectorResourceModel
 
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -59,13 +59,13 @@ func (d *connectorDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	readConnectorResponse, err := d.client.Connectors.ReadConnector(ctx, config.ResourceName.ValueString(), d.orgName)
+	reqResp, err := d.client.Connectors.ReadConnector(ctx, config.ResourceName.ValueString(), d.orgName)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read connector.", err.Error())
 		return
 	}
 
-	connectorDataSourceModel, diags := connector.BuildAPIModelToConnectorModel(readConnectorResponse.Msg)
+	connectorDataSourceModel, diags := connector.BuildAPIModelToConnectorModel(reqResp.Msg)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

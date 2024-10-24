@@ -52,7 +52,7 @@ func (d *roleAssignmentDataSource) Configure(_ context.Context, req datasource.C
 }
 
 func (d *roleAssignmentDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var config roleAssignmentDataSourceModel
+	var config roleAssignment.RoleAssignmentResourceModel
 
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)

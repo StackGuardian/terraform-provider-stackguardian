@@ -59,7 +59,7 @@ func (r *roleAssignmentResource) ImportState(ctx context.Context, req resource.I
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *roleAssignmentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan roleAssignmentResourceModel
+	var plan RoleAssignmentResourceModel
 
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -121,7 +121,7 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 // Read refreshes the Terraform state with the latest data.
 func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// Get current state
-	var state roleAssignmentResourceModel
+	var state RoleAssignmentResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -161,7 +161,7 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *roleAssignmentResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan roleAssignmentResourceModel
+	var plan RoleAssignmentResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -208,7 +208,7 @@ func (r *roleAssignmentResource) Update(ctx context.Context, req resource.Update
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state roleAssignmentResourceModel
+	var state RoleAssignmentResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

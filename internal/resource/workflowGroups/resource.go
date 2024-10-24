@@ -101,7 +101,7 @@ func (r *workflowGroupResource) Create(ctx context.Context, req resource.CreateR
 						workflowGroup.Msg.ResourceName = &fullResourceName
 					}
 
-					workflowGroupResourceModel, diags := buildAPIModelToWorkflowGroupModel(workflowGroup.Msg)
+					workflowGroupResourceModel, diags := BuildAPIModelToWorkflowGroupModel(workflowGroup.Msg)
 					resp.Diagnostics.Append(diags...)
 					if resp.Diagnostics.HasError() {
 						return
@@ -141,7 +141,7 @@ func (r *workflowGroupResource) Create(ctx context.Context, req resource.CreateR
 						workflowGroup.Msg.ResourceName = &fullResourceName
 					}
 
-					workflowGroupResourceModel, diags := buildAPIModelToWorkflowGroupModel(workflowGroup.Msg)
+					workflowGroupResourceModel, diags := BuildAPIModelToWorkflowGroupModel(workflowGroup.Msg)
 					resp.Diagnostics.Append(diags...)
 					if resp.Diagnostics.HasError() {
 						return
@@ -158,7 +158,7 @@ func (r *workflowGroupResource) Create(ctx context.Context, req resource.CreateR
 		responseData = reqResp.Data
 	}
 
-	workflowGroupModel, diags := buildAPIModelToWorkflowGroupModel(responseData)
+	workflowGroupModel, diags := BuildAPIModelToWorkflowGroupModel(responseData)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -197,7 +197,7 @@ func (r *workflowGroupResource) Read(ctx context.Context, req resource.ReadReque
 	fullResourceName := strings.Replace(*workflowGroup.Msg.SubResourceId, "/wfgrps/", "", 1)
 	workflowGroup.Msg.ResourceName = &fullResourceName
 
-	workflowGroupResourceModel, diags := buildAPIModelToWorkflowGroupModel(workflowGroup.Msg)
+	workflowGroupResourceModel, diags := BuildAPIModelToWorkflowGroupModel(workflowGroup.Msg)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -242,7 +242,7 @@ func (r *workflowGroupResource) Update(ctx context.Context, req resource.UpdateR
 	fullResourceName := strings.Replace(*updatedWorkflowGroup.Msg.SubResourceId, "/wfgrps/", "", 1)
 	updatedWorkflowGroup.Msg.ResourceName = &fullResourceName
 
-	workflowGroupResourceModel, diags := buildAPIModelToWorkflowGroupModel(updatedWorkflowGroup.Msg)
+	workflowGroupResourceModel, diags := BuildAPIModelToWorkflowGroupModel(updatedWorkflowGroup.Msg)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
