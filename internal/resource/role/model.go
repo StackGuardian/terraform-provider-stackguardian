@@ -148,7 +148,7 @@ func (m *RoleResourceModel) ToPatchedAPIModel(ctx context.Context) (*sgsdkgo.Pat
 	return &apiPatchedModel, nil
 }
 
-func buildAPIModelToRoleModel(apiResponse *sgsdkgo.RoleDataResponse) (*RoleResourceModel, diag.Diagnostics) {
+func BuildAPIModelToRoleModel(apiResponse *sgsdkgo.RoleDataResponse) (*RoleResourceModel, diag.Diagnostics) {
 	roleModel := &RoleResourceModel{
 		ResourceName: flatteners.String(apiResponse.ResourceName),
 		Description:  flatteners.StringPtr(apiResponse.Description),

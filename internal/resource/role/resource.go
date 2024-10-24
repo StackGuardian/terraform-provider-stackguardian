@@ -105,7 +105,7 @@ func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, r
 					return
 				}
 
-				roleResourceModel, diags := buildAPIModelToRoleModel(role.Msg)
+				roleResourceModel, diags := BuildAPIModelToRoleModel(role.Msg)
 				resp.Diagnostics.Append(diags...)
 				if resp.Diagnostics.HasError() {
 					return
@@ -120,7 +120,7 @@ func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	roleModel, diags := buildAPIModelToRoleModel(reqResp.Data)
+	roleModel, diags := BuildAPIModelToRoleModel(reqResp.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -155,7 +155,7 @@ func (r *roleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	roleResourceModel, diags := buildAPIModelToRoleModel(role.Msg)
+	roleResourceModel, diags := BuildAPIModelToRoleModel(role.Msg)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -196,7 +196,7 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	roleResourceModel, diags := buildAPIModelToRoleModel(updatedRole.Msg)
+	roleResourceModel, diags := BuildAPIModelToRoleModel(updatedRole.Msg)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
