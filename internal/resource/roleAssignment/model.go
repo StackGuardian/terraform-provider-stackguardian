@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-type roleAssignmentResourceModel struct {
+type RoleAssignmentResourceModel struct {
 	UserId     types.String `tfsdk:"user_id"`
 	EntityType types.String `tfsdk:"entity_type"`
 	Role       types.String `tfsdk:"role"`
@@ -23,7 +23,7 @@ var (
 	}
 )
 
-func (m *roleAssignmentResourceModel) ToCreateAPIModel(ctx context.Context) (*sgsdkgo.AddUserToOrganization, diag.Diagnostics) {
+func (m *RoleAssignmentResourceModel) ToCreateAPIModel(ctx context.Context) (*sgsdkgo.AddUserToOrganization, diag.Diagnostics) {
 	apiModel := sgsdkgo.AddUserToOrganization{
 		UserId: m.UserId.ValueString(),
 		Role:   m.Role.ValueString(),
@@ -39,7 +39,7 @@ func (m *roleAssignmentResourceModel) ToCreateAPIModel(ctx context.Context) (*sg
 	return &apiModel, nil
 }
 
-func (m *roleAssignmentResourceModel) ToGetAPIModel(ctx context.Context) (*sgsdkgo.GetorRemoveUserFromOrganization, diag.Diagnostics) {
+func (m *RoleAssignmentResourceModel) ToGetAPIModel(ctx context.Context) (*sgsdkgo.GetorRemoveUserFromOrganization, diag.Diagnostics) {
 
 	apiModel := sgsdkgo.GetorRemoveUserFromOrganization{
 		UserId: m.UserId.ValueString(),
@@ -48,10 +48,10 @@ func (m *roleAssignmentResourceModel) ToGetAPIModel(ctx context.Context) (*sgsdk
 	return &apiModel, nil
 }
 
-func BuildAPIModelToRoleAssignmentModel(apiResponse *sgsdkgo.AddUserToOrganization) (*roleAssignmentResourceModel, diag.Diagnostics) {
+func BuildAPIModelToRoleAssignmentModel(apiResponse *sgsdkgo.AddUserToOrganization) (*RoleAssignmentResourceModel, diag.Diagnostics) {
 	entityTypeValue := flatteners.String(string(*apiResponse.EntityType.Ptr()))
 	userID := strings.Split(apiResponse.UserId, "/")
-	RoleModel := &roleAssignmentResourceModel{
+	RoleModel := &RoleAssignmentResourceModel{
 		UserId:     flatteners.String(userID[len(userID)-1]),
 		Role:       flatteners.String(apiResponse.Role),
 		EntityType: entityTypeValue,

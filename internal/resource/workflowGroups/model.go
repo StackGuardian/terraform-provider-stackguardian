@@ -58,7 +58,7 @@ func (m *WorkflowGroupResourceModel) ToPatchedAPIModel(ctx context.Context) (*sg
 	return &apiModel, nil
 }
 
-func buildAPIModelToWorkflowGroupModel(apiResponse *sgsdkgo.WorkflowGroupDataResponse) (*WorkflowGroupResourceModel, diag.Diagnostics) {
+func BuildAPIModelToWorkflowGroupModel(apiResponse *sgsdkgo.WorkflowGroupDataResponse) (*WorkflowGroupResourceModel, diag.Diagnostics) {
 	diag := diag.Diagnostics{}
 	WorkflowGroupModel := &WorkflowGroupResourceModel{
 		ResourceName: flatteners.String(*apiResponse.ResourceName),
