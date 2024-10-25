@@ -108,7 +108,7 @@ Optional:
 - `azure_devops_http_url` (String) HTTP URL for accessing Azure DevOps services.
 - `bitbucket_creds` (String) Credentials for Bitbucket integration.
 - `duration_seconds` (String) The duration, in seconds, of the role session. Default is 3600 seconds (1 hour).
-- `external_id` (String) A unique identifier that is used by third parties to assume a role in their customers' accounts.
+- `external_id` (String) (String) A unique identifier that is used to assume the role in the customers' AWS accounts. Should start with org name followed by ":" and a random string. SG_ORG_NAME:ElfygiFglfldTwnDFpAScQkvgvHTGV
 - `gcp_config_file_content` (String) Content of the GCP configuration file.
 - `github_api_url` (String) Base URL for the GitHub API.
 - `github_app_client_id` (String) Client ID for the GitHub app.
