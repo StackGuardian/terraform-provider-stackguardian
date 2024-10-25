@@ -12,7 +12,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-var _ resource.Resource = &roleAssignmentResource{}
+var (
+	_ resource.Resource               = &roleAssignmentResource{}
+	_ resource.ResourceWithConfigure  = &roleAssignmentResource{}
+	_ resource.ResourceWithModifyPlan = &roleAssignmentResource{}
+)
 
 type roleAssignmentResource struct {
 	resource.Resource
@@ -57,9 +61,26 @@ func (r *roleAssignmentResource) ImportState(ctx context.Context, req resource.I
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), req.ID)...)
 }
 
+func (r *roleAssignmentResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if !req.State.Raw.IsNull() && !req.Plan.Raw.IsNull() {
+		var state RoleAssignmentResourceModel
+		var plan RoleAssignmentResourceModel
+
+		resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+		resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		if !plan.UserId.Equal(state.UserId) {
+			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("resource_name"))
+		}
+	}
+}
+
 // Create creates the resource and sets the initial Terraform state.
 func (r *roleAssignmentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan roleAssignmentResourceModel
+	var plan RoleAssignmentResourceModel
 
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -93,7 +114,7 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 					return
 				}
 
-				roleResourceModel, diags := buildAPIModelToRoleAssignmentModel(user.Data)
+				roleResourceModel, diags := BuildAPIModelToRoleAssignmentModel(user.Data)
 				resp.Diagnostics.Append(diags...)
 				if resp.Diagnostics.HasError() {
 					return
@@ -108,7 +129,7 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	roleAssignmentModel, diags := buildAPIModelToRoleAssignmentModel(reqResp.Data)
+	roleAssignmentModel, diags := BuildAPIModelToRoleAssignmentModel(reqResp.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -121,7 +142,7 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 // Read refreshes the Terraform state with the latest data.
 func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// Get current state
-	var state roleAssignmentResourceModel
+	var state RoleAssignmentResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -149,7 +170,7 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	roleResourceModel, diags := buildAPIModelToRoleAssignmentModel(user.Data)
+	roleResourceModel, diags := BuildAPIModelToRoleAssignmentModel(user.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -161,7 +182,7 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *roleAssignmentResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan roleAssignmentResourceModel
+	var plan RoleAssignmentResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -197,7 +218,7 @@ func (r *roleAssignmentResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	roleResourceModel, diags := buildAPIModelToRoleAssignmentModel(updatedUser.Data)
+	roleResourceModel, diags := BuildAPIModelToRoleAssignmentModel(updatedUser.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -208,7 +229,7 @@ func (r *roleAssignmentResource) Update(ctx context.Context, req resource.Update
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state roleAssignmentResourceModel
+	var state RoleAssignmentResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

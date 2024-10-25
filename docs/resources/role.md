@@ -48,12 +48,12 @@ resource "stackguardian_role" "example_role" {
 
 ### Required
 
-- `resource_name` (String) The role name. It must be less than 100 characters and can only contain the following allowed characters: `^[-a-zA-Z0-9_]+$`.
+- `resource_name` (String) The name of the role. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
 
 ### Optional
 
 - `allowed_permissions` (Attributes Map) A map of permissions assigned to the role. (see [below for nested schema](#nestedatt--allowed_permissions))
-- `description` (String) A description of the role. It must be less than 256 characters.
+- `description` (String) A brief description of the role. Must be less than 256 characters.
 - `tags` (List of String) A list of tags associated with the role. A maximum of 10 tags are allowed.
 
 <a id="nestedatt--allowed_permissions"></a>

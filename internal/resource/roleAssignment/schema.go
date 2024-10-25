@@ -3,6 +3,7 @@ package roleAssignment
 import (
 	"context"
 
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 )
@@ -12,17 +13,15 @@ func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequ
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"user_id": schema.StringAttribute{
-				MarkdownDescription: "Fully qualified user email or group. Example: you@example.com for a local user, <SSO Login Method Identifier>/you@example.com for a SSO email when entity_type in EMAIL. <SSO Login Method Identifier>/group-devs when entity_type in GROUP.",
+				MarkdownDescription: constants.UserId,
 				Required:            true,
 			},
 			"entity_type": schema.StringAttribute{
-				MarkdownDescription: `Should be one of:
-	- <span style="background-color: #eff0f0; color: #e53835;">EMAIL</span>
-	- <span style="background-color: #eff0f0; color: #e53835;">GROUP</span>`,
-				Required: true,
+				MarkdownDescription: constants.EntityType,
+				Required:            true,
 			},
 			"role": schema.StringAttribute{
-				MarkdownDescription: "StackGuardian role name.",
+				MarkdownDescription: constants.Role,
 				Required:            true,
 			},
 		},

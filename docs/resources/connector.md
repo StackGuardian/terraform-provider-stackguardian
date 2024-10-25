@@ -32,14 +32,14 @@ resource "stackguardian_connector" "aws-cloud-connector-example" {
 
 ### Required
 
-- `resource_name` (String) The name of the connector. Must be less than 100 characters. Allowed characters are ^[-a-zA-Z0-9_]+$
+- `resource_name` (String) The name of the connector. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
 - `settings` (Attributes) (see [below for nested schema](#nestedatt--settings))
 
 ### Optional
 
 - `description` (String) A brief description of the connector. Must be less than 256 characters.
 - `discovery_settings` (Attributes) Settings for discovery insights related to the connector. (see [below for nested schema](#nestedatt--discovery_settings))
-- `tags` (List of String) A list of tags associated with the connectors. Up to 10 tags are allowed.
+- `tags` (List of String) A list of tags associated with the connector. A maximum of 10 tags are allowed.
 
 <a id="nestedatt--settings"></a>
 ### Nested Schema for `settings`
@@ -108,7 +108,7 @@ Optional:
 - `azure_devops_http_url` (String) HTTP URL for accessing Azure DevOps services.
 - `bitbucket_creds` (String) Credentials for Bitbucket integration.
 - `duration_seconds` (String) The duration, in seconds, of the role session. Default is 3600 seconds (1 hour).
-- `external_id` (String) A unique identifier that is used by third parties to assume a role in their customers' accounts.
+- `external_id` (String) A unique identifier that is used to assume the role in the customers' AWS accounts. Should start with org name followed by ":" and a random string. SG_ORG_NAME:ElfygiFglfldTwnDFpAScQkvgvHTGV
 - `gcp_config_file_content` (String) Content of the GCP configuration file.
 - `github_api_url` (String) Base URL for the GitHub API.
 - `github_app_client_id` (String) Client ID for the GitHub app.

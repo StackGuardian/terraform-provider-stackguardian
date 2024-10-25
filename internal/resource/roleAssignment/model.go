@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-type roleAssignmentResourceModel struct {
+type RoleAssignmentResourceModel struct {
 	UserId     types.String `tfsdk:"user_id"`
 	EntityType types.String `tfsdk:"entity_type"`
 	Role       types.String `tfsdk:"role"`
@@ -23,25 +23,23 @@ var (
 	}
 )
 
-func (m *roleAssignmentResourceModel) ToCreateAPIModel(ctx context.Context) (*sgsdkgo.AddUserToOrganization, diag.Diagnostics) {
-	diags := diag.Diagnostics{}
+func (m *RoleAssignmentResourceModel) ToCreateAPIModel(ctx context.Context) (*sgsdkgo.AddUserToOrganization, diag.Diagnostics) {
+	apiModel := sgsdkgo.AddUserToOrganization{
+		UserId: m.UserId.ValueString(),
+		Role:   m.Role.ValueString(),
+	}
 
 	entity, ok := capabilitiesMap[strings.ToUpper(m.EntityType.ValueString())]
 	if !ok {
-		diags.AddError("entityType", "Invalid entityType value")
-		return nil, diags
+		return nil, diag.Diagnostics{diag.NewErrorDiagnostic("entityType", "Invalid entityType value")}
 	}
 
-	apiModel := sgsdkgo.AddUserToOrganization{
-		UserId:     m.UserId.ValueString(),
-		EntityType: entity,
-		Role:       m.Role.ValueString(),
-	}
+	apiModel.EntityType = entity
 
 	return &apiModel, nil
 }
 
-func (m *roleAssignmentResourceModel) ToGetAPIModel(ctx context.Context) (*sgsdkgo.GetorRemoveUserFromOrganization, diag.Diagnostics) {
+func (m *RoleAssignmentResourceModel) ToGetAPIModel(ctx context.Context) (*sgsdkgo.GetorRemoveUserFromOrganization, diag.Diagnostics) {
 
 	apiModel := sgsdkgo.GetorRemoveUserFromOrganization{
 		UserId: m.UserId.ValueString(),
@@ -50,10 +48,10 @@ func (m *roleAssignmentResourceModel) ToGetAPIModel(ctx context.Context) (*sgsdk
 	return &apiModel, nil
 }
 
-func buildAPIModelToRoleAssignmentModel(apiResponse *sgsdkgo.AddUserToOrganization) (*roleAssignmentResourceModel, diag.Diagnostics) {
+func BuildAPIModelToRoleAssignmentModel(apiResponse *sgsdkgo.AddUserToOrganization) (*RoleAssignmentResourceModel, diag.Diagnostics) {
 	entityTypeValue := flatteners.String(string(*apiResponse.EntityType.Ptr()))
 	userID := strings.Split(apiResponse.UserId, "/")
-	RoleModel := &roleAssignmentResourceModel{
+	RoleModel := &RoleAssignmentResourceModel{
 		UserId:     flatteners.String(userID[len(userID)-1]),
 		Role:       flatteners.String(apiResponse.Role),
 		EntityType: entityTypeValue,

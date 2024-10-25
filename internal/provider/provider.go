@@ -8,6 +8,13 @@ import (
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	sgoption "github.com/StackGuardian/sg-sdk-go/option"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
+	connectordatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/connector"
+	roledatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/role"
+	roleassignment "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/roleAssignment"
+	stackoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_outputs"
+	stackworkflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_workflow_outputs"
+	workflowgroupsdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_groups"
+	workflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_outputs"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/connector"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/roleAssignment"
@@ -192,7 +199,15 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 
 // DataSources defines the data sources implemented in the provider.
 func (p *stackguardianProvider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return nil
+	return []func() datasource.DataSource{
+		stackoutputs.NewDataSource,
+		stackworkflowoutputs.NewDataSource,
+		workflowoutputs.NewDataSource,
+		connectordatasource.NewDataSource,
+		roleassignment.NewDataSource,
+		workflowgroupsdatasource.NewDataSource,
+		roledatasource.NewDataSource,
+	}
 }
 
 // Resources defines the resources implemented in the provider.

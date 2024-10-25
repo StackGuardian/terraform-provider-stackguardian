@@ -14,7 +14,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-var _ resource.Resource = &workflowGroupResource{}
+var (
+	_ resource.Resource               = &workflowGroupResource{}
+	_ resource.ResourceWithConfigure  = &workflowGroupResource{}
+	_ resource.ResourceWithModifyPlan = &workflowGroupResource{}
+)
 
 type workflowGroupResource struct {
 	client   *sgclient.Client
@@ -56,6 +60,23 @@ func (r *workflowGroupResource) Configure(_ context.Context, req resource.Config
 
 func (r *workflowGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("resource_name"), req.ID)...)
+}
+
+func (r *workflowGroupResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if !req.State.Raw.IsNull() && !req.Plan.Raw.IsNull() {
+		var state WorkflowGroupResourceModel
+		var plan WorkflowGroupResourceModel
+
+		resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+		resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		if !plan.ResourceName.Equal(state.ResourceName) {
+			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("resource_name"))
+		}
+	}
 }
 
 // Create creates the resource and sets the initial Terraform state.
@@ -101,7 +122,7 @@ func (r *workflowGroupResource) Create(ctx context.Context, req resource.CreateR
 						workflowGroup.Msg.ResourceName = &fullResourceName
 					}
 
-					workflowGroupResourceModel, diags := buildAPIModelToWorkflowGroupModel(workflowGroup.Msg)
+					workflowGroupResourceModel, diags := BuildAPIModelToWorkflowGroupModel(workflowGroup.Msg)
 					resp.Diagnostics.Append(diags...)
 					if resp.Diagnostics.HasError() {
 						return
@@ -141,7 +162,7 @@ func (r *workflowGroupResource) Create(ctx context.Context, req resource.CreateR
 						workflowGroup.Msg.ResourceName = &fullResourceName
 					}
 
-					workflowGroupResourceModel, diags := buildAPIModelToWorkflowGroupModel(workflowGroup.Msg)
+					workflowGroupResourceModel, diags := BuildAPIModelToWorkflowGroupModel(workflowGroup.Msg)
 					resp.Diagnostics.Append(diags...)
 					if resp.Diagnostics.HasError() {
 						return
@@ -158,7 +179,7 @@ func (r *workflowGroupResource) Create(ctx context.Context, req resource.CreateR
 		responseData = reqResp.Data
 	}
 
-	workflowGroupModel, diags := buildAPIModelToWorkflowGroupModel(responseData)
+	workflowGroupModel, diags := BuildAPIModelToWorkflowGroupModel(responseData)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -197,7 +218,7 @@ func (r *workflowGroupResource) Read(ctx context.Context, req resource.ReadReque
 	fullResourceName := strings.Replace(*workflowGroup.Msg.SubResourceId, "/wfgrps/", "", 1)
 	workflowGroup.Msg.ResourceName = &fullResourceName
 
-	workflowGroupResourceModel, diags := buildAPIModelToWorkflowGroupModel(workflowGroup.Msg)
+	workflowGroupResourceModel, diags := BuildAPIModelToWorkflowGroupModel(workflowGroup.Msg)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -242,7 +263,7 @@ func (r *workflowGroupResource) Update(ctx context.Context, req resource.UpdateR
 	fullResourceName := strings.Replace(*updatedWorkflowGroup.Msg.SubResourceId, "/wfgrps/", "", 1)
 	updatedWorkflowGroup.Msg.ResourceName = &fullResourceName
 
-	workflowGroupResourceModel, diags := buildAPIModelToWorkflowGroupModel(updatedWorkflowGroup.Msg)
+	workflowGroupResourceModel, diags := BuildAPIModelToWorkflowGroupModel(updatedWorkflowGroup.Msg)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

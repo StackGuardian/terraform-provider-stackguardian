@@ -22,7 +22,7 @@ func (m *WorkflowGroupResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.W
 		Description:  m.Description.ValueStringPointer(),
 	}
 
-	if !m.Tags.IsUnknown() {
+	if !m.Tags.IsUnknown() && !m.Tags.IsNull() {
 		tags, diags := expanders.StringList(context.TODO(), m.Tags)
 		if diags.HasError() {
 			return nil, diags
@@ -38,16 +38,18 @@ func (m *WorkflowGroupResourceModel) ToPatchedAPIModel(ctx context.Context) (*sg
 		ResourceName: sgsdkgo.Optional(m.ResourceName.ValueString()),
 	}
 
-	if m.Description.IsUnknown() {
+	if !m.Description.IsUnknown() && !m.Description.IsNull() {
+		apiModel.Description = sgsdkgo.Optional(m.Description.ValueString())
+	} else {
 		apiModel.Description = sgsdkgo.Null[string]()
 	}
 
 	// Convert Tags from types.List to []string
-	if m.Tags.IsUnknown() {
-		tags, diags := expanders.StringList(context.TODO(), m.Tags)
-		if diags.HasError() {
-			return nil, diags
-		}
+	tags, diags := expanders.StringList(context.TODO(), m.Tags)
+	if diags.HasError() {
+		return nil, diags
+	}
+	if tags != nil {
 		apiModel.Tags = sgsdkgo.Optional(tags)
 	} else {
 		apiModel.Tags = sgsdkgo.Null[[]string]()
@@ -56,7 +58,7 @@ func (m *WorkflowGroupResourceModel) ToPatchedAPIModel(ctx context.Context) (*sg
 	return &apiModel, nil
 }
 
-func buildAPIModelToWorkflowGroupModel(apiResponse *sgsdkgo.WorkflowGroupDataResponse) (*WorkflowGroupResourceModel, diag.Diagnostics) {
+func BuildAPIModelToWorkflowGroupModel(apiResponse *sgsdkgo.WorkflowGroupDataResponse) (*WorkflowGroupResourceModel, diag.Diagnostics) {
 	diag := diag.Diagnostics{}
 	WorkflowGroupModel := &WorkflowGroupResourceModel{
 		ResourceName: flatteners.String(*apiResponse.ResourceName),

@@ -12,7 +12,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-var _ resource.Resource = &roleResource{}
+var (
+	_ resource.Resource               = &roleResource{}
+	_ resource.ResourceWithConfigure  = &roleResource{}
+	_ resource.ResourceWithModifyPlan = &roleResource{}
+)
 
 type roleResource struct {
 	client   *sgclient.Client
@@ -56,6 +60,23 @@ func (r *roleResource) ImportState(ctx context.Context, req resource.ImportState
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("resource_name"), req.ID)...)
 }
 
+func (r *roleResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if !req.State.Raw.IsNull() && !req.Plan.Raw.IsNull() {
+		var state RoleResourceModel
+		var plan RoleResourceModel
+
+		resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+		resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		if !plan.ResourceName.Equal(state.ResourceName) {
+			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("resource_name"))
+		}
+	}
+}
+
 // Create creates the resource and sets the initial Terraform state.
 func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan RoleResourceModel
@@ -84,7 +105,7 @@ func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, r
 					return
 				}
 
-				roleResourceModel, diags := buildAPIModelToRoleModel(role.Msg)
+				roleResourceModel, diags := BuildAPIModelToRoleModel(role.Msg)
 				resp.Diagnostics.Append(diags...)
 				if resp.Diagnostics.HasError() {
 					return
@@ -99,7 +120,7 @@ func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	roleModel, diags := buildAPIModelToRoleModel(reqResp.Data)
+	roleModel, diags := BuildAPIModelToRoleModel(reqResp.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -134,7 +155,7 @@ func (r *roleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	roleResourceModel, diags := buildAPIModelToRoleModel(role.Msg)
+	roleResourceModel, diags := BuildAPIModelToRoleModel(role.Msg)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -175,7 +196,7 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	roleResourceModel, diags := buildAPIModelToRoleModel(updatedRole.Msg)
+	roleResourceModel, diags := BuildAPIModelToRoleModel(updatedRole.Msg)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
