@@ -84,7 +84,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 									Optional:            true,
 								},
 								"external_id": schema.StringAttribute{
-									MarkdownDescription: "A unique identifier that is used by third parties to assume a role in their customers' accounts.",
+									MarkdownDescription: `(String) A unique identifier that is used to assume the role in the customers' AWS accounts. Should start with org name followed by ":" and a random string. SG_ORG_NAME:ElfygiFglfldTwnDFpAScQkvgvHTGV`,
 									Optional:            true,
 								},
 								"duration_seconds": schema.StringAttribute{

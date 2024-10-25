@@ -22,7 +22,7 @@ func (m *WorkflowGroupResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.W
 		Description:  m.Description.ValueStringPointer(),
 	}
 
-	if !m.Tags.IsUnknown() {
+	if !m.Tags.IsUnknown() && !m.Tags.IsNull() {
 		tags, diags := expanders.StringList(context.TODO(), m.Tags)
 		if diags.HasError() {
 			return nil, diags
@@ -38,16 +38,29 @@ func (m *WorkflowGroupResourceModel) ToPatchedAPIModel(ctx context.Context) (*sg
 		ResourceName: sgsdkgo.Optional(m.ResourceName.ValueString()),
 	}
 
-	if m.Description.IsUnknown() {
+	if !m.Description.IsUnknown() && !m.Description.IsNull() {
+<<<<<<< HEAD
+=======
+		apiModel.Description = sgsdkgo.Optional(m.Description.ValueString())
+	} else {
+>>>>>>> 230e083 (Bug fixes and code improvements)
 		apiModel.Description = sgsdkgo.Null[string]()
 	}
 
 	// Convert Tags from types.List to []string
-	if m.Tags.IsUnknown() {
+<<<<<<< HEAD
+	if !m.Tags.IsUnknown() && !m.Tags.IsNull() {
 		tags, diags := expanders.StringList(context.TODO(), m.Tags)
 		if diags.HasError() {
 			return nil, diags
 		}
+=======
+	tags, diags := expanders.StringList(context.TODO(), m.Tags)
+	if diags.HasError() {
+		return nil, diags
+	}
+	if tags != nil {
+>>>>>>> 230e083 (Bug fixes and code improvements)
 		apiModel.Tags = sgsdkgo.Optional(tags)
 	} else {
 		apiModel.Tags = sgsdkgo.Null[[]string]()

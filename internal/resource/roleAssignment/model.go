@@ -24,19 +24,17 @@ var (
 )
 
 func (m *roleAssignmentResourceModel) ToCreateAPIModel(ctx context.Context) (*sgsdkgo.AddUserToOrganization, diag.Diagnostics) {
-	diags := diag.Diagnostics{}
+	apiModel := sgsdkgo.AddUserToOrganization{
+		UserId: m.UserId.ValueString(),
+		Role:   m.Role.ValueString(),
+	}
 
 	entity, ok := capabilitiesMap[strings.ToUpper(m.EntityType.ValueString())]
 	if !ok {
-		diags.AddError("entityType", "Invalid entityType value")
-		return nil, diags
+		return nil, diag.Diagnostics{diag.NewErrorDiagnostic("entityType", "Invalid entityType value")}
 	}
 
-	apiModel := sgsdkgo.AddUserToOrganization{
-		UserId:     m.UserId.ValueString(),
-		EntityType: entity,
-		Role:       m.Role.ValueString(),
-	}
+	apiModel.EntityType = entity
 
 	return &apiModel, nil
 }
