@@ -23,7 +23,7 @@ func (r *roleDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				Computed:            true,
 			},
 			"tags": schema.ListAttribute{
-				MarkdownDescription: constants.Tags,
+				MarkdownDescription: fmt.Sprintf(constants.Tags, "role"),
 				Computed:            true,
 				ElementType:         types.StringType,
 			},

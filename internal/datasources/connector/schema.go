@@ -252,7 +252,7 @@ func (d *connectorDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 				},
 			},
 			"tags": schema.ListAttribute{
-				MarkdownDescription: constants.Tags,
+				MarkdownDescription: fmt.Sprintf(constants.Tags, "connector"),
 				ElementType:         types.StringType,
 				Computed:            true,
 			},

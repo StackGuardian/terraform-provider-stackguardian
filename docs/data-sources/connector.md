@@ -6,24 +6,17 @@ description: |-
 
 ---
 
-# stackguardian_connector (Resource)
+# stackguardian_connector (Data Source)
 
 ## Example Usage
 
 ```terraform
-resource "stackguardian_connector" "aws-cloud-connector-example" {
-  resource_name = "aws-rbac-connector"
-  description   = "AWS Cloud Connector"
+data "stackguardian_connector" "example" {
+  resource_name = "testing"
+}
 
-  settings = {
-    kind = "AWS_RBAC"
-
-    config = [{
-      role_arn         = "arn:aws:iam::209502960327:role/StackGuardian"
-      external_id      = "wicked-hop:ElfygiFglfldTwnDFpAScQkvgvHTGV "
-      duration_seconds = "3600"
-    }]
-  }
+output "connector-output" {
+  value = data.stackguardian_connector.example.description
 }
 ```
 
@@ -33,18 +26,74 @@ resource "stackguardian_connector" "aws-cloud-connector-example" {
 ### Required
 
 - `resource_name` (String) The name of the connector. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
-- `settings` (Attributes) (see [below for nested schema](#nestedatt--settings))
 
-### Optional
+### Read-Only
 
 - `description` (String) A brief description of the connector. Must be less than 256 characters.
 - `discovery_settings` (Attributes) Settings for discovery insights related to the connector. (see [below for nested schema](#nestedatt--discovery_settings))
+- `settings` (Attributes) (see [below for nested schema](#nestedatt--settings))
 - `tags` (List of String) A list of tags associated with the connector. A maximum of 10 tags are allowed.
+
+<a id="nestedatt--discovery_settings"></a>
+### Nested Schema for `discovery_settings`
+
+Read-Only:
+
+- `benchmarks` (Attributes Map) Statistics for various StackGuardian resources. (see [below for nested schema](#nestedatt--discovery_settings--benchmarks))
+
+<a id="nestedatt--discovery_settings--benchmarks"></a>
+### Nested Schema for `discovery_settings.benchmarks`
+
+Read-Only:
+
+- `active` (Boolean) Indicates if the discovery is active.
+- `checks` (List of String) List of checks performed during discovery.
+- `description` (String) A description of the benchmark. It must be less than 256 characters.
+- `discovery_interval` (Number) Interval for the discovery process.
+- `is_custom_check` (Boolean) Indicates if the discovery is a custom check.
+- `label` (String) Label associated with the discovery.
+- `regions` (Attributes Map) Regions associated with the discovery. (see [below for nested schema](#nestedatt--discovery_settings--benchmarks--regions))
+- `runtime_source` (Attributes) (see [below for nested schema](#nestedatt--discovery_settings--benchmarks--runtime_source))
+- `summary_description` (String) A brief summary of the discovery.
+- `summary_title` (String) Title for the discovery summary.
+
+<a id="nestedatt--discovery_settings--benchmarks--regions"></a>
+### Nested Schema for `discovery_settings.benchmarks.regions`
+
+Read-Only:
+
+- `emails` (List of String) List of emails to notify about the discovery.
+
+
+<a id="nestedatt--discovery_settings--benchmarks--runtime_source"></a>
+### Nested Schema for `discovery_settings.benchmarks.runtime_source`
+
+Read-Only:
+
+- `config` (Attributes) Specific configuration settings for runtime source. (see [below for nested schema](#nestedatt--discovery_settings--benchmarks--runtime_source--config))
+- `source_config_dest_kind` (String) Kind of the source configuration destination. Valid examples include eg:- AWS_RBAC, AZURE_STATIC.
+
+<a id="nestedatt--discovery_settings--benchmarks--runtime_source--config"></a>
+### Nested Schema for `discovery_settings.benchmarks.runtime_source.config`
+
+Read-Only:
+
+- `auth` (String) Authentication method for accessing the repository.
+- `git_core_auto_crlf` (Boolean) Indicates if core.autocrlf should be enabled.
+- `include_sub_module` (Boolean) Indicates whether to include sub-modules.
+- `is_private` (Boolean) Indicates if the repository is private.
+- `ref` (String) Reference identifier for the repository.
+- `repo` (String) Repository name or URL.
+- `working_dir` (String) Working directory for operations.
+
+
+
+
 
 <a id="nestedatt--settings"></a>
 ### Nested Schema for `settings`
 
-Required:
+Read-Only:
 
 - `config` (Attributes List) Configuration settings for the connector's secrets (see [below for nested schema](#nestedatt--settings--config))
 - `kind` (String) The type of connector<br>
@@ -94,10 +143,10 @@ Required:
 <a id="nestedatt--settings--config"></a>
 ### Nested Schema for `settings.config`
 
-Optional:
+Read-Only:
 
 - `arm_client_id` (String) Client ID for Azure Resource Manager.
-- `arm_client_secret` (String) Client secret for Azure Resource Manager.
+- `arm_client_secret` (String) Client ID for Azure Resource Manager.
 - `arm_subscription_id` (String) Azure Resource Manager subscription ID.
 - `arm_tenant_id` (String) Azure Resource Manager tenant ID.
 - `aws_access_key_id` (String) AWS access key ID for authentication.
@@ -126,80 +175,3 @@ Optional:
 
 
 
-<a id="nestedatt--discovery_settings"></a>
-### Nested Schema for `discovery_settings`
-
-Optional:
-
-- `benchmarks` (Attributes Map) Statistics for various StackGuardian resources. (see [below for nested schema](#nestedatt--discovery_settings--benchmarks))
-
-<a id="nestedatt--discovery_settings--benchmarks"></a>
-### Nested Schema for `discovery_settings.benchmarks`
-
-Required:
-
-- `checks` (List of String) List of checks performed during discovery.
-- `summary_title` (String) Title for the discovery summary.
-
-Optional:
-
-- `active` (Boolean) Indicates if the discovery is active.
-- `description` (String) A description of the benchmark. It must be less than 256 characters.
-- `discovery_interval` (Number) Interval for the discovery process.
-- `is_custom_check` (Boolean) Indicates if the discovery is a custom check.
-- `label` (String) Label associated with the discovery.
-- `regions` (Attributes Map) Regions associated with the discovery. (see [below for nested schema](#nestedatt--discovery_settings--benchmarks--regions))
-- `runtime_source` (Attributes) (see [below for nested schema](#nestedatt--discovery_settings--benchmarks--runtime_source))
-- `summary_description` (String) A brief summary of the discovery.
-
-<a id="nestedatt--discovery_settings--benchmarks--regions"></a>
-### Nested Schema for `discovery_settings.benchmarks.regions`
-
-Optional:
-
-- `emails` (List of String) List of emails to notify about the discovery.
-
-
-<a id="nestedatt--discovery_settings--benchmarks--runtime_source"></a>
-### Nested Schema for `discovery_settings.benchmarks.runtime_source`
-
-Optional:
-
-- `config` (Attributes) Specific configuration settings for runtime source. (see [below for nested schema](#nestedatt--discovery_settings--benchmarks--runtime_source--config))
-- `source_config_dest_kind` (String) Kind of the source configuration destination. Valid examples include eg:- AWS_RBAC, AZURE_STATIC.
-
-<a id="nestedatt--discovery_settings--benchmarks--runtime_source--config"></a>
-### Nested Schema for `discovery_settings.benchmarks.runtime_source.config`
-
-Optional:
-
-- `auth` (String) Authentication method for accessing the repository.
-- `git_core_auto_crlf` (Boolean) Indicates if core.autocrlf should be enabled.
-- `include_sub_module` (Boolean) Indicates whether to include sub-modules.
-- `is_private` (Boolean) Indicates if the repository is private.
-- `ref` (String) Reference identifier for the repository.
-- `repo` (String) Repository name or URL.
-- `working_dir` (String) Working directory for operations.
-
-
-
-
-
-
-
-## Import
-
-Import existing resource
-
-### Using Import block (terraform v1.5.0 and later)
-```terraform
-import {
-  to = "stackguardian_connector.example-connector"
-  id = "connector-name"
-}
-```
-
-### Using CLI
-```bash
-terraform import stackguardian_connector.example-connector connector-name
-```

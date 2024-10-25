@@ -24,7 +24,7 @@ func (r *workflowGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 				Computed:            true,
 			},
 			"tags": schema.ListAttribute{
-				MarkdownDescription: constants.Tags,
+				MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow group"),
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,

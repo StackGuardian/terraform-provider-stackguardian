@@ -1,5 +1,7 @@
 package constants
 
+////////// Resource
+
 // Connector
 const (
 	SettingsKindMarkdownDoc = `
@@ -21,7 +23,7 @@ const (
 		- aws_default_region
 	- <span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC</span>
 		- role_arn
-		- exteranl_id
+		- external_id
 		- arm_client_id
 	- <span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC</span>
 		- role_arn
@@ -49,7 +51,7 @@ const (
 `
 	SettingsConfig                        = "Configuration settings for the connector's secrets"
 	SettingsConfigRoleArn                 = "The Amazon Resource Name (ARN) of the role that the caller is assuming."
-	SettingsConfigExternalId              = "A unique identifier that is used by third parties to assume a role in their customers' accounts."
+	SettingsConfigExternalId              = `A unique identifier that is used to assume the role in the customers' AWS accounts. Should start with org name followed by ":" and a random string. SG_ORG_NAME:ElfygiFglfldTwnDFpAScQkvgvHTGV`
 	SettingsConfigDurationSeconds         = "The duration, in seconds, of the role session. Default is 3600 seconds (1 hour)."
 	SettingsConfigInstallationId          = "The installation ID for GitHub applications."
 	SettingsConfigGithubAppId             = "The application ID for the GitHub app."
@@ -122,7 +124,18 @@ const (
 
 // Common
 const (
-	ResourceName = "The name of the %s. Must be less than 100 characters. Allowed characters are ^[-a-zA-Z0-9_]+$"
+	ResourceName = "The name of the %s. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$"
 	Description  = "A brief description of the %s. Must be less than 256 characters."
-	Tags         = "A list of tags associated with the connectors. Up to 10 tags are allowed."
+	Tags         = "A list of tags associated with the %s. A maximum of 10 tags are allowed."
+)
+
+////////////// Data Source
+
+// Common
+const (
+	StackguardianStack         = "Stackguardian stack name"
+	StackguardianWorkflow      = "Stackguardian workflow name"
+	StackguardianWorkflowGroup = "Stackguardian workflow group name"
+	DataSourceDataJson         = "Raw JSON body"
+	DataSourceData             = "Map of k/v pairs with value as JSON string"
 )

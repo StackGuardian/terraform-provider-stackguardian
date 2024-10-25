@@ -22,7 +22,7 @@ func (d *workflowGroupsDataSource) Schema(_ context.Context, _ datasource.Schema
 				Computed:            true,
 			},
 			"tags": schema.ListAttribute{
-				MarkdownDescription: constants.Tags,
+				MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow group"),
 				ElementType:         types.StringType,
 				Computed:            true,
 			},

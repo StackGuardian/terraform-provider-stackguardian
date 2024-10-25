@@ -137,7 +137,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								},
 								"arm_client_secret": schema.StringAttribute{
 									Optional:            true,
-									MarkdownDescription: constants.SettingsConfigArmClientId,
+									MarkdownDescription: constants.SettingsConfigArmClientSecret,
 								},
 								"gcp_config_file_content": schema.StringAttribute{
 									Optional:            true,
@@ -270,7 +270,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				},
 			},
 			"tags": schema.ListAttribute{
-				MarkdownDescription: constants.Tags,
+				MarkdownDescription: fmt.Sprintf(constants.Tags, "connector"),
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,

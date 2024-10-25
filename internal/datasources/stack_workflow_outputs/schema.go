@@ -3,6 +3,7 @@ package stackworkflowoutputs
 import (
 	"context"
 
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -13,20 +14,25 @@ func (d *stackWorkflowOutputsDataSource) Schema(_ context.Context, _ datasource.
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"stack": schema.StringAttribute{
-				Required: true,
+				MarkdownDescription: constants.StackguardianStack,
+				Required:            true,
 			},
 			"workflow": schema.StringAttribute{
-				Required: true,
+				MarkdownDescription: constants.StackguardianWorkflow,
+				Required:            true,
 			},
 			"workflow_group": schema.StringAttribute{
-				Required: true,
+				MarkdownDescription: constants.StackguardianWorkflowGroup,
+				Required:            true,
 			},
 			"data": schema.MapAttribute{
-				ElementType: types.StringType,
-				Computed:    true,
+				MarkdownDescription: constants.DataSourceData,
+				ElementType:         types.StringType,
+				Computed:            true,
 			},
 			"data_json": schema.StringAttribute{
-				Computed: true,
+				MarkdownDescription: constants.DataSourceDataJson,
+				Computed:            true,
 			},
 		},
 	}

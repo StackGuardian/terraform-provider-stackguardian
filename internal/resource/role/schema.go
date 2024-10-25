@@ -24,7 +24,7 @@ func (r *roleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Computed:            true,
 			},
 			"tags": schema.ListAttribute{
-				MarkdownDescription: constants.Tags,
+				MarkdownDescription: fmt.Sprintf(constants.Tags, "role"),
 				Optional:            true,
 				Computed:            true,
 				ElementType:         types.StringType,
