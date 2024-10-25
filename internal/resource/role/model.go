@@ -11,8 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-type RoleAllowedPermissionsPathsModel types.List
-
 type RoleAllowedPermissionsModel struct {
 	Name  types.String `tfsdk:"name"`
 	Paths types.Map    `tfsdk:"paths"`
@@ -52,7 +50,7 @@ func allowedPermissionsToAPIModel(m types.Map) (map[string]*sgsdkgo.AllowedPermi
 			Name: allowedPermissionValue.Name.ValueString(),
 		}
 
-		if !allowedPermissionValue.Paths.IsNull() {
+		if !allowedPermissionValue.Paths.IsNull() && !allowedPermissionValue.Paths.IsUnknown() {
 			var allowedPermissionsPathsModelValue map[string]types.List
 			diags := allowedPermissionValue.Paths.ElementsAs(context.Background(), &allowedPermissionsPathsModelValue, false)
 			if diags.HasError() {
@@ -87,27 +85,27 @@ func (m *RoleResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Role, diag
 		ResourceName: m.ResourceName.ValueString(),
 	}
 
-	if !m.Description.IsUnknown() {
+	if !m.Description.IsUnknown() && !m.Description.IsNull() {
 		apiModel.Description = sgsdkgo.Optional(m.Description.ValueString())
 	} else {
 		apiModel.Description = sgsdkgo.Null[string]()
 	}
 
-	if !m.Tags.IsUnknown() {
-		tags, diags := expanders.StringList(context.TODO(), m.Tags)
-		if diags.HasError() {
-			return nil, diags
-		}
-		apiModel.Tags = sgsdkgo.Optional(tags)
+	tags, diags := expanders.StringList(context.TODO(), m.Tags)
+	if diags.HasError() {
+		return nil, diags
+	}
+	apiModel.Tags = sgsdkgo.Optional(tags)
+	if tags != nil {
 	} else {
 		apiModel.Tags = sgsdkgo.Null[[]string]()
 	}
 
-	if !m.AllowedPermissions.IsUnknown() {
-		allowedPermissionsAPIValue, diags := allowedPermissionsToAPIModel(m.AllowedPermissions)
-		if diags.HasError() {
-			return nil, diags
-		}
+	allowedPermissionsAPIValue, diags := allowedPermissionsToAPIModel(m.AllowedPermissions)
+	if diags.HasError() {
+		return nil, diags
+	}
+	if allowedPermissionsAPIValue != nil {
 		apiModel.AllowedPermissions = sgsdkgo.Optional(allowedPermissionsAPIValue)
 	} else {
 		apiModel.AllowedPermissions = sgsdkgo.Null[map[string]*sgsdkgo.AllowedPermissions]()
@@ -121,27 +119,27 @@ func (m *RoleResourceModel) ToPatchedAPIModel(ctx context.Context) (*sgsdkgo.Pat
 		ResourceName: sgsdkgo.Optional(*m.ResourceName.ValueStringPointer()),
 	}
 
-	if !m.Description.IsUnknown() {
+	if !m.Description.IsUnknown() && !m.Description.IsNull() {
 		apiPatchedModel.Description = sgsdkgo.Null[string]()
 	} else {
 		apiPatchedModel.Description = sgsdkgo.Optional(*m.Description.ValueStringPointer())
 	}
 
-	if !m.Tags.IsUnknown() {
-		tags, diags := expanders.StringList(context.TODO(), m.Tags)
-		if diags.HasError() {
-			return nil, diags
-		}
+	tags, diags := expanders.StringList(context.TODO(), m.Tags)
+	if diags.HasError() {
+		return nil, diags
+	}
+	if tags != nil {
 		apiPatchedModel.Tags = sgsdkgo.Optional(tags)
 	} else {
 		apiPatchedModel.Tags = sgsdkgo.Null[[]string]()
 	}
 
-	if !m.AllowedPermissions.IsUnknown() {
-		allowedPermissionsAPIValue, diags := allowedPermissionsToAPIModel(m.AllowedPermissions)
-		if diags.HasError() {
-			return nil, diags
-		}
+	allowedPermissionsAPIValue, diags := allowedPermissionsToAPIModel(m.AllowedPermissions)
+	if diags.HasError() {
+		return nil, diags
+	}
+	if allowedPermissionsAPIValue != nil {
 		apiPatchedModel.AllowedPermissions = sgsdkgo.Optional(allowedPermissionsAPIValue)
 	} else {
 		apiPatchedModel.AllowedPermissions = sgsdkgo.Null[map[string]*sgsdkgo.AllowedPermissions]()
