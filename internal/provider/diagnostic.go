@@ -1,5 +1,0 @@
-package provider
-
-func CreateDiagnostic() {
-
-}

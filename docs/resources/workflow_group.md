@@ -24,12 +24,12 @@ resource "stackguardian_workflow_group" "example_workflow_group" {
 
 ### Required
 
-- `resource_name` (String) The name of the Workflow Group. Must be less than 100 characters and can only contain alphanumeric characters, dashes (-), and underscores (_).
+- `resource_name` (String) The name of the workflow group. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
 
 ### Optional
 
-- `description` (String) A description of the Workflow Group. Must be less than 256 characters.
-- `tags` (List of String) A list of tags associated with the Workflow Group. Up to 10 tags are allowed.
+- `description` (String) A brief description of the workflow group. Must be less than 256 characters.
+- `tags` (List of String) A list of tags associated with the workflow group. A maximum of 10 tags are allowed.
 
 
 
