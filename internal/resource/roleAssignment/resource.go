@@ -12,7 +12,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-var _ resource.Resource = &roleAssignmentResource{}
+var (
+	_ resource.Resource               = &roleAssignmentResource{}
+	_ resource.ResourceWithConfigure  = &roleAssignmentResource{}
+	_ resource.ResourceWithModifyPlan = &roleAssignmentResource{}
+)
 
 type roleAssignmentResource struct {
 	resource.Resource
@@ -55,6 +59,23 @@ func (r *roleAssignmentResource) Configure(_ context.Context, req resource.Confi
 
 func (r *roleAssignmentResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), req.ID)...)
+}
+
+func (r *roleAssignmentResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if !req.State.Raw.IsNull() && !req.Plan.Raw.IsNull() {
+		var state roleAssignmentResourceModel
+		var plan roleAssignmentResourceModel
+
+		resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+		resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		if !plan.UserId.Equal(state.UserId) {
+			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("resource_name"))
+		}
+	}
 }
 
 // Create creates the resource and sets the initial Terraform state.

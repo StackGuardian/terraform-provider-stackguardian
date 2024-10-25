@@ -12,7 +12,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-var _ resource.Resource = &roleResource{}
+var (
+	_ resource.Resource               = &roleResource{}
+	_ resource.ResourceWithConfigure  = &roleResource{}
+	_ resource.ResourceWithModifyPlan = &roleResource{}
+)
 
 type roleResource struct {
 	client   *sgclient.Client
@@ -54,6 +58,23 @@ func (r *roleResource) Configure(_ context.Context, req resource.ConfigureReques
 
 func (r *roleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("resource_name"), req.ID)...)
+}
+
+func (r *roleResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if !req.State.Raw.IsNull() && !req.Plan.Raw.IsNull() {
+		var state RoleResourceModel
+		var plan RoleResourceModel
+
+		resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+		resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		if !plan.ResourceName.Equal(state.ResourceName) {
+			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("resource_name"))
+		}
+	}
 }
 
 // Create creates the resource and sets the initial Terraform state.

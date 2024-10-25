@@ -14,7 +14,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-var _ resource.Resource = &connectorResource{}
+var (
+	_ resource.Resource               = &connectorResource{}
+	_ resource.ResourceWithConfigure  = &connectorResource{}
+	_ resource.ResourceWithModifyPlan = &connectorResource{}
+)
 
 type connectorResource struct {
 	client   *sgclient.Client
@@ -52,6 +56,23 @@ func (r *connectorResource) Configure(_ context.Context, req resource.ConfigureR
 
 	r.client = provider.Client
 	r.org_name = provider.Org_name
+}
+
+func (r *connectorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if !req.State.Raw.IsNull() && !req.Plan.Raw.IsNull() {
+		var state ConnectorResourceModel
+		var plan ConnectorResourceModel
+
+		resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+		resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		if !plan.ResourceName.Equal(state.ResourceName) {
+			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("resource_name"))
+		}
+	}
 }
 
 func (r *connectorResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
