@@ -120,9 +120,9 @@ func (m *RoleResourceModel) ToPatchedAPIModel(ctx context.Context) (*sgsdkgo.Pat
 	}
 
 	if !m.Description.IsUnknown() && !m.Description.IsNull() {
-		apiPatchedModel.Description = sgsdkgo.Null[string]()
-	} else {
 		apiPatchedModel.Description = sgsdkgo.Optional(*m.Description.ValueStringPointer())
+	} else {
+		apiPatchedModel.Description = sgsdkgo.Null[string]()
 	}
 
 	tags, diags := expanders.StringList(context.TODO(), m.Tags)
