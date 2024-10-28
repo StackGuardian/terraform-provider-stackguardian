@@ -1,4 +1,4 @@
-package roleAssignment
+package roleassignment
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
-	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/roleAssignment"
+	roleassignment "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role_assignment"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 )
 
@@ -52,7 +52,7 @@ func (d *roleAssignmentDataSource) Configure(_ context.Context, req datasource.C
 }
 
 func (d *roleAssignmentDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var config roleAssignment.RoleAssignmentResourceModel
+	var config roleassignment.RoleAssignmentResourceModel
 
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -70,7 +70,7 @@ func (d *roleAssignmentDataSource) Read(ctx context.Context, req datasource.Read
 		return
 	}
 
-	roleAssignmentDataSourceModel, diags := roleAssignment.BuildAPIModelToRoleAssignmentModel(readRoleAssignmentResponse.Data)
+	roleAssignmentDataSourceModel, diags := roleassignment.BuildAPIModelToRoleAssignmentModel(readRoleAssignmentResponse.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

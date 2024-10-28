@@ -1,4 +1,4 @@
-package workflowgroupsdatasource
+package workflowgroupdatasource
 
 import (
 	"context"
@@ -6,30 +6,30 @@ import (
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
-	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflowGroups"
+	workflowgroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_group"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 )
 
 var (
-	_ datasource.DataSource              = &workflowGroupsDataSource{}
-	_ datasource.DataSourceWithConfigure = &workflowGroupsDataSource{}
+	_ datasource.DataSource              = &workflowGroupDataSource{}
+	_ datasource.DataSourceWithConfigure = &workflowGroupDataSource{}
 )
 
 // NewDataSource is a helper function to simplify the provider implementation.
 func NewDataSource() datasource.DataSource {
-	return &workflowGroupsDataSource{}
+	return &workflowGroupDataSource{}
 }
 
-type workflowGroupsDataSource struct {
+type workflowGroupDataSource struct {
 	client  *sgclient.Client
 	orgName string
 }
 
-func (d *workflowGroupsDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *workflowGroupDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_workflow_group"
 }
 
-func (d *workflowGroupsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *workflowGroupDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Add a nil check when handling ProviderData because Terraform
 	// sets that data after it calls the ConfigureProvider RPC.
 	if req.ProviderData == nil {
@@ -50,8 +50,8 @@ func (d *workflowGroupsDataSource) Configure(_ context.Context, req datasource.C
 	d.orgName = provInfo.Org_name
 }
 
-func (d *workflowGroupsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var config workflowGroups.WorkflowGroupResourceModel
+func (d *workflowGroupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var config workflowgroup.WorkflowGroupResourceModel
 
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -65,7 +65,7 @@ func (d *workflowGroupsDataSource) Read(ctx context.Context, req datasource.Read
 		return
 	}
 
-	workflowGroupsDataSourceModel, diags := workflowGroups.BuildAPIModelToWorkflowGroupModel(reqResp.Msg)
+	workflowGroupsDataSourceModel, diags := workflowgroup.BuildAPIModelToWorkflowGroupModel(reqResp.Msg)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
