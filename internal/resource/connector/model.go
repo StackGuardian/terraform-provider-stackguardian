@@ -447,7 +447,11 @@ func (m *ConnectorResourceModel) ToAPIPatchedModel(ctx context.Context) (*sgsdkg
 	if diags.HasError() {
 		return nil, diags
 	}
-	apiPatchedModel.DiscoverySettings = sgsdkgo.Optional(*discoverySettings)
+	if discoverySettings != nil {
+		apiPatchedModel.DiscoverySettings = sgsdkgo.Optional(*discoverySettings)
+	} else {
+		apiPatchedModel.DiscoverySettings = sgsdkgo.Null[sgsdkgo.Discoverysettings]()
+	}
 
 	return apiPatchedModel, nil
 }
