@@ -10,7 +10,7 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	connectordatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/connector"
 	roledatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/role"
-	roleassignmentdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/roleassignment"
+	roleassignmentdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/role_assignment"
 	stackoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_outputs"
 	stackworkflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_workflow_outputs"
 	workflowgroupdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_group"
@@ -67,11 +67,11 @@ func (p *stackguardianProvider) Schema(_ context.Context, _ provider.SchemaReque
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"org_name": schema.StringAttribute{
-				Required:    true,
-				Description: "Required. Stackguardian Organization name. Required if not using environment variable STACKGUARDIAN_ORG_NAME",
+				Optional:    true,
+				Description: "Stackguardian Organization name. Required if not using environment variable STACKGUARDIAN_ORG_NAME",
 			},
 			"api_key": schema.StringAttribute{
-				Required:    true,
+				Optional:    true,
 				Sensitive:   true,
 				Description: "Api Key to authenticate on StackGuardian API. Required if not using environment variable STACKGUARDIAN_API_KEY",
 			},
