@@ -1,4 +1,4 @@
-package workflowGroups
+package workflowgroup
 
 import (
 	"context"

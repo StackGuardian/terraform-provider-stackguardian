@@ -1,4 +1,4 @@
-package roleAssignment
+package roleassignment
 
 import (
 	"context"

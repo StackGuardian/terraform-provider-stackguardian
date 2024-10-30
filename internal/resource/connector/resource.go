@@ -151,6 +151,9 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 		}
 
 		reqResp.Msg.Settings.Config[0] = &sgsdkgo.SettingsConfig{
+			RoleArn:                 settingsConfigValue[0].RoleArn.ValueStringPointer(),
+			ExternalId:              settingsConfigValue[0].ExternalId.ValueStringPointer(),
+			DurationSeconds:         settingsConfigValue[0].DurationSeconds.ValueStringPointer(),
 			InstallationId:          settingsConfigValue[0].InstallationId.ValueStringPointer(),
 			GithubAppId:             settingsConfigValue[0].GithubAppId.ValueStringPointer(),
 			GithubAppWebhookSecret:  settingsConfigValue[0].GithubAppWebhookSecret.ValueStringPointer(),

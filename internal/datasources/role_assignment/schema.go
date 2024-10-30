@@ -1,15 +1,15 @@
-package roleAssignment
+package roleassignment
 
 import (
 	"context"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
-	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 )
 
 // Schema defines the schema for the resource.
-func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *roleAssignmentDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"user_id": schema.StringAttribute{
@@ -18,11 +18,11 @@ func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequ
 			},
 			"entity_type": schema.StringAttribute{
 				MarkdownDescription: constants.EntityType,
-				Required:            true,
+				Computed:            true,
 			},
 			"role": schema.StringAttribute{
 				MarkdownDescription: constants.Role,
-				Required:            true,
+				Computed:            true,
 			},
 		},
 	}

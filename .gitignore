@@ -50,3 +50,6 @@ dist
 .DS_Store
 .AppleDouble
 .LSOverride
+
+.vscode
+.env
