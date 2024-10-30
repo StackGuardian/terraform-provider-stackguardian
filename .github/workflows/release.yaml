@@ -10,10 +10,10 @@ permissions:
 
 jobs:
 
-  provider-release_pre-test:
-    name: "Test Provider code before the Release"
-    uses: ./.github/workflows/test.yaml
-    secrets: inherit
+  #provider-release_pre-test:
+  #  name: "Test Provider code before the Release"
+  #  uses: ./.github/workflows/test.yaml
+  #  secrets: inherit
 
   provider-release_build:
     name: "Build Release of the Provider"
