@@ -16,6 +16,7 @@ import (
 	workflowgroupdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_group"
 	workflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_outputs"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/connector"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/policy"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role"
 	roleassignment "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role_assignment"
 	workflowgroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_group"
@@ -217,5 +218,6 @@ func (p *stackguardianProvider) Resources(_ context.Context) []func() resource.R
 		workflowgroup.NewResource,
 		role.NewResource,
 		roleassignment.NewResource,
+		policy.NewResource,
 	}
 }
