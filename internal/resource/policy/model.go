@@ -407,7 +407,7 @@ func (m *PolicyResourceModel) ToPatchedAPIModel() (*sgsdkgo.PatchedPolicy, diag.
 	return policyAPIModel, nil
 }
 
-func buildAPIModelToPolicyModel(apiResponse *sgsdkgo.PolicyDataResponse) (*PolicyResourceModel, diag.Diagnostics) {
+func BuildAPIModelToPolicyModel(apiResponse *sgsdkgo.PolicyDataResponse) (*PolicyResourceModel, diag.Diagnostics) {
 	policyConfigModel := &PolicyResourceModel{
 		ResourceName:              flatteners.StringPtr(apiResponse.ResourceName),
 		Description:               flatteners.StringPtr(apiResponse.Description),

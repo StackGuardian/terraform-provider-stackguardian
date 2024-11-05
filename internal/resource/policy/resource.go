@@ -93,7 +93,7 @@ func (r *policyResrouce) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	policyResourceModel, diags := buildAPIModelToPolicyModel(policy.Data)
+	policyResourceModel, diags := BuildAPIModelToPolicyModel(policy.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -124,7 +124,7 @@ func (r *policyResrouce) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	policyResourceModel, diags := buildAPIModelToPolicyModel(policy.Msg)
+	policyResourceModel, diags := BuildAPIModelToPolicyModel(policy.Msg)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -154,7 +154,7 @@ func (r *policyResrouce) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	policyResourceModel, diags := buildAPIModelToPolicyModel(updatedPolicy.Data)
+	policyResourceModel, diags := BuildAPIModelToPolicyModel(updatedPolicy.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
