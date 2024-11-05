@@ -84,7 +84,7 @@ const (
 	DiscoverySettingsBenchmarksDescription = "A description of the benchmark. It must be less than 256 characters."
 	DiscoverySettingsBenchmarksLabel       = "Label associated with the discovery."
 
-	DiscoverySettingsBenchmarksRuntimeSource                     = ""
+	DiscoverySettingsBenchmarksRuntimeSource                     = "Source configuration type and settings definition"
 	DiscoverySettingsBenchmarksRuntimeSourceSourceConfigDestKind = "Kind of the source configuration destination. Valid examples include eg:- AWS_RBAC, AZURE_STATIC."
 
 	DiscoverySettingsBenchmarksRuntimeSourceConfig                 = "Specific configuration settings for runtime source."
@@ -120,6 +120,50 @@ const (
 	- <span style="background-color: #eff0f0; color: #e53835;">EMAIL</span>
 	- <span style="background-color: #eff0f0; color: #e53835;">GROUP</span>`
 	Role = "StackGuardian role name."
+)
+
+// Policy
+const (
+	Approvers                 = "List of stackguardian users"
+	NumberOfApprovalsRequired = "Number of approvals required for a policy check to pass"
+	EnforcedOn                = "List of Resource path on which this policy is to be applied on"
+
+	PolicyConfig       = "Policy configuration"
+	PolicyConfigSkip   = "Enable or disable the policy check"
+	PolicyConfigOnFail = `Specifies the action to be performed on failure. Options: <span style="background-color: #eff0f0; color: #e53835;">FAIL</span>,
+		<span style="background-color: #eff0f0; color: #e53835;">WARN</span>,
+		<span style="background-color: #eff0f0; color: #e53835;">PASS</span>,
+		<span style="background-color: #eff0f0; color: #e53835;">APPROVAL_REQUIRED</span>`
+	PolicyConfigOnPass = `Specifies the action to be performed on pass. Options: <span style="background-color: #eff0f0; color: #e53835;">FAIL</span>,
+		<span style="background-color: #eff0f0; color: #e53835;">WARN</span>,
+		<span style="background-color: #eff0f0; color: #e53835;">PASS</span>,
+		<span style="background-color: #eff0f0; color: #e53835;">APPROVAL_REQUIRED</span>`
+	PolicyConfigInputData           = "Policy definition"
+	PolicyConfigInputDataSchemaType = `Specifies the schema type of the policy. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>,
+		<span style="background-color: #eff0f0; color: #e53835;">RAW_JSON</span>,
+		<span style="background-color: #eff0f0; color: #e53835;">TIRITH_JSON</span>,
+		<span style="background-color: #eff0f0; color: #e53835;">NONE</span>`
+	PolicyConfigInputDataData = "Policy body"
+
+	PolicyVCSConfig                    = "Configuration to import policy from version control"
+	PolicyVCSConfigMarketplaceTemplate = "Name of the template from marketplace"
+	PolicyVCSConfigTemplateId          = "ID of the template from marketplace"
+
+	PolicyVCSConfigCustomSource                     = DiscoverySettingsBenchmarksRuntimeSource
+	PolicyVCSConfigCustomSourceSourceConfigDestKind = DiscoverySettingsBenchmarksRuntimeSourceSourceConfigDestKind
+	PolicyVCSConfigCustomSourceSourceConfigKind     = `Kind of policy. Options: <span style="background-color: #eff0f0; color: #e53835;">OPA_REGO</span>,
+		<span style="background-color: #eff0f0; color: #e53835;">SG_POLICY_FRAMEWORK</span>,
+	`
+	PolicyVCSConfigCustomSourceConfig                  = DiscoverySettingsBenchmarksRuntimeSourceConfig
+	PolicyVCSConfigCustomSourceRef                     = DiscoverySettingsBenchmarksRuntimeSourceConfigRef
+	PolicyVCSConfigCustomSourceGitCoreAutoCRLF         = DiscoverySettingsBenchmarksRuntimeSourceConfigGitCoreAutoCRLF
+	PolicyVCSConfigCustomSourceGitSparseCheckoutConfig = "Configuration for git sparse checkout"
+	PolicyVCSConfigCustomSourceAuth                    = DiscoverySettingsBenchmarksRuntimeSourceConfigAuth
+	PolicyVCSConfigCustomSourceWorkingDir              = DiscoverySettingsBenchmarksRuntimeSourceConfigWorkingDir
+	PolicyVCSConfigCustomSourceRepo                    = DiscoverySettingsBenchmarksRuntimeSourceConfigRepo
+	PolicyVCSConfigCustomSourceIsPrivate               = DiscoverySettingsBenchmarksRuntimeSourceConfigIsPrivate
+
+	PolicyVCSConfigAdditionalConfig = "Additional configuration for the policy"
 )
 
 // Common
