@@ -149,7 +149,7 @@ Optional:
 - `is_custom_check` (Boolean) Indicates if the discovery is a custom check.
 - `label` (String) Label associated with the discovery.
 - `regions` (Attributes Map) Regions associated with the discovery. (see [below for nested schema](#nestedatt--discovery_settings--benchmarks--regions))
-- `runtime_source` (Attributes) (see [below for nested schema](#nestedatt--discovery_settings--benchmarks--runtime_source))
+- `runtime_source` (Attributes) Source configuration type and settings definition (see [below for nested schema](#nestedatt--discovery_settings--benchmarks--runtime_source))
 - `summary_description` (String) A brief summary of the discovery.
 
 <a id="nestedatt--discovery_settings--benchmarks--regions"></a>
