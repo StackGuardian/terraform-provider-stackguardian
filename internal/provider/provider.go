@@ -69,17 +69,17 @@ func (p *stackguardianProvider) Schema(_ context.Context, _ provider.SchemaReque
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"org_name": schema.StringAttribute{
-				Optional:    true,
-				Description: "Stackguardian Organization name. Required if not using environment variable STACKGUARDIAN_ORG_NAME",
+				Optional:            true,
+				MarkdownDescription: "Stackguardian Organization name. **Required** if not using environment variable STACKGUARDIAN_ORG_NAME",
 			},
 			"api_key": schema.StringAttribute{
-				Optional:    true,
-				Sensitive:   true,
-				Description: "Api Key to authenticate on StackGuardian API. Required if not using environment variable STACKGUARDIAN_API_KEY",
+				Optional:            true,
+				Sensitive:           true,
+				MarkdownDescription: "API key to authenticate on StackGuardian API. **Required** if not using environment variable STACKGUARDIAN_API_KEY",
 			},
 			"api_uri": schema.StringAttribute{
-				Optional:    true,
-				Description: "Api Uri to set as prefix URL for StackGuardian API. Required if not using environment variable STACKGUARDIAN_API_URI",
+				Optional:            true,
+				MarkdownDescription: "API URI to set as prefix URL for StackGuardian API. Can also be configured using environment variable STACKGUARDIAN_API_URI",
 			},
 		},
 	}
@@ -114,21 +114,14 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 		)
 	}
 
-	if config.Api_uri.IsUnknown() {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("api_uri"),
-			"Unknown Stackguardian API URI",
-			"The provider cannot create the Stackguardian API client as there is an unknown configuration value for the Stackguardian API URI. "+
-				"Either set the value statically in the configuration, or use the STACKGUARDIAN_API_URI environment variable.",
-		)
-	}
-
 	if diags.HasError() {
 		return
 	}
 
+	api_uri := "https://api.app.stackguardian.io"
+
 	org_name := os.Getenv("STACKGUARDIAN_ORG_NAME")
-	api_uri := os.Getenv("STACKGUARDIAN_API_URI")
+	api_uri = os.Getenv("STACKGUARDIAN_API_URI")
 	api_key := os.Getenv("STACKGUARDIAN_API_KEY")
 
 	// Default values to environment variables, but override
@@ -171,9 +164,6 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 				"Either set the value statically in the configuration, or use the STACKGUARDIAN_API_URI environment variable.",
 		)
 	}
-
-	// TODO: Restrict usage of dash env for pre release. Uncomment before production release
-	api_uri = "https://testapi.qa.stackguardian.io"
 
 	client := sgclient.NewClient(
 		sgoption.WithApiKey("apikey "+api_key),
