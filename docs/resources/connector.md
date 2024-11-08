@@ -194,7 +194,7 @@ Import existing resource
 ### Using Import block (terraform v1.5.0 and later)
 ```terraform
 import {
-  to = "stackguardian_connector.example-connector"
+  to = stackguardian_connector.example-connector
   id = "connector-name"
 }
 ```

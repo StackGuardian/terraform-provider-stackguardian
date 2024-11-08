@@ -68,7 +68,7 @@ Import existing resource
 ### Using Import block (terraform v1.5.0 and later)
 ```terraform
 import {
-  to = "stackguardian_connector.example-role-assignment"
+  to = stackguardian_role_assignment.example-role-assignment
   id = "user-id"
 }
 ```
