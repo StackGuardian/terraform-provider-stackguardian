@@ -167,7 +167,7 @@ Import existing resource
 ### Using Import block (terraform v1.5.0 and later)
 ```terraform
 import {
-  to = "stackguardian_connector.example-policy"
+  to = stackguardian_policy.example-policy
   id = "policy-name"
 }
 ```

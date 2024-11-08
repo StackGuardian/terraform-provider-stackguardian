@@ -97,48 +97,55 @@ Read-Only:
 
 - `config` (Attributes List) Configuration settings for the connector's secrets (see [below for nested schema](#nestedatt--settings--config))
 - `kind` (String) The type of connector<br>
+
 	Values with supported config fields:
-	- <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>
+
+	**VCS Connectors**
+	- <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM <a href="https://docs.stackguardian.io/docs/connectors/vcs/githubcom/"><span class="fa fa-external-link"></span></span></a>
 		- github_com_url
 		- github_http_url
-	- <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>
+	- <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM <a href="https://docs.stackguardian.io/docs/connectors/vcs/github_enterprise/"><span class="fa fa-external-link"></span></span></a>
 		- github_app_client_id
 		- github_app_client_secret
 		- github_app_id
 		- github_app_pem_file_content
 		- github_app_webhook_secret
 		- github_app_webhook_url
-	- <span style="background-color: #eff0f0; color: #e53835;">AWS_STATIC</span>
+	- <span style="background-color: #eff0f0; color: #e53835;">BITBUCKET_ORG <a href="https://docs.stackguardian.io/docs/connectors/vcs/bitbucket/"><span class="fa fa-external-link"></span></span></a>
+		- bitbucket_creds
+	- <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM <a href="https://docs.stackguardian.io/docs/connectors/vcs/gitlabcom/"><span class="fa fa-external-link"></span></span></a>
+		- gitlab_api_url
+		- gitlab_creds
+		- gitlab_http_url
+	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS <a href="https://docs.stackguardian.io/docs/connectors/vcs/azuredevops/"><span class="fa fa-external-link"></span></span></a>
+		- azure_devops_api_url
+		- azure_devops_http_url
+		- azure_creds</br>
+
+	**Cloud Connectors**
+	- <span style="background-color: #eff0f0; color: #e53835;">AWS_STATIC <a href="https://docs.stackguardian.io/docs/connectors/csp/aws/#access-keys"><span class="fa fa-external-link"></span></span></a>
 		- aws_access_key_id
 		- aws_secret_access_key
 		- aws_default_region
-	- <span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC</span>
+	- <span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC <a href="https://docs.stackguardian.io/docs/connectors/csp/aws/#roles-or-rbac-recommended"><span class="fa fa-external-link"></span></span></a>
 		- role_arn
 		- external_id
 		- arm_client_id
-	- <span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC</span>
+	- <span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC <a href="https://docs.stackguardian.io/docs/connectors/csp/aws/#using-oidc-identity-provider"><span class="fa fa-external-link"></span></span></a>
 		- role_arn
-	- <span style="background-color: #eff0f0; color: #e53835;">GCP_STATIC</span>
+	- <span style="background-color: #eff0f0; color: #e53835;">GCP_STATIC <a href="https://docs.stackguardian.io/docs/connectors/csp/gcp/#using-service-account"><span class="fa fa-external-link"></span></span></a>
 		- gcp_config_file_content
-	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_STATIC</span>
+	- <span style="background-color: #eff0f0; color: #e53835;">GCP_OIDC <a href="https://docs.stackguardian.io/docs/connectors/csp/gcp/"><span class="fa fa-external-link"></span></span></a>
+		- gcp_config_file_content
+	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_STATIC <a href="https://docs.stackguardian.io/docs/connectors/csp/azure/#service-principal-with-client-secret"><span class="fa fa-external-link"></span></span></a>
 		- arm_client_id
 		- arm_client_secret
 		- arm_subscription_id
 		- arm_tenant_id
-	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_OIDC</span>
+	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_OIDC <a href="https://docs.stackguardian.io/docs/connectors/csp/azure/#service-principal-with-workload-identity"><span class="fa fa-external-link"></span></span></a>
 		- arm_tenant_id
 		- arm_subscription_id
 		- arm_client_id
-	- <span style="background-color: #eff0f0; color: #e53835;">BITBUCKET_ORG</span>
-		- bitbucket_creds
-	- <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>
-		- gitlab_api_url
-		- gitlab_creds
-		- gitlab_http_url
-	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS</span>
-		- azure_devops_api_url
-		- azure_devops_http_url
-		- azure_creds
 
 <a id="nestedatt--settings--config"></a>
 ### Nested Schema for `settings.config`

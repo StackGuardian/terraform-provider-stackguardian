@@ -69,17 +69,17 @@ Required:
 
 ## Import
 
-Import existing resource
+Import existing resource.
 
 ### Using Import block (terraform v1.5.0 and later)
 ```terraform
 import {
-  to = "stackguardian_connector.example-role"
+  to = stackguardian_role.example-role
   id = "role-name"
 }
 ```
 
 ### Using CLI
 ```bash
-terraform import stackguardian_connector.example-role role-name
+terraform import stackguardian_role.example-role role-name
 ```
