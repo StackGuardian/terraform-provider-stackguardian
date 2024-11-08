@@ -120,8 +120,11 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 
 	api_uri := "https://api.app.stackguardian.io"
 
+	if os.Getenv("STACKGUARDIAN_API_URI") != "" {
+		api_uri = os.Getenv("STACKGUARDIAN_API_URI")
+	}
+
 	org_name := os.Getenv("STACKGUARDIAN_ORG_NAME")
-	api_uri = os.Getenv("STACKGUARDIAN_API_URI")
 	api_key := os.Getenv("STACKGUARDIAN_API_KEY")
 
 	// Default values to environment variables, but override
