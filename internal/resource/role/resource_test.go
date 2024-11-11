@@ -69,7 +69,7 @@ resource "stackguardian_role" "example_role" {
 }`
 )
 
-func TestAccWorkflowGroup(t *testing.T) {
+func TestAccRole(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
