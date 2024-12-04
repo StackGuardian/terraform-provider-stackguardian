@@ -11,7 +11,7 @@ import (
 const (
 	testAccResource = `
 resource "stackguardian_workflow_group" "example_workflow_group" {
-  resource_name = "example-workflow-group"
+  resource_name = "example-workflow-group-role"
   description   = "Example of terraform-provider-stackguardian for Workflow Group"
   tags          = ["example-tag"]
 }
@@ -40,7 +40,7 @@ resource "stackguardian_role" "example_role" {
 
 	testAccResourceUpdate = `
 resource "stackguardian_workflow_group" "example_workflow_group" {
-  resource_name = "example-workflow-group"
+  resource_name = "example-workflow-group-role"
   description   = "Example of terraform-provider-stackguardian for Workflow Group"
   tags          = ["example-tag"]
 }

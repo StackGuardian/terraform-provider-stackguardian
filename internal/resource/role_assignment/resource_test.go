@@ -17,7 +17,7 @@ resource "stackguardian_workflow_group" "example_workflow_group" {
 }
 
 resource "stackguardian_role" "example_role" {
-  resource_name = "example-role"
+  resource_name = "example-role-roleassignment"
   description   = "Example of terraform-provider-stackguardian for a Role"
   tags = [
     "example-org",
@@ -53,7 +53,7 @@ resource "stackguardian_workflow_group" "example_workflow_group" {
 }
 
 resource "stackguardian_role" "example_role" {
-  resource_name = "example-role"
+  resource_name = "example-role-roleassignment"
   description   = "Example of terraform-provider-stackguardian for a Role"
   tags = [
     "example-org",
