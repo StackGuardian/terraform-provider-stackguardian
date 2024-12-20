@@ -62,6 +62,38 @@ type ConnectorSettingsConfigModel struct {
 	GcpConfigFileContent    types.String `tfsdk:"gcp_config_file_content"`
 }
 
+func (m ConnectorSettingsConfigModel) toAPIModel() *sgsdkgo.SettingsConfig {
+	return &sgsdkgo.SettingsConfig{
+		RoleArn:                 m.RoleArn.ValueStringPointer(),
+		ExternalId:              m.ExternalId.ValueStringPointer(),
+		DurationSeconds:         m.DurationSeconds.ValueStringPointer(),
+		InstallationId:          m.InstallationId.ValueStringPointer(),
+		GithubAppId:             m.GithubAppId.ValueStringPointer(),
+		GithubAppWebhookSecret:  m.GithubAppWebhookSecret.ValueStringPointer(),
+		GithubApiUrl:            m.GithubApiUrl.ValueStringPointer(),
+		GithubHttpUrl:           m.GithubHttpUrl.ValueStringPointer(),
+		GithubAppClientId:       m.GithubAppClientId.ValueStringPointer(),
+		GithubAppClientSecret:   m.GithubAppClientSecret.ValueStringPointer(),
+		GithubAppPemFileContent: m.GithubAppPemFileContent.ValueStringPointer(),
+		GithubAppWebhookUrl:     m.GithubAppWebhookURL.ValueStringPointer(),
+		GitlabCreds:             m.GitlabCreds.ValueStringPointer(),
+		GitlabHttpUrl:           m.GitlabHttpUrl.ValueStringPointer(),
+		GitlabApiUrl:            m.GitlabApiUrl.ValueStringPointer(),
+		AzureCreds:              m.AzureCreds.ValueStringPointer(),
+		AzureDevopsHttpUrl:      m.AzureDevopsHttpUrl.ValueStringPointer(),
+		AzureDevopsApiUrl:       m.AzureDevopsApiUrl.ValueStringPointer(),
+		BitbucketCreds:          m.BitbucketCreds.ValueStringPointer(),
+		AwsAccessKeyId:          m.AwsAccessKeyId.ValueStringPointer(),
+		AwsSecretAccessKey:      m.AwsSecretAccessKey.ValueStringPointer(),
+		AwsDefaultRegion:        m.AwsDefaultRegion.ValueStringPointer(),
+		ArmTenantId:             m.ArmTenantId.ValueStringPointer(),
+		ArmSubscriptionId:       m.ArmSubscriptionId.ValueStringPointer(),
+		ArmClientId:             m.ArmClientId.ValueStringPointer(),
+		ArmClientSecret:         m.ArmClientSecret.ValueStringPointer(),
+		GcpConfigFileContent:    m.GcpConfigFileContent.ValueStringPointer(),
+	}
+}
+
 func (m ConnectorSettingsConfigModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"role_arn":                    types.StringType,
@@ -125,6 +157,105 @@ type ConnectorDiscoverySettingsBenchmarksModel struct {
 	Active             types.Bool   `tfsdk:"active"`
 	Checks             types.List   `tfsdk:"checks"`
 	Regions            types.Map    `tfsdk:"regions"`
+}
+
+func (m *ConnectorDiscoverySettingsBenchmarksModel) toAPIModel() (*sgsdkgo.DiscoveryBenchmark, diag.Diagnostics) {
+	benchmarkAPIModel := &sgsdkgo.DiscoveryBenchmark{
+		Description:   m.Description.ValueStringPointer(),
+		SummaryDesc:   m.SummaryDescription.ValueStringPointer(),
+		SummaryTitle:  m.SummaryTitle.ValueString(),
+		Label:         m.Label.ValueString(),
+		Active:        m.Active.ValueBoolPointer(),
+		IsCustomCheck: m.IsCustomCheck.ValueBoolPointer(),
+	}
+
+	// checks
+	var benchmarkChecksModel []types.String
+	diags := m.Checks.ElementsAs(context.Background(), &benchmarkChecksModel, false)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	var benchmarkChecks []string
+	for _, check := range benchmarkChecksModel {
+		benchmarkChecks = append(benchmarkChecks, check.ValueString())
+	}
+
+	benchmarkAPIModel.Checks = benchmarkChecks
+
+	// runtime resource
+	if !m.RuntimeSource.IsNull() {
+		var runtimeSourceModel ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel
+		diags = m.RuntimeSource.As(context.TODO(), &runtimeSourceModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
+		if diags.HasError() {
+			return nil, diags
+		}
+
+		destKind, err := sgsdkgo.NewCustomSourceSourceConfigDestKindEnumFromString(runtimeSourceModel.SourceConfigDestKind.ValueString())
+		if err != nil {
+			return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Error in converting sourceConfigDestKind", err.Error())}
+		}
+		benchmarkRuntimeResource := sgsdkgo.CustomSource{
+			SourceConfigDestKind: destKind,
+		}
+
+		if runtimeSourceModel.Config.IsUnknown() {
+			var customSourceConfigModel ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel
+			diags = runtimeSourceModel.Config.As(context.TODO(), &customSourceConfigModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
+			if diags.HasError() {
+				return nil, diags
+			}
+
+			configAPIModel := &sgsdkgo.CustomSourceConfig{
+				Auth:             customSourceConfigModel.Auth.ValueStringPointer(),
+				IncludeSubModule: customSourceConfigModel.IncludeSubModule.ValueBoolPointer(),
+				Ref:              customSourceConfigModel.Ref.ValueStringPointer(),
+				GitCoreAutoCrlf:  customSourceConfigModel.GitCoreAutoCRLF.ValueBoolPointer(),
+				WorkingDir:       customSourceConfigModel.WorkingDir.ValueStringPointer(),
+				Repo:             customSourceConfigModel.Repo.ValueStringPointer(),
+				IsPrivate:        customSourceConfigModel.IsPrivate.ValueBoolPointer(),
+			}
+
+			benchmarkRuntimeResource.Config = configAPIModel
+		}
+		benchmarkAPIModel.RuntimeSource = &benchmarkRuntimeResource
+	}
+
+	// regions
+	if !m.Regions.IsUnknown() {
+		var benchmarkRegionsModel map[string]*ConnectorDiscoverySettingsBenchmarksRegionsModel
+		diags = m.Regions.ElementsAs(context.Background(), &benchmarkRegionsModel, false)
+		if diags.HasError() {
+			return nil, diags
+		}
+
+		benchmarkRegions := map[string]*sgsdkgo.DiscoveryRegion{}
+		for region, regionValue := range benchmarkRegionsModel {
+			benchmarkRegions[region] = &sgsdkgo.DiscoveryRegion{}
+			if !regionValue.Emails.IsUnknown() {
+				var emailsModel []types.String
+				var emailsAPIModel []string
+				diags = regionValue.Emails.ElementsAs(context.Background(), &emailsModel, false)
+				if diags.HasError() {
+					return nil, diags
+				}
+				for _, email := range emailsModel {
+					if email.ValueString() != "" {
+						emailsAPIModel = append(emailsAPIModel, email.ValueString())
+					}
+				}
+				benchmarkRegions[region].Emails = emailsAPIModel
+			}
+		}
+		benchmarkAPIModel.Regions = benchmarkRegions
+	}
+
+	if !m.DiscoveryInterval.IsUnknown() {
+		intValue := int(m.DiscoveryInterval.ValueInt64())
+		benchmarkAPIModel.DiscoveryInterval = &intValue
+	}
+
+	return benchmarkAPIModel, nil
 }
 
 func (ConnectorDiscoverySettingsBenchmarksModel) AttributeTypes() attr.Type {
@@ -206,35 +337,7 @@ func settingsToAPIModel(m types.Object) (*sgsdkgo.Settings, diag.Diagnostics) {
 		Kind: sgsdkgo.SettingsKindEnum(settingsModelValue.Kind.ValueString()),
 	}
 
-	settingsConfigAPIValue := []*sgsdkgo.SettingsConfig{{
-		RoleArn:                 settingsConfigModel[0].RoleArn.ValueStringPointer(),
-		ExternalId:              settingsConfigModel[0].ExternalId.ValueStringPointer(),
-		DurationSeconds:         settingsConfigModel[0].DurationSeconds.ValueStringPointer(),
-		InstallationId:          settingsConfigModel[0].InstallationId.ValueStringPointer(),
-		GithubAppId:             settingsConfigModel[0].GithubAppId.ValueStringPointer(),
-		GithubAppWebhookSecret:  settingsConfigModel[0].GithubAppWebhookSecret.ValueStringPointer(),
-		GithubApiUrl:            settingsConfigModel[0].GithubApiUrl.ValueStringPointer(),
-		GithubHttpUrl:           settingsConfigModel[0].GithubHttpUrl.ValueStringPointer(),
-		GithubAppClientId:       settingsConfigModel[0].GithubAppClientId.ValueStringPointer(),
-		GithubAppClientSecret:   settingsConfigModel[0].GithubAppClientSecret.ValueStringPointer(),
-		GithubAppPemFileContent: settingsConfigModel[0].GithubAppPemFileContent.ValueStringPointer(),
-		GithubAppWebhookUrl:     settingsConfigModel[0].GithubAppWebhookURL.ValueStringPointer(),
-		GitlabCreds:             settingsConfigModel[0].GitlabCreds.ValueStringPointer(),
-		GitlabHttpUrl:           settingsConfigModel[0].GitlabHttpUrl.ValueStringPointer(),
-		GitlabApiUrl:            settingsConfigModel[0].GitlabApiUrl.ValueStringPointer(),
-		AzureCreds:              settingsConfigModel[0].AzureCreds.ValueStringPointer(),
-		AzureDevopsHttpUrl:      settingsConfigModel[0].AzureDevopsHttpUrl.ValueStringPointer(),
-		AzureDevopsApiUrl:       settingsConfigModel[0].AzureDevopsApiUrl.ValueStringPointer(),
-		BitbucketCreds:          settingsConfigModel[0].BitbucketCreds.ValueStringPointer(),
-		AwsAccessKeyId:          settingsConfigModel[0].AwsAccessKeyId.ValueStringPointer(),
-		AwsSecretAccessKey:      settingsConfigModel[0].AwsSecretAccessKey.ValueStringPointer(),
-		AwsDefaultRegion:        settingsConfigModel[0].AwsDefaultRegion.ValueStringPointer(),
-		ArmTenantId:             settingsConfigModel[0].ArmTenantId.ValueStringPointer(),
-		ArmSubscriptionId:       settingsConfigModel[0].ArmSubscriptionId.ValueStringPointer(),
-		ArmClientId:             settingsConfigModel[0].ArmClientId.ValueStringPointer(),
-		ArmClientSecret:         settingsConfigModel[0].ArmClientSecret.ValueStringPointer(),
-		GcpConfigFileContent:    settingsConfigModel[0].GcpConfigFileContent.ValueStringPointer(),
-	}}
+	settingsConfigAPIValue := []*sgsdkgo.SettingsConfig{settingsConfigModel[0].toAPIModel()}
 
 	settings.Config = settingsConfigAPIValue
 
@@ -263,104 +366,11 @@ func discoverSettingsToAPIModel(m types.Object) (*sgsdkgo.Discoverysettings, dia
 		}
 
 		benchmarksAPIModel := map[string]*sgsdkgo.DiscoveryBenchmark{}
-		for benchmarkName, benchmark := range benchmarksModel {
-
-			benchmarkAPIModel := &sgsdkgo.DiscoveryBenchmark{
-				Description:   benchmark.Description.ValueStringPointer(),
-				SummaryDesc:   benchmark.SummaryDescription.ValueStringPointer(),
-				SummaryTitle:  benchmark.SummaryTitle.ValueString(),
-				Label:         benchmark.Label.ValueString(),
-				Active:        benchmark.Active.ValueBoolPointer(),
-				IsCustomCheck: benchmark.IsCustomCheck.ValueBoolPointer(),
-			}
-
-			// checks
-			var benchmarkChecksModel []types.String
-			diags = benchmark.Checks.ElementsAs(context.Background(), &benchmarkChecksModel, false)
+		for benchmarkName, benchmarkModel := range benchmarksModel {
+			benchmarksAPIModel[benchmarkName], diags = benchmarkModel.toAPIModel()
 			if diags.HasError() {
 				return nil, diags
 			}
-
-			var benchmarkChecks []string
-			for _, check := range benchmarkChecksModel {
-				benchmarkChecks = append(benchmarkChecks, check.ValueString())
-			}
-
-			benchmarkAPIModel.Checks = benchmarkChecks
-
-			// runtime resource
-			if !benchmark.RuntimeSource.IsNull() {
-				var runtimeSourceModel ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel
-				diags = benchmark.RuntimeSource.As(context.TODO(), &runtimeSourceModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
-				if diags.HasError() {
-					return nil, diags
-				}
-
-				destKind, err := sgsdkgo.NewCustomSourceSourceConfigDestKindEnumFromString(runtimeSourceModel.SourceConfigDestKind.ValueString())
-				if err != nil {
-					return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Error in converting sourceConfigDestKind", err.Error())}
-				}
-				benchmarkRuntimeResource := sgsdkgo.CustomSource{
-					SourceConfigDestKind: destKind,
-				}
-
-				if runtimeSourceModel.Config.IsUnknown() {
-					var customSourceConfigModel ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel
-					diags = runtimeSourceModel.Config.As(context.TODO(), &customSourceConfigModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
-					if diags.HasError() {
-						return nil, diags
-					}
-
-					configAPIModel := &sgsdkgo.CustomSourceConfig{
-						Auth:             customSourceConfigModel.Auth.ValueStringPointer(),
-						IncludeSubModule: customSourceConfigModel.IncludeSubModule.ValueBoolPointer(),
-						Ref:              customSourceConfigModel.Ref.ValueStringPointer(),
-						GitCoreAutoCrlf:  customSourceConfigModel.GitCoreAutoCRLF.ValueBoolPointer(),
-						WorkingDir:       customSourceConfigModel.WorkingDir.ValueStringPointer(),
-						Repo:             customSourceConfigModel.Repo.ValueStringPointer(),
-						IsPrivate:        customSourceConfigModel.IsPrivate.ValueBoolPointer(),
-					}
-
-					benchmarkRuntimeResource.Config = configAPIModel
-				}
-				benchmarkAPIModel.RuntimeSource = &benchmarkRuntimeResource
-			}
-
-			// regions
-			if !benchmark.Regions.IsUnknown() {
-				var benchmarkRegionsModel map[string]*ConnectorDiscoverySettingsBenchmarksRegionsModel
-				diags = benchmark.Regions.ElementsAs(context.Background(), &benchmarkRegionsModel, false)
-				if diags.HasError() {
-					return nil, diags
-				}
-
-				benchmarkRegions := map[string]*sgsdkgo.DiscoveryRegion{}
-				for region, regionValue := range benchmarkRegionsModel {
-					benchmarkRegions[region] = &sgsdkgo.DiscoveryRegion{}
-					if !regionValue.Emails.IsUnknown() {
-						var emailsModel []types.String
-						var emailsAPIModel []string
-						diags = regionValue.Emails.ElementsAs(context.Background(), &emailsModel, false)
-						if diags.HasError() {
-							return nil, diags
-						}
-						for _, email := range emailsModel {
-							if email.ValueString() != "" {
-								emailsAPIModel = append(emailsAPIModel, email.ValueString())
-							}
-						}
-						benchmarkRegions[region].Emails = emailsAPIModel
-					}
-				}
-				benchmarkAPIModel.Regions = benchmarkRegions
-			}
-
-			if !benchmark.DiscoveryInterval.IsUnknown() {
-				intValue := int(benchmark.DiscoveryInterval.ValueInt64())
-				benchmarkAPIModel.DiscoveryInterval = &intValue
-			}
-
-			benchmarksAPIModel[benchmarkName] = benchmarkAPIModel
 		}
 		discoverySettingsAPIModel.Benchmarks = benchmarksAPIModel
 	}

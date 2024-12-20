@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	core "github.com/StackGuardian/sg-sdk-go/core"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
@@ -150,35 +149,7 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 			return
 		}
 
-		reqResp.Msg.Settings.Config[0] = &sgsdkgo.SettingsConfig{
-			RoleArn:                 settingsConfigValue[0].RoleArn.ValueStringPointer(),
-			ExternalId:              settingsConfigValue[0].ExternalId.ValueStringPointer(),
-			DurationSeconds:         settingsConfigValue[0].DurationSeconds.ValueStringPointer(),
-			InstallationId:          settingsConfigValue[0].InstallationId.ValueStringPointer(),
-			GithubAppId:             settingsConfigValue[0].GithubAppId.ValueStringPointer(),
-			GithubAppWebhookSecret:  settingsConfigValue[0].GithubAppWebhookSecret.ValueStringPointer(),
-			GithubApiUrl:            settingsConfigValue[0].GithubApiUrl.ValueStringPointer(),
-			GithubHttpUrl:           settingsConfigValue[0].GithubHttpUrl.ValueStringPointer(),
-			GithubAppClientId:       settingsConfigValue[0].GithubAppClientId.ValueStringPointer(),
-			GithubAppClientSecret:   settingsConfigValue[0].GithubAppClientSecret.ValueStringPointer(),
-			GithubAppPemFileContent: settingsConfigValue[0].GithubAppPemFileContent.ValueStringPointer(),
-			GithubAppWebhookUrl:     settingsConfigValue[0].GithubAppWebhookURL.ValueStringPointer(),
-			GitlabCreds:             settingsConfigValue[0].GitlabCreds.ValueStringPointer(),
-			GitlabHttpUrl:           settingsConfigValue[0].GitlabHttpUrl.ValueStringPointer(),
-			GitlabApiUrl:            settingsConfigValue[0].GitlabApiUrl.ValueStringPointer(),
-			AzureCreds:              settingsConfigValue[0].AzureCreds.ValueStringPointer(),
-			AzureDevopsHttpUrl:      settingsConfigValue[0].AzureDevopsHttpUrl.ValueStringPointer(),
-			AzureDevopsApiUrl:       settingsConfigValue[0].AzureDevopsApiUrl.ValueStringPointer(),
-			BitbucketCreds:          settingsConfigValue[0].BitbucketCreds.ValueStringPointer(),
-			AwsAccessKeyId:          settingsConfigValue[0].AwsAccessKeyId.ValueStringPointer(),
-			AwsSecretAccessKey:      settingsConfigValue[0].AwsSecretAccessKey.ValueStringPointer(),
-			AwsDefaultRegion:        settingsConfigValue[0].AwsDefaultRegion.ValueStringPointer(),
-			ArmTenantId:             settingsConfigValue[0].ArmTenantId.ValueStringPointer(),
-			ArmSubscriptionId:       settingsConfigValue[0].ArmSubscriptionId.ValueStringPointer(),
-			ArmClientId:             settingsConfigValue[0].ArmClientId.ValueStringPointer(),
-			ArmClientSecret:         settingsConfigValue[0].ArmClientSecret.ValueStringPointer(),
-			GcpConfigFileContent:    settingsConfigValue[0].GcpConfigFileContent.ValueStringPointer(),
-		}
+		reqResp.Msg.Settings.Config[0] = settingsConfigValue[0].toAPIModel()
 	}
 
 	connectorResourceModel, diags := BuildAPIModelToConnectorModel(reqResp.Msg)

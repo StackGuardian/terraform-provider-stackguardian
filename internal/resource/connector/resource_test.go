@@ -5,6 +5,9 @@ import (
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
@@ -18,7 +21,7 @@ const (
 
     config = [{
       role_arn         = "arn:aws:iam::209502960327:role/StackGuardian"
-      external_id      = "sg-provider-test:ElfygiFglfldTwnDFpAScQkvgvHTGV "
+      external_id      = "sg-provider-test:ElfygiFglfldTwnDFpAScQkvgvHTGV"
       duration_seconds = "3600"
     }]
   }
@@ -33,14 +36,14 @@ const (
 
     config = [{
       role_arn         = "arn:aws:iam::209502960327:role/StackGuardian"
-      external_id      = "sg-provider-test:ElfygiFglfldTwnDFpAScQkvgvHTGV "
+      external_id      = "sg-provider-test:ElfygiFglfldTwnDFpAScQkvgvHTGV"
       duration_seconds = "3600"
     }]
   }
 }`
 )
 
-func TestAccWorkflowGroup(t *testing.T) {
+func TestAccConnector(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -50,6 +53,13 @@ func TestAccWorkflowGroup(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccResource,
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"stackguardian_connector.aws-cloud-connector-example",
+						tfjsonpath.New("settings").AtMapKey("config").AtSliceIndex(0).AtMapKey("external_id"),
+						knownvalue.StringExact("sg-provider-test:ElfygiFglfldTwnDFpAScQkvgvHTGV"),
+					),
+				},
 			},
 			{
 				Config: testAccResourceUpdate,
