@@ -7,6 +7,7 @@ import (
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	core "github.com/StackGuardian/sg-sdk-go/core"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -85,6 +86,21 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	getUserPayload, diags := plan.ToGetAPIModel(ctx)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	user, err := r.client.UsersRoles.GetUser(ctx, r.org_name, getUserPayload)
+	if err != nil {
+		resp.Diagnostics.Append(diag.NewErrorDiagnostic("Internal Error", err.Error()))
+	}
+	if user != nil {
+		resp.Diagnostics.Append(diag.NewErrorDiagnostic("Invalid User", fmt.Sprintf("A role has been assigned to user %s", user.Data.UserId)))
 		return
 	}
 

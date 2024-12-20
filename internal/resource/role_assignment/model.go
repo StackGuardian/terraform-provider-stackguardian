@@ -48,15 +48,17 @@ func (m *RoleAssignmentResourceModel) ToGetAPIModel(ctx context.Context) (*sgsdk
 	return &apiModel, nil
 }
 
+func parseUser(userId string) string {
+	if strings.HasPrefix(userId, "local/") {
+		return strings.Split(userId, "/")[1]
+	}
+	return userId
+}
+
 func BuildAPIModelToRoleAssignmentModel(apiResponse *sgsdkgo.AddUserToOrganization) (*RoleAssignmentResourceModel, diag.Diagnostics) {
 	entityTypeValue := flatteners.String(string(*apiResponse.EntityType.Ptr()))
 
-	var userID string
-	if strings.HasPrefix(apiResponse.UserId, "local/") {
-		userID = strings.Split(apiResponse.UserId, "/")[1]
-	} else {
-		userID = apiResponse.UserId
-	}
+	userID := parseUser(apiResponse.UserId)
 
 	RoleModel := &RoleAssignmentResourceModel{
 		UserId:     flatteners.String(userID),
