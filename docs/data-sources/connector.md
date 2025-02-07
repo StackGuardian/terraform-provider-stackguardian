@@ -130,7 +130,6 @@ Read-Only:
 	- <span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC <a href="https://docs.stackguardian.io/docs/connectors/csp/aws/#roles-or-rbac-recommended"><span class="fa fa-external-link"></span></span></a>
 		- role_arn
 		- external_id
-		- arm_client_id
 	- <span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC <a href="https://docs.stackguardian.io/docs/connectors/csp/aws/#using-oidc-identity-provider"><span class="fa fa-external-link"></span></span></a>
 		- role_arn
 	- <span style="background-color: #eff0f0; color: #e53835;">GCP_STATIC <a href="https://docs.stackguardian.io/docs/connectors/csp/gcp/#using-service-account"><span class="fa fa-external-link"></span></span></a>
