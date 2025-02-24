@@ -44,28 +44,30 @@ To install it, you will need to download the zip file for your platform and arch
 
 2. We need to make sure that the following configuration is set in the `.terraformrc` file so that Terraform can find the local StackGuardian Terraform provider.\
    _Please replace `<Fully qualified path to .terraform.d/plugins>` with the fully qualified path to your `.terraform.d/plugins` directory._
-   `    provider_installation 
-    {
-        filesystem_mirror 
+
+   ```
+    provider_installation {
+        filesystem_mirror
         {
             path    = "<Fully qualified path to .terraform.d/plugins>"
         }
-        direct 
+        direct
         {
             exclude = ["terraform.local/*/*"]
         }
     }
-   `
+
+   ```
 
 3. Download the zip file for your platform and architecture from the [latest pre release](https://github.com/StackGuardian/terraform-provider-stackguardian/releases/tag/v1.0.0-rc) and extract it to the directory you created in step 1.\
    **Linux/MacOS**
 
-   ```
+   ```sh
    curl -L -o ~/.terraform.d/plugins/terraform.local/local/StackGuardian/1.0.0-rc/${OS_ARCH}/terraform-provider-stackguardian_v1.0.0-rc.tar.gz \
    "https://github.com/StackGuardian/terraform-provider-stackguardian/releases/download/v1.0.0-rc/terraform-provider-stackguardian_${OS_ARCH}.tar.gz"
    ```
 
-   ```
+   ```sh
    cd ~/.terraform.d/plugins/terraform.local/local/StackGuardian/1.0.0-rc/${OS_ARCH}
    tar -xvf terraform-provider-stackguardian_v1.0.0-rc.tar.gz
    ```
@@ -85,7 +87,7 @@ To install it, you will need to download the zip file for your platform and arch
 4. [Optional] Delete the downloaded zip file.\
    **Linux/MacOS**
 
-   ```
+   ```sh
    rm terraform-provider-stackguardian_v1.0.0-rc.tar.gz
    ```
 
@@ -97,7 +99,7 @@ To install it, you will need to download the zip file for your platform and arch
 
 5. For Linux and MacOS systems you might need to set execute permissions on the terraform-provider-stackguardian binary.
 
-   ```
+   ```sh
    chmod +x terraform-provider-stackguardian
    ```
 
