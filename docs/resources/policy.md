@@ -71,6 +71,7 @@ resource "stackguardian_policy" "example-policy" {
 
 ### Required
 
+- `policy_type` (String) Type of policy created "GENERAL" or "FILTER.INSIGHT"
 - `resource_name` (String) The name of the policy. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
 
 ### Optional
@@ -88,6 +89,9 @@ resource "stackguardian_policy" "example-policy" {
 Required:
 
 - `name` (String) The name of the policy config. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
+
+Optional:
+
 - `on_fail` (String) Specifies the action to be performed on failure. Options: <span style="background-color: #eff0f0; color: #e53835;">FAIL</span>,
 		<span style="background-color: #eff0f0; color: #e53835;">WARN</span>,
 		<span style="background-color: #eff0f0; color: #e53835;">PASS</span>,
@@ -96,9 +100,6 @@ Required:
 		<span style="background-color: #eff0f0; color: #e53835;">WARN</span>,
 		<span style="background-color: #eff0f0; color: #e53835;">PASS</span>,
 		<span style="background-color: #eff0f0; color: #e53835;">APPROVAL_REQUIRED</span>
-
-Optional:
-
 - `policy_input_data` (Attributes) Policy definition (see [below for nested schema](#nestedatt--policies_config--policy_input_data))
 - `policy_vcs_config` (Attributes) Configuration to import policy from version control (see [below for nested schema](#nestedatt--policies_config--policy_vcs_config))
 - `skip` (Boolean) Enable or disable the policy check
