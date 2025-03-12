@@ -11,7 +11,7 @@ import (
 )
 
 // Schema defines the schema for the resource.
-func (r *roleDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (r *policyDatasource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"resource_name": schema.StringAttribute{

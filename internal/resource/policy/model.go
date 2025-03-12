@@ -15,6 +15,7 @@ import (
 
 type PolicyResourceModel struct {
 	ResourceName              types.String `tfsdk:"resource_name"`
+	PolicyType                types.String `tfsdk:"policy_type"`
 	Description               types.String `tfsdk:"description"`
 	NumberOfApprovalsRequired types.Int32  `tfsdk:"number_of_approvals_required"`
 	Approvers                 types.List   `tfsdk:"approvers"`
@@ -293,8 +294,55 @@ func policiesConfigModelToAPIModel(policiesConfig types.List) ([]*sgsdkgo.Polici
 	return policiesConfigAPIModel, nil
 }
 
-func (m *PolicyResourceModel) ToAPIModel() (*sgsdkgo.Policy, diag.Diagnostics) {
-	policyAPIModel := &sgsdkgo.Policy{
+func (m *PolicyResourceModel) ToAPIModel() (*sgsdkgo.PolicyGeneral, diag.Diagnostics) {
+	policyAPIModel := &sgsdkgo.PolicyGeneral{
+		ResourceName: m.ResourceName.ValueStringPointer(),
+	}
+
+	if !m.Description.IsNull() {
+		policyAPIModel.Description = m.Description.ValueStringPointer()
+	}
+
+	if !m.NumberOfApprovalsRequired.IsNull() {
+		policyAPIModel.NumberOfApprovalsRequired = expanders.IntPtr(m.NumberOfApprovalsRequired.ValueInt32Pointer())
+	}
+
+	// Approvers
+	approvers, diags := expanders.StringList(context.TODO(), m.Approvers)
+	if diags.HasError() {
+		return nil, diags
+	} else if approvers != nil {
+		policyAPIModel.Approvers = approvers
+	}
+
+	// Enforced On
+	enforcedOn, diags := expanders.StringList(context.TODO(), m.EnforcedOn)
+	if diags.HasError() {
+		return nil, diags
+	} else if enforcedOn != nil {
+		policyAPIModel.EnforcedOn = enforcedOn
+	}
+
+	// Tags
+	tags, diags := expanders.StringList(context.TODO(), m.Tags)
+	if diags.HasError() {
+		return nil, diags
+	} else if tags != nil {
+		policyAPIModel.Tags = tags
+	}
+
+	policiesConfig, diags := policiesConfigModelToAPIModel(m.PoliciesConfig)
+	if diags.HasError() {
+		return nil, diags
+	} else if policiesConfig != nil {
+		policyAPIModel.PoliciesConfig = policiesConfig
+	}
+
+	return policyAPIModel, nil
+}
+
+func (m *PolicyResourceModel) ToPatchedAPIModel() (*sgsdkgo.PatchedPolicyGeneral, diag.Diagnostics) {
+	policyAPIModel := &sgsdkgo.PatchedPolicyGeneral{
 		ResourceName: sgsdkgo.Optional(m.ResourceName.ValueString()),
 	}
 
@@ -350,66 +398,10 @@ func (m *PolicyResourceModel) ToAPIModel() (*sgsdkgo.Policy, diag.Diagnostics) {
 	return policyAPIModel, nil
 }
 
-func (m *PolicyResourceModel) ToPatchedAPIModel() (*sgsdkgo.PatchedPolicy, diag.Diagnostics) {
-	policyAPIModel := &sgsdkgo.PatchedPolicy{
-		ResourceName: sgsdkgo.Optional(m.ResourceName.ValueString()),
-	}
-
-	if !m.Description.IsNull() {
-		policyAPIModel.Description = sgsdkgo.Optional(m.Description.ValueString())
-	} else {
-		policyAPIModel.Description = sgsdkgo.Null[string]()
-	}
-
-	if !m.NumberOfApprovalsRequired.IsNull() {
-		policyAPIModel.NumberOfApprovalsRequired = sgsdkgo.Optional(*expanders.IntPtr(m.NumberOfApprovalsRequired.ValueInt32Pointer()))
-	}
-
-	// Approvers
-	approvers, diags := expanders.StringList(context.TODO(), m.Approvers)
-	if diags.HasError() {
-		return nil, diags
-	} else if approvers != nil {
-		policyAPIModel.Approvers = sgsdkgo.Optional(approvers)
-	} else {
-		policyAPIModel.Approvers = sgsdkgo.Null[[]string]()
-	}
-
-	// Enforced On
-	enforcedOn, diags := expanders.StringList(context.TODO(), m.EnforcedOn)
-	if diags.HasError() {
-		return nil, diags
-	} else if enforcedOn != nil {
-		policyAPIModel.EnforcedOn = sgsdkgo.Optional(enforcedOn)
-	} else {
-		policyAPIModel.EnforcedOn = sgsdkgo.Null[[]string]()
-	}
-
-	// Tags
-	tags, diags := expanders.StringList(context.TODO(), m.Tags)
-	if diags.HasError() {
-		return nil, diags
-	} else if tags != nil {
-		policyAPIModel.Tags = sgsdkgo.Optional(tags)
-	} else {
-		policyAPIModel.Tags = sgsdkgo.Null[[]string]()
-	}
-
-	policiesConfig, diags := policiesConfigModelToAPIModel(m.PoliciesConfig)
-	if diags.HasError() {
-		return nil, diags
-	} else if policiesConfig != nil {
-		policyAPIModel.PoliciesConfig = sgsdkgo.Optional(policiesConfig)
-	} else {
-		policyAPIModel.PoliciesConfig = sgsdkgo.Null[[]*sgsdkgo.PoliciesConfig]()
-	}
-
-	return policyAPIModel, nil
-}
-
-func BuildAPIModelToPolicyModel(apiResponse *sgsdkgo.PolicyDataResponse) (*PolicyResourceModel, diag.Diagnostics) {
+func BuildAPIModelToPolicyModel(apiResponse *sgsdkgo.PolicyGeneral) (*PolicyResourceModel, diag.Diagnostics) {
 	policyConfigModel := &PolicyResourceModel{
 		ResourceName:              flatteners.StringPtr(apiResponse.ResourceName),
+		PolicyType:                flatteners.String("GENERAL"),
 		Description:               flatteners.StringPtr(apiResponse.Description),
 		NumberOfApprovalsRequired: flatteners.Int32Ptr(apiResponse.NumberOfApprovalsRequired),
 	}
