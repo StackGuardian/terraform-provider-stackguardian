@@ -41,28 +41,35 @@ func (r *runnerGroupResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Computed:            true,
 			},
 			"storage_backend_config": schema.SingleNestedAttribute{
-				Required: true,
+				MarkdownDescription: constants.StorageBackendConfig,
+				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
 						Required: true,
 					},
 					"azure_blob_storage_access_key": schema.StringAttribute{
-						Optional: true,
+						MarkdownDescription: constants.AzureBlobStorageAccessKey,
+						Optional:            true,
 					},
 					"azure_blob_storage_account_name": schema.StringAttribute{
-						Optional: true,
+						MarkdownDescription: constants.AzureBlobStorageAccountName,
+						Optional:            true,
 					},
 					"s3_bucket_name": schema.StringAttribute{
-						Optional: true,
+						MarkdownDescription: constants.S3BucketName,
+						Optional:            true,
 					},
 					"aws_region": schema.StringAttribute{
-						Optional: true,
+						MarkdownDescription: constants.AWSRegion,
+						Optional:            true,
 					},
 					"auth": schema.SingleNestedAttribute{
-						Optional: true,
+						MarkdownDescription: constants.Auth,
+						Optional:            true,
 						Attributes: map[string]schema.Attribute{
 							"integration_id": schema.StringAttribute{
-								Required: true,
+								MarkdownDescription: constants.IntegrationId,
+								Required:            true,
 							},
 						},
 					},
