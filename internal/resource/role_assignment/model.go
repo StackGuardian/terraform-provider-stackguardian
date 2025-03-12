@@ -26,7 +26,7 @@ var (
 func (m *RoleAssignmentResourceModel) ToCreateAPIModel(ctx context.Context) (*sgsdkgo.AddUserToOrganization, diag.Diagnostics) {
 	apiModel := sgsdkgo.AddUserToOrganization{
 		UserId: m.UserId.ValueString(),
-		Role:   m.Role.ValueString(),
+		Role:   m.Role.ValueStringPointer(),
 	}
 
 	entity, ok := capabilitiesMap[strings.ToUpper(m.EntityType.ValueString())]
@@ -60,7 +60,7 @@ func BuildAPIModelToRoleAssignmentModel(apiResponse *sgsdkgo.AddUserToOrganizati
 
 	RoleModel := &RoleAssignmentResourceModel{
 		UserId:     flatteners.String(userID),
-		Role:       flatteners.String(apiResponse.Role),
+		Role:       flatteners.StringPtr(apiResponse.Role),
 		EntityType: entityTypeValue,
 	}
 	return RoleModel, nil

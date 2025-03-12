@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/policy"
@@ -11,25 +12,25 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = &roleDataSource{}
-	_ datasource.DataSourceWithConfigure = &roleDataSource{}
+	_ datasource.DataSource              = &policyDatasource{}
+	_ datasource.DataSourceWithConfigure = &policyDatasource{}
 )
 
 // NewDataSource is a helper function to simplify the provider implementation.
 func NewDataSource() datasource.DataSource {
-	return &roleDataSource{}
+	return &policyDatasource{}
 }
 
-type roleDataSource struct {
+type policyDatasource struct {
 	client  *sgclient.Client
 	orgName string
 }
 
-func (d *roleDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *policyDatasource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_policy"
 }
 
-func (d *roleDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *policyDatasource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Add a nil check when handling ProviderData because Terraform
 	// sets that data after it calls the ConfigureProvider RPC.
 	if req.ProviderData == nil {
@@ -50,7 +51,7 @@ func (d *roleDataSource) Configure(_ context.Context, req datasource.ConfigureRe
 	d.orgName = provInfo.Org_name
 }
 
-func (d *roleDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *policyDatasource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var config policy.PolicyResourceModel
 
 	diags := req.Config.Get(ctx, &config)
@@ -65,7 +66,20 @@ func (d *roleDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
-	policyModel, diags := policy.BuildAPIModelToPolicyModel(reqResp.Msg)
+	respPolicyGeneral := reqResp.Msg.General
+	policyGeneralModel := sgsdkgo.PolicyGeneral{
+		ResourceName: respPolicyGeneral.ResourceName,
+		Description:  respPolicyGeneral.Description,
+		Approvers:    respPolicyGeneral.Approvers,
+
+		NumberOfApprovalsRequired: respPolicyGeneral.NumberOfApprovalsRequired,
+		Tags:                      respPolicyGeneral.Tags,
+		ContextTags:               respPolicyGeneral.ContextTags,
+		EnforcedOn:                respPolicyGeneral.EnforcedOn,
+		PoliciesConfig:            respPolicyGeneral.PoliciesConfig,
+	}
+
+	policyModel, diags := policy.BuildAPIModelToPolicyModel(&policyGeneralModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	core "github.com/StackGuardian/sg-sdk-go/core"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
@@ -80,20 +81,23 @@ func (r *policyResrouce) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	payload, diags := plan.ToAPIModel()
+	apiModel, diags := plan.ToAPIModel()
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	policy, err := r.client.Policies.CreatePolicy(ctx, r.orgName, payload)
+	policy, err := r.client.Policies.CreatePolicy(ctx, r.orgName, &sgsdkgo.PolymorphicPolicy{
+		PolicyType: "GENERAL",
+		General:    apiModel,
+	})
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error creating policy", "Error in creating policy API call: "+err.Error())
 		return
 	}
 
-	policyResourceModel, diags := BuildAPIModelToPolicyModel(policy.Data)
+	policyResourceModel, diags := BuildAPIModelToPolicyModel(policy.Data.General)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -124,7 +128,20 @@ func (r *policyResrouce) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	policyResourceModel, diags := BuildAPIModelToPolicyModel(policy.Msg)
+	respPolicyGeneral := policy.Msg.General
+	policyGeneralModel := sgsdkgo.PolicyGeneral{
+		ResourceName: respPolicyGeneral.ResourceName,
+		Description:  respPolicyGeneral.Description,
+		Approvers:    respPolicyGeneral.Approvers,
+
+		NumberOfApprovalsRequired: respPolicyGeneral.NumberOfApprovalsRequired,
+		Tags:                      respPolicyGeneral.Tags,
+		ContextTags:               respPolicyGeneral.ContextTags,
+		EnforcedOn:                respPolicyGeneral.EnforcedOn,
+		PoliciesConfig:            respPolicyGeneral.PoliciesConfig,
+	}
+
+	policyResourceModel, diags := BuildAPIModelToPolicyModel(&policyGeneralModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -142,19 +159,22 @@ func (r *policyResrouce) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	payload, diags := plan.ToPatchedAPIModel()
+	patchedAPIModel, diags := plan.ToPatchedAPIModel()
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	updatedPolicy, err := r.client.Policies.UpdatePolicy(ctx, r.orgName, plan.ResourceName.ValueString(), payload)
+	updatedPolicy, err := r.client.Policies.UpdatePolicy(ctx, r.orgName, plan.ResourceName.ValueString(), &sgsdkgo.PatchedPolymorphicPolicy{
+		PolicyType: "GENERAL",
+		General:    patchedAPIModel,
+	})
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating policy", err.Error())
 		return
 	}
 
-	policyResourceModel, diags := BuildAPIModelToPolicyModel(updatedPolicy.Data)
+	policyResourceModel, diags := BuildAPIModelToPolicyModel(updatedPolicy.Data.General)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

@@ -23,6 +23,10 @@ func (r *policyResrouce) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Optional:            true,
 				Computed:            true,
 			},
+			"policy_type": schema.StringAttribute{
+				MarkdownDescription: constants.PolicyType,
+				Required:            true,
+			},
 			"approvers": schema.ListAttribute{
 				MarkdownDescription: constants.Approvers,
 				ElementType:         types.StringType,
@@ -62,11 +66,11 @@ func (r *policyResrouce) Schema(_ context.Context, _ resource.SchemaRequest, res
 						},
 						"on_fail": schema.StringAttribute{
 							MarkdownDescription: constants.PolicyConfigOnFail,
-							Required:            true,
+							Optional:            true,
 						},
 						"on_pass": schema.StringAttribute{
 							MarkdownDescription: constants.PolicyConfigOnPass,
-							Required:            true,
+							Optional:            true,
 						},
 						"policy_input_data": schema.SingleNestedAttribute{
 							MarkdownDescription: constants.PolicyConfigInputData,

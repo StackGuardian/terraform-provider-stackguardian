@@ -13,6 +13,8 @@ const (
   resource_name = "example-policy"
 
   description = "Policy created using provider"
+  
+  policy_type = "GENERAL"
 
   number_of_approvals_required = 0
 
@@ -67,6 +69,8 @@ const (
   resource_name = "example-policy"
 
   description = "Policy created using provider"
+
+  policy_type = "GENERAL"
 
   number_of_approvals_required = 0
 
