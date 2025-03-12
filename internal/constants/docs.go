@@ -133,6 +133,7 @@ const (
 	Approvers                 = "List of stackguardian users"
 	NumberOfApprovalsRequired = "Number of approvals required for a policy check to pass"
 	EnforcedOn                = "List of Resource path on which this policy is to be applied on"
+	PolicyType                = "Type of policy created \"GENERAL\" or \"FILTER.INSIGHT\""
 
 	PolicyConfig       = "Policy configuration"
 	PolicyConfigSkip   = "Enable or disable the policy check"
@@ -170,6 +171,14 @@ const (
 	PolicyVCSConfigCustomSourceIsPrivate               = DiscoverySettingsBenchmarksRuntimeSourceConfigIsPrivate
 
 	PolicyVCSConfigAdditionalConfig = "Additional configuration for the policy"
+)
+
+// Runner Group
+const (
+	RunnerToken            = "Private token of the runner group"
+	MaxNumberOfRunners     = "Maximum number of runners allowed in a runner group"
+	DockerImage            = "Docker image to used to execute workflows"
+	DockerRegistryUsername = "Username for docker register"
 )
 
 // Common
