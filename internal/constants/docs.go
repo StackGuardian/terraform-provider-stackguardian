@@ -187,7 +187,7 @@ const (
 	Description          = "A brief description of the %s. Must be less than 256 characters."
 	Tags                 = "A list of tags associated with the %s. A maximum of 10 tags are allowed."
 	StorageBackendConfig = "Configuration for storing runner logs"
-	Type                 = `Platform of the storage:
+	RunnerGroupType      = `Platform of the storage:
 	- <span style="background-color: #eff0f0; color: #e53835;">aws_s3</span>
 	- <span style="background-color: #eff0f0; color: #e53835;">azure_blob_storage</span>
 `
@@ -195,8 +195,8 @@ const (
 	AzureBlobStorageAccessKey   = "Access key for you blob storage account"
 	S3BucketName                = "S3 buckget name"
 	AWSRegion                   = "AWS region where the bucket is placed"
-	Auth                        = "Authentication required by the runner to access the backend storage"
-	IntegrationId               = "SG Connector Id eg: /integrations/test-connector"
+	Auth                        = "Authentication required by the runner to access the backend storage. Required only for type \"aws_s3\""
+	IntegrationId               = "SG Connector Id. Required only for type \"aws_s3\" eg: /integrations/test-connector"
 )
 
 ////////////// Data Source

@@ -53,11 +53,13 @@ resource "stackguardian_runner_group" "example-runner-group" {
 
 Required:
 
-- `type` (String)
+- `type` (String) Platform of the storage:
+	- <span style="background-color: #eff0f0; color: #e53835;">aws_s3</span>
+	- <span style="background-color: #eff0f0; color: #e53835;">azure_blob_storage</span>
 
 Optional:
 
-- `auth` (Attributes) Authentication required by the runner to access the backend storage (see [below for nested schema](#nestedatt--storage_backend_config--auth))
+- `auth` (Attributes) Authentication required by the runner to access the backend storage. Required only for type "aws_s3" (see [below for nested schema](#nestedatt--storage_backend_config--auth))
 - `aws_region` (String) AWS region where the bucket is placed
 - `azure_blob_storage_access_key` (String) Access key for you blob storage account
 - `azure_blob_storage_account_name` (String) Account of your azure blob storage
@@ -68,7 +70,7 @@ Optional:
 
 Required:
 
-- `integration_id` (String) SG Connector Id eg: /integrations/test-connector
+- `integration_id` (String) SG Connector Id. Required only for type "aws_s3" eg: /integrations/test-connector
 
 
 
