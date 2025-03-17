@@ -45,7 +45,8 @@ func (r *runnerGroupResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
-						Required: true,
+						MarkdownDescription: constants.RunnerGroupType,
+						Required:            true,
 					},
 					"azure_blob_storage_access_key": schema.StringAttribute{
 						MarkdownDescription: constants.AzureBlobStorageAccessKey,
