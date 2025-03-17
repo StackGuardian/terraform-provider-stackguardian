@@ -12,6 +12,7 @@ import (
 	policydatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/policy"
 	roledatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/role"
 	roleassignmentdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/role_assignment"
+	runnergroupdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/runner_group"
 	stackoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_outputs"
 	stackworkflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_workflow_outputs"
 	workflowgroupdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_group"
@@ -204,6 +205,7 @@ func (p *stackguardianProvider) DataSources(_ context.Context) []func() datasour
 		workflowgroupdatasource.NewDataSource,
 		roledatasource.NewDataSource,
 		policydatasource.NewDataSource,
+		runnergroupdatasource.NewDataSource,
 	}
 }
 
