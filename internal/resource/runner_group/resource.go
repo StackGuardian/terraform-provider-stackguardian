@@ -10,7 +10,7 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -100,9 +100,10 @@ func (r *runnerGroupResource) Create(ctx context.Context, req resource.CreateReq
 		resp.Diagnostics.AddError("Error create runner group", "Error in creating runner group API call: "+err.Error())
 		return
 	}
+	runnerGroup.Data.RunnerToken = nil
+	runnerGroup.Data.StorageBackendConfig.AzureBlobStorageAccessKey = payload.StorageBackendConfig.AzureBlobStorageAccessKey
 
 	runnerGroupResourceModel, diags := BuildAPIModelToRunnerGroupModel(runnerGroup.Data)
-	runnerGroupResourceModel.RunnerToken = types.StringNull()
 
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -137,6 +138,18 @@ func (r *runnerGroupResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
+	var storageBackendConfigModelValue storageBackendConfigModel
+	if !state.StorageBackendConfig.IsNull() && !state.StorageBackendConfig.IsUnknown() {
+		diags := state.StorageBackendConfig.As(ctx, &storageBackendConfigModelValue, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	runnerGroup.Msg.RunnerToken = state.RunnerToken.ValueStringPointer()
+	runnerGroup.Msg.StorageBackendConfig.AzureBlobStorageAccessKey = storageBackendConfigModelValue.AzureBlobStorageAccessKey.ValueStringPointer()
+
 	runnerGroupResourceModel, diags := BuildAPIModelToRunnerGroupModel(runnerGroup.Msg)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -166,6 +179,8 @@ func (r *runnerGroupResource) Update(ctx context.Context, req resource.UpdateReq
 		resp.Diagnostics.AddError("Error updating policy", err.Error())
 		return
 	}
+	updatedRunnerGroup.Data.RunnerToken = nil
+	updatedRunnerGroup.Data.StorageBackendConfig.AzureBlobStorageAccessKey = patchedAPIModel.StorageBackendConfig.Value.AzureBlobStorageAccessKey
 
 	runnerGroupResourceModel, diags := BuildAPIModelToRunnerGroupModel(updatedRunnerGroup.Data)
 	resp.Diagnostics.Append(diags...)
