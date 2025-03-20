@@ -18,7 +18,7 @@ func (r *runnerGroupDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 				Required:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Description, "policy"),
+				MarkdownDescription: fmt.Sprintf(constants.Description, "runner group"),
 				Computed:            true,
 			},
 			"runner_token": schema.StringAttribute{
