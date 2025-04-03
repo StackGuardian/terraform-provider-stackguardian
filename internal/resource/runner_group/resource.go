@@ -134,7 +134,7 @@ func (r *runnerGroupResource) Read(ctx context.Context, req resource.ReadRequest
 				resp.State.RemoveResource(ctx)
 			}
 		}
-		resp.Diagnostics.AddError("Error reading policy", err.Error())
+		resp.Diagnostics.AddError("Error reading runner group", err.Error())
 		return
 	}
 
@@ -176,7 +176,7 @@ func (r *runnerGroupResource) Update(ctx context.Context, req resource.UpdateReq
 
 	updatedRunnerGroup, err := r.client.RunnerGroups.UpdateRunnerGroup(ctx, r.org_name, plan.ResourceName.ValueString(), patchedAPIModel)
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating policy", err.Error())
+		resp.Diagnostics.AddError("Error updating runner group", err.Error())
 		return
 	}
 	updatedRunnerGroup.Data.RunnerToken = nil
@@ -203,7 +203,7 @@ func (r *runnerGroupResource) Delete(ctx context.Context, req resource.DeleteReq
 
 	_, err := r.client.RunnerGroups.DeleteRunnerGroup(ctx, r.org_name, state.ResourceName.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error deleting policy", err.Error())
+		resp.Diagnostics.AddError("Error deleting runner group", err.Error())
 		return
 	}
 }
