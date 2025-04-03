@@ -27,6 +27,9 @@ var (
 		type = "aws_s3"
 		aws_region = "eu-central-1"
 		s3_bucket_name = "http-proxy-private-runner"
+		auth = {
+			integration_id = "/integrations/taher-aws"
+		}
 	}
 
 }
@@ -46,6 +49,9 @@ var (
 		type = "aws_s3"
 		aws_region = "eu-central-1"
 		s3_bucket_name = "http-proxy-private-runner"
+		auth = {
+			integration_id = "/integrations/taher-aws"
+		}
 	}
 }`
 )
