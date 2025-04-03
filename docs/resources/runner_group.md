@@ -42,7 +42,7 @@ resource "stackguardian_runner_group" "example-runner-group" {
 
 ### Optional
 
-- `description` (String) A brief description of the policy. Must be less than 256 characters.
+- `description` (String) A brief description of the runner group. Must be less than 256 characters.
 - `max_number_of_runners` (Number) Maximum number of runners allowed in a runner group
 - `run_controller_runtime_source` (Attributes) Source configuration type and settings definition (see [below for nested schema](#nestedatt--run_controller_runtime_source))
 - `runner_token` (String) Private token of the runner group

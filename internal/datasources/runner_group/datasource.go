@@ -65,7 +65,7 @@ func (d *runnerGroupDataSource) Read(ctx context.Context, req datasource.ReadReq
 		GetActiveWorkflowsDetails: &readRunnerGroupReqBools,
 	})
 	if err != nil {
-		resp.Diagnostics.AddError("Unable to read role assignment.", err.Error())
+		resp.Diagnostics.AddError("Unable to read runner group.", err.Error())
 		return
 	}
 
