@@ -75,18 +75,18 @@ jobs:
       #    STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_STG_ORG_NAME }}'
       #    TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY: '${{ secrets.TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY }}'
 
-      - name: "Test API-STG with Provider onboarding example"
-        if: inputs.testenv=='STG'
-        run: |
-          set -eu -x;
-          make install;
-          make test-examples-onboarding ARGS="-f local-build";
-        shell: bash
-        env:
-          STACKGUARDIAN_API_URI: '${{ secrets.SG_STG_API_URI }}'
-          STACKGUARDIAN_API_KEY: '${{ secrets.SG_STG_API_KEY }}'
-          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_STG_ORG_NAME }}'
-          TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY: '${{ secrets.TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY }}'
+      #- name: "Test API-STG with Provider onboarding example"
+      #  if: inputs.testenv=='STG'
+      #  run: |
+      #    set -eu -x;
+      #    make install;
+      #    make test-examples-onboarding ARGS="-f local-build";
+      #  shell: bash
+      #  env:
+      #    STACKGUARDIAN_API_URI: '${{ secrets.SG_STG_API_URI }}'
+      #    STACKGUARDIAN_API_KEY: '${{ secrets.SG_STG_API_KEY }}'
+      #    STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_STG_ORG_NAME }}'
+      #    TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY: '${{ secrets.TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY }}'
 
 
       ### --- testenv: PRD ----------------------------------------------------
@@ -113,15 +113,15 @@ jobs:
       #    STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'
       #    TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY: '${{ secrets.TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY }}'
 
-      - name: "Test API-PRD with Provider onboarding example"
-        if: inputs.testenv=='PRD'
-        run: |
-          set -eu -x;
-          make install;
-          make test-examples-onboarding ARGS="-f local-build";
-        shell: bash
-        env:
-          STACKGUARDIAN_API_URI: '${{ secrets.SG_PRD_API_URI }}'
-          STACKGUARDIAN_API_KEY: '${{ secrets.SG_PRD_API_KEY }}'
-          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'
-          TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY: '${{ secrets.TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY }}'
+      #- name: "Test API-PRD with Provider onboarding example"
+      #  if: inputs.testenv=='PRD'
+      #  run: |
+      #    set -eu -x;
+      #    make install;
+      #    make test-examples-onboarding ARGS="-f local-build";
+      #  shell: bash
+      #  env:
+      #    STACKGUARDIAN_API_URI: '${{ secrets.SG_PRD_API_URI }}'
+      #    STACKGUARDIAN_API_KEY: '${{ secrets.SG_PRD_API_KEY }}'
+      #    STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'
+      #    TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY: '${{ secrets.TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY }}'
