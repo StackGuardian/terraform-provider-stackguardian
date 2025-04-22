@@ -31,6 +31,9 @@ func getAPIToken(runnerGroupID string, apiBaseUrl string, apiKey string) (apiRes
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewReader(payload))
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Add("Authorization", apiKey)
 
 	reqResp, err := http.DefaultClient.Do(req)
