@@ -5,6 +5,8 @@ import (
 )
 
 type ProviderInfo struct {
-	Org_name string
-	Client   *sgclient.Client
+	ApiBaseURL string
+	ApiKey     string
+	Org_name   string
+	Client     *sgclient.Client
 }

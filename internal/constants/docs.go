@@ -209,3 +209,9 @@ const (
 	DataSourceDataJson         = "Raw JSON body"
 	DataSourceData             = "Map of k/v pairs with value as JSON string"
 )
+
+// api token
+const (
+	ApiToken      = "API token used to make api call for stackguardian organization"
+	RunnerGroupId = "Runner group ID"
+)

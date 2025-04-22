@@ -13,6 +13,7 @@ import (
 	roledatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/role"
 	roleassignmentdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/role_assignment"
 	runnergroupdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/runner_group"
+	runnergrouptoken "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/runner_group_token"
 	stackoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_outputs"
 	stackworkflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_workflow_outputs"
 	workflowgroupdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_group"
@@ -170,14 +171,17 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 		)
 	}
 
+	api_key = "apikey " + api_key
 	client := sgclient.NewClient(
-		sgoption.WithApiKey("apikey "+api_key),
+		sgoption.WithApiKey(api_key),
 		sgoption.WithBaseURL(api_uri),
 	)
 	//Set the values in our struct
 	provInfo := customTypes.ProviderInfo{
-		Org_name: org_name,
-		Client:   client,
+		ApiBaseURL: api_uri,
+		ApiKey:     api_key,
+		Org_name:   org_name,
+		Client:     client,
 	}
 	// Make the HashiCups client available during DataSource and Resource
 	// type Configure methods.
@@ -206,6 +210,7 @@ func (p *stackguardianProvider) DataSources(_ context.Context) []func() datasour
 		roledatasource.NewDataSource,
 		policydatasource.NewDataSource,
 		runnergroupdatasource.NewDataSource,
+		runnergrouptoken.NewDataSource,
 	}
 }
 
