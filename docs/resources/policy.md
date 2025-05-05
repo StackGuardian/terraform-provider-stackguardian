@@ -72,7 +72,7 @@ resource "stackguardian_policy" "example-policy" {
 ### Required
 
 - `policy_type` (String) Type of policy created "GENERAL" or "FILTER.INSIGHT"
-- `resource_name` (String) The name of the policy. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
+- `resource_name` (String) Name of the policy. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
 
 ### Optional
 
@@ -88,7 +88,7 @@ resource "stackguardian_policy" "example-policy" {
 
 Required:
 
-- `name` (String) The name of the policy config. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
+- `name` (String) Name of the policy config. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
 
 Optional:
 

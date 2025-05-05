@@ -24,7 +24,7 @@ resource "stackguardian_workflow_group" "example_workflow_group" {
 
 ### Required
 
-- `resource_name` (String) The name of the workflow group. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
+- `resource_name` (String) Name of the workflow group. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_/]+$
 
 ### Optional
 

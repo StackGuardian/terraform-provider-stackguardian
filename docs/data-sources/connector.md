@@ -25,7 +25,7 @@ output "connector-output" {
 
 ### Required
 
-- `resource_name` (String) The name of the connector. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
+- `resource_name` (String) Name of the connector. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
 
 ### Read-Only
 

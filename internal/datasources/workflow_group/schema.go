@@ -14,7 +14,7 @@ func (d *workflowGroupDataSource) Schema(_ context.Context, _ datasource.SchemaR
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"resource_name": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "workflow group"),
+				MarkdownDescription: constants.WorkflowGroupResourceName,
 				Required:            true,
 			},
 			"description": schema.StringAttribute{

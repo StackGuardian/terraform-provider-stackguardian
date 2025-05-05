@@ -25,7 +25,7 @@ output "demo-runner-group-output" {
 
 ### Required
 
-- `resource_name` (String) The name of the runner group. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
+- `resource_name` (String) Name of the runner group. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
 
 ### Read-Only
 
