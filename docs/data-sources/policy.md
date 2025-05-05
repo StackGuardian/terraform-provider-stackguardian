@@ -25,7 +25,7 @@ output "policy-output" {
 
 ### Required
 
-- `resource_name` (String) The name of the policy. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
+- `resource_name` (String) Name of the policy. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
 
 ### Read-Only
 
@@ -41,7 +41,7 @@ output "policy-output" {
 
 Read-Only:
 
-- `name` (String) The name of the policy config. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
+- `name` (String) Name of the policy config. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
 - `on_fail` (String) Specifies the action to be performed on failure. Options: <span style="background-color: #eff0f0; color: #e53835;">FAIL</span>,
 		<span style="background-color: #eff0f0; color: #e53835;">WARN</span>,
 		<span style="background-color: #eff0f0; color: #e53835;">PASS</span>,
