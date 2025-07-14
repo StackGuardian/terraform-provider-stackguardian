@@ -122,6 +122,7 @@ func (r *policyResrouce) Read(ctx context.Context, req resource.ReadRequest, res
 		if apiErr, ok := err.(*core.APIError); ok {
 			if apiErr.StatusCode == 404 {
 				resp.State.RemoveResource(ctx)
+				return
 			}
 		}
 		resp.Diagnostics.AddError("Error reading policy", err.Error())
