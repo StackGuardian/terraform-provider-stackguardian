@@ -25,5 +25,5 @@ data "stackguardian_runner_group_token" "rgt" {
 
 ### Read-Only
 
-- `runner_group_token` (String) API token used to make api call for stackguardian organization
+- `runner_group_token` (String) Runner Group token
 

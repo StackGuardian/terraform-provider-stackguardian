@@ -217,6 +217,6 @@ const (
 
 // api token
 const (
-	ApiToken      = "API token used to make api call for stackguardian organization"
-	RunnerGroupId = "Runner group ID"
+	RunnerGroupToken = "Runner Group token"
+	RunnerGroupId    = "Runner group ID"
 )

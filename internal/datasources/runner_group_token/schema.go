@@ -20,7 +20,7 @@ func (d *runnerGroupTokenDataSource) Schema(_ context.Context, _ datasource.Sche
 				Required:            true,
 			},
 			"runner_group_token": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.ApiToken),
+				MarkdownDescription: fmt.Sprintf(constants.RunnerGroupToken),
 				Computed:            true,
 			},
 		},
