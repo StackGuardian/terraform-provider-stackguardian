@@ -1,6 +1,9 @@
 package policy_test
 
 import (
+	"context"
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
@@ -9,8 +12,8 @@ import (
 )
 
 const (
-	testAccResource = `resource "stackguardian_policy" "example-policy" {
-  resource_name = "example-policy"
+	testAccResource = `resource "stackguardian_policy" "%s" {
+  resource_name = "%s"
 
   description = "Policy created using provider"
   
@@ -65,8 +68,8 @@ const (
   }]
 }
 `
-	testAccResourceUpdate = `resource "stackguardian_policy" "example-policy" {
-  resource_name = "example-policy"
+	testAccResourceUpdate = `resource "stackguardian_policy" "%s" {
+  resource_name = "%s"
 
   description = "Policy created using provider"
 
@@ -123,6 +126,9 @@ const (
 )
 
 func TestAccPolicy(t *testing.T) {
+	resourceName := "example-policy"
+	policyName := "example-policy"
+
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -131,10 +137,44 @@ func TestAccPolicy(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResource,
+				Config: fmt.Sprintf(testAccResource, resourceName, policyName),
 			},
 			{
-				Config: testAccResourceUpdate,
+				Config: fmt.Sprintf(testAccResourceUpdate, resourceName, policyName),
+			},
+		},
+	})
+}
+
+func TestAccPolicyRecreateOnExternalDelete(t *testing.T) {
+	resourceName := "example-policy2"
+	policyName := "example-policy2"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(testAccResource, resourceName, policyName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fmt.Sprintf("stackguardian_policy.%s", resourceName), "resource_name", policyName),
+				),
+			},
+			{
+				PreConfig: func() {
+					client := acctest.SGClient()
+					err := client.Policies.DeletePolicy(context.TODO(), os.Getenv("STACKGUARDIAN_ORG_NAME"), policyName)
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: fmt.Sprintf(testAccResource, resourceName, policyName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fmt.Sprintf("stackguardian_policy.%s", resourceName), "resource_name", policyName),
+				),
 			},
 		},
 	})

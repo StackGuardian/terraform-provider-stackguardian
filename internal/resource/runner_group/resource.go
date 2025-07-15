@@ -132,6 +132,7 @@ func (r *runnerGroupResource) Read(ctx context.Context, req resource.ReadRequest
 		if apiErr, ok := err.(*core.APIError); ok {
 			if apiErr.StatusCode == 404 {
 				resp.State.RemoveResource(ctx)
+				return
 			}
 		}
 		resp.Diagnostics.AddError("Error reading runner group", err.Error())

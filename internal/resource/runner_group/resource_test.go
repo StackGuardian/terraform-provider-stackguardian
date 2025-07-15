@@ -1,6 +1,7 @@
 package runnergroup_test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -13,8 +14,8 @@ import (
 var azureStorageBackendAccessKey = os.Getenv("TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY")
 
 var (
-	testAccResource = `resource "stackguardian_runner_group" "example-runner-group" {
-  resource_name = "example-runner-group"
+	testAccResource = `resource "stackguardian_runner_group" "%s" {
+  resource_name = "%s"
 
   description = "RunnerGroup created using provider"
   
@@ -34,8 +35,8 @@ var (
 
 }
 `
-	testAccResourceUpdate = `resource "stackguardian_runner_group" "example-runner-group" {
-  resource_name = "example-runner-group"
+	testAccResourceUpdate = `resource "stackguardian_runner_group" "%s" {
+  resource_name = "%s"
 
   description = "RunnerGroup created using provider"
   
@@ -57,6 +58,9 @@ var (
 )
 
 func TestAccRunnerGroupAWSS3(t *testing.T) {
+	runnerGroupResourceName := "example-runner-group"
+	runnerGroupName := "example-runner-group"
+
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -65,10 +69,10 @@ func TestAccRunnerGroupAWSS3(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResource,
+				Config: fmt.Sprintf(testAccResource, runnerGroupResourceName, runnerGroupName),
 			},
 			{
-				Config: testAccResourceUpdate,
+				Config: fmt.Sprintf(testAccResourceUpdate, runnerGroupResourceName, runnerGroupName),
 			},
 		},
 	})
@@ -103,6 +107,40 @@ func TestAccRunnerGroupAzureBlobStorage(t *testing.T) {
     type                            = "azure_blob_storage"
   }
 }`, azureStorageBackendAccessKey),
+			},
+		},
+	})
+}
+
+func TestAccRunnerGroupRecreateOnExternalDelete(t *testing.T) {
+	runnerGroupResourceName := "runner-group2"
+	runnerGroupName := "runner-group2"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(testAccResource, runnerGroupResourceName, runnerGroupName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fmt.Sprintf("stackguardian_runner_group.%s", runnerGroupResourceName), "resource_name", runnerGroupName),
+				),
+			},
+			{
+				PreConfig: func() {
+					client := acctest.SGClient()
+					_, err := client.RunnerGroups.DeleteRunnerGroup(context.TODO(), os.Getenv("STACKGUARDIAN_ORG_NAME"), runnerGroupName)
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: fmt.Sprintf(testAccResource, runnerGroupResourceName, runnerGroupName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fmt.Sprintf("stackguardian_runner_group.%s", runnerGroupResourceName), "resource_name", runnerGroupName),
+				),
 			},
 		},
 	})
