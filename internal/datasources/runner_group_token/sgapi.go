@@ -13,8 +13,8 @@ type apiResponseModel struct {
 	Data string `json:"data"`
 }
 
-func getAPIToken(runnerGroupID string, apiBaseUrl string, apiKey string) (apiResponse *apiResponseModel, err error) {
-	url := apiBaseUrl + "/api/v1/orgs/sg-provider-test/api_token/"
+func getAPIToken(runnerGroupID string, apiBaseUrl string, apiKey string, orgName string) (apiResponse *apiResponseModel, err error) {
+	url := apiBaseUrl + "/api/v1/orgs/" + orgName + "/api_token/"
 
 	type reqBody struct {
 		Regenerate    bool   `json:"regenerate"`

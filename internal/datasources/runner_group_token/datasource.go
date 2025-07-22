@@ -63,7 +63,7 @@ func (d *runnerGroupTokenDataSource) Read(ctx context.Context, req datasource.Re
 		return
 	}
 
-	apiResponse, err := getAPIToken(config.RunnerGroupID.ValueString(), d.apiBaseURL, d.apiKey)
+	apiResponse, err := getAPIToken(config.RunnerGroupID.ValueString(), d.apiBaseURL, d.apiKey, d.orgName)
 	if err != nil {
 		resp.Diagnostics.Append(diag.NewErrorDiagnostic("failed to call api token url", err.Error()))
 		return
