@@ -78,7 +78,7 @@ Import existing resource.
 ### Using Import block (terraform v1.5.0 and later)
 ```terraform
 import {
-  to = stackguardian_role.example-role
+  to = stackguardian_role4.example-role
   id = "role-name"
 }
 ```
@@ -112,7 +112,7 @@ resource "stackguardian_role" "test" {
 }
 
 // stackguardian_rolev4 equivalent example
-resource "stackguardian_role" "test" {
+resource "stackguardian_rolev4" "test" {
   resource_name = "testing"
   allowed_permissions = {
     "PATCH/api/v1/orgs/lhind-master/wfgrps/<wfGrp>/wfs/<wf>/" = {
