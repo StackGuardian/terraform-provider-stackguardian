@@ -1,4 +1,4 @@
-package role
+package rolev4
 
 import (
 	"context"
@@ -7,34 +7,36 @@ import (
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	core "github.com/StackGuardian/sg-sdk-go/core"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var (
-	_ resource.Resource               = &RoleResource{}
-	_ resource.ResourceWithConfigure  = &RoleResource{}
-	_ resource.ResourceWithModifyPlan = &RoleResource{}
+	_ resource.Resource               = &RoleV4Resource{}
+	_ resource.ResourceWithConfigure  = &RoleV4Resource{}
+	_ resource.ResourceWithModifyPlan = &RoleV4Resource{}
 )
 
-type RoleResource struct {
+type RoleV4Resource struct {
+	role.RoleResource
 	client   *sgclient.Client
 	org_name string
 }
 
 // NewResource is a helper function to simplify the provider implementation.
 func NewResource() resource.Resource {
-	return &RoleResource{}
+	return &RoleV4Resource{}
 }
 
 // Metadata returns the resource type name.
-func (r *RoleResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_role"
+func (r *RoleV4Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_rolev4"
 }
 
 // Configure adds the provider configured client to the resource.
-func (r *RoleResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *RoleV4Resource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Add a nil check when handling ProviderData because Terraform
 	// sets that data after it calls the ConfigureProvider RPC.
 	if req.ProviderData == nil {
@@ -56,14 +58,14 @@ func (r *RoleResource) Configure(_ context.Context, req resource.ConfigureReques
 	r.org_name = provider.Org_name
 }
 
-func (r *RoleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *RoleV4Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("resource_name"), req.ID)...)
 }
 
-func (r *RoleResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+func (r *RoleV4Resource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	if !req.State.Raw.IsNull() && !req.Plan.Raw.IsNull() {
-		var state RoleResourceModel
-		var plan RoleResourceModel
+		var state RoleV4ResourceModel
+		var plan RoleV4ResourceModel
 
 		resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 		resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -78,8 +80,9 @@ func (r *RoleResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRe
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *RoleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan RoleResourceModel
+func (r *RoleV4Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan RoleV4ResourceModel
+
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -131,9 +134,10 @@ func (r *RoleResource) Create(ctx context.Context, req resource.CreateRequest, r
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *RoleV4Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// Get current state
-	var state RoleResourceModel
+	var state RoleV4ResourceModel
+
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -165,8 +169,8 @@ func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan RoleResourceModel
+func (r *RoleV4Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan RoleV4ResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -206,8 +210,8 @@ func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *RoleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state RoleResourceModel
+func (r *RoleV4Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state RoleV4ResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

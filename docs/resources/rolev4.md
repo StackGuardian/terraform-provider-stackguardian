@@ -6,11 +6,7 @@ description: |-
 
 ---
 
-<div style="background-color: #fff8c5; border-left: 4px solid #d4a72c; padding: 10px;">
-⚠️ <strong>Deprecated:</strong> This feature is no longer recommended for use and may be removed in future versions. Use <a href=https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/resources/rolev4>rolev4</a> instead
-</div>
-
-# stackguardian_role (Resource)
+# stackguardian_rolev4 (Resource)
 
 ## Example Usage
 
@@ -23,7 +19,7 @@ resource "stackguardian_workflow_group" "example_workflow_group" {
   tags          = ["example-tag"]
 }
 
-resource "stackguardian_role" "example_role" {
+resource "stackguardian_rolev4" "example_role" {
   resource_name = "example-role"
   description   = "Example of terraform-provider-stackguardian for Role"
 
@@ -60,6 +56,10 @@ resource "stackguardian_role" "example_role" {
 - `description` (String) A brief description of the role. Must be less than 256 characters.
 - `tags` (List of String) A list of tags associated with the role. A maximum of 10 tags are allowed.
 
+### Read-Only
+
+- `doc_version` (String)
+
 <a id="nestedatt--allowed_permissions"></a>
 ### Nested Schema for `allowed_permissions`
 
@@ -87,3 +87,65 @@ import {
 ```bash
 terraform import stackguardian_role.example-role role-name
 ```
+
+## Migrating from stackguardian_role to stackguardian_rolev4
+
+```terraform
+// stackguardian_role example
+resource "stackguardian_role" "test" {
+  resource_name = "testing"
+  allowed_permissions = {
+    "PATCH/api/v1/orgs/lhind-master/wfgrps/<wfGrp>/wfs/<wf>/" = {
+      name = "UpdateWorkflow"
+      paths = {
+        "<wfGrp>" = [
+          "wfgrp1",
+          "wfgrp2"
+        ]
+        "<wf>" = [
+          "wf1",
+          "wf2"
+        ]
+      }
+    },
+  }
+}
+
+// stackguardian_rolev4 equivalent example
+resource "stackguardian_role" "test" {
+  resource_name = "testing"
+  allowed_permissions = {
+    "PATCH/api/v1/orgs/lhind-master/wfgrps/<wfGrp>/wfs/<wf>/" = {
+      name = "UpdateWorkflow"
+      paths = {
+        "<wfGrp>" = [
+          "wfgrp1|wfgrp2"
+        ]
+        "<wf>" = [
+          "wf1|wf2"
+        ]
+      }
+    },
+  }
+}
+```
+
+### Explanation
+
+We can convert from role to rolev4 by combining all paths inside a list with a logical `|` operator.
+
+Difference between `stackguardian_role` and `stackguardian_rolev4`
+
+`stackguardian_role` resolves the resources by combining with each path with every other path. Resolving the paths from the above example:
+
+- /wfGrp/wfgrp1/wf/wf1
+- /wfGrp/wfgrp1/wf/wf2
+- /wfGrp/wfgrp2/wf/wf1
+- /wfGrp/wfgrp2/wf/wf2
+
+</br>
+
+`stackguardian_rolev4` resolves the resources by mapping paths one to one. Resolving paths from the above example:
+
+- /wfGrp/wfgrp1/wf/wf1
+- /wfGrp/wfgrp2/wf/wf2
