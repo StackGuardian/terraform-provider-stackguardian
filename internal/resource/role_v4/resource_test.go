@@ -19,7 +19,7 @@ resource "stackguardian_workflow_group" "%s" {
   tags          = ["example-tag"]
 }
 
-resource "stackguardian_role" "%s" {
+resource "stackguardian_rolev4" "%s" {
   resource_name = "%s"
   description   = "Example of terraform-provider-stackguardian for a Role"
   tags = [
@@ -48,7 +48,7 @@ resource "stackguardian_workflow_group" "%s" {
   tags          = ["example-tag"]
 }
 
-resource "stackguardian_role" "%s" {
+resource "stackguardian_rolev4" "%s" {
   resource_name = "%s"
   description   = "Update in Example of terraform-provider-stackguardian for a Role"
   tags = [
@@ -73,10 +73,10 @@ resource "stackguardian_role" "%s" {
 )
 
 func TestAccRole(t *testing.T) {
-	workflowGroupResourceName := "role-example-workflow-group"
-	workflowGroupName := "role-example-workflow-group"
-	roleResourceName := "role-example-role"
-	roleName := "role-example-role"
+	workflowGroupResourceName := "rolev4-example-workflow-group"
+	workflowGroupName := "rolev4-example-workflow-group"
+	roleResourceName := "rolev4-example-role"
+	roleName := "rolev4-example-role"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -96,10 +96,10 @@ func TestAccRole(t *testing.T) {
 }
 
 func TestAccRoleRecreateOnExternalDelete(t *testing.T) {
-	workflowGroupResourceName := "role-example-workflow-group2"
-	workflowGroupName := "role-example-workflow-group2"
-	roleResourceName := "role-example-role2"
-	roleName := "role-example-role2"
+	workflowGroupResourceName := "rolev4-example-workflow-group2"
+	workflowGroupName := "rolev4-example-workflow-group2"
+	roleResourceName := "rolev4-example-role2"
+	roleName := "rolev4-example-role2"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -111,7 +111,7 @@ func TestAccRoleRecreateOnExternalDelete(t *testing.T) {
 			{
 				Config: fmt.Sprintf(testAccResource, workflowGroupResourceName, workflowGroupName, roleResourceName, roleName, workflowGroupName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(fmt.Sprintf("stackguardian_role.%s", roleResourceName), "resource_name", roleName),
+					resource.TestCheckResourceAttr(fmt.Sprintf("stackguardian_rolev4.%s", roleResourceName), "resource_name", roleName),
 				),
 			},
 			{
@@ -124,7 +124,7 @@ func TestAccRoleRecreateOnExternalDelete(t *testing.T) {
 				},
 				Config: fmt.Sprintf(testAccResource, workflowGroupResourceName, workflowGroupName, roleResourceName, roleName, workflowGroupName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(fmt.Sprintf("stackguardian_role.%s", roleResourceName), "resource_name", roleName),
+					resource.TestCheckResourceAttr(fmt.Sprintf("stackguardian_rolev4.%s", roleResourceName), "resource_name", roleName),
 				),
 			},
 		},
