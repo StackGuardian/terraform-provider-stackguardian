@@ -22,6 +22,7 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/policy"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role"
 	roleassignment "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role_assignment"
+	rolev4 "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role_v4"
 	runnergroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/runner_group"
 	workflowgroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_group"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -223,5 +224,6 @@ func (p *stackguardianProvider) Resources(_ context.Context) []func() resource.R
 		roleassignment.NewResource,
 		policy.NewResource,
 		runnergroup.NewResource,
+		rolev4.NewResource,
 	}
 }
