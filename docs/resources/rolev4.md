@@ -78,7 +78,7 @@ Import existing resource.
 ### Using Import block (terraform v1.5.0 and later)
 ```terraform
 import {
-  to = stackguardian_role4.example-role
+  to = stackguardian_rolev4.example-role
   id = "role-name"
 }
 ```

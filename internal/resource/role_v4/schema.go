@@ -9,8 +9,8 @@ import (
 )
 
 // Schema defines the schema for the resource.
-func (r *RoleV4Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	r.RoleResource.Schema(context.TODO(), resource.SchemaRequest{}, resp)
+func (r *RoleV4Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	r.RoleResource.Schema(ctx, req, resp)
 	resp.Schema.Attributes["doc_version"] = schema.StringAttribute{
 		Computed: true,
 		Default:  stringdefault.StaticString("V4"),

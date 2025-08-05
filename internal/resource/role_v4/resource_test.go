@@ -53,7 +53,7 @@ resource "stackguardian_rolev4" "%s" {
   description   = "Update in Example of terraform-provider-stackguardian for a Role"
   tags = [
     "example-org",
-		"update",
+	"update",
   ]
 
   # Defining allowed permissions for the role
