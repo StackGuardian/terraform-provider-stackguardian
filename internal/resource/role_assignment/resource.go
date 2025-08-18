@@ -73,7 +73,7 @@ func (r *roleAssignmentResource) ModifyPlan(ctx context.Context, req resource.Mo
 		}
 
 		if !plan.UserId.Equal(state.UserId) {
-			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("resource_name"))
+			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("user_id"))
 		}
 	}
 }

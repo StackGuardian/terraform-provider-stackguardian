@@ -9,6 +9,7 @@ import (
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
@@ -144,6 +145,36 @@ func TestAccRoleAssignmentRecreateOnExternalDelete(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(fmt.Sprintf("stackguardian_role_assignment.%s", roleAssignmentName), "user_id", userId),
 				),
+			},
+		},
+	})
+}
+
+func TestAccRoleAssignmentRecreateOnChangeInUserId(t *testing.T) {
+	userId := "example.user3@domain.com"
+	workflowGroupResourceName := "role-assign-example-workflow-group3"
+	workflowGroupName := "role-assign-example-workflow-group3"
+	roleResourceName := "role-assign-example-role3"
+	roleName := "role-assign-example-role3"
+	roleAssignmentName := "example-role-assignment3"
+	newUserId := "example.user30@domain.com"
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(testAccResource, workflowGroupResourceName, workflowGroupName, roleResourceName, roleName, workflowGroupName, roleAssignmentName, userId, roleName),
+			},
+			{
+				Config: fmt.Sprintf(testAccResource, workflowGroupResourceName, workflowGroupName, roleResourceName, roleName, workflowGroupName, roleAssignmentName, newUserId, roleName),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(fmt.Sprintf("stackguardian_role_assignment.%s", roleAssignmentName), plancheck.ResourceActionReplace),
+					},
+				},
 			},
 		},
 	})
