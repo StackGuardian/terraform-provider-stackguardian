@@ -14,6 +14,8 @@ description: |-
 resource "stackguardian_policy" "example-policy" {
   resource_name = "example-policy"
 
+  policy_type = "GENERAL"
+
   description = "Policy created using provider"
 
   number_of_approvals_required = 0
