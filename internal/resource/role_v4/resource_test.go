@@ -130,3 +130,38 @@ func TestAccRoleRecreateOnExternalDelete(t *testing.T) {
 		},
 	})
 }
+
+func TestRoleEmptyPath(t *testing.T) {
+	testResource := `
+resource "stackguardian_rolev4" "%s" {
+  resource_name = "%s"
+  description   = "Example of terraform-provider-stackguardian for a Role"
+  tags = [
+    "example-org",
+  ]
+
+  # Defining allowed permissions for the role
+  allowed_permissions = {
+    # Permission for accessing a Workflow Group
+    "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" = { # Replace with your organization name
+      name = "GetWorkflowGroup",
+      paths = {}
+    }
+  }
+}`
+
+	roleResourceName := "rolev4-example-role3"
+	roleName := "rolev4-example-role3"
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(testResource, roleResourceName, roleName),
+			},
+		},
+	})
+}
