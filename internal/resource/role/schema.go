@@ -41,7 +41,8 @@ func (r *RoleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 						},
 						"paths": schema.MapAttribute{
 							MarkdownDescription: constants.AllowedPermissionsPaths,
-							Required:            true,
+							Optional:            true,
+							Computed:            true,
 							ElementType: types.ListType{
 								ElemType: types.StringType,
 							},

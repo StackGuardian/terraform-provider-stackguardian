@@ -66,6 +66,9 @@ resource "stackguardian_role" "example_role" {
 Required:
 
 - `name` (String) The name of the permission.
+
+Optional:
+
 - `paths` (Map of List of String) A map of resource paths to which this permission is scoped.
 
 
