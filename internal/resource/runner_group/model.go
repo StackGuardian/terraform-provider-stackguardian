@@ -13,6 +13,7 @@ import (
 )
 
 type RunnerGroupResourceModel struct {
+	Id                         types.String `tfsdk:"id"`
 	ResourceName               types.String `tfsdk:"resource_name"`
 	Description                types.String `tfsdk:"description"`
 	RunnerToken                types.String `tfsdk:"runner_token"`
@@ -24,19 +25,19 @@ type RunnerGroupResourceModel struct {
 
 func (m *RunnerGroupResourceModel) ToAPIModel() (*sgsdkgo.RunnerGroup, diag.Diagnostics) {
 	runnerGroupAPIModel := &sgsdkgo.RunnerGroup{
-		ResourceName: m.ResourceName.ValueStringPointer(),
+		ResourceName: sgsdkgo.Optional(m.ResourceName.ValueString()),
 	}
 
 	if !m.RunnerToken.IsUnknown() && !m.RunnerToken.IsNull() {
-		runnerGroupAPIModel.RunnerToken = m.RunnerToken.ValueStringPointer()
+		runnerGroupAPIModel.RunnerToken = sgsdkgo.Optional(m.RunnerToken.ValueString())
 	}
 
 	if !m.Description.IsUnknown() && !m.Description.IsNull() {
-		runnerGroupAPIModel.Description = m.Description.ValueStringPointer()
+		runnerGroupAPIModel.Description = sgsdkgo.Optional(m.Description.ValueString())
 	}
 
 	if !m.MaxNumberOfRunners.IsUnknown() && !m.MaxNumberOfRunners.IsNull() {
-		runnerGroupAPIModel.MaxNumberOfRunners = expanders.IntPtr(m.MaxNumberOfRunners.ValueInt32Pointer())
+		runnerGroupAPIModel.MaxNumberOfRunners = sgsdkgo.Optional(int(m.MaxNumberOfRunners.ValueInt32()))
 	}
 
 	// Tags
@@ -45,7 +46,7 @@ func (m *RunnerGroupResourceModel) ToAPIModel() (*sgsdkgo.RunnerGroup, diag.Diag
 		if diags.HasError() {
 			return nil, diags
 		} else if tags != nil {
-			runnerGroupAPIModel.Tags = tags
+			runnerGroupAPIModel.Tags = sgsdkgo.Optional(tags)
 		}
 	}
 
@@ -67,10 +68,11 @@ func (m *RunnerGroupResourceModel) ToAPIModel() (*sgsdkgo.RunnerGroup, diag.Diag
 		if diags.HasError() {
 			return nil, diags
 		}
-		runnerGroupAPIModel.RunControllerRuntimeSource, diags = runControllerRuntimeSourceModel.ToAPIModel()
+		runControllerRuntimeSourceAPIModel, diags := runControllerRuntimeSourceModel.ToAPIModel()
 		if diags.HasError() {
 			return nil, diags
 		}
+		runnerGroupAPIModel.RunControllerRuntimeSource = sgsdkgo.Optional(*runControllerRuntimeSourceAPIModel)
 	}
 
 	return runnerGroupAPIModel, nil
@@ -305,8 +307,9 @@ func storageBackendConfigToTerraType(storageBackendConfig *sgsdkgo.StorageBacken
 	return storageBackendConfigTerraType, nil
 }
 
-func BuildAPIModelToRunnerGroupModel(apiResponse *sgsdkgo.RunnerGroup) (*RunnerGroupResourceModel, diag.Diagnostics) {
+func BuildAPIModelToRunnerGroupModel(apiResponse *sgsdkgo.RunnerGroupResponse) (*RunnerGroupResourceModel, diag.Diagnostics) {
 	runnerGroupModel := &RunnerGroupResourceModel{
+		Id:                 flatteners.StringPtr(apiResponse.Id),
 		ResourceName:       flatteners.StringPtr(apiResponse.ResourceName),
 		Description:        flatteners.StringPtr(apiResponse.Description),
 		RunnerToken:        flatteners.StringPtr(apiResponse.RunnerToken),

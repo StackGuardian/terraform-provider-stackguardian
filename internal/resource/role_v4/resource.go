@@ -7,6 +7,7 @@ import (
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	core "github.com/StackGuardian/sg-sdk-go/core"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/flatteners"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -73,7 +74,7 @@ func (r *RoleV4Resource) ModifyPlan(ctx context.Context, req resource.ModifyPlan
 			return
 		}
 
-		if !plan.ResourceName.Equal(state.ResourceName) {
+		if !plan.Id.Equal(state.Id) {
 			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("resource_name"))
 		}
 	}
@@ -95,12 +96,12 @@ func (r *RoleV4Resource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	reqResp, err := r.client.UsersRoles.CreateRole(ctx, r.org_name, payload)
+	reqResp, err := r.client.AccessManagement.CreateRole(ctx, r.org_name, payload)
 	if err != nil {
 		if apiErr, ok := err.(*core.APIError); ok {
 			// Check if resource already exists
 			if apiErr.StatusCode == 400 {
-				role, readErr := r.client.UsersRoles.ReadRole(ctx, r.org_name, plan.ResourceName.ValueString())
+				role, readErr := r.client.AccessManagement.ReadRole(ctx, r.org_name, plan.ResourceName.ValueString())
 				if readErr != nil {
 					tflog.Error(ctx, readErr.Error())
 					//Return the original error if read also fails
@@ -129,6 +130,8 @@ func (r *RoleV4Resource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
+	roleModel.Id = flatteners.String(reqResp.Data.Id)
+
 	// Set state to fully populated data
 	resp.Diagnostics.Append(resp.State.Set(ctx, &roleModel)...)
 }
@@ -145,7 +148,7 @@ func (r *RoleV4Resource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	// Get refreshed state from client
-	role, err := r.client.UsersRoles.ReadRole(ctx, r.org_name, state.ResourceName.ValueString())
+	role, err := r.client.AccessManagement.ReadRole(ctx, r.org_name, state.Id.ValueString())
 	if err != nil {
 		// If a managed resource is no longer found then remove it from the state
 		if apiErr, ok := err.(*core.APIError); ok {
@@ -165,6 +168,8 @@ func (r *RoleV4Resource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
+	roleResourceModel.Id = flatteners.String(role.Data.Id)
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, roleResourceModel)...)
 }
 
@@ -183,7 +188,7 @@ func (r *RoleV4Resource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	_, err := r.client.UsersRoles.UpdateRole(ctx, r.org_name, plan.ResourceName.ValueString(), payload)
+	_, err := r.client.AccessManagement.UpdateRole(ctx, r.org_name, plan.Id.ValueString(), payload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error updating role", "Error in updating role "+
@@ -192,11 +197,11 @@ func (r *RoleV4Resource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Call read to get the updated WFG resource to set the state
-	updatedRole, err := r.client.UsersRoles.ReadRole(ctx, r.org_name, plan.ResourceName.ValueString())
+	updatedRole, err := r.client.AccessManagement.ReadRole(ctx, r.org_name, plan.ResourceName.ValueString())
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error reading the updated state of role",
-			"Could not read the updated state of role "+plan.ResourceName.ValueString()+": "+err.Error())
+			"Could not read the updated state of role "+plan.Id.ValueString()+": "+err.Error())
 		return
 	}
 
@@ -205,6 +210,8 @@ func (r *RoleV4Resource) Update(ctx context.Context, req resource.UpdateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	roleResourceModel.Id = flatteners.String(updatedRole.Data.Id)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, roleResourceModel)...)
 }
@@ -218,7 +225,7 @@ func (r *RoleV4Resource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	err := r.client.UsersRoles.DeleteRole(ctx, r.org_name, state.ResourceName.ValueString())
+	err := r.client.AccessManagement.DeleteRole(ctx, r.org_name, state.Id.ValueString())
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error deleting role", "Error in deleting role "+state.ResourceName.ValueString()+": "+err.Error())

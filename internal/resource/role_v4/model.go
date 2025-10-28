@@ -21,7 +21,7 @@ func (m *RoleV4ResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Role, di
 		return nil, diags
 	}
 
-	apimodel.DocVersion = sgsdkgo.Optional(sgsdkgo.DocVersionEnumV4)
+	apimodel.DocVersion = sgsdkgo.Optional(sgsdkgo.RoleDocVersionEnumV4)
 
 	return apimodel, nil
 }
@@ -32,7 +32,7 @@ func (m *RoleV4ResourceModel) ToPatchedAPIModel(ctx context.Context) (*sgsdkgo.P
 		return nil, diags
 	}
 
-	apimodel.DocVersion = sgsdkgo.Optional(sgsdkgo.DocVersionEnumV4)
+	apimodel.DocVersion = sgsdkgo.Optional(sgsdkgo.RoleDocVersionEnumV4)
 
 	return apimodel, nil
 }

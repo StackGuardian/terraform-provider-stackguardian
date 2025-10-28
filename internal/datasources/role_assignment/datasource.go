@@ -61,10 +61,10 @@ func (d *roleAssignmentDataSource) Read(ctx context.Context, req datasource.Read
 	}
 
 	getUserRequest := &sgsdkgo.GetorRemoveUserFromOrganization{
-		UserId: config.UserId.ValueString(),
+		UserId: config.UserId.ValueStringPointer(),
 	}
 
-	readRoleAssignmentResponse, err := d.client.UsersRoles.GetUser(ctx, d.orgName, getUserRequest)
+	readRoleAssignmentResponse, err := d.client.AccessManagement.ReadUser(ctx, d.orgName, getUserRequest)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read role assignment.", err.Error())
 		return

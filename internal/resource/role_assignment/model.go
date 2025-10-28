@@ -42,7 +42,7 @@ func (m *RoleAssignmentResourceModel) ToCreateAPIModel(ctx context.Context) (*sg
 func (m *RoleAssignmentResourceModel) ToGetAPIModel(ctx context.Context) (*sgsdkgo.GetorRemoveUserFromOrganization, diag.Diagnostics) {
 
 	apiModel := sgsdkgo.GetorRemoveUserFromOrganization{
-		UserId: m.UserId.ValueString(),
+		UserId: m.UserId.ValueStringPointer(),
 	}
 
 	return &apiModel, nil

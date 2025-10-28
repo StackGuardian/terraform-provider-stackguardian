@@ -25,8 +25,8 @@ const (
 )
 
 func TestAccWorkflowGroup(t *testing.T) {
-	workflowGroupResrouceName := "example-workflow-group"
-	workflowGroupName := "example-workflow-group"
+	workflowGroupResrouceName := "wfgrp-example-workflow-group"
+	workflowGroupName := "wfgrp-example-workflow-group"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -46,8 +46,8 @@ func TestAccWorkflowGroup(t *testing.T) {
 }
 
 func TestAccWorkflowGroupRecreateOnExternalDelete(t *testing.T) {
-	workflowGroupResourceName := "example-policy2"
-	workflowGroupName := "example-policy2"
+	workflowGroupResourceName := "wfgrp-example-workflow-group2"
+	workflowGroupName := "wfgrp-example-workflow-group2"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -74,6 +74,28 @@ func TestAccWorkflowGroupRecreateOnExternalDelete(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(fmt.Sprintf("stackguardian_workflow_group.%s", workflowGroupResourceName), "resource_name", workflowGroupName),
 				),
+			},
+		},
+	})
+}
+
+func TestAccWorkflowGroupIncompatibleResourceName(t *testing.T) {
+	// Test if the resource has name that is not compatible with the
+	workflowGroupName := "wfgrp-example-workflow-group3"
+	workflowGroupResourceName := "wfgrp example workflow group3"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(testAccResource, workflowGroupName, workflowGroupResourceName),
+			},
+			{
+				Config: fmt.Sprintf(testAccResourceUpdate, workflowGroupName, workflowGroupResourceName),
 			},
 		},
 	})

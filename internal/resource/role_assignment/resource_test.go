@@ -136,7 +136,7 @@ func TestAccRoleAssignmentRecreateOnExternalDelete(t *testing.T) {
 			{
 				PreConfig: func() {
 					client := acctest.SGClient()
-					_, err := client.UsersRoles.RemoveUser(context.TODO(), os.Getenv("STACKGUARDIAN_ORG_NAME"), &sgsdkgo.GetorRemoveUserFromOrganization{UserId: userId})
+					_, err := client.AccessManagement.DeleteUser(context.TODO(), os.Getenv("STACKGUARDIAN_ORG_NAME"), &sgsdkgo.GetorRemoveUserFromOrganization{UserId: &userId})
 					if err != nil {
 						t.Fatal(err)
 					}

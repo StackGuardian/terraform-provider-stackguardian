@@ -26,6 +26,7 @@ func (m RoleAllowedPermissionsModel) AttributeTypes() map[string]attr.Type {
 }
 
 type RoleResourceModel struct {
+	Id                 types.String `tfsdk:"id"`
 	ResourceName       types.String `tfsdk:"resource_name"`
 	Description        types.String `tfsdk:"description"`
 	AllowedPermissions types.Map    `tfsdk:"allowed_permissions"`
@@ -150,6 +151,7 @@ func (m *RoleResourceModel) ToPatchedAPIModel(ctx context.Context) (*sgsdkgo.Pat
 
 func BuildAPIModelToRoleModel(apiResponse *sgsdkgo.RoleDataResponse) (*RoleResourceModel, diag.Diagnostics) {
 	roleModel := &RoleResourceModel{
+		Id:           flatteners.String(apiResponse.Id),
 		ResourceName: flatteners.String(apiResponse.ResourceName),
 		Description:  flatteners.StringPtr(apiResponse.Description),
 	}

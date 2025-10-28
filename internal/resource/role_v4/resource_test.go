@@ -117,7 +117,7 @@ func TestAccRoleRecreateOnExternalDelete(t *testing.T) {
 			{
 				PreConfig: func() {
 					client := acctest.SGClient()
-					err := client.UsersRoles.DeleteRole(context.TODO(), os.Getenv("STACKGUARDIAN_ORG_NAME"), roleName)
+					err := client.AccessManagement.DeleteRole(context.TODO(), os.Getenv("STACKGUARDIAN_ORG_NAME"), roleName)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -161,6 +161,30 @@ resource "stackguardian_rolev4" "%s" {
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testResource, roleResourceName, roleName),
+			},
+		},
+	})
+}
+
+func TestAccRoleV4IncompatibleResourceName(t *testing.T) {
+	// Test if the resource has name that is not compatible with the
+	workflowGroupResourceName := "rolev4-example-workflow-group4"
+	workflowGroupName := "rolev4-example-workflow-group4"
+	roleName := "rolev4-assign-example-role4"
+	roleResourceName := "rolev4-assign-example-role4"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(testAccResource, workflowGroupName, workflowGroupResourceName, roleName, roleResourceName, workflowGroupName),
+			},
+			{
+				Config: fmt.Sprintf(testAccResourceUpdate, workflowGroupName, workflowGroupResourceName, roleName, roleResourceName, workflowGroupName),
 			},
 		},
 	})

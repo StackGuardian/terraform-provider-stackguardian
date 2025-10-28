@@ -3,6 +3,8 @@ package stackoutputs
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -27,23 +29,25 @@ func buildAPIModelToTerraformModel(stackOutputs *sgsdkgo.GeneratedStackOutputsRe
 		return &stackOutputsDataSourceModel, nil
 	}
 
-	dataString, err := json.Marshal(stackOutputsMap)
-	if err != nil {
-		return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Faile to convert stack outputs map to string", err.Error())}
-	}
-	stackOutputsDataSourceModel.DataJson = types.StringValue(string(dataString))
-
-	dataMap := map[string]types.String{}
+	dataMap := map[string]*string{}
 	for key, value := range stackOutputsMap {
-		if value != nil {
-			valueString, err := json.Marshal(value)
+		if value != "" {
+			reqResp, err := http.Get(value)
 			if err != nil {
-				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Fail to convert stack output to string", err.Error())}
+				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Failed to fetch stack outputs", "")}
+			}
+			defer reqResp.Body.Close()
+
+			body, err := io.ReadAll(reqResp.Body)
+			if err != nil {
+				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Failed to parse stack outputs", "")}
 			}
 
-			dataMap[key] = types.StringValue(string(valueString))
+			bodyStr := string(body)
+
+			dataMap[key] = &bodyStr
 		} else {
-			dataMap[key] = types.StringNull()
+			dataMap[key] = nil
 		}
 	}
 	dataTerraType, diags := types.MapValueFrom(context.TODO(), types.StringType, &dataMap)
@@ -52,6 +56,23 @@ func buildAPIModelToTerraformModel(stackOutputs *sgsdkgo.GeneratedStackOutputsRe
 	}
 
 	stackOutputsDataSourceModel.Data = dataTerraType
+
+	dataMapJson := map[string]any{}
+	for workflow, outputs := range dataMap {
+		var jsonOutputs any
+		err := json.Unmarshal([]byte(*outputs), &jsonOutputs)
+		if err != nil {
+			return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Failed to parse stack outputs", "")}
+		}
+
+		dataMapJson[workflow] = jsonOutputs
+	}
+
+	dataString, err := json.Marshal(dataMapJson)
+	if err != nil {
+		return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Failed to read stack outputs", err.Error())}
+	}
+	stackOutputsDataSourceModel.DataJson = types.StringValue(string(dataString))
 
 	return &stackOutputsDataSourceModel, nil
 }

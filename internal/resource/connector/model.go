@@ -13,6 +13,7 @@ import (
 )
 
 type ConnectorResourceModel struct {
+	Id                types.String `tfsdk:"id"`
 	ResourceName      types.String `tfsdk:"resource_name"`
 	Description       types.String `tfsdk:"description"`
 	Settings          types.Object `tfsdk:"settings"`
@@ -319,7 +320,7 @@ func (ConnectorDiscoverySettingsBenchmarksRegionsModel) AttributeTypes() map[str
 	}
 }
 
-func settingsToAPIModel(m types.Object) (*sgsdkgo.Settings, diag.Diagnostics) {
+func settingsToAPIModel(m types.Object) (*sgsdkgo.IntegrationsSettings, diag.Diagnostics) {
 	// Set kind and config in Settings
 	var settingsModelValue *ConnectorSettingsModel
 	diags := m.As(context.Background(), &settingsModelValue, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: false, UnhandledUnknownAsEmpty: false})
@@ -333,8 +334,8 @@ func settingsToAPIModel(m types.Object) (*sgsdkgo.Settings, diag.Diagnostics) {
 		return nil, diags
 	}
 
-	settings := &sgsdkgo.Settings{
-		Kind: sgsdkgo.SettingsKindEnum(settingsModelValue.Kind.ValueString()),
+	settings := &sgsdkgo.IntegrationsSettings{
+		Kind: sgsdkgo.IntegrationsSettingsKindEnum(settingsModelValue.Kind.ValueString()),
 	}
 
 	settingsConfigAPIValue := []*sgsdkgo.SettingsConfig{settingsConfigModel[0].toAPIModel()}
@@ -380,33 +381,27 @@ func discoverSettingsToAPIModel(m types.Object) (*sgsdkgo.Discoverysettings, dia
 
 func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integration, diag.Diagnostics) {
 	apiModel := sgsdkgo.Integration{
-		ResourceName: sgsdkgo.Optional(*m.ResourceName.ValueStringPointer()),
+		ResourceName: m.ResourceName.ValueStringPointer(),
 	}
 
 	if !m.Description.IsUnknown() {
-		apiModel.Description = sgsdkgo.Optional(*m.Description.ValueStringPointer())
-	} else {
-		apiModel.Description = sgsdkgo.Null[string]()
+		apiModel.Description = m.Description.ValueStringPointer()
 	}
 
 	settings, diags := settingsToAPIModel(m.Settings)
 	if diags.HasError() {
 		return nil, diags
 	}
-	if settings == nil {
-		apiModel.Settings = sgsdkgo.Null[sgsdkgo.Settings]()
-	} else {
-		apiModel.Settings = sgsdkgo.Optional(*settings)
+	if settings != nil {
+		apiModel.Settings = settings
 	}
 
 	discoverySettings, diags := discoverSettingsToAPIModel(m.DiscoverySettings)
 	if diags.HasError() {
 		return nil, diags
 	}
-	if discoverySettings == nil {
-		apiModel.DiscoverySettings = sgsdkgo.Null[sgsdkgo.Discoverysettings]()
-	} else {
-		apiModel.DiscoverySettings = sgsdkgo.Optional(*discoverySettings)
+	if discoverySettings != nil {
+		apiModel.DiscoverySettings = discoverySettings
 	}
 
 	// Parse tags
@@ -414,10 +409,8 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 	if diags.HasError() {
 		return nil, diags
 	}
-	if tags == nil {
-		apiModel.Tags = sgsdkgo.Null[[]string]()
-	} else {
-		apiModel.Tags = sgsdkgo.Optional(tags)
+	if tags != nil {
+		apiModel.Tags = tags
 	}
 
 	return &apiModel, nil
@@ -425,13 +418,13 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 
 func (m *ConnectorResourceModel) ToAPIPatchedModel(ctx context.Context) (*sgsdkgo.PatchedIntegration, diag.Diagnostics) {
 	apiPatchedModel := &sgsdkgo.PatchedIntegration{
-		ResourceName: sgsdkgo.Optional(*m.ResourceName.ValueStringPointer()),
+		ResourceName: sgsdkgo.Optional(m.ResourceName.ValueStringPointer()),
 	}
 
 	if !m.Description.IsUnknown() {
-		apiPatchedModel.Description = sgsdkgo.Optional(m.Description.ValueString())
+		apiPatchedModel.Description = sgsdkgo.Optional(m.Description.ValueStringPointer())
 	} else {
-		apiPatchedModel.Description = sgsdkgo.Null[string]()
+		apiPatchedModel.Description = sgsdkgo.Null[*string]()
 	}
 
 	// Parse tags
@@ -450,7 +443,7 @@ func (m *ConnectorResourceModel) ToAPIPatchedModel(ctx context.Context) (*sgsdkg
 	if diags.HasError() {
 		return nil, diags
 	}
-	apiPatchedModel.Settings = sgsdkgo.Optional(*settings)
+	apiPatchedModel.Settings = sgsdkgo.Optional(settings)
 
 	// Parse discovery settings
 	discoverySettings, diags := discoverSettingsToAPIModel(m.DiscoverySettings)
@@ -458,9 +451,9 @@ func (m *ConnectorResourceModel) ToAPIPatchedModel(ctx context.Context) (*sgsdkg
 		return nil, diags
 	}
 	if discoverySettings != nil {
-		apiPatchedModel.DiscoverySettings = sgsdkgo.Optional(*discoverySettings)
+		apiPatchedModel.DiscoverySettings = sgsdkgo.Optional(discoverySettings)
 	} else {
-		apiPatchedModel.DiscoverySettings = sgsdkgo.Null[sgsdkgo.Discoverysettings]()
+		apiPatchedModel.DiscoverySettings = sgsdkgo.Null[*sgsdkgo.Discoverysettings]()
 	}
 
 	return apiPatchedModel, nil
@@ -468,6 +461,7 @@ func (m *ConnectorResourceModel) ToAPIPatchedModel(ctx context.Context) (*sgsdkg
 
 func BuildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadResponseMsg) (*ConnectorResourceModel, diag.Diagnostics) {
 	connectorModel := &ConnectorResourceModel{
+		Id:           flatteners.String(apiResponse.Id),
 		ResourceName: flatteners.String(apiResponse.ResourceName),
 		Description:  flatteners.String(apiResponse.Description),
 	}

@@ -73,7 +73,7 @@ func (r *runnerGroupResource) ModifyPlan(ctx context.Context, req resource.Modif
 			return
 		}
 
-		if !plan.ResourceName.Equal(state.ResourceName) {
+		if !plan.Id.Equal(state.Id) {
 			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("resource_name"))
 		}
 	}
@@ -123,7 +123,7 @@ func (r *runnerGroupResource) Read(ctx context.Context, req resource.ReadRequest
 	}
 
 	readRunnerGroupReqBools := false
-	runnerGroup, err := r.client.RunnerGroups.ReadRunnerGroup(ctx, r.org_name, state.ResourceName.ValueString(), &sgsdkgo.ReadRunnerGroupRequest{
+	runnerGroup, err := r.client.RunnerGroups.ReadRunnerGroup(ctx, r.org_name, state.Id.ValueString(), &sgsdkgo.ReadRunnerGroupRequest{
 		GetActiveWorkflows:        &readRunnerGroupReqBools,
 		GetActiveWorkflowsDetails: &readRunnerGroupReqBools,
 	})
@@ -158,7 +158,6 @@ func (r *runnerGroupResource) Read(ctx context.Context, req resource.ReadRequest
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, runnerGroupResourceModel)...)
-
 }
 
 func (r *runnerGroupResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -175,7 +174,7 @@ func (r *runnerGroupResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	updatedRunnerGroup, err := r.client.RunnerGroups.UpdateRunnerGroup(ctx, r.org_name, plan.ResourceName.ValueString(), patchedAPIModel)
+	updatedRunnerGroup, err := r.client.RunnerGroups.UpdateRunnerGroup(ctx, r.org_name, plan.Id.ValueString(), patchedAPIModel)
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating runner group", err.Error())
 		return
@@ -202,7 +201,7 @@ func (r *runnerGroupResource) Delete(ctx context.Context, req resource.DeleteReq
 		return
 	}
 
-	_, err := r.client.RunnerGroups.DeleteRunnerGroup(ctx, r.org_name, state.ResourceName.ValueString())
+	_, err := r.client.RunnerGroups.DeleteRunnerGroup(ctx, r.org_name, state.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error deleting runner group", err.Error())
 		return

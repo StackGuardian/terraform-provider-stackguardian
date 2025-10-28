@@ -14,6 +14,7 @@ import (
 )
 
 type PolicyResourceModel struct {
+	Id                        types.String `tfsdk:"id"`
 	ResourceName              types.String `tfsdk:"resource_name"`
 	PolicyType                types.String `tfsdk:"policy_type"`
 	Description               types.String `tfsdk:"description"`
@@ -398,8 +399,9 @@ func (m *PolicyResourceModel) ToPatchedAPIModel() (*sgsdkgo.PatchedPolicyGeneral
 	return policyAPIModel, nil
 }
 
-func BuildAPIModelToPolicyModel(apiResponse *sgsdkgo.PolicyGeneral) (*PolicyResourceModel, diag.Diagnostics) {
+func BuildAPIModelToPolicyModel(apiResponse *sgsdkgo.PolicyGeneralResponse) (*PolicyResourceModel, diag.Diagnostics) {
 	policyConfigModel := &PolicyResourceModel{
+		Id:                        flatteners.String(apiResponse.Id),
 		ResourceName:              flatteners.StringPtr(apiResponse.ResourceName),
 		PolicyType:                flatteners.String("GENERAL"),
 		Description:               flatteners.StringPtr(apiResponse.Description),

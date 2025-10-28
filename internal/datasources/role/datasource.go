@@ -59,7 +59,7 @@ func (d *roleDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
-	reqResp, err := d.client.UsersRoles.ReadRole(ctx, d.orgName, config.ResourceName.ValueString())
+	reqResp, err := d.client.AccessManagement.ReadRole(ctx, d.orgName, config.ResourceName.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read role assignment.", err.Error())
 		return

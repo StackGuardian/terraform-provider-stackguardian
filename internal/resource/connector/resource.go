@@ -68,7 +68,7 @@ func (r *connectorResource) ModifyPlan(ctx context.Context, req resource.ModifyP
 			return
 		}
 
-		if !plan.ResourceName.Equal(state.ResourceName) {
+		if !plan.Id.Equal(state.Id) {
 			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("resource_name"))
 		}
 	}
@@ -100,7 +100,7 @@ func (r *connectorResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	reqResp.Data.Settings.Config = payload.Settings.Value.Config
+	reqResp.Data.Settings.Config = payload.Settings.Config
 
 	connectorModel, diags := BuildAPIModelToConnectorModel(reqResp.Data)
 	resp.Diagnostics.Append(diags...)
@@ -123,7 +123,7 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	// Get refreshed state from client
-	reqResp, err := r.client.Connectors.ReadConnector(ctx, state.ResourceName.ValueString(), r.org_name)
+	reqResp, err := r.client.Connectors.ReadConnector(ctx, state.Id.ValueString(), r.org_name)
 	if err != nil {
 		apiErr := err.(*core.APIError)
 		if apiErr.StatusCode == 404 {
@@ -164,6 +164,7 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *connectorResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan ConnectorResourceModel
+
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -176,7 +177,7 @@ func (r *connectorResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	reqResp, err := r.client.Connectors.UpdateConnector(ctx, plan.ResourceName.ValueString(), r.org_name, payload)
+	reqResp, err := r.client.Connectors.UpdateConnector(ctx, plan.Id.ValueString(), r.org_name, payload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error updating connector", "Error in updating connector API call: "+err.Error())
@@ -205,7 +206,7 @@ func (r *connectorResource) Delete(ctx context.Context, req resource.DeleteReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	_, err := r.client.Connectors.DeleteConnector(ctx, state.ResourceName.ValueString(), r.org_name)
+	_, err := r.client.Connectors.DeleteConnector(ctx, state.Id.ValueString(), r.org_name)
 	if err != nil {
 		apiErr := err.(*core.APIError)
 		if apiErr.StatusCode == 404 {

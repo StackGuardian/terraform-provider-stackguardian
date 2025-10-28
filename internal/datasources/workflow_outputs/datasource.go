@@ -3,6 +3,8 @@ package workflowoutputs
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
@@ -62,10 +64,29 @@ func (d *workflowOutputsDataSource) Read(ctx context.Context, req datasource.Rea
 
 	workflowOuputs, err := d.client.Workflows.Outputs(ctx, d.orgName, config.Workflow.ValueString(), config.WorkflowGroup.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Unable to read stack outputs", err.Error())
+		resp.Diagnostics.AddError("Request failure to read workflow outputs", err.Error())
+		return
 	}
 
-	stackOutputsDataSourceModel, diags := buildAPIModelToTerraformModel(workflowOuputs.Data)
+	if workflowOuputs.Data.OutputsSignedUrl == "" {
+		resp.Diagnostics.AddError("Unable to fetch workflow outputs", "")
+		return
+	}
+
+	reqResp, err := http.Get(workflowOuputs.Data.OutputsSignedUrl)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to read workflow outputs", "")
+		return
+	}
+	defer reqResp.Body.Close()
+
+	body, err := io.ReadAll(reqResp.Body)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to parse workflow outputs", "")
+		return
+	}
+
+	stackOutputsDataSourceModel, diags := buildAPIModelToTerraformModel(body)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

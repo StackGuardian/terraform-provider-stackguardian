@@ -94,7 +94,7 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	reqResp, err := r.client.UsersRoles.AddUser(ctx, r.org_name, payload)
+	reqResp, err := r.client.AccessManagement.CreateUser(ctx, r.org_name, payload)
 	if err != nil {
 		if apiErr, ok := err.(*core.APIError); ok {
 			// Check if resource already exists
@@ -106,7 +106,7 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 				}
 
 				// Get refreshed state from client
-				user, getErr := r.client.UsersRoles.GetUser(ctx, r.org_name, payload)
+				user, getErr := r.client.AccessManagement.ReadUser(ctx, r.org_name, payload)
 				if getErr != nil {
 					//Return the original error if read also fails
 					tflog.Error(ctx, getErr.Error())
@@ -156,7 +156,7 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	// Get refreshed state from client
-	user, err := r.client.UsersRoles.GetUser(ctx, r.org_name, payload)
+	user, err := r.client.AccessManagement.ReadUser(ctx, r.org_name, payload)
 	if err != nil {
 		// If a managed resource is no longer found then remove it from the state
 		if apiErr, ok := err.(*core.APIError); ok {
@@ -195,7 +195,7 @@ func (r *roleAssignmentResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	_, err := r.client.UsersRoles.UpdateUser(ctx, r.org_name, payload)
+	_, err := r.client.AccessManagement.UpdateUser(ctx, r.org_name, payload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error updating Role Assignment", "Error in updating Role Assignment "+
@@ -210,7 +210,7 @@ func (r *roleAssignmentResource) Update(ctx context.Context, req resource.Update
 	}
 
 	// Call read to get the updated WFG resource to set the state
-	updatedUser, err := r.client.UsersRoles.GetUser(ctx, r.org_name, getPayload)
+	updatedUser, err := r.client.AccessManagement.ReadUser(ctx, r.org_name, getPayload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error reading the updated state of Role Assignment",
@@ -242,7 +242,7 @@ func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 
-	_, err := r.client.UsersRoles.RemoveUser(ctx, r.org_name, removePayload)
+	_, err := r.client.AccessManagement.DeleteUser(ctx, r.org_name, removePayload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error deleting Role Assignment", "Error in deleting Role Assignment "+state.UserId.ValueString()+": "+err.Error())

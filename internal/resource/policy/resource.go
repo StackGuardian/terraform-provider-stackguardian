@@ -67,7 +67,7 @@ func (r *policyResrouce) ModifyPlan(ctx context.Context, req resource.ModifyPlan
 			return
 		}
 
-		if !plan.ResourceName.Equal(state.ResourceName) {
+		if !plan.Id.Equal(state.Id) {
 			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("resource_name"))
 		}
 	}
@@ -116,7 +116,7 @@ func (r *policyResrouce) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	policy, err := r.client.Policies.ReadPolicy(ctx, r.orgName, state.ResourceName.ValueString())
+	policy, err := r.client.Policies.ReadPolicy(ctx, r.orgName, state.Id.ValueString())
 	if err != nil {
 		// if a managed resource is no longer found then remove it from state
 		if apiErr, ok := err.(*core.APIError); ok {
@@ -130,7 +130,8 @@ func (r *policyResrouce) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	respPolicyGeneral := policy.Msg.General
-	policyGeneralModel := sgsdkgo.PolicyGeneral{
+	policyGeneralModel := sgsdkgo.PolicyGeneralResponse{
+		Id:           respPolicyGeneral.Id,
 		ResourceName: respPolicyGeneral.ResourceName,
 		Description:  respPolicyGeneral.Description,
 		Approvers:    respPolicyGeneral.Approvers,
@@ -149,7 +150,6 @@ func (r *policyResrouce) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, policyResourceModel)...)
-
 }
 
 func (r *policyResrouce) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -166,7 +166,7 @@ func (r *policyResrouce) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	updatedPolicy, err := r.client.Policies.UpdatePolicy(ctx, r.orgName, plan.ResourceName.ValueString(), &sgsdkgo.PatchedPolymorphicPolicy{
+	updatedPolicy, err := r.client.Policies.UpdatePolicy(ctx, r.orgName, plan.Id.ValueString(), &sgsdkgo.PatchedPolymorphicPolicy{
 		PolicyType: "GENERAL",
 		General:    patchedAPIModel,
 	})
@@ -194,7 +194,7 @@ func (r *policyResrouce) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	err := r.client.Policies.DeletePolicy(ctx, r.orgName, state.ResourceName.ValueString())
+	err := r.client.Policies.DeletePolicy(ctx, r.orgName, state.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error deleting policy", err.Error())
 		return

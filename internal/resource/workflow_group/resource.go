@@ -73,7 +73,7 @@ func (r *workflowGroupResource) ModifyPlan(ctx context.Context, req resource.Mod
 			return
 		}
 
-		if !plan.ResourceName.Equal(state.ResourceName) {
+		if !plan.Id.Equal(state.Id) {
 			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("resource_name"))
 		}
 	}
@@ -97,12 +97,14 @@ func (r *workflowGroupResource) Create(ctx context.Context, req resource.CreateR
 	var responseData *sgsdkgo.WorkflowGroupDataResponse
 
 	// Check if resource name is nested. If so, create a child workflow group
+	var reqResp *sgsdkgo.WorkflowGroupCreateResponse
+	var err error
 	if workflows := strings.Split(*payload.ResourceName, "/"); len(workflows) > 1 {
 		resourceName := workflows[len(workflows)-1]
 		payload.ResourceName = &resourceName
 		ParentWfg := strings.Join(workflows[:len(workflows)-1], "/")
 
-		reqResp, err := r.client.WorkflowGroups.CreateChildWorkflowGroup(ctx, r.org_name,
+		reqResp, err = r.client.WorkflowGroups.CreateChildWorkflowGroup(ctx, r.org_name,
 			ParentWfg, payload)
 		if err != nil {
 			// Check if resource already exists
@@ -143,7 +145,7 @@ func (r *workflowGroupResource) Create(ctx context.Context, req resource.CreateR
 		}
 		responseData = reqResp.Data
 	} else { //If not, create a normal workflow group
-		reqResp, err := r.client.WorkflowGroups.CreateWorkflowGroup(ctx, r.org_name, payload)
+		reqResp, err = r.client.WorkflowGroups.CreateWorkflowGroup(ctx, r.org_name, payload)
 		if err != nil {
 			// Check if resource already exists
 			if apiErr, ok := err.(*core.APIError); ok {
@@ -200,7 +202,7 @@ func (r *workflowGroupResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	// Get refreshed state from client
-	workflowGroup, err := r.client.WorkflowGroups.ReadWorkflowGroup(ctx, r.org_name, state.ResourceName.ValueString())
+	workflowGroup, err := r.client.WorkflowGroups.ReadWorkflowGroup(ctx, r.org_name, state.Id.ValueString())
 	if err != nil {
 		// If a managed resource is no longer found then remove it from the state
 		if apiErr, ok := err.(*core.APIError); ok {
@@ -215,8 +217,8 @@ func (r *workflowGroupResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	//For cases where WFG is a nested one, the resource name is returned as the full path to match the resource_name in resource definition
-	fullResourceName := strings.Replace(*workflowGroup.Msg.SubResourceId, "/wfgrps/", "", 1)
-	workflowGroup.Msg.ResourceName = &fullResourceName
+	fullResourceId := strings.Replace(*workflowGroup.Msg.SubResourceId, "/wfgrps/", "", 1)
+	workflowGroup.Msg.Id = fullResourceId
 
 	workflowGroupResourceModel, diags := BuildAPIModelToWorkflowGroupModel(workflowGroup.Msg)
 	resp.Diagnostics.Append(diags...)
@@ -243,7 +245,7 @@ func (r *workflowGroupResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	_, err := r.client.WorkflowGroups.UpdateWorkflowGroup(ctx, r.org_name, plan.ResourceName.ValueString(), payload)
+	_, err := r.client.WorkflowGroups.UpdateWorkflowGroup(ctx, r.org_name, plan.Id.ValueString(), payload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error updating workflowGroup", "Error in updating workflowGroup "+
@@ -252,7 +254,7 @@ func (r *workflowGroupResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	// Call read to get the updated WFG resource to set the state
-	updatedWorkflowGroup, err := r.client.WorkflowGroups.ReadWorkflowGroup(ctx, r.org_name, plan.ResourceName.ValueString())
+	updatedWorkflowGroup, err := r.client.WorkflowGroups.ReadWorkflowGroup(ctx, r.org_name, plan.Id.ValueString())
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error reading the updated state of workflowGroup",
@@ -260,8 +262,8 @@ func (r *workflowGroupResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 	//For cases where WFG is a nested one, the resource name is returned as the full path to match the resource_name in resource definition
-	fullResourceName := strings.Replace(*updatedWorkflowGroup.Msg.SubResourceId, "/wfgrps/", "", 1)
-	updatedWorkflowGroup.Msg.ResourceName = &fullResourceName
+	fullResourceId := strings.Replace(*updatedWorkflowGroup.Msg.SubResourceId, "/wfgrps/", "", 1)
+	updatedWorkflowGroup.Msg.Id = fullResourceId
 
 	workflowGroupResourceModel, diags := BuildAPIModelToWorkflowGroupModel(updatedWorkflowGroup.Msg)
 	resp.Diagnostics.Append(diags...)
@@ -281,7 +283,7 @@ func (r *workflowGroupResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	_, err := r.client.WorkflowGroups.DeleteWorkflowGroup(ctx, r.org_name, state.ResourceName.ValueString())
+	_, err := r.client.WorkflowGroups.DeleteWorkflowGroup(ctx, r.org_name, state.Id.ValueString())
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error deleting workflowGroup", "Error in deleting workflowGroup "+state.ResourceName.ValueString()+": "+err.Error())

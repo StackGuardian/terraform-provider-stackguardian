@@ -67,7 +67,7 @@ func (d *policyDatasource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 
 	respPolicyGeneral := reqResp.Msg.General
-	policyGeneralModel := sgsdkgo.PolicyGeneral{
+	policyGeneralModel := sgsdkgo.PolicyGeneralResponse{
 		ResourceName: respPolicyGeneral.ResourceName,
 		Description:  respPolicyGeneral.Description,
 		Approvers:    respPolicyGeneral.Approvers,

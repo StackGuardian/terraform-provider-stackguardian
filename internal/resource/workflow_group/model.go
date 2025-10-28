@@ -11,6 +11,7 @@ import (
 )
 
 type WorkflowGroupResourceModel struct {
+	Id           types.String `tfsdk:"id"`
 	ResourceName types.String `tfsdk:"resource_name"`
 	Description  types.String `tfsdk:"description"`
 	Tags         types.List   `tfsdk:"tags"`
@@ -61,6 +62,7 @@ func (m *WorkflowGroupResourceModel) ToPatchedAPIModel(ctx context.Context) (*sg
 func BuildAPIModelToWorkflowGroupModel(apiResponse *sgsdkgo.WorkflowGroupDataResponse) (*WorkflowGroupResourceModel, diag.Diagnostics) {
 	diag := diag.Diagnostics{}
 	WorkflowGroupModel := &WorkflowGroupResourceModel{
+		Id:           flatteners.String(apiResponse.Id),
 		ResourceName: flatteners.String(*apiResponse.ResourceName),
 		Description:  flatteners.String(*apiResponse.Description),
 	}

@@ -13,6 +13,10 @@ import (
 func (d *connectorDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				MarkdownDescription: constants.Id,
+				Computed:            true,
+			},
 			"resource_name": schema.StringAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "connector"),
 				Required:            true,

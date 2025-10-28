@@ -6,8 +6,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
-	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 )
 
 type workflowOutputsDataSourceModel struct {
@@ -17,24 +15,25 @@ type workflowOutputsDataSourceModel struct {
 	Data          types.Map    `tfsdk:"data"`
 }
 
-func buildAPIModelToTerraformModel(stackOutputs *sgsdkgo.GeneratedWorkflowOutputsResponseData) (*workflowOutputsDataSourceModel, diag.Diagnostics) {
-	stackOutputsDataSourceModel := workflowOutputsDataSourceModel{}
-	stackOutputsMap := stackOutputs.Outputs
+func buildAPIModelToTerraformModel(workflowOutputs []byte) (*workflowOutputsDataSourceModel, diag.Diagnostics) {
+	workflowOutputsDataSourceModel := workflowOutputsDataSourceModel{}
 
-	if stackOutputsMap == nil {
-		stackOutputsDataSourceModel.Data = types.MapNull(types.StringType)
-		stackOutputsDataSourceModel.DataJson = types.StringNull()
-		return &stackOutputsDataSourceModel, nil
+	if workflowOutputs == nil {
+		workflowOutputsDataSourceModel.Data = types.MapNull(types.StringType)
+		workflowOutputsDataSourceModel.DataJson = types.StringNull()
+		return &workflowOutputsDataSourceModel, nil
 	}
 
-	dataString, err := json.Marshal(stackOutputsMap)
+	workflowOutputsDataSourceModel.DataJson = types.StringValue(string(workflowOutputs))
+
+	var workflowOutputsMap map[string]any
+	err := json.Unmarshal(workflowOutputs, &workflowOutputsMap)
 	if err != nil {
-		return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Faile to convert stack outputs map to string", err.Error())}
+		return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Workflow output is not valid JSON", "")}
 	}
-	stackOutputsDataSourceModel.DataJson = types.StringValue(string(dataString))
 
 	dataMap := map[string]types.String{}
-	for key, value := range stackOutputsMap {
+	for key, value := range workflowOutputsMap {
 		if value != nil {
 			valueString, err := json.Marshal(value)
 			if err != nil {
@@ -51,7 +50,7 @@ func buildAPIModelToTerraformModel(stackOutputs *sgsdkgo.GeneratedWorkflowOutput
 		return nil, diags
 	}
 
-	stackOutputsDataSourceModel.Data = dataTerraType
+	workflowOutputsDataSourceModel.Data = dataTerraType
 
-	return &stackOutputsDataSourceModel, nil
+	return &workflowOutputsDataSourceModel, nil
 }
