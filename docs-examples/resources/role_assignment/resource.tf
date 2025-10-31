@@ -33,3 +33,18 @@ resource "stackguardian_role_assignment" "example_role_assignment" {
   entity_type = "EMAIL"
   role        = stackguardian_role.example_role.resource_name
 }
+
+
+# Example for SSO user
+resource "stackguardian_role_assignment" "example_sso_role_assignment" {
+  user_id     = "sg-test-sso/sso.user@domain.com"
+  entity_type = "EMAIL"
+  role        = stackguardian_role.example_role.resource_name
+}
+
+# Example for SSO group
+resource "stackguardian_role_assignment" "example_sso_group_assignment" {
+  user_id     = "sg-test-sso/group-devs"
+  entity_type = "GROUP"
+  role        = stackguardian_role.example_role.resource_name
+}
