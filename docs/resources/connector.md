@@ -175,7 +175,7 @@ Optional:
 - `source_config_dest_kind` (String) Kind of the source configuration destination. Valid examples include eg:- AWS_RBAC, AZURE_STATIC.
 
 <a id="nestedatt--discovery_settings--benchmarks--runtime_source--config"></a>
-### Nested Schema for `discovery_settings.benchmarks.runtime_source.config`
+### Nested Schema for `discovery_settings.benchmarks.runtime_source.source_config_dest_kind`
 
 Optional:
 

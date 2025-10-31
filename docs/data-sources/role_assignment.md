@@ -25,7 +25,10 @@ output "role-assignment-output" {
 
 ### Required
 
-- `user_id` (String) Fully qualified user email or group. Example: you@example.com for a local user, <SSO Login Method Identifier>/you@example.com for a SSO email when entity_type in EMAIL. <SSO Login Method Identifier>/group-devs when entity_type in GROUP.
+- `user_id` (String) Fully qualified user email or group. Examples:
+	- Local user: you@example.com
+	- SSO user: <SSO-Provider-Name>/you@example.com (e.g., sg-test-sso/you@example.com)
+	- SSO group: <SSO-Provider-Name>/group-name (e.g., sg-test-sso/group-devs)
 
 ### Read-Only
 

@@ -86,7 +86,7 @@ Read-Only:
 - `source_config_kind` (String)
 
 <a id="nestedatt--policies_config--policy_vcs_config--custom_source--config"></a>
-### Nested Schema for `policies_config.policy_vcs_config.custom_source.config`
+### Nested Schema for `policies_config.policy_vcs_config.custom_source.source_config_kind`
 
 Read-Only:
 

@@ -144,7 +144,7 @@ Optional:
 - `source_config_dest_kind` (String) Kind of the source configuration destination. Valid examples include eg:- AWS_RBAC, AZURE_STATIC.
 
 <a id="nestedatt--policies_config--policy_vcs_config--custom_source--config"></a>
-### Nested Schema for `policies_config.policy_vcs_config.custom_source.config`
+### Nested Schema for `policies_config.policy_vcs_config.custom_source.source_config_dest_kind`
 
 Optional:
 
