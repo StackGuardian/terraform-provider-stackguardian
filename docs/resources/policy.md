@@ -85,6 +85,10 @@ resource "stackguardian_policy" "example-policy" {
 - `policies_config` (Attributes List) Policy configuration (see [below for nested schema](#nestedatt--policies_config))
 - `tags` (List of String) A list of tags associated with the policy. A maximum of 10 tags are allowed.
 
+### Read-Only
+
+- `id` (String) ID of the resource — use this field to reference the resource in other resources. The legacy resource_name is still supported but its use is discouraged and may not work in some cases.
+
 <a id="nestedatt--policies_config"></a>
 ### Nested Schema for `policies_config`
 

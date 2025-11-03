@@ -59,6 +59,10 @@ resource "stackguardian_role_assignment" "example_role_assignment" {
 - `role` (String) StackGuardian role name.
 - `user_id` (String) Fully qualified user email or group. Example: you@example.com for a local user, <SSO Login Method Identifier>/you@example.com for a SSO email when entity_type in EMAIL. <SSO Login Method Identifier>/group-devs when entity_type in GROUP.
 
+### Optional
+
+- `send_email` (Boolean) Enable or disable email notification to the user on creation
+
 
 
 ## Import

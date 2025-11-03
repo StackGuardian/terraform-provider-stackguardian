@@ -7,6 +7,7 @@ import (
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	core "github.com/StackGuardian/sg-sdk-go/core"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/flatteners"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -135,6 +136,13 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
+	if payload.SendEmail == nil {
+		sendEmail := true
+		roleAssignmentModel.SendEmail = flatteners.BoolPtr(&sendEmail)
+	} else {
+		roleAssignmentModel.SendEmail = flatteners.BoolPtr(payload.SendEmail)
+	}
+
 	// Set state to fully populated data
 	resp.Diagnostics.Append(resp.State.Set(ctx, &roleAssignmentModel)...)
 }
@@ -176,8 +184,9 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, roleResourceModel)...)
+	roleResourceModel.SendEmail = state.SendEmail
 
+	resp.Diagnostics.Append(resp.State.Set(ctx, roleResourceModel)...)
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -224,6 +233,8 @@ func (r *roleAssignmentResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
+	roleResourceModel.SendEmail = plan.SendEmail
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, roleResourceModel)...)
 }
 
@@ -248,5 +259,4 @@ func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.Delete
 		resp.Diagnostics.AddError("Error deleting Role Assignment", "Error in deleting Role Assignment "+state.UserId.ValueString()+": "+err.Error())
 		return
 	}
-	//TODO: check if we need to update the state
 }

@@ -75,7 +75,6 @@ func (d *roleAssignmentDataSource) Read(ctx context.Context, req datasource.Read
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	roleAssignmentDataSourceModel.UserId = config.UserId
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, roleAssignmentDataSourceModel)...)
 }

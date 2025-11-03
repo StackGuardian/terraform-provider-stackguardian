@@ -186,6 +186,11 @@ const (
 	WorkflowGroupResourceName = "Name of the workflow group. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_/]+$"
 )
 
+// Role Assignment or User
+const (
+	SendEmail = "Enable or disable email notification to the user on creation"
+)
+
 // Common
 const (
 	ResourceName         = "Name of the %s. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$"

@@ -47,6 +47,7 @@ resource "stackguardian_role_assignment" "%s" {
   user_id     = "%s"
   entity_type = "EMAIL"
   role        = stackguardian_role.%s.resource_name
+  send_email  = false
 }
 `
 
@@ -175,6 +176,64 @@ func TestAccRoleAssignmentRecreateOnChangeInUserId(t *testing.T) {
 						plancheck.ExpectResourceAction(fmt.Sprintf("stackguardian_role_assignment.%s", roleAssignmentName), plancheck.ResourceActionReplace),
 					},
 				},
+			},
+		},
+	})
+}
+
+func TestSendEmail(t *testing.T) {
+	userId := "example.user3@domain.com"
+	workflowGroupResourceName := "role-assign-example-workflow-group4"
+	workflowGroupName := "role-assign-example-workflow-group4"
+	roleResourceName := "role-assign-example-role4"
+	roleName := "role-assign-example-role4"
+	roleAssignmentName := "example-role-assignment4"
+
+	testResource := `resource "stackguardian_workflow_group" "%s" {
+  resource_name = "%s"
+  description   = "Example of terraform-provider-stackguardian for Workflow Group"
+  tags          = ["example-tag"]
+}
+
+resource "stackguardian_role" "%s" {
+  resource_name = "%s"
+  description   = "Example of terraform-provider-stackguardian for a Role"
+  tags = [
+    "example-org",
+  ]
+
+  # Defining allowed permissions for the role
+  allowed_permissions = {
+    # Permission for accessing a Workflow Group
+    "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" = { # Replace with your organization name
+      name = "GetWorkflowGroup",
+      paths = {
+        "<wfGrp>" = [
+          # Referencing the workflow group resource
+          stackguardian_workflow_group.%s.resource_name,
+        ]
+      }
+    }
+  }
+}
+
+resource "stackguardian_role_assignment" "%s" {
+  user_id     = "%s"
+  entity_type = "EMAIL"
+  role        = stackguardian_role.%s.resource_name
+  send_email  = %s
+}
+	`
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(testResource, workflowGroupResourceName, workflowGroupName, roleResourceName, roleName, workflowGroupName, roleAssignmentName, userId, roleName, "true"),
 			},
 		},
 	})

@@ -32,6 +32,7 @@ output "policy-output" {
 - `approvers` (List of String) List of stackguardian users
 - `description` (String) A brief description of the policy. Must be less than 256 characters.
 - `enforced_on` (List of String) List of Resource path on which this policy is to be applied on
+- `id` (String) ID of the resource — use this field to reference the resource in other resources. The legacy resource_name is still supported but its use is discouraged and may not work in some cases.
 - `number_of_approvals_required` (Number) Number of approvals required for a policy check to pass
 - `policies_config` (Attributes List) Policy configuration (see [below for nested schema](#nestedatt--policies_config))
 - `tags` (List of String) A list of tags associated with the policy. A maximum of 10 tags are allowed.

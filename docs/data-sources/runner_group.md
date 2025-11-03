@@ -30,6 +30,7 @@ output "demo-runner-group-output" {
 ### Read-Only
 
 - `description` (String) A brief description of the runner group. Must be less than 256 characters.
+- `id` (String) ID of the resource — use this field to reference the resource in other resources. The legacy resource_name is still supported but its use is discouraged and may not work in some cases.
 - `max_number_of_runners` (Number) Maximum number of runners allowed in a runner group
 - `run_controller_runtime_source` (Attributes) Source configuration type and settings definition (see [below for nested schema](#nestedatt--run_controller_runtime_source))
 - `runner_token` (String) Private token of the runner group

@@ -48,6 +48,10 @@ resource "stackguardian_runner_group" "example-runner-group" {
 - `runner_token` (String) Private token of the runner group
 - `tags` (List of String) A list of tags associated with the runner group. A maximum of 10 tags are allowed.
 
+### Read-Only
+
+- `id` (String) ID of the resource — use this field to reference the resource in other resources. The legacy resource_name is still supported but its use is discouraged and may not work in some cases.
+
 <a id="nestedatt--storage_backend_config"></a>
 ### Nested Schema for `storage_backend_config`
 
