@@ -121,7 +121,10 @@ const (
 
 // Role Assignment
 const (
-	UserId     = "Fully qualified user email or group. Example: you@example.com for a local user, <SSO Login Method Identifier>/you@example.com for a SSO email when entity_type in EMAIL. <SSO Login Method Identifier>/group-devs when entity_type in GROUP."
+	UserId = `Fully qualified user email or group. Examples:
+	- Local user: you@example.com
+	- SSO user: <SSO-Provider-Name>/you@example.com (e.g., sg-test-sso/you@example.com)
+	- SSO group: <SSO-Provider-Name>/group-name (e.g., sg-test-sso/group-devs)`
 	EntityType = `Should be one of:
 	- <span style="background-color: #eff0f0; color: #e53835;">EMAIL</span>
 	- <span style="background-color: #eff0f0; color: #e53835;">GROUP</span>`
