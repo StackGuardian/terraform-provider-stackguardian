@@ -147,8 +147,14 @@ func (r *RoleV4Resource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
+	// for resources created before introduction of Id attribute
+	id := state.Id.ValueString()
+	if id == "" {
+		id = state.ResourceName.ValueString()
+	}
+
 	// Get refreshed state from client
-	role, err := r.client.AccessManagement.ReadRole(ctx, r.org_name, state.Id.ValueString())
+	role, err := r.client.AccessManagement.ReadRole(ctx, r.org_name, id)
 	if err != nil {
 		// If a managed resource is no longer found then remove it from the state
 		if apiErr, ok := err.(*core.APIError); ok {

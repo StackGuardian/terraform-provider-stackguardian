@@ -116,7 +116,13 @@ func (r *policyResrouce) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	policy, err := r.client.Policies.ReadPolicy(ctx, r.orgName, state.Id.ValueString())
+	// for resources created before introduction of Id attribute
+	id := state.Id.ValueString()
+	if id == "" {
+		id = state.ResourceName.ValueString()
+	}
+
+	policy, err := r.client.Policies.ReadPolicy(ctx, r.orgName, id)
 	if err != nil {
 		// if a managed resource is no longer found then remove it from state
 		if apiErr, ok := err.(*core.APIError); ok {

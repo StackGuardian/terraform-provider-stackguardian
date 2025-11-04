@@ -201,8 +201,14 @@ func (r *workflowGroupResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
+	// for resources created before introduction of Id attribute
+	id := state.Id.ValueString()
+	if id == "" {
+		id = state.ResourceName.ValueString()
+	}
+
 	// Get refreshed state from client
-	workflowGroup, err := r.client.WorkflowGroups.ReadWorkflowGroup(ctx, r.org_name, state.Id.ValueString())
+	workflowGroup, err := r.client.WorkflowGroups.ReadWorkflowGroup(ctx, r.org_name, id)
 	if err != nil {
 		// If a managed resource is no longer found then remove it from the state
 		if apiErr, ok := err.(*core.APIError); ok {
