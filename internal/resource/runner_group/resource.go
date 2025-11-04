@@ -122,8 +122,14 @@ func (r *runnerGroupResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
+	// for resources created before introduction of Id attribute
+	id := state.Id.ValueString()
+	if id == "" {
+		id = state.ResourceName.ValueString()
+	}
+
 	readRunnerGroupReqBools := false
-	runnerGroup, err := r.client.RunnerGroups.ReadRunnerGroup(ctx, r.org_name, state.Id.ValueString(), &sgsdkgo.ReadRunnerGroupRequest{
+	runnerGroup, err := r.client.RunnerGroups.ReadRunnerGroup(ctx, r.org_name, id, &sgsdkgo.ReadRunnerGroupRequest{
 		GetActiveWorkflows:        &readRunnerGroupReqBools,
 		GetActiveWorkflowsDetails: &readRunnerGroupReqBools,
 	})

@@ -122,8 +122,14 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
+	// for resources created before introduction of Id attribute
+	id := state.Id.ValueString()
+	if id == "" {
+		id = state.ResourceName.ValueString()
+	}
+
 	// Get refreshed state from client
-	reqResp, err := r.client.Connectors.ReadConnector(ctx, state.Id.ValueString(), r.org_name)
+	reqResp, err := r.client.Connectors.ReadConnector(ctx, id, r.org_name)
 	if err != nil {
 		apiErr := err.(*core.APIError)
 		if apiErr.StatusCode == 404 {
