@@ -59,8 +59,17 @@ func (d *runnerGroupDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
+	id := config.Id.ValueString()
+	if id == "" {
+		id = config.ResourceName.ValueString()
+		if id == "" {
+			resp.Diagnostics.AddError("either id or resource_name should be provided", "")
+			return
+		}
+	}
+
 	readRunnerGroupReqBools := false
-	reqResp, err := d.client.RunnerGroups.ReadRunnerGroup(ctx, d.org_name, config.ResourceName.ValueString(), &sgsdkgo.ReadRunnerGroupRequest{
+	reqResp, err := d.client.RunnerGroups.ReadRunnerGroup(ctx, d.org_name, id, &sgsdkgo.ReadRunnerGroupRequest{
 		GetActiveWorkflows:        &readRunnerGroupReqBools,
 		GetActiveWorkflowsDetails: &readRunnerGroupReqBools,
 	})

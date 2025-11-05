@@ -62,7 +62,7 @@ resource "stackguardian_role" "example_role" {
 
 ### Read-Only
 
-- `id` (String) ID of the resource — use this field to reference the resource in other resources. The legacy resource_name is still supported but its use is discouraged and may not work in some cases.
+- `id` (String) ID of the resource — Use this attribute to reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.
 
 <a id="nestedatt--allowed_permissions"></a>
 ### Nested Schema for `allowed_permissions`

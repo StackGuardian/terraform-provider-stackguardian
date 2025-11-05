@@ -14,12 +14,12 @@ func (d *connectorDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: constants.Id,
-				Computed:            true,
+				MarkdownDescription: constants.DatasourceId,
+				Optional:            true,
 			},
 			"resource_name": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "connector"),
-				Required:            true,
+				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "connector") + constants.DatasourceResourceNameDeprecation,
+				Optional:            true,
 			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.Description, "connector"),

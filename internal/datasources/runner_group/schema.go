@@ -14,12 +14,12 @@ func (r *runnerGroupDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: constants.Id,
-				Computed:            true,
+				MarkdownDescription: constants.DatasourceId,
+				Optional:            true,
 			},
 			"resource_name": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "runner group"),
-				Required:            true,
+				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "runner group") + constants.DatasourceResourceNameDeprecation,
+				Optional:            true,
 			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.Description, "runner group"),
