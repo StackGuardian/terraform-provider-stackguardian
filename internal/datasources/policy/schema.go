@@ -28,6 +28,10 @@ func (r *policyDatasource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				MarkdownDescription: fmt.Sprintf(constants.Description, "policy"),
 				Computed:            true,
 			},
+			"policy_type": schema.StringAttribute{
+				MarkdownDescription: constants.PolicyType,
+				Computed:            true,
+			},
 			"approvers": schema.ListAttribute{
 				MarkdownDescription: constants.Approvers,
 				ElementType:         types.StringType,

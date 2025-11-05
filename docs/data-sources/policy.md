@@ -35,6 +35,7 @@ output "policy-output" {
 - `enforced_on` (List of String) List of Resource path on which this policy is to be applied on
 - `number_of_approvals_required` (Number) Number of approvals required for a policy check to pass
 - `policies_config` (Attributes List) Policy configuration (see [below for nested schema](#nestedatt--policies_config))
+- `policy_type` (String) Type of policy created "GENERAL" or "FILTER.INSIGHT"
 - `tags` (List of String) A list of tags associated with the policy. A maximum of 10 tags are allowed.
 
 <a id="nestedatt--policies_config"></a>
