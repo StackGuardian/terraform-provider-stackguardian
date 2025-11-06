@@ -197,7 +197,7 @@ const (
 // Common
 const (
 	ResourceName         = "Name of the %s. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$"
-	Id                   = "ID of the resource — use this field to reference the resource in other resources. The legacy resource_name is still supported but its use is discouraged and may not work in some cases."
+	Id                   = "ID of the resource — Use this attribute to reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases."
 	Description          = "A brief description of the %s. Must be less than 256 characters."
 	Tags                 = "A list of tags associated with the %s. A maximum of 10 tags are allowed."
 	StorageBackendConfig = "Configuration for storing runner logs"
@@ -217,11 +217,13 @@ const (
 
 // Common
 const (
-	StackguardianStack         = "Stackguardian stack name"
-	StackguardianWorkflow      = "Stackguardian workflow name"
-	StackguardianWorkflowGroup = "Stackguardian workflow group name"
-	DataSourceDataJson         = "Raw JSON body"
-	DataSourceData             = "Map of k/v pairs with value as JSON string"
+	DatasourceId                      = "ID of the resource. Should be used to import the resource."
+	StackguardianStack                = "Stackguardian stack name"
+	StackguardianWorkflow             = "Stackguardian workflow name"
+	StackguardianWorkflowGroup        = "Stackguardian workflow group name"
+	DataSourceDataJson                = "Raw JSON body"
+	DataSourceData                    = "Map of k/v pairs with value as JSON string"
+	DatasourceResourceNameDeprecation = " <span style='color: #e53835;'>Deprecated:</span> The `resource_name` attribute is still available but its use is discouraged and may not work in some cases. Use `id`."
 )
 
 // api token

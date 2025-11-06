@@ -59,7 +59,16 @@ func (d *connectorDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	reqResp, err := d.client.Connectors.ReadConnector(ctx, config.ResourceName.ValueString(), d.orgName)
+	id := config.Id.ValueString()
+	if id == "" {
+		id = config.ResourceName.ValueString()
+		if id == "" {
+			resp.Diagnostics.AddError("either id or resource_name should be provided", "")
+			return
+		}
+	}
+
+	reqResp, err := d.client.Connectors.ReadConnector(ctx, id, d.orgName)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read connector.", err.Error())
 		return
@@ -70,7 +79,6 @@ func (d *connectorDataSource) Read(ctx context.Context, req datasource.ReadReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	connectorDataSourceModel.ResourceName = config.ResourceName
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, connectorDataSourceModel)...)
 }

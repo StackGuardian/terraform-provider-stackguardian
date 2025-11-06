@@ -33,7 +33,7 @@ resource "stackguardian_workflow_group" "example_workflow_group" {
 
 ### Read-Only
 
-- `id` (String) ID of the resource — use this field to reference the resource in other resources. The legacy resource_name is still supported but its use is discouraged and may not work in some cases.
+- `id` (String) ID of the resource — Use this attribute to reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.
 
 
 
