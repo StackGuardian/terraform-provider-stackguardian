@@ -192,6 +192,7 @@ const (
 // Role Assignment or User
 const (
 	SendEmail = "Enable or disable email notification to the user on creation"
+	Alias     = "Alias to easily identify SSO Groups. Only applicable for `GROUP` entityType."
 )
 
 // Common

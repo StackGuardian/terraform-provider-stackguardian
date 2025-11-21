@@ -32,8 +32,10 @@ output "role-assignment-output" {
 
 ### Read-Only
 
+- `alias` (String) Alias to easily identify SSO Groups. Only applicable for `GROUP` entityType.
 - `entity_type` (String) Should be one of:
 	- <span style="background-color: #eff0f0; color: #e53835;">EMAIL</span>
 	- <span style="background-color: #eff0f0; color: #e53835;">GROUP</span>
 - `role` (String) StackGuardian role name.
+- `send_email` (Boolean) Enable or disable email notification to the user on creation
 

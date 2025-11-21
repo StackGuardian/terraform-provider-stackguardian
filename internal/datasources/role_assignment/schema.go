@@ -24,7 +24,14 @@ func (r *roleAssignmentDataSource) Schema(_ context.Context, _ datasource.Schema
 				MarkdownDescription: constants.Role,
 				Computed:            true,
 			},
+			"alias": schema.StringAttribute{
+				MarkdownDescription: constants.Alias,
+				Computed:            true,
+			},
+			"send_email": schema.BoolAttribute{
+				MarkdownDescription: constants.SendEmail,
+				Computed:            true,
+			},
 		},
 	}
-
 }

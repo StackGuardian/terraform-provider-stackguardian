@@ -15,6 +15,7 @@ type RoleAssignmentResourceModel struct {
 	EntityType types.String `tfsdk:"entity_type"`
 	Role       types.String `tfsdk:"role"`
 	SendEmail  types.Bool   `tfsdk:"send_email"`
+	Alias      types.String `tfsdk:"alias"`
 }
 
 var (
@@ -28,6 +29,7 @@ func (m *RoleAssignmentResourceModel) ToCreateAPIModel(ctx context.Context) (*sg
 	apiModel := sgsdkgo.AddUserToOrganization{
 		UserId: m.UserId.ValueString(),
 		Role:   m.Role.ValueStringPointer(),
+		Alias:  m.Alias.ValueStringPointer(),
 	}
 
 	entity, ok := capabilitiesMap[strings.ToUpper(m.EntityType.ValueString())]
@@ -70,6 +72,7 @@ func BuildAPIModelToRoleAssignmentModel(apiResponse *sgsdkgo.AddUserToOrganizati
 		UserId:     flatteners.String(userID),
 		Role:       flatteners.StringPtr(apiResponse.Role),
 		EntityType: entityTypeValue,
+		Alias:      flatteners.StringPtr(apiResponse.Alias),
 	}
 
 	return RoleModel, nil

@@ -60,6 +60,7 @@ resource "stackguardian_role_assignment" "example_sso_group_assignment" {
   user_id     = "sg-test-sso/group-devs"
   entity_type = "GROUP"
   role        = stackguardian_role.example_role.resource_name
+  alias       = "Group Developers"
 }
 ```
 
@@ -79,6 +80,7 @@ resource "stackguardian_role_assignment" "example_sso_group_assignment" {
 
 ### Optional
 
+- `alias` (String) Alias to easily identify SSO Groups. Only applicable for `GROUP` entityType.
 - `send_email` (Boolean) Enable or disable email notification to the user on creation
 
 
