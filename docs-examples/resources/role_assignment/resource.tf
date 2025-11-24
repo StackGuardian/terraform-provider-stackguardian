@@ -47,4 +47,5 @@ resource "stackguardian_role_assignment" "example_sso_group_assignment" {
   user_id     = "sg-test-sso/group-devs"
   entity_type = "GROUP"
   role        = stackguardian_role.example_role.resource_name
+  alias       = "Group Developers"
 }

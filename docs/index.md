@@ -45,3 +45,7 @@ resource "stackguardian_workflow_group" "Simple-Workflow-Group" {
   tags          = ["tf-provider-example", "example"]
 }
 ```
+
+## Release Notes
+
+Check the release notes on github [here](https://github.com/StackGuardian/terraform-provider-stackguardian/releases).

@@ -238,3 +238,34 @@ resource "stackguardian_role_assignment" "%s" {
 		},
 	})
 }
+
+func TestRoleAssignmentGroupAlias(t *testing.T) {
+	testAccResource := `resource "stackguardian_role_assignment" "%s" {
+  user_id     = "%s"
+  entity_type = "GROUP"
+  role        = "DEV"
+  alias       = "%s"
+  send_email  = false
+}
+`
+	userId := "sg-test-sso/group-devs"
+	roleAssignmentName := "example-role-assignment5"
+	alias := "Group Developers"
+	newAlias := "Group Developers Updated"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(testAccResource, roleAssignmentName, userId, alias),
+			},
+			{
+				Config: fmt.Sprintf(testAccResource, roleAssignmentName, userId, newAlias),
+			},
+		},
+	})
+}

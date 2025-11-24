@@ -34,6 +34,10 @@ func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequ
 					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"alias": schema.StringAttribute{
+				MarkdownDescription: constants.Alias,
+				Optional:            true,
+			},
 		},
 	}
 
