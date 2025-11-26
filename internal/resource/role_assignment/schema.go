@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 // Schema defines the schema for the resource.
@@ -24,7 +25,12 @@ func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequ
 			},
 			"role": schema.StringAttribute{
 				MarkdownDescription: constants.Role,
-				Required:            true,
+				Optional:            true,
+			},
+			"roles": schema.ListAttribute{
+				MarkdownDescription: constants.Roles,
+				ElementType:         types.StringType,
+				Optional:            true,
 			},
 			"send_email": schema.BoolAttribute{
 				MarkdownDescription: constants.SendEmail,

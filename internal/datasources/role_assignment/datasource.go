@@ -70,6 +70,11 @@ func (d *roleAssignmentDataSource) Read(ctx context.Context, req datasource.Read
 		return
 	}
 
+	// role is deprecated
+	if readRoleAssignmentResponse.Data.Role != nil {
+		readRoleAssignmentResponse.Data.Role = nil
+	}
+
 	roleAssignmentDataSourceModel, diags := roleassignment.BuildAPIModelToRoleAssignmentModel(readRoleAssignmentResponse.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

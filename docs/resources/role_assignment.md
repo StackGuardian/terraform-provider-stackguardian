@@ -72,7 +72,6 @@ resource "stackguardian_role_assignment" "example_sso_group_assignment" {
 - `entity_type` (String) Should be one of:
 	- <span style="background-color: #eff0f0; color: #e53835;">EMAIL</span>
 	- <span style="background-color: #eff0f0; color: #e53835;">GROUP</span>
-- `role` (String) StackGuardian role name.
 - `user_id` (String) Fully qualified user email or group. Examples:
 	- Local user: you@example.com
 	- SSO user: <SSO-Provider-Name>/you@example.com (e.g., sg-test-sso/you@example.com)
@@ -81,7 +80,9 @@ resource "stackguardian_role_assignment" "example_sso_group_assignment" {
 ### Optional
 
 - `alias` (String) Alias to easily identify SSO Groups. Only applicable for `GROUP` entityType.
-- `send_email` (Boolean) Enable or disable email notification to the user on creation
+- `role` (String) StackGuardian role name. <span style='color: #e53835;'>(Deprecated)</span> Use `roles` instead.
+- `roles` (List of String) StackGuardian roles. Use to assign one or multiple roles.
+- `send_email` (Boolean) Enable or disable email notification to the user on creation.
 
 
 

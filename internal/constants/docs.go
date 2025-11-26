@@ -128,7 +128,8 @@ const (
 	EntityType = `Should be one of:
 	- <span style="background-color: #eff0f0; color: #e53835;">EMAIL</span>
 	- <span style="background-color: #eff0f0; color: #e53835;">GROUP</span>`
-	Role = "StackGuardian role name."
+	Role  = "StackGuardian role name. <span style='color: #e53835;'>(Deprecated)</span> Use `roles` instead."
+	Roles = "StackGuardian roles. Use to assign one or multiple roles."
 )
 
 // Policy
@@ -191,7 +192,7 @@ const (
 
 // Role Assignment or User
 const (
-	SendEmail = "Enable or disable email notification to the user on creation"
+	SendEmail = "Enable or disable email notification to the user on creation."
 	Alias     = "Alias to easily identify SSO Groups. Only applicable for `GROUP` entityType."
 )
 

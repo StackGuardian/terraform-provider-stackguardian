@@ -6,6 +6,7 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 // Schema defines the schema for the resource.
@@ -22,6 +23,11 @@ func (r *roleAssignmentDataSource) Schema(_ context.Context, _ datasource.Schema
 			},
 			"role": schema.StringAttribute{
 				MarkdownDescription: constants.Role,
+				Computed:            true,
+			},
+			"roles": schema.ListAttribute{
+				MarkdownDescription: constants.Roles,
+				ElementType:         types.StringType,
 				Computed:            true,
 			},
 			"alias": schema.StringAttribute{

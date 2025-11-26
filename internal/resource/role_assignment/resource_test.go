@@ -269,3 +269,111 @@ func TestRoleAssignmentGroupAlias(t *testing.T) {
 		},
 	})
 }
+
+func TestRoleAssignmentMultipleRoles(t *testing.T) {
+	testAccResource := `resource "stackguardian_role_assignment" "%s" {
+  user_id     = "%s"
+  entity_type = "EMAIL"
+  roles       = ["DEV", "ADMIN"]
+  send_email  = false
+}
+`
+	testAccResourceUpdate := `resource "stackguardian_role_assignment" "%s" {
+  user_id     = "%s"
+  entity_type = "EMAIL"
+  roles       = ["DEV"]
+  send_email  = false
+}
+`
+	userId := "example.user6@domain.com"
+	roleAssignmentName := "example-role-assignment6"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(testAccResource, roleAssignmentName, userId),
+			},
+			{
+				Config: fmt.Sprintf(testAccResourceUpdate, roleAssignmentName, userId),
+			},
+		},
+	})
+
+}
+
+func TestRoleAssignmentRoleToRoles(t *testing.T) {
+	testAccResource := `resource "stackguardian_role_assignment" "%s" {
+  user_id     = "%s"
+  entity_type = "EMAIL"
+  role        = "DEV"
+  send_email  = false
+}
+`
+	testAccResourceUpdate := `resource "stackguardian_role_assignment" "%s" {
+  user_id     = "%s"
+  entity_type = "EMAIL"
+  roles       = ["ADMIN", "DEV"]
+  send_email  = false
+}
+`
+	userId := "example.user7@domain.com"
+	roleAssignmentName := "example-role-assignment7"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(testAccResource, roleAssignmentName, userId),
+			},
+			{
+				Config: fmt.Sprintf(testAccResourceUpdate, roleAssignmentName, userId),
+			},
+		},
+	})
+
+}
+
+func TestRoleAssignmentRolesToRole(t *testing.T) {
+	testAccResource := `resource "stackguardian_role_assignment" "%s" {
+  user_id     = "%s"
+  entity_type = "EMAIL"
+  roles       = ["ADMIN", "DEV"]
+  send_email  = false
+}
+`
+	testAccResourceUpdate := `resource "stackguardian_role_assignment" "%s" {
+  user_id     = "%s"
+  entity_type = "EMAIL"
+  role        = "DEV"
+  send_email  = false
+}
+`
+	userId := "example.user8@domain.com"
+	roleAssignmentName := "example-role-assignment8"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(testAccResource, roleAssignmentName, userId),
+			},
+			{
+				Config: fmt.Sprintf(testAccResourceUpdate, roleAssignmentName, userId),
+			},
+		},
+	})
+
+}

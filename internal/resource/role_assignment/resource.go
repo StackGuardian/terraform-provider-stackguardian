@@ -130,6 +130,20 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
+	// Added for backwards compabitlity
+	// Role is deprecated but if old projects are using it we need to set the
+	// Roles as nil
+	if !plan.Role.IsNull() {
+		reqResp.Data.Roles = nil
+	}
+
+	// Added for backwards compabitlity
+	// Role is deprecated but the value is still returned from the API as Roles[0]
+	// Role needs to be set to nil
+	if !plan.Roles.IsNull() {
+		reqResp.Data.Role = nil
+	}
+
 	roleAssignmentModel, diags := BuildAPIModelToRoleAssignmentModel(reqResp.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -176,6 +190,20 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error reading Role Assignment", "Could not read Role Assignment for "+state.UserId.ValueString()+": "+err.Error())
 		return
+	}
+
+	// Added for backwards compabitlity
+	// Role is deprecated but if old projects are using it we need to set the
+	// Roles as nil
+	if !state.Role.IsNull() {
+		user.Data.Roles = nil
+	}
+
+	// Added for backwards compabitlity
+	// Role is deprecated but the value is still returned from the API as Roles[0]
+	// Role needs to be set to nil
+	if !state.Roles.IsNull() {
+		user.Data.Role = nil
 	}
 
 	roleResourceModel, diags := BuildAPIModelToRoleAssignmentModel(user.Data)
@@ -225,6 +253,20 @@ func (r *roleAssignmentResource) Update(ctx context.Context, req resource.Update
 		resp.Diagnostics.AddError("Error reading the updated state of Role Assignment",
 			"Could not read the updated state of Role Assignment "+plan.UserId.ValueString()+": "+err.Error())
 		return
+	}
+
+	// Added for backwards compabitlity
+	// Role is deprecated but if old projects are using it we need to set the
+	// Roles as nil
+	if !plan.Role.IsNull() {
+		updatedUser.Data.Roles = nil
+	}
+
+	// Added for backwards compabitlity
+	// Role is deprecated but the value is still returned from the API as Roles[0]
+	// Role needs to be set to nil
+	if !plan.Roles.IsNull() {
+		updatedUser.Data.Role = nil
 	}
 
 	roleResourceModel, diags := BuildAPIModelToRoleAssignmentModel(updatedUser.Data)
