@@ -36,6 +36,7 @@ output "role-assignment-output" {
 - `entity_type` (String) Should be one of:
 	- <span style="background-color: #eff0f0; color: #e53835;">EMAIL</span>
 	- <span style="background-color: #eff0f0; color: #e53835;">GROUP</span>
-- `role` (String) StackGuardian role name.
-- `send_email` (Boolean) Enable or disable email notification to the user on creation
+- `role` (String) StackGuardian role name. <span style='color: #e53835;'>(Deprecated)</span> Use `roles` instead.
+- `roles` (List of String) StackGuardian roles. Use to assign one or multiple roles.
+- `send_email` (Boolean) Enable or disable email notification to the user on creation.
 

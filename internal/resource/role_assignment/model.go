@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/expanders"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/flatteners"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -14,6 +15,7 @@ type RoleAssignmentResourceModel struct {
 	UserId     types.String `tfsdk:"user_id"`
 	EntityType types.String `tfsdk:"entity_type"`
 	Role       types.String `tfsdk:"role"`
+	Roles      types.List   `tfsdk:"roles"`
 	SendEmail  types.Bool   `tfsdk:"send_email"`
 	Alias      types.String `tfsdk:"alias"`
 }
@@ -30,6 +32,13 @@ func (m *RoleAssignmentResourceModel) ToCreateAPIModel(ctx context.Context) (*sg
 		UserId: m.UserId.ValueString(),
 		Role:   m.Role.ValueStringPointer(),
 		Alias:  m.Alias.ValueStringPointer(),
+	}
+
+	roles, diags := expanders.StringList(context.TODO(), m.Roles)
+	if diags.HasError() {
+		return nil, diags
+	} else if roles != nil {
+		apiModel.Roles = roles
 	}
 
 	entity, ok := capabilitiesMap[strings.ToUpper(m.EntityType.ValueString())]
@@ -68,9 +77,15 @@ func BuildAPIModelToRoleAssignmentModel(apiResponse *sgsdkgo.AddUserToOrganizati
 		userID = apiResponse.UserId
 	}
 
+	rolesTerraType, diags := flatteners.ListOfStringToTerraformList(apiResponse.Roles)
+	if diags.HasError() {
+		return nil, diags
+	}
+
 	RoleModel := &RoleAssignmentResourceModel{
 		UserId:     flatteners.String(userID),
 		Role:       flatteners.StringPtr(apiResponse.Role),
+		Roles:      rolesTerraType,
 		EntityType: entityTypeValue,
 		Alias:      flatteners.StringPtr(apiResponse.Alias),
 	}
