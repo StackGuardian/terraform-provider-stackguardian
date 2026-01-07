@@ -25,7 +25,7 @@ type workflowGroupResource struct {
 	org_name string
 }
 
-// NewWorkflowGroupResource is a helper function to simplify the provider implementation.
+// NewResource is a helper function to simplify the provider implementation.
 func NewResource() resource.Resource {
 	return &workflowGroupResource{}
 }

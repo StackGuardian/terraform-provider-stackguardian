@@ -28,6 +28,10 @@ func (m *RunnerGroupResourceModel) ToAPIModel() (*sgsdkgo.RunnerGroup, diag.Diag
 		ResourceName: sgsdkgo.Optional(m.ResourceName.ValueString()),
 	}
 
+	if !m.Id.IsUnknown() {
+		runnerGroupAPIModel.Id = m.Id.ValueStringPointer()
+	}
+
 	if !m.RunnerToken.IsUnknown() && !m.RunnerToken.IsNull() {
 		runnerGroupAPIModel.RunnerToken = sgsdkgo.Optional(m.RunnerToken.ValueString())
 	}

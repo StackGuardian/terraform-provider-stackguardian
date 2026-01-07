@@ -8,6 +8,9 @@ import (
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
@@ -185,6 +188,77 @@ func TestAccRoleV4IncompatibleResourceName(t *testing.T) {
 			},
 			{
 				Config: fmt.Sprintf(testAccResourceUpdate, workflowGroupName, workflowGroupResourceName, roleName, roleResourceName, workflowGroupName),
+			},
+		},
+	})
+}
+
+func TestAccRoleOptionalId(t *testing.T) {
+	// Test if the resource has name that is not compatible with the
+	testResource := `
+resource "stackguardian_rolev4" "rolev4-example-role5" {
+  id = "rolev4_example_role5"
+  resource_name = "rolev4_example_role5_resource_name"
+  description   = "Example of terraform-provider-stackguardian for a Role"
+  tags = [
+    "example-org",
+  ]
+
+  # Defining allowed permissions for the role
+  allowed_permissions = {
+    # Permission for accessing a Workflow Group
+    "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" = { # Replace with your organization name
+      name = "GetWorkflowGroup",
+      paths = {}
+    }
+  }
+}`
+	testUpdateResource := `
+resource "stackguardian_rolev4" "rolev4-example-role5" {
+  id = "rolev4_example_role5"
+  resource_name = "rolev4_example_role5_resource_name"
+  description   = "Example of terraform-provider-stackguardian for a Role updated"
+  tags = [
+    "example-org",
+  ]
+
+  # Defining allowed permissions for the role
+  allowed_permissions = {
+    # Permission for accessing a Workflow Group
+    "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" = { # Replace with your organization name
+      name = "GetWorkflowGroup",
+      paths = {}
+    }
+  }
+}`
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: testResource,
+				//Check:  resource.TestCheckResourceAttr("aws-cloud-connector-example2"),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"stackguardian_rolev4.rolev4-example-role5",
+						tfjsonpath.New("id"),
+						knownvalue.StringExact("rolev4_example_role5"),
+					),
+				},
+			},
+			{
+				Config: testUpdateResource,
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"stackguardian_rolev4.rolev4-example-role5",
+						tfjsonpath.New("id"),
+						knownvalue.StringExact("rolev4_example_role5"),
+					),
+				},
 			},
 		},
 	})

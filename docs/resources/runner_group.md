@@ -43,14 +43,11 @@ resource "stackguardian_runner_group" "example-runner-group" {
 ### Optional
 
 - `description` (String) A brief description of the runner group. Must be less than 256 characters.
+- `id` (String) ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>
 - `max_number_of_runners` (Number) Maximum number of runners allowed in a runner group
 - `run_controller_runtime_source` (Attributes) Source configuration type and settings definition (see [below for nested schema](#nestedatt--run_controller_runtime_source))
 - `runner_token` (String) Private token of the runner group
 - `tags` (List of String) A list of tags associated with the runner group. A maximum of 10 tags are allowed.
-
-### Read-Only
-
-- `id` (String) ID of the resource — Use this attribute to reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.
 
 <a id="nestedatt--storage_backend_config"></a>
 ### Nested Schema for `storage_backend_config`

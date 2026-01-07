@@ -8,6 +8,9 @@ import (
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
@@ -175,6 +178,44 @@ func TestAccPolicyRecreateOnExternalDelete(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(fmt.Sprintf("stackguardian_policy.%s", resourceName), "resource_name", policyName),
 				),
+			},
+		},
+	})
+}
+
+func TestAccPolicyOptionalId(t *testing.T) {
+	// Test if the resource has name that is not compatible with the
+	testResource := `resource "stackguardian_policy" "example-policy3" {
+  id = "example_policy3"
+  resource_name = "example_policy3_resource_name"
+  policy_type = "GENERAL"
+}`
+	testUpdateResource := `resource "stackguardian_policy" "example-policy3" {
+  id = "example_policy3"
+  resource_name = "example_policy3_resource_name"
+  policy_type = "GENERAL"
+}`
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: testResource,
+				//Check:  resource.TestCheckResourceAttr("aws-cloud-connector-example2"),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"stackguardian_policy.example-policy3",
+						tfjsonpath.New("id"),
+						knownvalue.StringExact("example_policy3"),
+					),
+				},
+			},
+			{
+				Config: testUpdateResource,
 			},
 		},
 	})

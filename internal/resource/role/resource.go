@@ -97,7 +97,13 @@ func (r *RoleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		if apiErr, ok := err.(*core.APIError); ok {
 			// Check if resource already exists
 			if apiErr.StatusCode == 400 {
-				role, readErr := r.client.AccessManagement.ReadRole(ctx, r.org_name, plan.ResourceName.ValueString())
+				var roleID string
+				if !plan.Id.IsNull() && !plan.Id.IsUnknown() {
+					roleID = plan.Id.ValueString()
+				} else {
+					roleID = plan.ResourceName.ValueString()
+				}
+				role, readErr := r.client.AccessManagement.ReadRole(ctx, r.org_name, roleID)
 				if readErr != nil {
 					tflog.Error(ctx, readErr.Error())
 					//Return the original error if read also fails
@@ -194,7 +200,7 @@ func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 
 	// Call read to get the updated WFG resource to set the state
-	updatedRole, err := r.client.AccessManagement.ReadRole(ctx, r.org_name, plan.ResourceName.ValueString())
+	updatedRole, err := r.client.AccessManagement.ReadRole(ctx, r.org_name, plan.Id.ValueString())
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error reading the updated state of role",

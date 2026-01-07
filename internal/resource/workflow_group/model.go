@@ -23,6 +23,10 @@ func (m *WorkflowGroupResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.W
 		Description:  m.Description.ValueStringPointer(),
 	}
 
+	if !m.Id.IsUnknown() {
+		apiModel.Id = m.Id.ValueStringPointer()
+	}
+
 	if !m.Tags.IsUnknown() && !m.Tags.IsNull() {
 		tags, diags := expanders.StringList(context.TODO(), m.Tags)
 		if diags.HasError() {

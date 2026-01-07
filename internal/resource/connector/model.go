@@ -384,6 +384,10 @@ func (m *ConnectorResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Integ
 		ResourceName: m.ResourceName.ValueStringPointer(),
 	}
 
+	if !m.Id.IsUnknown() {
+		apiModel.Id = m.Id.ValueStringPointer()
+	}
+
 	if !m.Description.IsUnknown() {
 		apiModel.Description = m.Description.ValueStringPointer()
 	}

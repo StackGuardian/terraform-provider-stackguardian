@@ -54,12 +54,12 @@ resource "stackguardian_rolev4" "example_role" {
 
 - `allowed_permissions` (Attributes Map) A map of permissions assigned to the role. (see [below for nested schema](#nestedatt--allowed_permissions))
 - `description` (String) A brief description of the role. Must be less than 256 characters.
+- `id` (String) ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>
 - `tags` (List of String) A list of tags associated with the role. A maximum of 10 tags are allowed.
 
 ### Read-Only
 
 - `doc_version` (String)
-- `id` (String) ID of the resource — Use this attribute to reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.
 
 <a id="nestedatt--allowed_permissions"></a>
 ### Nested Schema for `allowed_permissions`

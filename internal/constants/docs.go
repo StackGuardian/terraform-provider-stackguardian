@@ -199,7 +199,7 @@ const (
 // Common
 const (
 	ResourceName         = "Name of the %s. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$"
-	Id                   = "ID of the resource — Use this attribute to reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases."
+	Id                   = "ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>"
 	Description          = "A brief description of the %s. Must be less than 256 characters."
 	Tags                 = "A list of tags associated with the %s. A maximum of 10 tags are allowed."
 	StorageBackendConfig = "Configuration for storing runner logs"
