@@ -19,6 +19,7 @@ func (r *runnerGroupResource) Schema(_ context.Context, _ resource.SchemaRequest
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.Id,
 				Computed:            true,
+				Optional:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},

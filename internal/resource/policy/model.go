@@ -300,6 +300,10 @@ func (m *PolicyResourceModel) ToAPIModel() (*sgsdkgo.PolicyGeneral, diag.Diagnos
 		ResourceName: m.ResourceName.ValueStringPointer(),
 	}
 
+	if !m.Id.IsUnknown() {
+		policyAPIModel.Id = m.Id.ValueStringPointer()
+	}
+
 	if !m.Description.IsNull() {
 		policyAPIModel.Description = m.Description.ValueStringPointer()
 	}

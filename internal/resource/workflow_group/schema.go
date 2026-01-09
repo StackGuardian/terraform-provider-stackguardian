@@ -19,6 +19,7 @@ func (r *workflowGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.Id,
 				Computed:            true,
+				Optional:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},

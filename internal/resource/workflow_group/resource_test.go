@@ -8,6 +8,9 @@ import (
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
@@ -96,6 +99,52 @@ func TestAccWorkflowGroupIncompatibleResourceName(t *testing.T) {
 			},
 			{
 				Config: fmt.Sprintf(testAccResourceUpdate, workflowGroupName, workflowGroupResourceName),
+			},
+		},
+	})
+}
+
+func TestAccWorkflowGroupOptionalId(t *testing.T) {
+	testResource := `resource "stackguardian_workflow_group" "wfgrp-example-wfgrp4" {
+  id = "wfgrp_example_wfgrp4"
+  resource_name = "wfgrp example wfgrp4"
+  description   = "Onboarding example  of terraform-provider-stackguardian for WorkflowGroup"
+  tags          = ["tf-provider-example", "onboarding"]
+}`
+	testUpdateResource := `resource "stackguardian_workflow_group" "wfgrp-example-wfgrp4" {
+  id = "wfgrp_example_wfgrp4"
+  resource_name = "wfgrp example wfgrp4 updated"
+  description   = "Onboarding example of terraform-provider-stackguardian for WorkflowGroup updated"
+  tags          = ["tf-provider-example", "onboarding", "update"]
+}`
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: testResource,
+				//Check:  resource.TestCheckResourceAttr("aws-cloud-connector-example2"),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"stackguardian_workflow_group.wfgrp-example-wfgrp4",
+						tfjsonpath.New("id"),
+						knownvalue.StringExact("wfgrp_example_wfgrp4"),
+					),
+				},
+			},
+			{
+				Config: testUpdateResource,
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"stackguardian_workflow_group.wfgrp-example-wfgrp4",
+						tfjsonpath.New("id"),
+						knownvalue.StringExact("wfgrp_example_wfgrp4"),
+					),
+				},
 			},
 		},
 	})

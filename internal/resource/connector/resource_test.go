@@ -70,7 +70,7 @@ func TestAccConnector(t *testing.T) {
 
 func TestAccConnectorIncompatibleResourceName(t *testing.T) {
 	// Test if the resource has name that is not compatible with the
-	testResource := `resource "stackguardian_connector" "aws-cloud-connector-example" {
+	testResource := `resource "stackguardian_connector" "aws-cloud-connector-example1" {
   resource_name = "aws rbac connector"
   description   = "AWS Cloud Connector"
 
@@ -84,7 +84,7 @@ func TestAccConnectorIncompatibleResourceName(t *testing.T) {
     }]
   }
 }`
-	testUpdateResource := `resource "stackguardian_connector" "aws-cloud-connector-example" {
+	testUpdateResource := `resource "stackguardian_connector" "aws-cloud-connector-example1" {
   resource_name = "aws rbac connector"
   description   = "AWS Cloud Connector"
 
@@ -108,6 +108,64 @@ func TestAccConnectorIncompatibleResourceName(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testResource,
+			},
+			{
+				Config: testUpdateResource,
+			},
+		},
+	})
+}
+
+func TestAccConnectorOptionalId(t *testing.T) {
+	// Test if the resource has name that is not compatible with the
+	testResource := `resource "stackguardian_connector" "aws-cloud-connector-example2" {
+  id = "aws_rbac_connector2"
+  resource_name = "aws rbac connector"
+  description   = "AWS Cloud Connector"
+
+  settings = {
+    kind = "AWS_RBAC"
+
+    config = [{
+      role_arn         = "arn:aws:iam::209502960327:role/StackGuardian"
+      external_id      = "sg-provider-test:ElfygiFglfldTwnDFpAScQkvgvHTGV"
+      duration_seconds = "3600"
+    }]
+  }
+}`
+	testUpdateResource := `resource "stackguardian_connector" "aws-cloud-connector-example2" {
+  id = "aws_rbac_connector2"
+  resource_name = "aws rbac connector update"
+  description   = "AWS Cloud Connector"
+
+  settings = {
+    kind = "AWS_RBAC"
+
+    config = [{
+      role_arn         = "arn:aws:iam::209502960327:role/StackGuardian"
+      external_id      = "sg-provider-test:ElfygiFglfldTwnDFpAScQkvgvHTGV"
+      duration_seconds = "360"
+    }]
+  }
+}`
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: testResource,
+				//Check:  resource.TestCheckResourceAttr("aws-cloud-connector-example2"),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"stackguardian_connector.aws-cloud-connector-example2",
+						tfjsonpath.New("id"),
+						knownvalue.StringExact("aws_rbac_connector2"),
+					),
+				},
 			},
 			{
 				Config: testUpdateResource,

@@ -29,11 +29,8 @@ resource "stackguardian_workflow_group" "example_workflow_group" {
 ### Optional
 
 - `description` (String) A brief description of the workflow group. Must be less than 256 characters.
+- `id` (String) ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>
 - `tags` (List of String) A list of tags associated with the workflow group. A maximum of 10 tags are allowed.
-
-### Read-Only
-
-- `id` (String) ID of the resource — Use this attribute to reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.
 
 
 

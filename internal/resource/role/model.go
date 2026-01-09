@@ -86,6 +86,10 @@ func (m *RoleResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Role, diag
 		ResourceName: m.ResourceName.ValueString(),
 	}
 
+	if !m.Id.IsUnknown() {
+		apiModel.Id = m.Id.ValueStringPointer()
+	}
+
 	if !m.Description.IsUnknown() && !m.Description.IsNull() {
 		apiModel.Description = sgsdkgo.Optional(m.Description.ValueString())
 	} else {
