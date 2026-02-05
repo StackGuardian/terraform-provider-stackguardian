@@ -3,6 +3,7 @@ package sgprovider
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
@@ -25,6 +26,7 @@ import (
 	rolev4 "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role_v4"
 	runnergroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/runner_group"
 	workflowgroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_group"
+	workflowsteptemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_step_template"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -40,10 +42,11 @@ var (
 )
 
 // New is a helper function to simplify provider server and testing implementation.
-func New(version string) func() provider.Provider {
+func New(version string, customHeader http.Header) func() provider.Provider {
 	return func() provider.Provider {
 		return &stackguardianProvider{
-			version: version,
+			version:       version,
+			customHeaders: customHeader,
 		}
 	}
 }
@@ -53,7 +56,8 @@ type stackguardianProvider struct {
 	// version is set to the provider version on release, "dev" when the
 	// provider is built and ran locally, and "test" when running acceptance
 	// testing.
-	version string
+	version       string
+	customHeaders http.Header
 }
 
 type stackguardianProviderModel struct {
@@ -176,6 +180,7 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 	client := sgclient.NewClient(
 		sgoption.WithApiKey(api_key),
 		sgoption.WithBaseURL(api_uri),
+		sgoption.WithHTTPHeader(p.customHeaders),
 	)
 	//Set the values in our struct
 	provInfo := customTypes.ProviderInfo{
@@ -220,6 +225,7 @@ func (p *stackguardianProvider) Resources(_ context.Context) []func() resource.R
 	return []func() resource.Resource{
 		connector.NewResource,
 		workflowgroup.NewResource,
+		workflowsteptemplate.NewResource,
 		role.NewResource,
 		roleassignment.NewResource,
 		policy.NewResource,
