@@ -3,6 +3,7 @@ package roleassignment_test
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"testing"
 
@@ -101,7 +102,7 @@ func TestAccRoleAssignment(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testAccResource, workflowGroupResourceName, workflowGroupName, roleResourceName, roleName, workflowGroupName, roleAssignmentName, userId, roleName),
@@ -126,7 +127,7 @@ func TestAccRoleAssignmentRecreateOnExternalDelete(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testAccResource, workflowGroupResourceName, workflowGroupName, roleResourceName, roleName, workflowGroupName, roleAssignmentName, userId, roleName),
@@ -164,7 +165,7 @@ func TestAccRoleAssignmentRecreateOnChangeInUserId(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testAccResource, workflowGroupResourceName, workflowGroupName, roleResourceName, roleName, workflowGroupName, roleAssignmentName, userId, roleName),
@@ -230,7 +231,7 @@ resource "stackguardian_role_assignment" "%s" {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testResource, workflowGroupResourceName, workflowGroupName, roleResourceName, roleName, workflowGroupName, roleAssignmentName, userId, roleName, "true"),
@@ -258,7 +259,7 @@ func TestRoleAssignmentGroupAlias(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testAccResource, roleAssignmentName, userId, alias),
@@ -293,7 +294,7 @@ func TestRoleAssignmentMultipleRoles(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testAccResource, roleAssignmentName, userId),
@@ -329,7 +330,7 @@ func TestRoleAssignmentRoleToRoles(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testAccResource, roleAssignmentName, userId),
@@ -365,7 +366,7 @@ func TestRoleAssignmentRolesToRole(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testAccResource, roleAssignmentName, userId),

@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"log"
+	"net/http"
 
 	sgprovider "github.com/StackGuardian/terraform-provider-stackguardian/internal/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
@@ -27,7 +28,8 @@ func main() {
 		Debug:   debug,
 	}
 
-	err := providerserver.Serve(context.Background(), sgprovider.New(Version), opts)
+	httpHeader := http.Header{}
+	err := providerserver.Serve(context.Background(), sgprovider.New(Version, httpHeader), opts)
 
 	if err != nil {
 		log.Fatal(err.Error())

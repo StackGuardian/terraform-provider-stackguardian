@@ -3,6 +3,7 @@ package workflowgroup_test
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"testing"
 
@@ -36,7 +37,7 @@ func TestAccWorkflowGroup(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testAccResource, workflowGroupResrouceName, workflowGroupName),
@@ -57,7 +58,7 @@ func TestAccWorkflowGroupRecreateOnExternalDelete(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testAccResource, workflowGroupResourceName, workflowGroupName),
@@ -92,7 +93,7 @@ func TestAccWorkflowGroupIncompatibleResourceName(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testAccResource, workflowGroupName, workflowGroupResourceName),
@@ -123,7 +124,7 @@ func TestAccWorkflowGroupOptionalId(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: testResource,
