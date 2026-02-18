@@ -63,18 +63,19 @@ func (r *workflowStepTemplateResource) ImportState(ctx context.Context, req reso
 }
 
 func (r *workflowStepTemplateResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	var plan WorkflowStepTemplateResourceModel
-	var state WorkflowStepTemplateResourceModel
+	if !req.State.Raw.IsNull() && !req.Plan.Raw.IsNull() {
+		var state WorkflowStepTemplateResourceModel
+		var plan WorkflowStepTemplateResourceModel
 
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+		resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+		resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 
-	if !plan.Id.Equal(state.Id) {
-		resp.RequiresReplace = append(resp.RequiresReplace, path.Root("resource_name"))
-		return
+		if !plan.Id.Equal(state.Id) {
+			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("template_name"))
+		}
 	}
 }
 

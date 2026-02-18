@@ -81,9 +81,11 @@ resource "stackguardian_workflow_step_template" "test" {
 func TestAccWorkflowStepTemplate_WithRuntime(t *testing.T) {
 	name := "example-workflow-step-template2"
 
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
-		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			// Create and Read testing with runtime source
 			{

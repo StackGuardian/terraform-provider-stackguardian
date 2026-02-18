@@ -1,10 +1,11 @@
-package workflowsteptemplate
+package workflowsteptemplaterevision
 
 import (
 	"context"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	"github.com/StackGuardian/sg-sdk-go/workflowsteptemplate"
+	"github.com/StackGuardian/sg-sdk-go/workflowsteptemplaterevision"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/expanders"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/flatteners"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -13,21 +14,21 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
 
-// WorkflowStepTemplateResourceModel represents the Terraform resource model
-type WorkflowStepTemplateResourceModel struct {
+// WorkflowStepTemplateRevisionResourceModel represents the Terraform resource model
+type WorkflowStepTemplateRevisionResourceModel struct {
 	Id               types.String `tfsdk:"id"`
-	TemplateName     types.String `tfsdk:"template_name"`
+	TemplateId       types.String `tfsdk:"template_id"`
+	Alias            types.String `tfsdk:"alias"`
+	Notes            types.String `tfsdk:"notes"`
+	LongDescription  types.String `tfsdk:"description"`
 	TemplateType     types.String `tfsdk:"template_type"`
+	SourceConfigKind types.String `tfsdk:"source_config_kind"`
 	IsActive         types.String `tfsdk:"is_active"`
 	IsPublic         types.String `tfsdk:"is_public"`
-	Description      types.String `tfsdk:"description"`
 	Tags             types.List   `tfsdk:"tags"`
 	ContextTags      types.Map    `tfsdk:"context_tags"`
-	SharedOrgsList   types.List   `tfsdk:"shared_orgs_list"`
 	RuntimeSource    types.Object `tfsdk:"runtime_source"`
-	SourceConfigKind types.String `tfsdk:"source_config_kind"`
-	LatestRevision   types.Int32  `tfsdk:"latest_revision"`
-	NextRevision     types.Int32  `tfsdk:"next_revision"`
+	Deprecation      types.Object `tfsdk:"deprecation"`
 }
 
 // RuntimeSourceModel represents the runtime source nested object
@@ -62,18 +63,45 @@ func (RuntimeSourceConfigModel) AttributeTypes() map[string]attr.Type {
 	}
 }
 
+// DeprecationModel represents the deprecation nested object
+type DeprecationModel struct {
+	EffectiveDate types.String `tfsdk:"effective_date"`
+	Message       types.String `tfsdk:"message"`
+}
+
+func (DeprecationModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"effective_date": types.StringType,
+		"message":        types.StringType,
+	}
+}
+
 // ToAPIModel converts the Terraform model to the SDK create request model
-func (m *WorkflowStepTemplateResourceModel) ToAPIModel(ctx context.Context) (*workflowsteptemplate.CreateWorkflowStepTemplate, diag.Diagnostics) {
-	apiModel := &workflowsteptemplate.CreateWorkflowStepTemplate{
-		TemplateName:     m.TemplateName.ValueString(),
-		TemplateType:     workflowsteptemplate.TemplateTypeWorkflowStepEnum,
-		ShortDescription: m.Description.ValueStringPointer(),
+func (m *WorkflowStepTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) (*workflowsteptemplaterevision.CreateWorkflowStepTemplateRevisionModel, diag.Diagnostics) {
+	apiModel := &workflowsteptemplaterevision.CreateWorkflowStepTemplateRevisionModel{
+		TemplateType: workflowsteptemplate.TemplateTypeWorkflowStepEnum,
 	}
 
-	// Set optional ID
-	if !m.Id.IsUnknown() && !m.Id.IsNull() {
-		idStr := m.Id.ValueString()
-		apiModel.Id = &idStr
+	var diags diag.Diagnostics
+
+	// Set Alias
+	if !m.Alias.IsUnknown() && !m.Alias.IsNull() {
+		apiModel.Alias = m.Alias.ValueStringPointer()
+	}
+
+	// Set Notes
+	if !m.Notes.IsUnknown() && !m.Notes.IsNull() {
+		apiModel.Notes = m.Notes.ValueStringPointer()
+	}
+
+	// Set LongDescription
+	if !m.LongDescription.IsUnknown() && !m.LongDescription.IsNull() {
+		apiModel.LongDescription = m.LongDescription.ValueStringPointer()
+	}
+
+	// Set SourceConfigKind
+	if !m.SourceConfigKind.IsUnknown() && !m.SourceConfigKind.IsNull() {
+		apiModel.SourceConfigKind = workflowsteptemplate.WorkflowStepTemplateSourceConfigKindDockerImageEnum
 	}
 
 	// Set IsActive
@@ -87,7 +115,8 @@ func (m *WorkflowStepTemplateResourceModel) ToAPIModel(ctx context.Context) (*wo
 	}
 
 	// Parse tags
-	tags, diags := expanders.StringList(ctx, m.Tags)
+	tags, tagDiags := expanders.StringList(ctx, m.Tags)
+	diags.Append(tagDiags...)
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -102,18 +131,6 @@ func (m *WorkflowStepTemplateResourceModel) ToAPIModel(ctx context.Context) (*wo
 			return nil, diags
 		}
 		apiModel.ContextTags = contextTags
-	}
-
-	// Parse shared orgs list
-	sharedOrgs, diags := expanders.StringList(ctx, m.SharedOrgsList)
-	if diags.HasError() {
-		return nil, diags
-	}
-	apiModel.SharedOrgsList = sharedOrgs
-
-	// Set source config kind
-	if !m.SourceConfigKind.IsUnknown() && !m.SourceConfigKind.IsNull() {
-		apiModel.SourceConfigKind = workflowsteptemplate.WorkflowStepTemplateSourceConfigKindDockerImageEnum
 	}
 
 	// Parse runtime source
@@ -164,25 +181,51 @@ func (m *WorkflowStepTemplateResourceModel) ToAPIModel(ctx context.Context) (*wo
 		}
 	}
 
+	// Parse deprecation
+	if !m.Deprecation.IsUnknown() && !m.Deprecation.IsNull() {
+		var deprecationModel DeprecationModel
+		depDiags := m.Deprecation.As(ctx, &deprecationModel, basetypes.ObjectAsOptions{
+			UnhandledNullAsEmpty:    false,
+			UnhandledUnknownAsEmpty: false,
+		})
+		diags.Append(depDiags...)
+		if diags.HasError() {
+			return nil, diags
+		}
+
+		apiModel.Deprecation = &workflowsteptemplaterevision.Deprecation{
+			EffectiveDate: deprecationModel.EffectiveDate.ValueStringPointer(),
+			Message:       deprecationModel.Message.ValueStringPointer(),
+		}
+	}
+
 	return apiModel, diags
 }
 
-// ToUpdateAPIModel converts the Terraform model to the SDK update request model
-func (m *WorkflowStepTemplateResourceModel) ToPatchedAPIModel(ctx context.Context) (*workflowsteptemplate.UpdateWorkflowStepTemplateRequestModel, diag.Diagnostics) {
+// ToPatchedAPIModel converts the Terraform model to the SDK update request model
+func (m *WorkflowStepTemplateRevisionResourceModel) ToPatchedAPIModel(ctx context.Context) (*workflowsteptemplaterevision.UpdateWorkflowStepTemplateRevisionModel, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
 
-	apiModel := &workflowsteptemplate.UpdateWorkflowStepTemplateRequestModel{}
+	apiModel := &workflowsteptemplaterevision.UpdateWorkflowStepTemplateRevisionModel{}
 
-	// Set template name
-	if !m.TemplateName.IsUnknown() && !m.TemplateName.IsNull() {
-		templateName := m.TemplateName.ValueString()
-		// Using core.Optional pattern from the sgsdkgo package
-		apiModel.TemplateName = sgsdkgo.Optional(templateName)
+	// Set Alias
+	if !m.Alias.IsUnknown() && !m.Alias.IsNull() {
+		apiModel.Alias = sgsdkgo.Optional(m.Alias.ValueString())
 	}
 
-	// Set description
-	if !m.Description.IsUnknown() && !m.Description.IsNull() {
-		apiModel.ShortDescription = sgsdkgo.Optional(m.Description.ValueString())
+	// Set Notes
+	if !m.Notes.IsUnknown() && !m.Notes.IsNull() {
+		apiModel.Notes = sgsdkgo.Optional(m.Notes.ValueString())
+	}
+
+	// Set LongDescription
+	if !m.LongDescription.IsUnknown() && !m.LongDescription.IsNull() {
+		apiModel.LongDescription = sgsdkgo.Optional(m.LongDescription.ValueString())
+	}
+
+	// Set SourceConfigKind
+	if !m.SourceConfigKind.IsUnknown() && !m.SourceConfigKind.IsNull() {
+		apiModel.SourceConfigKind = sgsdkgo.Optional(workflowsteptemplate.WorkflowStepTemplateSourceConfigKindEnum(m.SourceConfigKind.ValueString()))
 	}
 
 	// Set IsActive
@@ -216,28 +259,38 @@ func (m *WorkflowStepTemplateResourceModel) ToPatchedAPIModel(ctx context.Contex
 		apiModel.ContextTags = sgsdkgo.Optional(contextTags)
 	}
 
-	// Parse shared orgs list
-	if !m.SharedOrgsList.IsUnknown() && !m.SharedOrgsList.IsNull() {
-		sharedOrgs, soDiags := expanders.StringList(ctx, m.SharedOrgsList)
-		diags.Append(soDiags...)
+	// Parse deprecation
+	if !m.Deprecation.IsUnknown() && !m.Deprecation.IsNull() {
+		var deprecationModel DeprecationModel
+		depDiags := m.Deprecation.As(ctx, &deprecationModel, basetypes.ObjectAsOptions{
+			UnhandledNullAsEmpty:    false,
+			UnhandledUnknownAsEmpty: false,
+		})
+		diags.Append(depDiags...)
 		if diags.HasError() {
 			return nil, diags
 		}
-		apiModel.SharedOrgsList = sgsdkgo.Optional(sharedOrgs)
+
+		apiModel.Deprecation = sgsdkgo.Optional(workflowsteptemplaterevision.Deprecation{
+			EffectiveDate: deprecationModel.EffectiveDate.ValueStringPointer(),
+			Message:       deprecationModel.Message.ValueStringPointer(),
+		})
 	}
 
 	return apiModel, diags
 }
 
-// BuildAPIModelToWorkflowStepTemplateModel converts the SDK response to the Terraform model
-func BuildAPIModelToWorkflowStepTemplateModel(apiResponse *workflowsteptemplate.UpdateWorkflowStepTemplateResponse) (*WorkflowStepTemplateResourceModel, diag.Diagnostics) {
+// BuildAPIModelToRevisionModel converts the SDK response to the Terraform model
+func BuildAPIModelToRevisionModel(apiResponse *workflowsteptemplaterevision.WorkflowStepTemplateRevisionResponseData, id string, templateId string) (*WorkflowStepTemplateRevisionResourceModel, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
 
-	model := &WorkflowStepTemplateResourceModel{
-		Id:               flatteners.String(apiResponse.Id),
-		TemplateName:     flatteners.String(apiResponse.TemplateName),
+	model := &WorkflowStepTemplateRevisionResourceModel{
+		Id:               flatteners.String(id),
+		TemplateId:       flatteners.String(templateId),
+		Alias:            flatteners.StringPtr(apiResponse.Alias),
+		Notes:            flatteners.StringPtr(apiResponse.Notes),
+		LongDescription:  flatteners.StringPtr(apiResponse.LongDescription),
 		TemplateType:     flatteners.String(string(apiResponse.TemplateType)),
-		Description:      flatteners.StringPtr(apiResponse.ShortDescription),
 		SourceConfigKind: flatteners.String(string(apiResponse.SourceConfigKind)),
 		IsActive:         flatteners.StringPtr((*string)(apiResponse.IsActive)),
 		IsPublic:         flatteners.StringPtr((*string)(apiResponse.IsPublic)),
@@ -269,22 +322,6 @@ func BuildAPIModelToWorkflowStepTemplateModel(apiResponse *workflowsteptemplate.
 		model.ContextTags = contextTagsMap
 	} else {
 		model.ContextTags = types.MapNull(types.StringType)
-	}
-
-	// Handle shared orgs list
-	if apiResponse.SharedOrgsList != nil {
-		var orgs []types.String
-		for _, org := range apiResponse.SharedOrgsList {
-			orgs = append(orgs, flatteners.String(org))
-		}
-		orgsList, oDiags := types.ListValueFrom(context.Background(), types.StringType, orgs)
-		diags.Append(oDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		model.SharedOrgsList = orgsList
-	} else {
-		model.SharedOrgsList = types.ListNull(types.StringType)
 	}
 
 	// Handle runtime source
@@ -334,17 +371,21 @@ func BuildAPIModelToWorkflowStepTemplateModel(apiResponse *workflowsteptemplate.
 		model.RuntimeSource = types.ObjectNull(RuntimeSourceModel{}.AttributeTypes())
 	}
 
-	// Handle revisions
-	if apiResponse.LatestRevision != nil {
-		model.LatestRevision = flatteners.Int32(int(*apiResponse.LatestRevision))
-	} else {
-		model.LatestRevision = types.Int32Null()
-	}
+	// Handle deprecation
+	if apiResponse.Deprecation != nil {
+		deprecationModel := DeprecationModel{
+			EffectiveDate: flatteners.StringPtr(apiResponse.Deprecation.EffectiveDate),
+			Message:       flatteners.StringPtr(apiResponse.Deprecation.Message),
+		}
 
-	if apiResponse.NextRevision != nil {
-		model.NextRevision = flatteners.Int32(int(*apiResponse.NextRevision))
+		deprecationObj, depDiags := types.ObjectValueFrom(context.Background(), DeprecationModel{}.AttributeTypes(), deprecationModel)
+		diags.Append(depDiags...)
+		if diags.HasError() {
+			return nil, diags
+		}
+		model.Deprecation = deprecationObj
 	} else {
-		model.NextRevision = types.Int32Null()
+		model.Deprecation = types.ObjectNull(DeprecationModel{}.AttributeTypes())
 	}
 
 	return model, diags

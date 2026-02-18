@@ -19,6 +19,8 @@ import (
 	stackworkflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_workflow_outputs"
 	workflowgroupdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_group"
 	workflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_outputs"
+	workflowsteptemplatedatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_step_template"
+	workflowsteptemplaterevisiondatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_step_template_revision"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/connector"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/policy"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role"
@@ -27,6 +29,7 @@ import (
 	runnergroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/runner_group"
 	workflowgroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_group"
 	workflowsteptemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_step_template"
+	workflowsteptemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_step_template_revision"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -217,6 +220,8 @@ func (p *stackguardianProvider) DataSources(_ context.Context) []func() datasour
 		policydatasource.NewDataSource,
 		runnergroupdatasource.NewDataSource,
 		runnergrouptoken.NewDataSource,
+		workflowsteptemplatedatasource.NewDataSource,
+		workflowsteptemplaterevisiondatasource.NewDataSource,
 	}
 }
 
@@ -226,6 +231,7 @@ func (p *stackguardianProvider) Resources(_ context.Context) []func() resource.R
 		connector.NewResource,
 		workflowgroup.NewResource,
 		workflowsteptemplate.NewResource,
+		workflowsteptemplaterevision.NewResource,
 		role.NewResource,
 		roleassignment.NewResource,
 		policy.NewResource,
