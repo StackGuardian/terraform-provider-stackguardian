@@ -384,99 +384,20 @@ func (DeploymentPlatformConfigModel) AttributeTypes() map[string]attr.Type {
 	}
 }
 
-type UserSchedulesTerraformActionModel struct {
-	Action types.String `tfsdk:"action"`
-}
-
-func (UserSchedulesTerraformActionModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"action": types.StringType,
-	}
-}
-
-type UserSchedulesVcsConfigIacInputDataModel struct {
-	SchemaId   types.String `tfsdk:"schema_id"`
-	SchemaType types.String `tfsdk:"schema_type"`
-	Data       types.String `tfsdk:"data"`
-}
-
-func (UserSchedulesVcsConfigIacInputDataModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"schema_id":   types.StringType,
-		"schema_type": types.StringType,
-		"data":        types.StringType,
-	}
-}
-
-type UserSchedulesVcsConfigIacVcsConfigModel struct {
-	UseMarketplaceTemplate types.Bool   `tfsdk:"use_marketplace_template"`
-	IacTemplateId          types.String `tfsdk:"iac_template_id"`
-	CustomSource           types.Object `tfsdk:"custom_source"`
-}
-
-func (UserSchedulesVcsConfigIacVcsConfigModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"use_marketplace_template": types.BoolType,
-		"iac_template_id":          types.StringType,
-		"custom_source":            types.ObjectType{AttrTypes: RuntimeSourceModel{}.AttributeTypes()},
-	}
-}
-
-type UserSchedulesVcsConfigModel struct {
-	IacVcsConfig types.Object `tfsdk:"iac_vcs_config"`
-	IacInputData types.Object `tfsdk:"iac_input_data"`
-}
-
-func (UserSchedulesVcsConfigModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"iac_vcs_config": types.ObjectType{AttrTypes: UserSchedulesVcsConfigIacVcsConfigModel{}.AttributeTypes()},
-		"iac_input_data": types.ObjectType{AttrTypes: UserSchedulesVcsConfigIacInputDataModel{}.AttributeTypes()},
-	}
-}
-
-type UserSchedulesInputsModel struct {
-	ContextTags          types.Map    `tfsdk:"context_tags"`
-	EnableChaining       types.Bool   `tfsdk:"enable_chaining"`
-	EnvironmentVariables types.List   `tfsdk:"environment_variables"`
-	MiniSteps            types.Object `tfsdk:"mini_steps"`
-	ScheduledAt          types.String `tfsdk:"scheduled_at"`
-	TerraformAction      types.Object `tfsdk:"terraform_action"`
-	TerraformConfig      types.Object `tfsdk:"terraform_config"`
-	UserJobCPU           types.Int64  `tfsdk:"user_job_cpu"`
-	UserJobMemory        types.Int64  `tfsdk:"user_job_memory"`
-	VcsConfig            types.Object `tfsdk:"vcs_config"`
-}
-
-func (UserSchedulesInputsModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"context_tags":          types.MapType{ElemType: types.StringType},
-		"enable_chaining":       types.BoolType,
-		"environment_variables": types.ListType{ElemType: types.ObjectType{AttrTypes: EnvironmentVariableModel{}.AttributeTypes()}},
-		"mini_steps":            types.ObjectType{AttrTypes: MinistepsModel{}.AttributeTypes()},
-		"scheduled_at":          types.StringType,
-		"terraform_action":      types.ObjectType{AttrTypes: UserSchedulesTerraformActionModel{}.AttributeTypes()},
-		"terraform_config":      types.ObjectType{AttrTypes: TerraformConfigModel{}.AttributeTypes()},
-		"user_job_cpu":          types.Int64Type,
-		"user_job_memory":       types.Int64Type,
-		"vcs_config":            types.ObjectType{AttrTypes: UserSchedulesVcsConfigModel{}.AttributeTypes()},
-	}
-}
 
 type UserSchedulesModel struct {
-	Cron   types.String `tfsdk:"cron"`
-	State  types.String `tfsdk:"state"`
-	Desc   types.String `tfsdk:"desc"`
-	Name   types.String `tfsdk:"name"`
-	Inputs types.Object `tfsdk:"inputs"`
+	Cron  types.String `tfsdk:"cron"`
+	State types.String `tfsdk:"state"`
+	Desc  types.String `tfsdk:"desc"`
+	Name  types.String `tfsdk:"name"`
 }
 
 func (UserSchedulesModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
-		"cron":   types.StringType,
-		"state":  types.StringType,
-		"desc":   types.StringType,
-		"name":   types.StringType,
-		"inputs": types.ObjectType{AttrTypes: UserSchedulesInputsModel{}.AttributeTypes()},
+		"cron":  types.StringType,
+		"state": types.StringType,
+		"desc":  types.StringType,
+		"name":  types.StringType,
 	}
 }
 
@@ -539,165 +460,9 @@ func convertUserSchedulesToAPIModel(ctx context.Context, userSchedulesList types
 			Name:  m.Name.ValueStringPointer(),
 		}
 
-		if !m.Inputs.IsNull() && !m.Inputs.IsUnknown() {
-			var inputsModel UserSchedulesInputsModel
-			diags := m.Inputs.As(ctx, &inputsModel, basetypes.ObjectAsOptions{
-				UnhandledNullAsEmpty:    true,
-				UnhandledUnknownAsEmpty: true,
-			})
-			if diags.HasError() {
-				return nil, diags
-			}
-
-			if !inputsModel.ContextTags.IsNull() && !inputsModel.ContextTags.IsUnknown() {
-				contextTags := make(map[string]string)
-				diags := inputsModel.ContextTags.ElementsAs(ctx, &contextTags, false)
-				if diags.HasError() {
-					return nil, diags
-				}
-				schedule.Inputs.ContextTags = contextTags
-			}
-
-			schedule.Inputs.EnableChaining = inputsModel.EnableChaining.ValueBoolPointer()
-			schedule.Inputs.ScheduledAt = inputsModel.ScheduledAt.ValueStringPointer()
-			schedule.Inputs.UserJobCPU = expanders.IntPtr(inputsModel.UserJobCPU.ValueInt64Pointer())
-			schedule.Inputs.UserJobMemory = expanders.IntPtr(inputsModel.UserJobMemory.ValueInt64Pointer())
-
-			envVars, diags := convertEnvironmentVariablesToAPI(ctx, inputsModel.EnvironmentVariables)
-			if diags.HasError() {
-				return nil, diags
-			}
-			schedule.Inputs.EnvironmentVariables = envVars
-
-			ministeps, diags := convertMinistepsToAPI(ctx, inputsModel.MiniSteps)
-			if diags.HasError() {
-				return nil, diags
-			}
-			if ministeps != nil {
-				schedule.Inputs.Ministeps = *ministeps
-			}
-
-			if !inputsModel.TerraformAction.IsNull() && !inputsModel.TerraformAction.IsUnknown() {
-				var actionModel UserSchedulesTerraformActionModel
-				diags := inputsModel.TerraformAction.As(ctx, &actionModel, basetypes.ObjectAsOptions{})
-				if diags.HasError() {
-					return nil, diags
-				}
-				action := sgsdkgo.ActionEnum(actionModel.Action.ValueString())
-				schedule.Inputs.TerraformAction = &sgsdkgo.TerraformAction{Action: &action}
-			}
-
-			terraformConfig, diags := convertTerraformConfigToAPI(ctx, inputsModel.TerraformConfig)
-			if diags.HasError() {
-				return nil, diags
-			}
-			schedule.Inputs.TerraformConfig = terraformConfig
-
-			vcsConfig, diags := convertUserSchedulesVcsConfigToAPI(ctx, inputsModel.VcsConfig)
-			if diags.HasError() {
-				return nil, diags
-			}
-			schedule.Inputs.VCSConfig = vcsConfig
-		}
-
 		result[i] = schedule
 	}
 	return result, nil
-}
-
-func convertUserSchedulesVcsConfigToAPI(ctx context.Context, vcsConfigObj types.Object) (*sgsdkgo.VcsConfig, diag.Diagnostics) {
-	if vcsConfigObj.IsNull() || vcsConfigObj.IsUnknown() {
-		return nil, nil
-	}
-
-	var vcsConfigModel UserSchedulesVcsConfigModel
-	diags := vcsConfigObj.As(ctx, &vcsConfigModel, basetypes.ObjectAsOptions{
-		UnhandledNullAsEmpty:    true,
-		UnhandledUnknownAsEmpty: true,
-	})
-	if diags.HasError() {
-		return nil, diags
-	}
-
-	vcsConfig := &sgsdkgo.VcsConfig{}
-
-	if !vcsConfigModel.IacVcsConfig.IsNull() && !vcsConfigModel.IacVcsConfig.IsUnknown() {
-		var iacVcsConfigModel UserSchedulesVcsConfigIacVcsConfigModel
-		diags := vcsConfigModel.IacVcsConfig.As(ctx, &iacVcsConfigModel, basetypes.ObjectAsOptions{
-			UnhandledNullAsEmpty:    true,
-			UnhandledUnknownAsEmpty: true,
-		})
-		if diags.HasError() {
-			return nil, diags
-		}
-
-		iacVcsConfig := &sgsdkgo.IacvcsConfig{
-			UseMarketplaceTemplate: iacVcsConfigModel.UseMarketplaceTemplate.ValueBool(),
-			IacTemplateId:          iacVcsConfigModel.IacTemplateId.ValueStringPointer(),
-		}
-
-		if !iacVcsConfigModel.CustomSource.IsNull() && !iacVcsConfigModel.CustomSource.IsUnknown() {
-			var customSourceModel RuntimeSourceModel
-			diags := iacVcsConfigModel.CustomSource.As(ctx, &customSourceModel, basetypes.ObjectAsOptions{
-				UnhandledNullAsEmpty:    true,
-				UnhandledUnknownAsEmpty: true,
-			})
-			if diags.HasError() {
-				return nil, diags
-			}
-
-			var configModel RuntimeSourceConfigModel
-			diags = customSourceModel.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
-				UnhandledNullAsEmpty:    true,
-				UnhandledUnknownAsEmpty: true,
-			})
-			if diags.HasError() {
-				return nil, diags
-			}
-
-			iacVcsConfig.CustomSource = &sgsdkgo.CustomSource{
-				SourceConfigDestKind: sgsdkgo.CustomSourceSourceConfigDestKindEnum(customSourceModel.SourceConfigDestKind.ValueString()),
-				Config: &sgsdkgo.CustomSourceConfig{
-					IsPrivate:               configModel.IsPrivate.ValueBoolPointer(),
-					Auth:                    configModel.Auth.ValueStringPointer(),
-					WorkingDir:              configModel.WorkingDir.ValueStringPointer(),
-					GitSparseCheckoutConfig: configModel.GitSparseCheckoutConfig.ValueStringPointer(),
-					GitCoreAutoCrlf:         configModel.GitCoreAutoCrlf.ValueBoolPointer(),
-					Ref:                     configModel.Ref.ValueStringPointer(),
-					Repo:                    configModel.Repo.ValueStringPointer(),
-					IncludeSubModule:        configModel.IncludeSubModule.ValueBoolPointer(),
-				},
-			}
-		}
-
-		vcsConfig.IacVcsConfig = iacVcsConfig
-	}
-
-	if !vcsConfigModel.IacInputData.IsNull() && !vcsConfigModel.IacInputData.IsUnknown() {
-		var iacInputDataModel UserSchedulesVcsConfigIacInputDataModel
-		diags := vcsConfigModel.IacInputData.As(ctx, &iacInputDataModel, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return nil, diags
-		}
-
-		iacInputData := &sgsdkgo.IacInputData{
-			SchemaId:   iacInputDataModel.SchemaId.ValueStringPointer(),
-			SchemaType: sgsdkgo.IacInputDataSchemaTypeEnum(iacInputDataModel.SchemaType.ValueString()),
-		}
-
-		if !iacInputDataModel.Data.IsNull() && !iacInputDataModel.Data.IsUnknown() {
-			var data map[string]interface{}
-			if err := json.Unmarshal([]byte(iacInputDataModel.Data.ValueString()), &data); err != nil {
-				diags.AddError("Failed to parse iac_input_data.data as JSON", err.Error())
-				return nil, diags
-			}
-			iacInputData.Data = data
-		}
-
-		vcsConfig.IacInputData = iacInputData
-	}
-
-	return vcsConfig, nil
 }
 
 // ToAPIModel converts the Terraform model to the API request model
@@ -1531,96 +1296,6 @@ func convertRunnerConstraintsFromAPI(ctx context.Context, runnerConstraints *sgs
 	return obj, nil
 }
 
-// convertUserSchedulesVcsConfigFromAPI converts API VcsConfig to terraform types.Object
-func convertUserSchedulesVcsConfigFromAPI(ctx context.Context, vcsConfig *sgsdkgo.VcsConfig) (types.Object, diag.Diagnostics) {
-	nullObject := types.ObjectNull(UserSchedulesVcsConfigModel{}.AttributeTypes())
-	if vcsConfig == nil {
-		return nullObject, nil
-	}
-
-	vcsConfigModel := UserSchedulesVcsConfigModel{}
-
-	// Convert IacVcsConfig
-	if vcsConfig.IacVcsConfig != nil {
-		iacVcsConfigModel := UserSchedulesVcsConfigIacVcsConfigModel{
-			UseMarketplaceTemplate: types.BoolValue(vcsConfig.IacVcsConfig.UseMarketplaceTemplate),
-			IacTemplateId:          flatteners.StringPtr(vcsConfig.IacVcsConfig.IacTemplateId),
-		}
-
-		if vcsConfig.IacVcsConfig.CustomSource != nil {
-			customSourceModel := RuntimeSourceModel{
-				SourceConfigDestKind: flatteners.String(string(vcsConfig.IacVcsConfig.CustomSource.SourceConfigDestKind)),
-			}
-
-			if vcsConfig.IacVcsConfig.CustomSource.Config != nil {
-				configModel := RuntimeSourceConfigModel{
-					IsPrivate:               flatteners.BoolPtr(vcsConfig.IacVcsConfig.CustomSource.Config.IsPrivate),
-					Auth:                    flatteners.StringPtr(vcsConfig.IacVcsConfig.CustomSource.Config.Auth),
-					GitCoreAutoCrlf:         flatteners.BoolPtr(vcsConfig.IacVcsConfig.CustomSource.Config.GitCoreAutoCrlf),
-					GitSparseCheckoutConfig: flatteners.StringPtr(vcsConfig.IacVcsConfig.CustomSource.Config.GitSparseCheckoutConfig),
-					IncludeSubModule:        flatteners.BoolPtr(vcsConfig.IacVcsConfig.CustomSource.Config.IncludeSubModule),
-					Ref:                     flatteners.StringPtr(vcsConfig.IacVcsConfig.CustomSource.Config.Ref),
-					Repo:                    flatteners.StringPtr(vcsConfig.IacVcsConfig.CustomSource.Config.Repo),
-					WorkingDir:              flatteners.StringPtr(vcsConfig.IacVcsConfig.CustomSource.Config.WorkingDir),
-				}
-
-				configObj, diags := types.ObjectValueFrom(ctx, RuntimeSourceConfigModel{}.AttributeTypes(), configModel)
-				if diags.HasError() {
-					return nullObject, diags
-				}
-				customSourceModel.Config = configObj
-			} else {
-				customSourceModel.Config = types.ObjectNull(RuntimeSourceConfigModel{}.AttributeTypes())
-			}
-
-			customSourceObj, diags := types.ObjectValueFrom(ctx, RuntimeSourceModel{}.AttributeTypes(), customSourceModel)
-			if diags.HasError() {
-				return nullObject, diags
-			}
-			iacVcsConfigModel.CustomSource = customSourceObj
-		} else {
-			iacVcsConfigModel.CustomSource = types.ObjectNull(RuntimeSourceModel{}.AttributeTypes())
-		}
-
-		iacVcsConfigObj, diags := types.ObjectValueFrom(ctx, UserSchedulesVcsConfigIacVcsConfigModel{}.AttributeTypes(), iacVcsConfigModel)
-		if diags.HasError() {
-			return nullObject, diags
-		}
-		vcsConfigModel.IacVcsConfig = iacVcsConfigObj
-	} else {
-		vcsConfigModel.IacVcsConfig = types.ObjectNull(UserSchedulesVcsConfigIacVcsConfigModel{}.AttributeTypes())
-	}
-
-	// Convert IacInputData
-	if vcsConfig.IacInputData != nil {
-		dataJSON, err := json.Marshal(vcsConfig.IacInputData.Data)
-		if err != nil {
-			dataJSON = []byte("{}")
-		}
-
-		iacInputDataModel := UserSchedulesVcsConfigIacInputDataModel{
-			SchemaId:   flatteners.StringPtr(vcsConfig.IacInputData.SchemaId),
-			SchemaType: flatteners.String(string(vcsConfig.IacInputData.SchemaType)),
-			Data:       types.StringValue(string(dataJSON)),
-		}
-
-		iacInputDataObj, diags := types.ObjectValueFrom(ctx, UserSchedulesVcsConfigIacInputDataModel{}.AttributeTypes(), iacInputDataModel)
-		if diags.HasError() {
-			return nullObject, diags
-		}
-		vcsConfigModel.IacInputData = iacInputDataObj
-	} else {
-		vcsConfigModel.IacInputData = types.ObjectNull(UserSchedulesVcsConfigIacInputDataModel{}.AttributeTypes())
-	}
-
-	obj, diags := types.ObjectValueFrom(ctx, UserSchedulesVcsConfigModel{}.AttributeTypes(), vcsConfigModel)
-	if diags.HasError() {
-		return nullObject, diags
-	}
-
-	return obj, nil
-}
-
 // convertUserSchedulesFromAPI converts API UserSchedules to terraform types.List
 func convertUserSchedulesFromAPI(ctx context.Context, userSchedules []workflowtemplaterevisions.UserSchedules) (types.List, diag.Diagnostics) {
 	nullList := types.ListNull(types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()})
@@ -1630,80 +1305,12 @@ func convertUserSchedulesFromAPI(ctx context.Context, userSchedules []workflowte
 
 	models := make([]UserSchedulesModel, len(userSchedules))
 	for i, us := range userSchedules {
-		model := UserSchedulesModel{
+		models[i] = UserSchedulesModel{
 			Cron:  flatteners.String(us.Cron),
 			State: flatteners.String(string(us.State)),
 			Desc:  flatteners.StringPtr(us.Desc),
 			Name:  flatteners.StringPtr(us.Name),
 		}
-
-		inputsModel := UserSchedulesInputsModel{
-			EnableChaining: flatteners.BoolPtr(us.Inputs.EnableChaining),
-			ScheduledAt:    flatteners.StringPtr(us.Inputs.ScheduledAt),
-			UserJobCPU:     flatteners.Int64Ptr(us.Inputs.UserJobCPU),
-			UserJobMemory:  flatteners.Int64Ptr(us.Inputs.UserJobMemory),
-		}
-
-		// Convert ContextTags
-		if us.Inputs.ContextTags != nil {
-			contextTagsValue, diags := types.MapValueFrom(ctx, types.StringType, us.Inputs.ContextTags)
-			if diags.HasError() {
-				return nullList, diags
-			}
-			inputsModel.ContextTags = contextTagsValue
-		} else {
-			inputsModel.ContextTags = types.MapNull(types.StringType)
-		}
-
-		// Convert EnvironmentVariables
-		envVars, diags := convertEnvironmentVariablesFromAPI(ctx, us.Inputs.EnvironmentVariables)
-		if diags.HasError() {
-			return nullList, diags
-		}
-		inputsModel.EnvironmentVariables = envVars
-
-		// Convert MiniSteps (value type in SDK, always pass address)
-		ministepsObj, diags := convertMinistepsFromAPI(ctx, &us.Inputs.Ministeps)
-		if diags.HasError() {
-			return nullList, diags
-		}
-		inputsModel.MiniSteps = ministepsObj
-
-		// Convert TerraformAction
-		if us.Inputs.TerraformAction != nil {
-			actionModel := UserSchedulesTerraformActionModel{
-				Action: flatteners.StringPtr((*string)(us.Inputs.TerraformAction.Action)),
-			}
-			actionObj, diags := types.ObjectValueFrom(ctx, UserSchedulesTerraformActionModel{}.AttributeTypes(), actionModel)
-			if diags.HasError() {
-				return nullList, diags
-			}
-			inputsModel.TerraformAction = actionObj
-		} else {
-			inputsModel.TerraformAction = types.ObjectNull(UserSchedulesTerraformActionModel{}.AttributeTypes())
-		}
-
-		// Convert TerraformConfig
-		terraformConfigObj, diags := convertTerraformConfigFromAPI(ctx, us.Inputs.TerraformConfig)
-		if diags.HasError() {
-			return nullList, diags
-		}
-		inputsModel.TerraformConfig = terraformConfigObj
-
-		// Convert VcsConfig
-		vcsConfigObj, diags := convertUserSchedulesVcsConfigFromAPI(ctx, us.Inputs.VCSConfig)
-		if diags.HasError() {
-			return nullList, diags
-		}
-		inputsModel.VcsConfig = vcsConfigObj
-
-		inputsObj, diags := types.ObjectValueFrom(ctx, UserSchedulesInputsModel{}.AttributeTypes(), inputsModel)
-		if diags.HasError() {
-			return nullList, diags
-		}
-		model.Inputs = inputsObj
-
-		models[i] = model
 	}
 
 	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()}, models)

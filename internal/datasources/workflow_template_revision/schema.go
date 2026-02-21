@@ -392,69 +392,6 @@ func (d *workflowTemplateRevisionDataSource) Schema(_ context.Context, _ datasou
 						"name": schema.StringAttribute{
 							Computed: true,
 						},
-						"inputs": schema.SingleNestedAttribute{
-							Computed: true,
-							Attributes: map[string]schema.Attribute{
-								"context_tags": schema.MapAttribute{
-									Computed:    true,
-									ElementType: types.StringType,
-								},
-								"enable_chaining": schema.BoolAttribute{
-									Computed: true,
-								},
-								"environment_variables": environmentVariablesSchema,
-								"mini_steps":            miniStepsSchema,
-								"scheduled_at": schema.StringAttribute{
-									Computed: true,
-								},
-								"terraform_action": schema.SingleNestedAttribute{
-									Computed: true,
-									Attributes: map[string]schema.Attribute{
-										"action": schema.StringAttribute{
-											Computed: true,
-										},
-									},
-								},
-								"terraform_config": terraformConfigSchema,
-								"user_job_cpu": schema.Int64Attribute{
-									Computed: true,
-								},
-								"user_job_memory": schema.Int64Attribute{
-									Computed: true,
-								},
-								"vcs_config": schema.SingleNestedAttribute{
-									Computed: true,
-									Attributes: map[string]schema.Attribute{
-										"iac_vcs_config": schema.SingleNestedAttribute{
-											Computed: true,
-											Attributes: map[string]schema.Attribute{
-												"use_marketplace_template": schema.BoolAttribute{
-													Computed: true,
-												},
-												"iac_template_id": schema.StringAttribute{
-													Computed: true,
-												},
-												"custom_source": runtimeSourceSchema,
-											},
-										},
-										"iac_input_data": schema.SingleNestedAttribute{
-											Computed: true,
-											Attributes: map[string]schema.Attribute{
-												"schema_id": schema.StringAttribute{
-													Computed: true,
-												},
-												"schema_type": schema.StringAttribute{
-													Computed: true,
-												},
-												"data": schema.StringAttribute{
-													Computed: true,
-												},
-											},
-										},
-									},
-								},
-							},
-						},
 					},
 				},
 			},
