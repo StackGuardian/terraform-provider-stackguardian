@@ -94,6 +94,7 @@ Optional:
 - `auth` (String, Sensitive) Authentication credentials or method for accessing the private registry or repository. (Sensitive)
 - `docker_registry_username` (String) Username for authentication with the Docker registry (if using private registries).
 - `is_private` (Boolean) Indicates whether the container registry or repository is private.
+- `local_workspace_dir` (String) Workfing directory path.
 
 
 

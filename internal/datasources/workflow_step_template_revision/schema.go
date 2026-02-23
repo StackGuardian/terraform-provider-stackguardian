@@ -94,6 +94,10 @@ func (d *workflowStepTemplateRevisionDatasource) Schema(_ context.Context, _ dat
 								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigDockerRegistryUsernameCommon,
 								Computed:            true,
 							},
+							"local_workspace_dir": schema.StringAttribute{
+								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigLocalWorkspaceDirCommon,
+								Computed:            true,
+							},
 						},
 					},
 				},

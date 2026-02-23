@@ -8,6 +8,7 @@ import (
 	"github.com/StackGuardian/sg-sdk-go/workflowsteptemplaterevision"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/expanders"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/flatteners"
+	workflowsteptemplateresource "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_step_template"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -29,38 +30,6 @@ type WorkflowStepTemplateRevisionResourceModel struct {
 	ContextTags      types.Map    `tfsdk:"context_tags"`
 	RuntimeSource    types.Object `tfsdk:"runtime_source"`
 	Deprecation      types.Object `tfsdk:"deprecation"`
-}
-
-// RuntimeSourceModel represents the runtime source nested object
-type RuntimeSourceModel struct {
-	SourceConfigDestKind types.String `tfsdk:"source_config_dest_kind"`
-	Config               types.Object `tfsdk:"config"`
-	AdditionalConfig     types.Map    `tfsdk:"additional_config"`
-}
-
-func (RuntimeSourceModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"source_config_dest_kind": types.StringType,
-		"config":                  types.ObjectType{AttrTypes: RuntimeSourceConfigModel{}.AttributeTypes()},
-		"additional_config":       types.MapType{ElemType: types.StringType},
-	}
-}
-
-// RuntimeSourceConfigModel represents the config nested within runtime source
-type RuntimeSourceConfigModel struct {
-	IsPrivate              types.Bool   `tfsdk:"is_private"`
-	Auth                   types.String `tfsdk:"auth"`
-	DockerImage            types.String `tfsdk:"docker_image"`
-	DockerRegistryUsername types.String `tfsdk:"docker_registry_username"`
-}
-
-func (RuntimeSourceConfigModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"is_private":               types.BoolType,
-		"auth":                     types.StringType,
-		"docker_image":             types.StringType,
-		"docker_registry_username": types.StringType,
-	}
 }
 
 // DeprecationModel represents the deprecation nested object
@@ -135,50 +104,20 @@ func (m *WorkflowStepTemplateRevisionResourceModel) ToAPIModel(ctx context.Conte
 
 	// Parse runtime source
 	if !m.RuntimeSource.IsUnknown() && !m.RuntimeSource.IsNull() {
-		var runtimeSourceModel RuntimeSourceModel
-		rsDiags := m.RuntimeSource.As(ctx, &runtimeSourceModel, basetypes.ObjectAsOptions{
+		var runtimeSourceModel workflowsteptemplateresource.RuntimeSourceModel
+		diags := m.RuntimeSource.As(ctx, &runtimeSourceModel, basetypes.ObjectAsOptions{
 			UnhandledNullAsEmpty:    false,
 			UnhandledUnknownAsEmpty: false,
 		})
-		diags.Append(rsDiags...)
 		if diags.HasError() {
 			return nil, diags
 		}
 
-		apiModel.RuntimeSource = &workflowsteptemplate.WorkflowStepRuntimeSource{
-			SourceConfigDestKind: workflowsteptemplate.SourceConfigDestKindContainerRegistryEnum,
+		runtimeSource, diags := runtimeSourceModel.ToAPIModel(ctx)
+		if diags.HasError() {
+			return nil, diags
 		}
-
-		// Parse runtime source config
-		if !runtimeSourceModel.Config.IsUnknown() && !runtimeSourceModel.Config.IsNull() {
-			var configModel RuntimeSourceConfigModel
-			cfgDiags := runtimeSourceModel.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
-				UnhandledNullAsEmpty:    false,
-				UnhandledUnknownAsEmpty: false,
-			})
-			diags.Append(cfgDiags...)
-			if diags.HasError() {
-				return nil, diags
-			}
-
-			apiModel.RuntimeSource.Config = &workflowsteptemplate.WorkflowStepRuntimeSourceConfig{
-				DockerImage:            configModel.DockerImage.ValueString(),
-				IsPrivate:              configModel.IsPrivate.ValueBoolPointer(),
-				Auth:                   configModel.Auth.ValueStringPointer(),
-				DockerRegistryUsername: configModel.DockerRegistryUsername.ValueStringPointer(),
-			}
-		}
-
-		// Parse additional config
-		if !runtimeSourceModel.AdditionalConfig.IsUnknown() && !runtimeSourceModel.AdditionalConfig.IsNull() {
-			var additionalConfig map[string]interface{}
-			acDiags := runtimeSourceModel.AdditionalConfig.ElementsAs(ctx, &additionalConfig, false)
-			diags.Append(acDiags...)
-			if diags.HasError() {
-				return nil, diags
-			}
-			apiModel.RuntimeSource.AdditionalConfig = additionalConfig
-		}
+		apiModel.RuntimeSource = runtimeSource
 	}
 
 	// Parse deprecation
@@ -259,6 +198,26 @@ func (m *WorkflowStepTemplateRevisionResourceModel) ToPatchedAPIModel(ctx contex
 		apiModel.ContextTags = sgsdkgo.Optional(contextTags)
 	}
 
+	// Parse runtime source
+	if !m.RuntimeSource.IsUnknown() && !m.RuntimeSource.IsNull() {
+		var runtimeSourceModel workflowsteptemplateresource.RuntimeSourceModel
+		diags := m.RuntimeSource.As(ctx, &runtimeSourceModel, basetypes.ObjectAsOptions{
+			UnhandledNullAsEmpty:    false,
+			UnhandledUnknownAsEmpty: false,
+		})
+		if diags.HasError() {
+			return nil, diags
+		}
+
+		runtimeSource, diags := runtimeSourceModel.ToAPIModel(ctx)
+		if diags.HasError() {
+			return nil, diags
+		}
+		apiModel.RuntimeSource = sgsdkgo.Optional(*runtimeSource)
+	} else {
+		apiModel.RuntimeSource = sgsdkgo.Null[workflowsteptemplate.WorkflowStepRuntimeSource]()
+	}
+
 	// Parse deprecation
 	if !m.Deprecation.IsUnknown() && !m.Deprecation.IsNull() {
 		var deprecationModel DeprecationModel
@@ -326,27 +285,28 @@ func BuildAPIModelToRevisionModel(apiResponse *workflowsteptemplaterevision.Work
 
 	// Handle runtime source
 	if apiResponse.RuntimeSource != nil {
-		runtimeSourceModel := &RuntimeSourceModel{
+		runtimeSourceModel := &workflowsteptemplateresource.RuntimeSourceModel{
 			SourceConfigDestKind: flatteners.String(string(apiResponse.RuntimeSource.SourceConfigDestKind)),
 		}
 
 		// Handle config
 		if apiResponse.RuntimeSource.Config != nil {
-			configModel := RuntimeSourceConfigModel{
+			configModel := workflowsteptemplateresource.RuntimeSourceConfigModel{
 				DockerImage:            flatteners.String(apiResponse.RuntimeSource.Config.DockerImage),
 				IsPrivate:              types.BoolValue(*apiResponse.RuntimeSource.Config.IsPrivate),
 				Auth:                   flatteners.StringPtr(apiResponse.RuntimeSource.Config.Auth),
 				DockerRegistryUsername: flatteners.StringPtr(apiResponse.RuntimeSource.Config.DockerRegistryUsername),
+				LocalWorkspaceDir:      flatteners.StringPtr(apiResponse.RuntimeSource.Config.LocalWorkspaceDir),
 			}
 
-			configObj, cfgDiags := types.ObjectValueFrom(context.Background(), RuntimeSourceConfigModel{}.AttributeTypes(), configModel)
+			configObj, cfgDiags := types.ObjectValueFrom(context.Background(), workflowsteptemplateresource.RuntimeSourceConfigModel{}.AttributeTypes(), configModel)
 			diags.Append(cfgDiags...)
 			if diags.HasError() {
 				return nil, diags
 			}
 			runtimeSourceModel.Config = configObj
 		} else {
-			runtimeSourceModel.Config = types.ObjectNull(RuntimeSourceConfigModel{}.AttributeTypes())
+			runtimeSourceModel.Config = types.ObjectNull(workflowsteptemplateresource.RuntimeSourceConfigModel{}.AttributeTypes())
 		}
 
 		// Handle additional config
@@ -361,14 +321,14 @@ func BuildAPIModelToRevisionModel(apiResponse *workflowsteptemplaterevision.Work
 			runtimeSourceModel.AdditionalConfig = types.MapNull(types.StringType)
 		}
 
-		runtimeSourceObj, rsDiags := types.ObjectValueFrom(context.Background(), RuntimeSourceModel{}.AttributeTypes(), runtimeSourceModel)
+		runtimeSourceObj, rsDiags := types.ObjectValueFrom(context.Background(), workflowsteptemplateresource.RuntimeSourceModel{}.AttributeTypes(), runtimeSourceModel)
 		diags.Append(rsDiags...)
 		if diags.HasError() {
 			return nil, diags
 		}
 		model.RuntimeSource = runtimeSourceObj
 	} else {
-		model.RuntimeSource = types.ObjectNull(RuntimeSourceModel{}.AttributeTypes())
+		model.RuntimeSource = types.ObjectNull(workflowsteptemplateresource.RuntimeSourceModel{}.AttributeTypes())
 	}
 
 	// Handle deprecation

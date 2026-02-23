@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
+	workflowsteptemplateresource "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_step_template"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -92,26 +93,7 @@ func (r *workflowStepTemplateRevisionResource) Schema(_ context.Context, _ resou
 					"config": schema.SingleNestedAttribute{
 						MarkdownDescription: constants.WorkflowStepTemplateRevisionRuntimeSourceConfig,
 						Required:            true,
-						Attributes: map[string]schema.Attribute{
-							"is_private": schema.BoolAttribute{
-								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigIsPrivateCommon,
-								Optional:            true,
-								Computed:            true,
-							},
-							"auth": schema.StringAttribute{
-								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigAuthCommon,
-								Optional:            true,
-								Sensitive:           true,
-							},
-							"docker_image": schema.StringAttribute{
-								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigDockerImageCommon,
-								Required:            true,
-							},
-							"docker_registry_username": schema.StringAttribute{
-								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigDockerRegistryUsernameCommon,
-								Optional:            true,
-							},
-						},
+						Attributes:          workflowsteptemplateresource.RuntimeSourceConfigSchemaAttributes(),
 					},
 				},
 			},

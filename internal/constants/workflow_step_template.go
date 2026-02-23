@@ -27,6 +27,8 @@ const (
 	WorkflowStepTemplateRuntimeSourceConfigDockerImageCommon = "Docker image URI to be used for template execution. Example: `ubuntu:latest`, `myregistry.azurecr.io/myapp:v1.0`"
 
 	WorkflowStepTemplateRuntimeSourceConfigDockerRegistryUsernameCommon = "Username for authentication with the Docker registry (if using private registries)."
+
+	WorkflowStepTemplateRuntimeSourceConfigLocalWorkspaceDirCommon = "Workfing directory path."
 )
 
 // Workflow Step Template Resource documentation

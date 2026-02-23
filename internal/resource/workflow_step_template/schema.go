@@ -11,6 +11,35 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+// RuntimeSourceConfigSchemaAttributes returns the common schema attributes for runtime_source.config
+// shared between workflow_step_template and workflow_step_template_revision resources.
+func RuntimeSourceConfigSchemaAttributes() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"is_private": schema.BoolAttribute{
+			MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigIsPrivateCommon,
+			Optional:            true,
+			Computed:            true,
+		},
+		"auth": schema.StringAttribute{
+			MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigAuthCommon,
+			Optional:            true,
+			Sensitive:           true,
+		},
+		"docker_image": schema.StringAttribute{
+			MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigDockerImageCommon,
+			Required:            true,
+		},
+		"docker_registry_username": schema.StringAttribute{
+			MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigDockerRegistryUsernameCommon,
+			Optional:            true,
+		},
+		"local_workspace_dir": schema.StringAttribute{
+			MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigLocalWorkspaceDirCommon,
+			Optional:            true,
+		},
+	}
+}
+
 // Schema defines the schema for the resource.
 func (r *workflowStepTemplateResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
@@ -94,26 +123,7 @@ func (r *workflowStepTemplateResource) Schema(_ context.Context, _ resource.Sche
 					"config": schema.SingleNestedAttribute{
 						MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfig,
 						Required:            true,
-						Attributes: map[string]schema.Attribute{
-							"is_private": schema.BoolAttribute{
-								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigIsPrivateCommon,
-								Optional:            true,
-								Computed:            true,
-							},
-							"auth": schema.StringAttribute{
-								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigAuthCommon,
-								Optional:            true,
-								Sensitive:           true,
-							},
-							"docker_image": schema.StringAttribute{
-								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigDockerImageCommon,
-								Required:            true,
-							},
-							"docker_registry_username": schema.StringAttribute{
-								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigDockerRegistryUsernameCommon,
-								Optional:            true,
-							},
-						},
+						Attributes:          RuntimeSourceConfigSchemaAttributes(),
 					},
 				},
 			},

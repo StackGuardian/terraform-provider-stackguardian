@@ -51,6 +51,7 @@ type RuntimeSourceConfigModel struct {
 	Auth                   types.String `tfsdk:"auth"`
 	DockerImage            types.String `tfsdk:"docker_image"`
 	DockerRegistryUsername types.String `tfsdk:"docker_registry_username"`
+	LocalWorkspaceDir      types.String `tfsdk:"local_workspace_dir"`
 }
 
 func (RuntimeSourceConfigModel) AttributeTypes() map[string]attr.Type {
@@ -59,7 +60,97 @@ func (RuntimeSourceConfigModel) AttributeTypes() map[string]attr.Type {
 		"auth":                     types.StringType,
 		"docker_image":             types.StringType,
 		"docker_registry_username": types.StringType,
+		"local_workspace_dir":      types.StringType,
 	}
+}
+
+// ToAPIModel converts the RuntimeSourceConfigModel to the SDK config model
+func (m *RuntimeSourceConfigModel) ToAPIModel() *workflowsteptemplate.WorkflowStepRuntimeSourceConfig {
+	return &workflowsteptemplate.WorkflowStepRuntimeSourceConfig{
+		DockerImage:            m.DockerImage.ValueString(),
+		IsPrivate:              m.IsPrivate.ValueBoolPointer(),
+		Auth:                   m.Auth.ValueStringPointer(),
+		DockerRegistryUsername: m.DockerRegistryUsername.ValueStringPointer(),
+		LocalWorkspaceDir:      m.LocalWorkspaceDir.ValueStringPointer(),
+	}
+}
+
+// ToAPIModel converts the RuntimeSourceModel to the SDK runtime source model
+func (m *RuntimeSourceModel) ToAPIModel(ctx context.Context) (*workflowsteptemplate.WorkflowStepRuntimeSource, diag.Diagnostics) {
+	apiRuntimeSource := &workflowsteptemplate.WorkflowStepRuntimeSource{
+		SourceConfigDestKind: workflowsteptemplate.SourceConfigDestKindContainerRegistryEnum,
+	}
+
+	if !m.Config.IsUnknown() && !m.Config.IsNull() {
+		var configModel RuntimeSourceConfigModel
+		diags := m.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
+			UnhandledNullAsEmpty:    false,
+			UnhandledUnknownAsEmpty: false,
+		})
+		if diags.HasError() {
+			return nil, diags
+		}
+		apiRuntimeSource.Config = configModel.ToAPIModel()
+	}
+
+	if !m.AdditionalConfig.IsUnknown() && !m.AdditionalConfig.IsNull() {
+		var additionalConfig map[string]interface{}
+		diags := m.AdditionalConfig.ElementsAs(ctx, &additionalConfig, false)
+		if diags.HasError() {
+			return nil, diags
+		}
+		apiRuntimeSource.AdditionalConfig = additionalConfig
+	}
+
+	return apiRuntimeSource, nil
+}
+
+// RuntimeSourceConfigToTerraType converts the SDK config to a Terraform object
+func RuntimeSourceConfigToTerraType(config *workflowsteptemplate.WorkflowStepRuntimeSourceConfig) (types.Object, diag.Diagnostics) {
+	if config == nil {
+		return types.ObjectNull(RuntimeSourceConfigModel{}.AttributeTypes()), nil
+	}
+
+	configModel := RuntimeSourceConfigModel{
+		DockerImage:            flatteners.String(config.DockerImage),
+		IsPrivate:              types.BoolValue(*config.IsPrivate),
+		Auth:                   flatteners.StringPtr(config.Auth),
+		DockerRegistryUsername: flatteners.StringPtr(config.DockerRegistryUsername),
+		LocalWorkspaceDir:      flatteners.StringPtr(config.LocalWorkspaceDir),
+	}
+
+	return types.ObjectValueFrom(context.Background(), RuntimeSourceConfigModel{}.AttributeTypes(), configModel)
+}
+
+// RuntimeSourceToTerraType converts the SDK runtime source to a Terraform object
+func RuntimeSourceToTerraType(runtimeSource *workflowsteptemplate.WorkflowStepRuntimeSource) (types.Object, diag.Diagnostics) {
+	objectNull := types.ObjectNull(RuntimeSourceModel{}.AttributeTypes())
+	if runtimeSource == nil {
+		return objectNull, nil
+	}
+
+	runtimeSourceModel := &RuntimeSourceModel{
+		SourceConfigDestKind: flatteners.String(string(runtimeSource.SourceConfigDestKind)),
+	}
+
+	configObj, diags := RuntimeSourceConfigToTerraType(runtimeSource.Config)
+	if diags.HasError() {
+		return objectNull, diags
+	}
+	runtimeSourceModel.Config = configObj
+
+	if runtimeSource.AdditionalConfig != nil {
+		acMap, acDiags := types.MapValueFrom(context.Background(), types.StringType, runtimeSource.AdditionalConfig)
+		diags.Append(acDiags...)
+		if diags.HasError() {
+			return objectNull, diags
+		}
+		runtimeSourceModel.AdditionalConfig = acMap
+	} else {
+		runtimeSourceModel.AdditionalConfig = types.MapNull(types.StringType)
+	}
+
+	return types.ObjectValueFrom(context.Background(), RuntimeSourceModel{}.AttributeTypes(), runtimeSourceModel)
 }
 
 // ToAPIModel converts the Terraform model to the SDK create request model
@@ -128,40 +219,12 @@ func (m *WorkflowStepTemplateResourceModel) ToAPIModel(ctx context.Context) (*wo
 			return nil, diags
 		}
 
-		apiModel.RuntimeSource = &workflowsteptemplate.WorkflowStepRuntimeSource{
-			SourceConfigDestKind: workflowsteptemplate.SourceConfigDestKindContainerRegistryEnum,
+		runtimeSource, rsApiDiags := runtimeSourceModel.ToAPIModel(ctx)
+		diags.Append(rsApiDiags...)
+		if diags.HasError() {
+			return nil, diags
 		}
-
-		// Parse runtime source config
-		if !runtimeSourceModel.Config.IsUnknown() && !runtimeSourceModel.Config.IsNull() {
-			var configModel RuntimeSourceConfigModel
-			cfgDiags := runtimeSourceModel.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
-				UnhandledNullAsEmpty:    false,
-				UnhandledUnknownAsEmpty: false,
-			})
-			diags.Append(cfgDiags...)
-			if diags.HasError() {
-				return nil, diags
-			}
-
-			apiModel.RuntimeSource.Config = &workflowsteptemplate.WorkflowStepRuntimeSourceConfig{
-				DockerImage:            configModel.DockerImage.ValueString(),
-				IsPrivate:              configModel.IsPrivate.ValueBoolPointer(),
-				Auth:                   configModel.Auth.ValueStringPointer(),
-				DockerRegistryUsername: configModel.DockerRegistryUsername.ValueStringPointer(),
-			}
-		}
-
-		// Parse additional config
-		if !runtimeSourceModel.AdditionalConfig.IsUnknown() && !runtimeSourceModel.AdditionalConfig.IsNull() {
-			var additionalConfig map[string]interface{}
-			acDiags := runtimeSourceModel.AdditionalConfig.ElementsAs(ctx, &additionalConfig, false)
-			diags.Append(acDiags...)
-			if diags.HasError() {
-				return nil, diags
-			}
-			apiModel.RuntimeSource.AdditionalConfig = additionalConfig
-		}
+		apiModel.RuntimeSource = runtimeSource
 	}
 
 	return apiModel, diags
@@ -226,6 +289,26 @@ func (m *WorkflowStepTemplateResourceModel) ToPatchedAPIModel(ctx context.Contex
 		apiModel.SharedOrgsList = sgsdkgo.Optional(sharedOrgs)
 	}
 
+	// Parse runtime source
+	if !m.RuntimeSource.IsUnknown() && !m.RuntimeSource.IsNull() {
+		var runtimeSourceModel RuntimeSourceModel
+		diags := m.RuntimeSource.As(ctx, &runtimeSourceModel, basetypes.ObjectAsOptions{
+			UnhandledNullAsEmpty:    false,
+			UnhandledUnknownAsEmpty: false,
+		})
+		if diags.HasError() {
+			return nil, diags
+		}
+
+		runtimeSource, diags := runtimeSourceModel.ToAPIModel(ctx)
+		if diags.HasError() {
+			return nil, diags
+		}
+		apiModel.RuntimeSource = sgsdkgo.Optional(*runtimeSource)
+	} else {
+		apiModel.RuntimeSource = sgsdkgo.Null[workflowsteptemplate.WorkflowStepRuntimeSource]()
+	}
+
 	return apiModel, diags
 }
 
@@ -288,51 +371,12 @@ func BuildAPIModelToWorkflowStepTemplateModel(apiResponse *workflowsteptemplate.
 	}
 
 	// Handle runtime source
-	if apiResponse.RuntimeSource != nil {
-		runtimeSourceModel := &RuntimeSourceModel{
-			SourceConfigDestKind: flatteners.String(string(apiResponse.RuntimeSource.SourceConfigDestKind)),
-		}
-
-		// Handle config
-		if apiResponse.RuntimeSource.Config != nil {
-			configModel := RuntimeSourceConfigModel{
-				DockerImage:            flatteners.String(apiResponse.RuntimeSource.Config.DockerImage),
-				IsPrivate:              types.BoolValue(*apiResponse.RuntimeSource.Config.IsPrivate),
-				Auth:                   flatteners.StringPtr(apiResponse.RuntimeSource.Config.Auth),
-				DockerRegistryUsername: flatteners.StringPtr(apiResponse.RuntimeSource.Config.DockerRegistryUsername),
-			}
-
-			configObj, cfgDiags := types.ObjectValueFrom(context.Background(), RuntimeSourceConfigModel{}.AttributeTypes(), configModel)
-			diags.Append(cfgDiags...)
-			if diags.HasError() {
-				return nil, diags
-			}
-			runtimeSourceModel.Config = configObj
-		} else {
-			runtimeSourceModel.Config = types.ObjectNull(RuntimeSourceConfigModel{}.AttributeTypes())
-		}
-
-		// Handle additional config
-		if apiResponse.RuntimeSource.AdditionalConfig != nil {
-			acMap, acDiags := types.MapValueFrom(context.Background(), types.StringType, apiResponse.RuntimeSource.AdditionalConfig)
-			diags.Append(acDiags...)
-			if diags.HasError() {
-				return nil, diags
-			}
-			runtimeSourceModel.AdditionalConfig = acMap
-		} else {
-			runtimeSourceModel.AdditionalConfig = types.MapNull(types.StringType)
-		}
-
-		runtimeSourceObj, rsDiags := types.ObjectValueFrom(context.Background(), RuntimeSourceModel{}.AttributeTypes(), runtimeSourceModel)
-		diags.Append(rsDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		model.RuntimeSource = runtimeSourceObj
-	} else {
-		model.RuntimeSource = types.ObjectNull(RuntimeSourceModel{}.AttributeTypes())
+	runtimeSourceObj, rsDiags := RuntimeSourceToTerraType(apiResponse.RuntimeSource)
+	diags.Append(rsDiags...)
+	if diags.HasError() {
+		return nil, diags
 	}
+	model.RuntimeSource = runtimeSourceObj
 
 	// Handle revisions
 	if apiResponse.LatestRevision != nil {
