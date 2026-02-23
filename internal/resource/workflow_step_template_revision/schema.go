@@ -17,7 +17,7 @@ func (r *workflowStepTemplateRevisionResource) Schema(_ context.Context, _ resou
 		MarkdownDescription: "Manages a workflow step template revision resource.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: constants.Id,
+				MarkdownDescription: constants.WorkflowStepTemplateRevisionId,
 				Computed:            true,
 				Optional:            true,
 				PlanModifiers: []planmodifier.String{

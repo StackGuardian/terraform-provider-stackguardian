@@ -19,6 +19,7 @@ func (r *workflowStepTemplateResource) Schema(_ context.Context, _ resource.Sche
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.Id,
 				Optional:            true,
+				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
