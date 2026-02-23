@@ -213,6 +213,9 @@ const (
 	AWSRegion                   = "AWS region where the bucket is placed"
 	Auth                        = "Authentication required by the runner to access the backend storage. Required only for type \"aws_s3\""
 	IntegrationId               = "SG Connector Id. Required only for type \"aws_s3\" eg: /integrations/test-connector"
+	Deprecation                 = "Deprecation information for this resource."
+	DeprecationEffectiveDate    = "Effective date when this resource will be deprecated and no longer available for use."
+	DeprecationMessage          = "Message to display to users about the deprecation of this resource."
 )
 
 ////////////// Data Source

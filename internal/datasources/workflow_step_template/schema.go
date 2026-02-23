@@ -2,7 +2,6 @@ package workflowsteptemplate
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -20,84 +19,84 @@ func (d *workflowStepTemplateDatasource) Schema(_ context.Context, _ datasource.
 				Required:            true,
 			},
 			"template_name": schema.StringAttribute{
-				MarkdownDescription: "Name of the workflow step template.",
+				MarkdownDescription: constants.WorkflowStepTemplateName,
 				Computed:            true,
 			},
 			"template_type": schema.StringAttribute{
-				MarkdownDescription: "Type of the template (WORKFLOW_STEP).",
+				MarkdownDescription: constants.WorkflowStepTemplateType,
 				Computed:            true,
 			},
 			"is_active": schema.StringAttribute{
-				MarkdownDescription: "Whether the template is active.",
+				MarkdownDescription: constants.WorkflowStepTemplateIsActiveCommon,
 				Computed:            true,
 			},
 			"is_public": schema.StringAttribute{
-				MarkdownDescription: "Whether the template is public.",
+				MarkdownDescription: constants.WorkflowStepTemplateIsPublicCommon,
 				Computed:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow step template"),
+				MarkdownDescription: constants.WorkflowStepTemplateDescription,
 				Computed:            true,
 			},
 			"tags": schema.ListAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow step template"),
+				MarkdownDescription: constants.WorkflowStepTemplateTags,
 				ElementType:         types.StringType,
 				Computed:            true,
 			},
 			"context_tags": schema.MapAttribute{
-				MarkdownDescription: "Contextual tags to give context to your tags.",
+				MarkdownDescription: constants.WorkflowStepTemplateContextTags,
 				ElementType:         types.StringType,
 				Computed:            true,
 			},
 			"shared_orgs_list": schema.ListAttribute{
-				MarkdownDescription: "List of organizations the template is shared with.",
+				MarkdownDescription: constants.WorkflowStepTemplateSharedOrgsList,
 				ElementType:         types.StringType,
 				Computed:            true,
 			},
 			"source_config_kind": schema.StringAttribute{
-				MarkdownDescription: "Source configuration kind (DOCKER_IMAGE).",
+				MarkdownDescription: constants.WorkflowStepTemplateSourceConfigKindCommon,
 				Computed:            true,
 			},
 			"latest_revision": schema.Int32Attribute{
-				MarkdownDescription: "Latest revision of the template.",
+				MarkdownDescription: constants.WorkflowStepTemplateLatestRevision,
 				Computed:            true,
 			},
 			"next_revision": schema.Int32Attribute{
-				MarkdownDescription: "Next revision of the template.",
+				MarkdownDescription: constants.WorkflowStepTemplateNextRevision,
 				Computed:            true,
 			},
 			"runtime_source": schema.SingleNestedAttribute{
-				MarkdownDescription: "Runtime source configuration for the template.",
+				MarkdownDescription: constants.WorkflowStepTemplateRuntimeSource,
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"source_config_dest_kind": schema.StringAttribute{
-						MarkdownDescription: "Destination kind for the source configuration.",
+						MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceDestKindCommon,
 						Computed:            true,
 					},
 					"additional_config": schema.MapAttribute{
-						MarkdownDescription: "Additional configuration for the runtime source.",
+						MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceAdditionalConfig,
 						ElementType:         types.StringType,
 						Computed:            true,
 					},
 					"config": schema.SingleNestedAttribute{
-						MarkdownDescription: "Configuration for the runtime source.",
+						MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfig,
 						Computed:            true,
 						Attributes: map[string]schema.Attribute{
 							"is_private": schema.BoolAttribute{
-								MarkdownDescription: "Whether the docker image is private.",
+								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigIsPrivateCommon,
 								Computed:            true,
 							},
 							"auth": schema.StringAttribute{
-								MarkdownDescription: "Authentication credentials for the docker image.",
+								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigAuthCommon,
 								Computed:            true,
 								Sensitive:           true,
 							},
 							"docker_image": schema.StringAttribute{
-								MarkdownDescription: "Docker image URI.",
+								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigDockerImageCommon,
 								Computed:            true,
 							},
 							"docker_registry_username": schema.StringAttribute{
-								MarkdownDescription: "Username for the docker registry.",
+								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigDockerRegistryUsernameCommon,
 								Computed:            true,
 							},
 						},
@@ -106,4 +105,5 @@ func (d *workflowStepTemplateDatasource) Schema(_ context.Context, _ datasource.
 			},
 		},
 	}
+
 }

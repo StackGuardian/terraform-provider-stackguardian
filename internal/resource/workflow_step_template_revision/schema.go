@@ -2,7 +2,6 @@ package workflowsteptemplaterevision
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -18,7 +17,7 @@ func (r *workflowStepTemplateRevisionResource) Schema(_ context.Context, _ resou
 		MarkdownDescription: "Manages a workflow step template revision resource.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "ID of the revision in the format `templateId:revisionNumber`.",
+				MarkdownDescription: constants.Id,
 				Computed:            true,
 				Optional:            true,
 				PlanModifiers: []planmodifier.String{
@@ -26,115 +25,108 @@ func (r *workflowStepTemplateRevisionResource) Schema(_ context.Context, _ resou
 				},
 			},
 			"template_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the parent workflow step template.",
+				MarkdownDescription: constants.WorkflowStepTemplateRevisionTemplateId,
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"alias": schema.StringAttribute{
-				MarkdownDescription: "Alias for the revision.",
+				MarkdownDescription: constants.WorkflowStepTemplateRevisionAlias,
 				Optional:            true,
 				Computed:            true,
 			},
 			"notes": schema.StringAttribute{
-				MarkdownDescription: "Notes for the revision.",
+				MarkdownDescription: constants.WorkflowStepTemplateRevisionNotes,
 				Optional:            true,
 				Computed:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow step template revision"),
+				MarkdownDescription: constants.WorkflowStepTemplateRevisionDescription,
 				Optional:            true,
 				Computed:            true,
 			},
 			"template_type": schema.StringAttribute{
-				MarkdownDescription: "Type of the template (WORKFLOW_STEP).",
+				MarkdownDescription: constants.WorkflowStepTemplateRevisionType,
 				Computed:            true,
 			},
 			"source_config_kind": schema.StringAttribute{
-				MarkdownDescription: "Source configuration kind (DOCKER_IMAGE).",
+				MarkdownDescription: constants.WorkflowStepTemplateSourceConfigKindCommon,
 				Required:            true,
 			},
 			"is_active": schema.StringAttribute{
-				MarkdownDescription: "Whether the revision is active.",
+				MarkdownDescription: constants.WorkflowStepTemplateIsActiveCommon,
 				Optional:            true,
 				Computed:            true,
 			},
 			"is_public": schema.StringAttribute{
-				MarkdownDescription: "Whether the revision is public.",
+				MarkdownDescription: constants.WorkflowStepTemplateIsPublicCommon,
 				Optional:            true,
 				Computed:            true,
 			},
 			"tags": schema.ListAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow step template revision"),
+				MarkdownDescription: constants.WorkflowStepTemplateRevisionTags,
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
 			},
 			"context_tags": schema.MapAttribute{
-				MarkdownDescription: "Contextual tags to give context to your tags.",
+				MarkdownDescription: constants.WorkflowStepTemplateRevisionContextTags,
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
 			},
 			"runtime_source": schema.SingleNestedAttribute{
-				MarkdownDescription: "Runtime source configuration for the revision.",
-				Optional:            true,
-				Computed:            true,
+				MarkdownDescription: constants.WorkflowStepTemplateRevisionRuntimeSource,
+				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"source_config_dest_kind": schema.StringAttribute{
-						MarkdownDescription: "Destination kind for the source configuration.",
-						Optional:            true,
-						Computed:            true,
+						MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceDestKindCommon,
+						Required:            true,
 					},
 					"additional_config": schema.MapAttribute{
-						MarkdownDescription: "Additional configuration for the runtime source.",
+						MarkdownDescription: constants.WorkflowStepTemplateRevisionRuntimeSourceAdditionalConfig,
 						ElementType:         types.StringType,
 						Optional:            true,
-						Computed:            true,
 					},
 					"config": schema.SingleNestedAttribute{
-						MarkdownDescription: "Configuration for the runtime source.",
-						Optional:            true,
-						Computed:            true,
+						MarkdownDescription: constants.WorkflowStepTemplateRevisionRuntimeSourceConfig,
+						Required:            true,
 						Attributes: map[string]schema.Attribute{
 							"is_private": schema.BoolAttribute{
-								MarkdownDescription: "Whether the docker image is private.",
+								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigIsPrivateCommon,
 								Optional:            true,
 								Computed:            true,
 							},
 							"auth": schema.StringAttribute{
-								MarkdownDescription: "Authentication credentials for the docker image.",
+								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigAuthCommon,
 								Optional:            true,
-								Computed:            true,
 								Sensitive:           true,
 							},
 							"docker_image": schema.StringAttribute{
-								MarkdownDescription: "Docker image URI.",
-								Optional:            true,
-								Computed:            true,
+								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigDockerImageCommon,
+								Required:            true,
 							},
 							"docker_registry_username": schema.StringAttribute{
-								MarkdownDescription: "Username for the docker registry.",
+								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigDockerRegistryUsernameCommon,
 								Optional:            true,
-								Computed:            true,
 							},
 						},
 					},
 				},
 			},
 			"deprecation": schema.SingleNestedAttribute{
-				MarkdownDescription: "Deprecation information for the revision.",
+				MarkdownDescription: constants.Deprecation,
 				Optional:            true,
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"effective_date": schema.StringAttribute{
-						MarkdownDescription: "Effective date for the deprecation.",
+						MarkdownDescription: constants.DeprecationEffectiveDate,
 						Optional:            true,
 						Computed:            true,
 					},
 					"message": schema.StringAttribute{
-						MarkdownDescription: "Deprecation message.",
+						MarkdownDescription: constants.DeprecationMessage,
 						Optional:            true,
 						Computed:            true,
 					},
