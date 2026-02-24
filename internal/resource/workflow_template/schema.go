@@ -12,6 +12,57 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+func WorkflowTemplateRuntimeSourceConfig() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"source_config_dest_kind": schema.StringAttribute{
+			MarkdownDescription: `Destination kind for the source configuration (e.g., GITHUB_COM, GITHUB_APP_CUSTOM, GITLAB_OAUTH_SSH, GITLAB_COM, AZURE_DEVOPS).`,
+			Optional:            true,
+		},
+		"config": schema.SingleNestedAttribute{
+			MarkdownDescription: "Configuration for the runtime environment.",
+			Optional:            true,
+			Attributes: map[string]schema.Attribute{
+				"auth": schema.StringAttribute{
+					MarkdownDescription: "Connector id to access private git repository",
+					Optional:            true,
+					Sensitive:           true,
+				},
+				"git_core_auto_crlf": schema.BoolAttribute{
+					MarkdownDescription: "Whether to automatically handle CRLF line endings.",
+					Optional:            true,
+					Computed:            true,
+				},
+				"git_sparse_checkout_config": schema.StringAttribute{
+					MarkdownDescription: "Git sparse checkout command line git cli options.",
+					Optional:            true,
+				},
+				"include_sub_module": schema.BoolAttribute{
+					MarkdownDescription: "Whether to include git submodules.",
+					Optional:            true,
+				},
+				"is_private": schema.BoolAttribute{
+					MarkdownDescription: "Whether the repository is private. Auth is required if the repository is private",
+					Optional:            true,
+					Computed:            true,
+				},
+				"ref": schema.StringAttribute{
+					MarkdownDescription: "Git reference (branch, tag, or commit hash).",
+					Optional:            true,
+					Computed:            true,
+				},
+				"repo": schema.StringAttribute{
+					MarkdownDescription: "Git repository URL.",
+					Required:            true,
+				},
+				"working_dir": schema.StringAttribute{
+					MarkdownDescription: "Working directory within the repository.",
+					Optional:            true,
+				},
+			},
+		},
+	}
+}
+
 // Schema defines the schema for the resource.
 func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
@@ -38,7 +89,7 @@ func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRe
 				Required:            true,
 			},
 			"is_public": schema.StringAttribute{
-				MarkdownDescription: "Whether the template is public.",
+				MarkdownDescription: "Make template available to other organisations. Available values (\"0\" or \"1\")",
 				Optional:            true,
 				Computed:            true,
 			},
@@ -68,57 +119,10 @@ func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRe
 				MarkdownDescription: "Runtime source configuration for the template.",
 				Optional:            true,
 				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"source_config_dest_kind": schema.StringAttribute{
-						MarkdownDescription: `Destination kind for the source configuration (e.g., GITHUB_COM, GITHUB_APP_CUSTOM, GITLAB_OAUTH_SSH, GITLAB_COM, AZURE_DEVOPS).`,
-						Optional:            true,
-					},
-					"config": schema.SingleNestedAttribute{
-						MarkdownDescription: "Configuration for the runtime source.",
-						Optional:            true,
-						Attributes: map[string]schema.Attribute{
-							"auth": schema.StringAttribute{
-								MarkdownDescription: "Authentication credentials for the repository.",
-								Optional:            true,
-								Sensitive:           true,
-							},
-							"git_core_auto_crlf": schema.BoolAttribute{
-								MarkdownDescription: "Whether to automatically handle CRLF line endings.",
-								Optional:            true,
-								Computed:            true,
-							},
-							"git_sparse_checkout_config": schema.StringAttribute{
-								MarkdownDescription: "Git sparse checkout configuration.",
-								Optional:            true,
-							},
-							"include_sub_module": schema.BoolAttribute{
-								MarkdownDescription: "Whether to include git submodules.",
-								Optional:            true,
-							},
-							"is_private": schema.BoolAttribute{
-								MarkdownDescription: "Whether the repository is private.",
-								Optional:            true,
-								Computed:            true,
-							},
-							"ref": schema.StringAttribute{
-								MarkdownDescription: "Git reference (branch, tag, or commit hash).",
-								Optional:            true,
-								Computed:            true,
-							},
-							"repo": schema.StringAttribute{
-								MarkdownDescription: "Repository URL.",
-								Required:            true,
-							},
-							"working_dir": schema.StringAttribute{
-								MarkdownDescription: "Working directory within the repository.",
-								Optional:            true,
-							},
-						},
-					},
-				},
+				Attributes:          WorkflowTemplateRuntimeSourceConfig(),
 			},
 			"vcs_triggers": schema.SingleNestedAttribute{
-				MarkdownDescription: "VCS trigger configuration for the template.",
+				MarkdownDescription: "VCS trigger configuration for the workflow.",
 				Optional:            true,
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
@@ -127,11 +131,11 @@ func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRe
 						Required:            true,
 					},
 					"create_tag": schema.SingleNestedAttribute{
-						MarkdownDescription: "Configuration for create tag trigger.",
+						MarkdownDescription: "Trigger configuration on tag creation in VCS",
 						Required:            true,
 						Attributes: map[string]schema.Attribute{
 							"create_revision": schema.SingleNestedAttribute{
-								MarkdownDescription: "Configuration for creating revision on tag.",
+								MarkdownDescription: "Create new revision on tag creation",
 								Required:            true,
 								Attributes: map[string]schema.Attribute{
 									"enabled": schema.BoolAttribute{

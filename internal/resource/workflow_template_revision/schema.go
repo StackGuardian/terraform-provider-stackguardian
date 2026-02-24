@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
+	workflowtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -15,8 +16,9 @@ var ministepsNotificationRecepients = schema.ListNestedAttribute{
 	NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
 			"recipients": schema.ListAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
+				MarkdownDescription: "List of emails",
+				Optional:            true,
+				ElementType:         types.StringType,
 			},
 		},
 	},
@@ -27,13 +29,16 @@ var ministepsWebhooks = schema.ListNestedAttribute{
 	NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
 			"webhook_name": schema.StringAttribute{
-				Required: true,
+				MarkdownDescription: "Webhook name",
+				Required:            true,
 			},
 			"webhook_url": schema.StringAttribute{
-				Required: true,
+				MarkdownDescription: "Webhook URL",
+				Required:            true,
 			},
 			"webhook_secret": schema.StringAttribute{
-				Optional: true,
+				MarkdownDescription: "Secret to be sent with API request to webhook url",
+				Optional:            true,
 			},
 		},
 	},
@@ -44,26 +49,31 @@ var ministepsWorkflowChaining = schema.ListNestedAttribute{
 	NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
 			"workflow_group_id": schema.StringAttribute{
-				Required: true,
+				MarkdownDescription: "Workflow group id for the workflow.",
+				Required:            true,
 			},
 			"stack_id": schema.StringAttribute{
-				Optional: true,
+				MarkdownDescription: "stack id for the stack to be triggered.",
+				Optional:            true,
 			},
 			"stack_run_payload": schema.StringAttribute{
-				Optional: true,
+				MarkdownDescription: "Overrides for the stack to be triggered",
+				Optional:            true,
 			},
 			"workflow_id": schema.StringAttribute{
-				Optional: true,
+				MarkdownDescription: "Workflow id for the workflow to be triggered",
+				Optional:            true,
 			},
 			"workflow_run_payload": schema.StringAttribute{
-				Optional: true,
+				MarkdownDescription: "Overrides for the workflow to be triggered",
+				Optional:            true,
 			},
 		},
 	},
 }
 
 var terraformConfigSchema = schema.SingleNestedAttribute{
-	MarkdownDescription: "Terraform configuration.",
+	MarkdownDescription: "Terraform configuration. Valid only for terraform type template",
 	Optional:            true,
 	Computed:            true,
 	Attributes: map[string]schema.Attribute{
@@ -83,7 +93,7 @@ var terraformConfigSchema = schema.SingleNestedAttribute{
 			Computed:            true,
 		},
 		"managed_terraform_state": schema.BoolAttribute{
-			MarkdownDescription: "Enable managed terraform state.",
+			MarkdownDescription: "Enable stackguardian managed terraform state.",
 			Optional:            true,
 			Computed:            true,
 		},
@@ -107,21 +117,10 @@ var terraformConfigSchema = schema.SingleNestedAttribute{
 			Optional:            true,
 			Computed:            true,
 			NestedObject: schema.NestedAttributeObject{
-				Attributes: map[string]schema.Attribute{
-					"source": schema.StringAttribute{
-						MarkdownDescription: "Source path for mount point.",
-						Optional:            true,
-					},
-					"target": schema.StringAttribute{
-						MarkdownDescription: "Target path for mount point.",
-						Optional:            true,
-					},
-					"read_only": schema.BoolAttribute{
-						Optional: true,
-					},
-				},
+				Attributes: mount_point,
 			},
 		},
+		// TODO: confirm the description
 		"timeout": schema.Int64Attribute{
 			MarkdownDescription: "Timeout for terraform operations in seconds.",
 			Optional:            true,
@@ -189,6 +188,45 @@ var terraformConfigSchema = schema.SingleNestedAttribute{
 	},
 }
 
+var environmentVariables = map[string]schema.Attribute{
+	"config": schema.SingleNestedAttribute{
+		MarkdownDescription: "Configuration for the environment variable.",
+		Required:            true,
+		Attributes: map[string]schema.Attribute{
+			"var_name": schema.StringAttribute{
+				MarkdownDescription: "Name of the variable.",
+				Required:            true,
+			},
+			"secret_id": schema.StringAttribute{
+				MarkdownDescription: "ID of the secret (if using vault secret). Use if type is SECRET_REF",
+				Optional:            true,
+			},
+			"text_value": schema.StringAttribute{
+				MarkdownDescription: "Text value (if using plain text). Use if type is TEXT",
+				Optional:            true,
+			},
+		},
+	},
+	"kind": schema.StringAttribute{
+		MarkdownDescription: "Kind of the environment variable (TEXT, SECRET_REF).",
+		Required:            true,
+	},
+}
+var mount_point = map[string]schema.Attribute{
+	"source": schema.StringAttribute{
+		MarkdownDescription: "Source path for mount point.",
+		Optional:            true,
+	},
+	"target": schema.StringAttribute{
+		MarkdownDescription: "Target path for mount point.",
+		Optional:            true,
+	},
+	// TODO: confirm the description
+	"read_only": schema.BoolAttribute{
+		MarkdownDescription: "If the directory is read only or not",
+		Optional:            true,
+	},
+}
 var wfStepsConfig = schema.NestedAttributeObject{
 	Attributes: map[string]schema.Attribute{
 		"name": schema.StringAttribute{
@@ -196,41 +234,18 @@ var wfStepsConfig = schema.NestedAttributeObject{
 			Required:            true,
 		},
 		"environment_variables": schema.ListNestedAttribute{
-			MarkdownDescription: "Environment variables for the step.",
+			MarkdownDescription: "Environment variables for the workflow steps.",
 			Optional:            true,
 			NestedObject: schema.NestedAttributeObject{
-				Attributes: map[string]schema.Attribute{
-					"config": schema.SingleNestedAttribute{
-						Required: true,
-						Attributes: map[string]schema.Attribute{
-
-							"var_name": schema.StringAttribute{
-								MarkdownDescription: "Variable name.",
-								Optional:            true,
-							},
-							"secret_id": schema.StringAttribute{
-								MarkdownDescription: "Secret ID.",
-								Optional:            true,
-							},
-							"text_value": schema.StringAttribute{
-								MarkdownDescription: "Text value.",
-								Optional:            true,
-							},
-						},
-					},
-					"kind": schema.StringAttribute{
-						MarkdownDescription: "Variable kind (TEXT, SECRET_REF).",
-						Optional:            true,
-					},
-				},
+				Attributes: environmentVariables,
 			},
 		},
 		"approval": schema.BoolAttribute{
-			MarkdownDescription: "Require approval for this step.",
+			MarkdownDescription: "Enable approval for the workflow step.",
 			Optional:            true,
 		},
 		"timeout": schema.Int64Attribute{
-			MarkdownDescription: "Step timeout in seconds.",
+			MarkdownDescription: "Workflow step execution timeout in seconds.",
 			Optional:            true,
 		},
 		"cmd_override": schema.StringAttribute{
@@ -241,20 +256,7 @@ var wfStepsConfig = schema.NestedAttributeObject{
 			MarkdownDescription: "Mount points for the step.",
 			Optional:            true,
 			NestedObject: schema.NestedAttributeObject{
-				Attributes: map[string]schema.Attribute{
-					"source": schema.StringAttribute{
-						MarkdownDescription: "Source path.",
-						Optional:            true,
-					},
-					"target": schema.StringAttribute{
-						MarkdownDescription: "Destination path.",
-						Optional:            true,
-					},
-					"read_only": schema.BoolAttribute{
-						Optional: true,
-						Computed: true,
-					},
-				},
+				Attributes: mount_point,
 			},
 		},
 		"wf_step_template_id": schema.StringAttribute{
@@ -337,34 +339,12 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				Optional:            true,
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"config": schema.SingleNestedAttribute{
-							MarkdownDescription: "Configuration for the environment variable.",
-							Required:            true,
-							Attributes: map[string]schema.Attribute{
-								"var_name": schema.StringAttribute{
-									MarkdownDescription: "Name of the variable.",
-									Required:            true,
-								},
-								"secret_id": schema.StringAttribute{
-									MarkdownDescription: "ID of the secret (if using vault secret).",
-									Optional:            true,
-								},
-								"text_value": schema.StringAttribute{
-									MarkdownDescription: "Text value (if using plain text).",
-									Optional:            true,
-								},
-							},
-						},
-						"kind": schema.StringAttribute{
-							MarkdownDescription: "Kind of the environment variable (TEXT, SECRET_REF).",
-							Required:            true,
-						},
-					},
+					Attributes: environmentVariables,
 				},
 			},
+			// TODO: Update descriptions for encoded_data and ui_schema_data
 			"input_schemas": schema.ListNestedAttribute{
-				MarkdownDescription: "List of input schemas for the revision.",
+				MarkdownDescription: "JSONSchema Form representation of input JSON data",
 				Optional:            true,
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
@@ -385,13 +365,16 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				},
 			},
 			"mini_steps": schema.SingleNestedAttribute{
-				Optional: true,
+				MarkdownDescription: "Actions that are required to be performed once workflow execution is complete",
+				Optional:            true,
 				Attributes: map[string]schema.Attribute{
 					"notifications": schema.SingleNestedAttribute{
-						Optional: true,
+						MarkdownDescription: "Configuration for notifications to be sent on workflow completion",
+						Optional:            true,
 						Attributes: map[string]schema.Attribute{
 							"email": schema.SingleNestedAttribute{
-								Optional: true,
+								MarkdownDescription: "Configuration for email notifications to be sent on complemention. Statuses on which notifications can be sent (approval_required, cancelled, completed, drift_detected, errored)",
+								Optional:            true,
 								Attributes: map[string]schema.Attribute{
 									"approval_required": ministepsNotificationRecepients,
 									"cancelled":         ministepsNotificationRecepients,
@@ -403,7 +386,8 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 						},
 					},
 					"webhooks": schema.SingleNestedAttribute{
-						Optional: true,
+						MarkdownDescription: "Configuration for webhooks to be triggered on complemention. Statuses on which webhooks can be sent (approval_required, cancelled, completed, drift_detected, errored)",
+						Optional:            true,
 						Attributes: map[string]schema.Attribute{
 							"approval_required": ministepsWebhooks,
 							"cancelled":         ministepsWebhooks,
@@ -413,7 +397,8 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 						},
 					},
 					"wf_chaining": schema.SingleNestedAttribute{
-						Optional: true,
+						Optional:            true,
+						MarkdownDescription: "Configuration for other workflows to be triggered on complemention. Statuses on which webhooks can be sent (completed, errored)",
 						Attributes: map[string]schema.Attribute{
 							"completed": ministepsWorkflowChaining,
 							"errored":   ministepsWorkflowChaining,
@@ -425,11 +410,13 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				Optional: true,
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
-						Required: true,
+						MarkdownDescription: "Type of runner. Valid options: 'shared' or 'external'",
+						Required:            true,
 					},
 					"names": schema.ListAttribute{
-						Optional:    true,
-						ElementType: types.StringType,
+						MarkdownDescription: "Id of the runner group",
+						Optional:            true,
+						ElementType:         types.StringType,
 					},
 				},
 			},
@@ -440,7 +427,7 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				Computed:            true,
 			},
 			"user_schedules": schema.ListNestedAttribute{
-				MarkdownDescription: "Scheduled runs for the workflow template revision.",
+				MarkdownDescription: "Configuration for scheduling runs for the workflows.",
 				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -470,7 +457,7 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				Computed:            true,
 			},
 			"approvers": schema.ListAttribute{
-				MarkdownDescription: "List of approvers for the revision.",
+				MarkdownDescription: "List of approvers for approvals during workflow execution.",
 				ElementType:         types.StringType,
 				Optional:            true,
 			},
@@ -480,12 +467,12 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				Computed:            true,
 			},
 			"user_job_cpu": schema.Int64Attribute{
-				MarkdownDescription: "User job CPU.",
+				MarkdownDescription: "Limits to set user job CPU.",
 				Optional:            true,
 				Computed:            true,
 			},
 			"user_job_memory": schema.Int64Attribute{
-				MarkdownDescription: "User job memory.",
+				MarkdownDescription: "Limits to set user job memory.",
 				Optional:            true,
 				Computed:            true,
 			},
@@ -493,52 +480,7 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				MarkdownDescription: "Runtime source configuration for the revision.",
 				Optional:            true,
 				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"source_config_dest_kind": schema.StringAttribute{
-						MarkdownDescription: "Source config destination kind.",
-						Optional:            true,
-						Computed:            true,
-					},
-					"config": schema.SingleNestedAttribute{
-						MarkdownDescription: "Source configuration details.",
-						Optional:            true,
-						Computed:            true,
-						Attributes: map[string]schema.Attribute{
-							"is_private": schema.BoolAttribute{
-								MarkdownDescription: "Whether the source is private.",
-								Optional:            true,
-							},
-							"auth": schema.StringAttribute{
-								MarkdownDescription: "Authentication method.",
-								Optional:            true,
-							},
-							"git_core_auto_crlf": schema.BoolAttribute{
-								MarkdownDescription: "Git core auto CRLF setting.",
-								Optional:            true,
-							},
-							"git_sparse_checkout_config": schema.StringAttribute{
-								MarkdownDescription: "Git sparse checkout configuration.",
-								Optional:            true,
-							},
-							"include_sub_module": schema.BoolAttribute{
-								MarkdownDescription: "Whether to include submodules.",
-								Optional:            true,
-							},
-							"ref": schema.StringAttribute{
-								MarkdownDescription: "Git reference (branch, tag, commit).",
-								Optional:            true,
-							},
-							"repo": schema.StringAttribute{
-								MarkdownDescription: "Repository URL.",
-								Optional:            true,
-							},
-							"working_dir": schema.StringAttribute{
-								MarkdownDescription: "Working directory within the repository.",
-								Optional:            true,
-							},
-						},
-					},
-				},
+				Attributes:          workflowtemplate.WorkflowTemplateRuntimeSourceConfig(),
 			},
 			"terraform_config": terraformConfigSchema,
 			"deployment_platform_config": schema.SingleNestedAttribute{
@@ -568,7 +510,7 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				},
 			},
 			"wf_steps_config": schema.ListNestedAttribute{
-				MarkdownDescription: "Workflow steps configuration.",
+				MarkdownDescription: "Workflow steps configuration. Valid for custom workflow types.",
 				Optional:            true,
 				Computed:            true,
 				NestedObject:        wfStepsConfig,
