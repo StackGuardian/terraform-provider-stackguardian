@@ -284,52 +284,12 @@ func BuildAPIModelToRevisionModel(apiResponse *workflowsteptemplaterevision.Work
 	}
 
 	// Handle runtime source
-	if apiResponse.RuntimeSource != nil {
-		runtimeSourceModel := &workflowsteptemplateresource.RuntimeSourceModel{
-			SourceConfigDestKind: flatteners.String(string(apiResponse.RuntimeSource.SourceConfigDestKind)),
-		}
-
-		// Handle config
-		if apiResponse.RuntimeSource.Config != nil {
-			configModel := workflowsteptemplateresource.RuntimeSourceConfigModel{
-				DockerImage:            flatteners.String(apiResponse.RuntimeSource.Config.DockerImage),
-				IsPrivate:              types.BoolValue(*apiResponse.RuntimeSource.Config.IsPrivate),
-				Auth:                   flatteners.StringPtr(apiResponse.RuntimeSource.Config.Auth),
-				DockerRegistryUsername: flatteners.StringPtr(apiResponse.RuntimeSource.Config.DockerRegistryUsername),
-				LocalWorkspaceDir:      flatteners.StringPtr(apiResponse.RuntimeSource.Config.LocalWorkspaceDir),
-			}
-
-			configObj, cfgDiags := types.ObjectValueFrom(context.Background(), workflowsteptemplateresource.RuntimeSourceConfigModel{}.AttributeTypes(), configModel)
-			diags.Append(cfgDiags...)
-			if diags.HasError() {
-				return nil, diags
-			}
-			runtimeSourceModel.Config = configObj
-		} else {
-			runtimeSourceModel.Config = types.ObjectNull(workflowsteptemplateresource.RuntimeSourceConfigModel{}.AttributeTypes())
-		}
-
-		// Handle additional config
-		if apiResponse.RuntimeSource.AdditionalConfig != nil {
-			acMap, acDiags := types.MapValueFrom(context.Background(), types.StringType, apiResponse.RuntimeSource.AdditionalConfig)
-			diags.Append(acDiags...)
-			if diags.HasError() {
-				return nil, diags
-			}
-			runtimeSourceModel.AdditionalConfig = acMap
-		} else {
-			runtimeSourceModel.AdditionalConfig = types.MapNull(types.StringType)
-		}
-
-		runtimeSourceObj, rsDiags := types.ObjectValueFrom(context.Background(), workflowsteptemplateresource.RuntimeSourceModel{}.AttributeTypes(), runtimeSourceModel)
-		diags.Append(rsDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		model.RuntimeSource = runtimeSourceObj
-	} else {
-		model.RuntimeSource = types.ObjectNull(workflowsteptemplateresource.RuntimeSourceModel{}.AttributeTypes())
+	runtimeSourceObj, rsDiags := workflowsteptemplateresource.RuntimeSourceToTerraType(apiResponse.RuntimeSource)
+	diags.Append(rsDiags...)
+	if diags.HasError() {
+		return nil, diags
 	}
+	model.RuntimeSource = runtimeSourceObj
 
 	// Handle deprecation
 	if apiResponse.Deprecation != nil {

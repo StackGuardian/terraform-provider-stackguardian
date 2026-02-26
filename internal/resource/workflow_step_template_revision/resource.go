@@ -108,28 +108,16 @@ func (r *workflowStepTemplateRevisionResource) Create(ctx context.Context, req r
 	}
 
 	// Construct the revision ID from the create response
-	revisionAlias := createResp.Data.Revision.Alias
-	var revisionId string
-	if revisionAlias != nil && *revisionAlias != "" {
-		revisionId = templateId + ":" + *revisionAlias
+	revisionId := createResp.Data.Revision.Id
+
+	// Read back the revision to get all attributes
+	readResp, err := r.client.WorkflowStepTemplateRevision.ReadWorkflowStepTemplateRevision(ctx, r.org_name, revisionId)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading workflow step template revision after create", "Error in reading workflow step template revision API call: "+err.Error())
+		return
 	}
 
-	// Read back the resource to get full state
-	if revisionId != "" {
-		readResp, err := r.client.WorkflowStepTemplateRevision.ReadWorkflowStepTemplateRevision(ctx, r.org_name, revisionId)
-		if err == nil && readResp != nil && readResp.Msg != nil {
-			revisionModel, diags := BuildAPIModelToRevisionModel(readResp.Msg, revisionId, templateId)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			resp.Diagnostics.Append(resp.State.Set(ctx, &revisionModel)...)
-			return
-		}
-	}
-
-	// Fall back to using the create response data directly
-	revisionModel, diags := BuildAPIModelToRevisionModel(&createResp.Data.Revision, revisionId, templateId)
+	revisionModel, diags := BuildAPIModelToRevisionModel(readResp.Msg, revisionId, templateId)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -158,21 +146,7 @@ func (r *workflowStepTemplateRevisionResource) Read(ctx context.Context, req res
 
 	readResp, err := r.client.WorkflowStepTemplateRevision.ReadWorkflowStepTemplateRevision(ctx, r.org_name, revisionId)
 	if err != nil {
-		if apiErr, ok := err.(*core.APIError); ok {
-			if apiErr.StatusCode == 404 {
-				tflog.Warn(ctx, "Workflow step template revision not found, removing from state")
-				resp.State.RemoveResource(ctx)
-				return
-			}
-		}
-
-		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error reading workflow step template revision", "Error in reading workflow step template revision API call: "+err.Error())
-		return
-	}
-
-	if readResp == nil || readResp.Msg == nil {
-		resp.Diagnostics.AddError("Error reading workflow step template revision", "API response is empty")
 		return
 	}
 
@@ -218,19 +192,26 @@ func (r *workflowStepTemplateRevisionResource) Update(ctx context.Context, req r
 
 	payload.OwnerOrg = fmt.Sprintf("/orgs/%v", r.org_name)
 
-	updateResp, err := r.client.WorkflowStepTemplateRevision.UpdateWorkflowStepTemplateRevision(ctx, r.org_name, revisionId, payload)
+	_, err := r.client.WorkflowStepTemplateRevision.UpdateWorkflowStepTemplateRevision(ctx, r.org_name, revisionId, payload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error updating workflow step template revision", "Error in updating workflow step template revision API call: "+err.Error())
 		return
 	}
 
-	if updateResp == nil {
-		resp.Diagnostics.AddError("Error updating workflow step template revision", "API response is empty")
+	// Read back the revision to get all attributes
+	readResp, err := r.client.WorkflowStepTemplateRevision.ReadWorkflowStepTemplateRevision(ctx, r.org_name, revisionId)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading workflow step template revision after update", "Error in reading workflow step template revision API call: "+err.Error())
 		return
 	}
 
-	revisionModel, diags := BuildAPIModelToRevisionModel(&updateResp.Data, revisionId, templateId)
+	if readResp == nil || readResp.Msg == nil {
+		resp.Diagnostics.AddError("Error reading workflow step template revision after update", "API response is empty")
+		return
+	}
+
+	revisionModel, diags := BuildAPIModelToRevisionModel(readResp.Msg, revisionId, templateId)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

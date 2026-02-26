@@ -104,6 +104,10 @@ func (r *workflowStepTemplateResource) Create(ctx context.Context, req resource.
 	}
 
 	readResp, err := r.client.WorkflowStepTemplate.ReadWorkflowStepTemplate(ctx, r.org_name, createResp.Data.Parent.Id)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading workflow step template after create", "Error in reading workflow step template API call: "+err.Error())
+		return
+	}
 
 	templateModel, diags := BuildAPIModelToWorkflowStepTemplateModel(&readResp.Msg)
 	resp.Diagnostics.Append(diags...)
@@ -191,19 +195,21 @@ func (r *workflowStepTemplateResource) Update(ctx context.Context, req resource.
 
 	payload.OwnerOrg = sgsdkgo.Optional(fmt.Sprintf("/orgs/%v", r.org_name))
 
-	updateResp, err := r.client.WorkflowStepTemplate.UpdateWorkflowStepTemplate(ctx, r.org_name, templateId, payload)
+	_, err := r.client.WorkflowStepTemplate.UpdateWorkflowStepTemplate(ctx, r.org_name, templateId, payload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error updating workflow step template", "Error in updating workflow step template API call: "+err.Error())
 		return
 	}
 
-	if updateResp == nil {
-		resp.Diagnostics.AddError("Error updating workflow step template", "API response is empty")
+	// Read back the template to get all attributes
+	readResp, err := r.client.WorkflowStepTemplate.ReadWorkflowStepTemplate(ctx, r.org_name, templateId)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading workflow step template after update", "Error in reading workflow step template API call: "+err.Error())
 		return
 	}
 
-	templateModel, diags := BuildAPIModelToWorkflowStepTemplateModel(&updateResp.Data)
+	templateModel, diags := BuildAPIModelToWorkflowStepTemplateModel(&readResp.Msg)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
