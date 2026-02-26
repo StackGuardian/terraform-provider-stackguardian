@@ -15,47 +15,47 @@ import (
 func WorkflowTemplateRuntimeSourceConfig() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"source_config_dest_kind": schema.StringAttribute{
-			MarkdownDescription: `Destination kind for the source configuration (e.g., GITHUB_COM, GITHUB_APP_CUSTOM, GITLAB_OAUTH_SSH, GITLAB_COM, AZURE_DEVOPS).`,
+			MarkdownDescription: constants.RuntimeSourceDestKind,
 			Optional:            true,
 		},
 		"config": schema.SingleNestedAttribute{
-			MarkdownDescription: "Configuration for the runtime environment.",
+			MarkdownDescription: constants.RuntimeSourceConfig,
 			Optional:            true,
 			Attributes: map[string]schema.Attribute{
 				"auth": schema.StringAttribute{
-					MarkdownDescription: "Connector id to access private git repository",
+					MarkdownDescription: constants.RuntimeSourceConfigAuth,
 					Optional:            true,
 					Sensitive:           true,
 				},
 				"git_core_auto_crlf": schema.BoolAttribute{
-					MarkdownDescription: "Whether to automatically handle CRLF line endings.",
+					MarkdownDescription: constants.RuntimeSourceConfigGitCoreCRLF,
 					Optional:            true,
 					Computed:            true,
 				},
 				"git_sparse_checkout_config": schema.StringAttribute{
-					MarkdownDescription: "Git sparse checkout command line git cli options.",
+					MarkdownDescription: constants.RuntimeSourceConfigGitSparse,
 					Optional:            true,
 				},
 				"include_sub_module": schema.BoolAttribute{
-					MarkdownDescription: "Whether to include git submodules.",
+					MarkdownDescription: constants.RuntimeSourceConfigIncludeSubmodule,
 					Optional:            true,
 				},
 				"is_private": schema.BoolAttribute{
-					MarkdownDescription: "Whether the repository is private. Auth is required if the repository is private",
+					MarkdownDescription: constants.RuntimeSourceConfigIsPrivate,
 					Optional:            true,
 					Computed:            true,
 				},
 				"ref": schema.StringAttribute{
-					MarkdownDescription: "Git reference (branch, tag, or commit hash).",
+					MarkdownDescription: constants.RuntimeSourceConfigRef,
 					Optional:            true,
 					Computed:            true,
 				},
 				"repo": schema.StringAttribute{
-					MarkdownDescription: "Git repository URL.",
+					MarkdownDescription: constants.RuntimeSourceConfigRepo,
 					Required:            true,
 				},
 				"working_dir": schema.StringAttribute{
-					MarkdownDescription: "Working directory within the repository.",
+					MarkdownDescription: constants.RuntimeSourceConfigWorkingDir,
 					Optional:            true,
 				},
 			},
@@ -77,19 +77,19 @@ func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRe
 				},
 			},
 			"owner_org": schema.StringAttribute{
-				MarkdownDescription: "Organization the template belongs to",
+				MarkdownDescription: constants.WorkflowTemplateOwnerOrg,
 				Computed:            true,
 			},
 			"template_name": schema.StringAttribute{
-				MarkdownDescription: "Name of the workflow template.",
+				MarkdownDescription: constants.WorkflowTemplateName,
 				Required:            true,
 			},
 			"source_config_kind": schema.StringAttribute{
-				MarkdownDescription: "Source configuration kind (TERRAFORM, OPENTOFU, ANSIBLE_PLAYBOOK, HELM, KUBECTL, CLOUDFORMATION, CUSTOM).",
+				MarkdownDescription: constants.SourceConfigKind,
 				Required:            true,
 			},
 			"is_public": schema.StringAttribute{
-				MarkdownDescription: "Make template available to other organisations. Available values (\"0\" or \"1\")",
+				MarkdownDescription: constants.WorkflowTemplateIsPublic,
 				Optional:            true,
 				Computed:            true,
 			},
@@ -104,42 +104,42 @@ func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRe
 				Optional:            true,
 			},
 			"context_tags": schema.MapAttribute{
-				MarkdownDescription: "Contextual tags to give context to your tags.",
+				MarkdownDescription: fmt.Sprintf(constants.ContextTags, "workflow template"),
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
 			},
 			"shared_orgs_list": schema.ListAttribute{
-				MarkdownDescription: "List of organizations the template is shared with.",
+				MarkdownDescription: constants.WorkflowTemplateSharedOrgs,
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
 			},
 			"runtime_source": schema.SingleNestedAttribute{
-				MarkdownDescription: "Runtime source configuration for the template.",
+				MarkdownDescription: fmt.Sprintf(constants.RuntimeSource, "template"),
 				Optional:            true,
 				Computed:            true,
 				Attributes:          WorkflowTemplateRuntimeSourceConfig(),
 			},
 			"vcs_triggers": schema.SingleNestedAttribute{
-				MarkdownDescription: "VCS trigger configuration for the workflow.",
+				MarkdownDescription: constants.VCSTriggers,
 				Optional:            true,
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
-						MarkdownDescription: "VCS provider type (GITHUB_COM, GITHUB_APP_CUSTOM, GITLAB_OAUTH_SSH, GITLAB_COM).",
+						MarkdownDescription: constants.VCSTriggersType,
 						Required:            true,
 					},
 					"create_tag": schema.SingleNestedAttribute{
-						MarkdownDescription: "Trigger configuration on tag creation in VCS",
+						MarkdownDescription: constants.VCSTriggersCreateTag,
 						Required:            true,
 						Attributes: map[string]schema.Attribute{
 							"create_revision": schema.SingleNestedAttribute{
-								MarkdownDescription: "Create new revision on tag creation",
+								MarkdownDescription: constants.VCSTriggersCreateTagRevision,
 								Required:            true,
 								Attributes: map[string]schema.Attribute{
 									"enabled": schema.BoolAttribute{
-										MarkdownDescription: "Whether to create revision when tag is created.",
+										MarkdownDescription: constants.VCSTriggersCreateTagRevisionEnabled,
 										Optional:            true,
 									},
 								},
