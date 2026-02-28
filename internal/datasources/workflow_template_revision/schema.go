@@ -311,9 +311,6 @@ func (d *workflowTemplateRevisionDataSource) Schema(_ context.Context, _ datasou
 				Optional:            true,
 				Computed:            true,
 			},
-			"revision_id": schema.StringAttribute{
-				Computed: true,
-			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow template revision"),
 				Computed:            true,

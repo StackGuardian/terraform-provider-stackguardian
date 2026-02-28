@@ -20,7 +20,6 @@ import (
 type WorkflowTemplateRevisionResourceModel struct {
 	Id                        types.String `tfsdk:"id"`
 	TemplateId                types.String `tfsdk:"template_id"`
-	RevisionId                types.String `tfsdk:"revision_id"`
 	LongDescription           types.String `tfsdk:"description"`
 	Alias                     types.String `tfsdk:"alias"`
 	Notes                     types.String `tfsdk:"notes"`
@@ -1325,7 +1324,6 @@ func BuildAPIModelToWorkflowTemplateRevisionModel(ctx context.Context, apiRespon
 
 	model := &WorkflowTemplateRevisionResourceModel{
 		Id:               flatteners.StringPtr(apiResponse.Id),
-		RevisionId:       flatteners.String(apiResponse.TemplateId),
 		LongDescription:  flatteners.StringPtr(apiResponse.LongDescription),
 		Alias:            flatteners.String(apiResponse.Alias),
 		Notes:            flatteners.String(apiResponse.Notes),

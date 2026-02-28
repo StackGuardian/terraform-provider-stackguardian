@@ -293,9 +293,6 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				MarkdownDescription: constants.WorkflowTemplateRevisionTemplateId,
 				Required:            true,
 			},
-			"revision_id": schema.StringAttribute{
-				Computed: true,
-			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow template revision"),
 				Optional:            true,
