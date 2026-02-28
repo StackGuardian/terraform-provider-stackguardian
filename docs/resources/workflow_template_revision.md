@@ -117,8 +117,8 @@ Required:
 
 Optional:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Use if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
-- `text_value` (String) Text value (if using plain text). Use if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
+- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 
 
 
@@ -296,9 +296,9 @@ Required:
 Optional:
 
 - `stack_id` (String) Stack id for the stack to be triggered.
-- `stack_run_payload` (String) Overrides for the stack to be triggered
+- `stack_run_payload` (String) JSON string specifying overrides for the stack to be triggered
 - `workflow_id` (String) Workflow id for the workflow to be triggered
-- `workflow_run_payload` (String) Overrides for the workflow to be triggered
+- `workflow_run_payload` (String) JSON string specifying overrides for the workflow to be triggered
 
 
 <a id="nestedatt--mini_steps--wf_chaining--errored"></a>
@@ -311,9 +311,9 @@ Required:
 Optional:
 
 - `stack_id` (String) Stack id for the stack to be triggered.
-- `stack_run_payload` (String) Overrides for the stack to be triggered
+- `stack_run_payload` (String) JSON string specifying overrides for the stack to be triggered
 - `workflow_id` (String) Workflow id for the workflow to be triggered
-- `workflow_run_payload` (String) Overrides for the workflow to be triggered
+- `workflow_run_payload` (String) JSON string specifying overrides for the workflow to be triggered
 
 
 
@@ -393,11 +393,11 @@ Required:
 Optional:
 
 - `approval` (Boolean) Enable approval for the workflow step.
-- `cmd_override` (String) Override command for the step (JSON).
+- `cmd_override` (String) Override command for the step.
 - `environment_variables` (Attributes List) Environment variables for the workflow steps. (see [below for nested schema](#nestedatt--terraform_config--post_apply_wf_steps_config--environment_variables))
 - `mount_points` (Attributes List) Mount points for the step. (see [below for nested schema](#nestedatt--terraform_config--post_apply_wf_steps_config--mount_points))
 - `timeout` (Number) Workflow step execution timeout in seconds.
-- `wf_step_input_data` (Attributes) Workflow step input data. (see [below for nested schema](#nestedatt--terraform_config--post_apply_wf_steps_config--wf_step_input_data))
+- `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--terraform_config--post_apply_wf_steps_config--wf_step_input_data))
 
 <a id="nestedatt--terraform_config--post_apply_wf_steps_config--environment_variables"></a>
 ### Nested Schema for `terraform_config.post_apply_wf_steps_config.environment_variables`
@@ -416,8 +416,8 @@ Required:
 
 Optional:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Use if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
-- `text_value` (String) Text value (if using plain text). Use if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
+- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 
 
 
@@ -426,7 +426,7 @@ Optional:
 
 Optional:
 
-- `read_only` (Boolean) If the directory is read only or not
+- `read_only` (Boolean) If the directory is to be mounted as read only or not
 - `source` (String) Source path for mount point.
 - `target` (String) Target path for mount point.
 
@@ -437,7 +437,7 @@ Optional:
 Optional:
 
 - `data` (String) Input data (JSON).
-- `schema_type` (String) Schema type.
+- `schema_type` (String) Schema type for the input data. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>
 
 
 
@@ -452,11 +452,11 @@ Required:
 Optional:
 
 - `approval` (Boolean) Enable approval for the workflow step.
-- `cmd_override` (String) Override command for the step (JSON).
+- `cmd_override` (String) Override command for the step.
 - `environment_variables` (Attributes List) Environment variables for the workflow steps. (see [below for nested schema](#nestedatt--terraform_config--post_plan_wf_steps_config--environment_variables))
 - `mount_points` (Attributes List) Mount points for the step. (see [below for nested schema](#nestedatt--terraform_config--post_plan_wf_steps_config--mount_points))
 - `timeout` (Number) Workflow step execution timeout in seconds.
-- `wf_step_input_data` (Attributes) Workflow step input data. (see [below for nested schema](#nestedatt--terraform_config--post_plan_wf_steps_config--wf_step_input_data))
+- `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--terraform_config--post_plan_wf_steps_config--wf_step_input_data))
 
 <a id="nestedatt--terraform_config--post_plan_wf_steps_config--environment_variables"></a>
 ### Nested Schema for `terraform_config.post_plan_wf_steps_config.environment_variables`
@@ -475,8 +475,8 @@ Required:
 
 Optional:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Use if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
-- `text_value` (String) Text value (if using plain text). Use if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
+- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 
 
 
@@ -485,7 +485,7 @@ Optional:
 
 Optional:
 
-- `read_only` (Boolean) If the directory is read only or not
+- `read_only` (Boolean) If the directory is to be mounted as read only or not
 - `source` (String) Source path for mount point.
 - `target` (String) Target path for mount point.
 
@@ -496,7 +496,7 @@ Optional:
 Optional:
 
 - `data` (String) Input data (JSON).
-- `schema_type` (String) Schema type.
+- `schema_type` (String) Schema type for the input data. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>
 
 
 
@@ -511,11 +511,11 @@ Required:
 Optional:
 
 - `approval` (Boolean) Enable approval for the workflow step.
-- `cmd_override` (String) Override command for the step (JSON).
+- `cmd_override` (String) Override command for the step.
 - `environment_variables` (Attributes List) Environment variables for the workflow steps. (see [below for nested schema](#nestedatt--terraform_config--pre_apply_wf_steps_config--environment_variables))
 - `mount_points` (Attributes List) Mount points for the step. (see [below for nested schema](#nestedatt--terraform_config--pre_apply_wf_steps_config--mount_points))
 - `timeout` (Number) Workflow step execution timeout in seconds.
-- `wf_step_input_data` (Attributes) Workflow step input data. (see [below for nested schema](#nestedatt--terraform_config--pre_apply_wf_steps_config--wf_step_input_data))
+- `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--terraform_config--pre_apply_wf_steps_config--wf_step_input_data))
 
 <a id="nestedatt--terraform_config--pre_apply_wf_steps_config--environment_variables"></a>
 ### Nested Schema for `terraform_config.pre_apply_wf_steps_config.environment_variables`
@@ -534,8 +534,8 @@ Required:
 
 Optional:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Use if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
-- `text_value` (String) Text value (if using plain text). Use if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
+- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 
 
 
@@ -544,7 +544,7 @@ Optional:
 
 Optional:
 
-- `read_only` (Boolean) If the directory is read only or not
+- `read_only` (Boolean) If the directory is to be mounted as read only or not
 - `source` (String) Source path for mount point.
 - `target` (String) Target path for mount point.
 
@@ -555,7 +555,7 @@ Optional:
 Optional:
 
 - `data` (String) Input data (JSON).
-- `schema_type` (String) Schema type.
+- `schema_type` (String) Schema type for the input data. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>
 
 
 
@@ -570,11 +570,11 @@ Required:
 Optional:
 
 - `approval` (Boolean) Enable approval for the workflow step.
-- `cmd_override` (String) Override command for the step (JSON).
+- `cmd_override` (String) Override command for the step.
 - `environment_variables` (Attributes List) Environment variables for the workflow steps. (see [below for nested schema](#nestedatt--terraform_config--pre_plan_wf_steps_config--environment_variables))
 - `mount_points` (Attributes List) Mount points for the step. (see [below for nested schema](#nestedatt--terraform_config--pre_plan_wf_steps_config--mount_points))
 - `timeout` (Number) Workflow step execution timeout in seconds.
-- `wf_step_input_data` (Attributes) Workflow step input data. (see [below for nested schema](#nestedatt--terraform_config--pre_plan_wf_steps_config--wf_step_input_data))
+- `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--terraform_config--pre_plan_wf_steps_config--wf_step_input_data))
 
 <a id="nestedatt--terraform_config--pre_plan_wf_steps_config--environment_variables"></a>
 ### Nested Schema for `terraform_config.pre_plan_wf_steps_config.environment_variables`
@@ -593,8 +593,8 @@ Required:
 
 Optional:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Use if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
-- `text_value` (String) Text value (if using plain text). Use if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
+- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 
 
 
@@ -603,7 +603,7 @@ Optional:
 
 Optional:
 
-- `read_only` (Boolean) If the directory is read only or not
+- `read_only` (Boolean) If the directory is to be mounted as read only or not
 - `source` (String) Source path for mount point.
 - `target` (String) Target path for mount point.
 
@@ -614,7 +614,7 @@ Optional:
 Optional:
 
 - `data` (String) Input data (JSON).
-- `schema_type` (String) Schema type.
+- `schema_type` (String) Schema type for the input data. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>
 
 
 
@@ -623,7 +623,7 @@ Optional:
 
 Optional:
 
-- `read_only` (Boolean) If the directory is read only or not
+- `read_only` (Boolean) If the directory is to be mounted as read only or not
 - `source` (String) Source path for mount point.
 - `target` (String) Target path for mount point.
 
@@ -654,11 +654,11 @@ Required:
 Optional:
 
 - `approval` (Boolean) Enable approval for the workflow step.
-- `cmd_override` (String) Override command for the step (JSON).
+- `cmd_override` (String) Override command for the step.
 - `environment_variables` (Attributes List) Environment variables for the workflow steps. (see [below for nested schema](#nestedatt--wf_steps_config--environment_variables))
 - `mount_points` (Attributes List) Mount points for the step. (see [below for nested schema](#nestedatt--wf_steps_config--mount_points))
 - `timeout` (Number) Workflow step execution timeout in seconds.
-- `wf_step_input_data` (Attributes) Workflow step input data. (see [below for nested schema](#nestedatt--wf_steps_config--wf_step_input_data))
+- `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--wf_steps_config--wf_step_input_data))
 
 <a id="nestedatt--wf_steps_config--environment_variables"></a>
 ### Nested Schema for `wf_steps_config.environment_variables`
@@ -677,8 +677,8 @@ Required:
 
 Optional:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Use if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
-- `text_value` (String) Text value (if using plain text). Use if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
+- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 
 
 
@@ -687,7 +687,7 @@ Optional:
 
 Optional:
 
-- `read_only` (Boolean) If the directory is read only or not
+- `read_only` (Boolean) If the directory is to be mounted as read only or not
 - `source` (String) Source path for mount point.
 - `target` (String) Target path for mount point.
 
@@ -698,7 +698,7 @@ Optional:
 Optional:
 
 - `data` (String) Input data (JSON).
-- `schema_type` (String) Schema type.
+- `schema_type` (String) Schema type for the input data. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>
 
 
 
