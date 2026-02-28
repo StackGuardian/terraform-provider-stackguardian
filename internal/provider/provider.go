@@ -19,6 +19,11 @@ import (
 	stackworkflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_workflow_outputs"
 	workflowgroupdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_group"
 	workflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_outputs"
+<<<<<<< HEAD
+=======
+	stacktemplatedatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_template"
+	stacktemplaterevisiondatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_template_revision"
+>>>>>>> 5bd38ae (Add stack templates)
 	workflowsteptemplatedatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_step_template"
 	workflowsteptemplaterevisiondatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_step_template_revision"
 	workflowtemplatedatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_template"
@@ -30,6 +35,11 @@ import (
 	rolev4 "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role_v4"
 	runnergroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/runner_group"
 	workflowgroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_group"
+<<<<<<< HEAD
+=======
+	stacktemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/stack_template"
+	stacktemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/stack_template_revision"
+>>>>>>> 5bd38ae (Add stack templates)
 	workflowsteptemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_step_template"
 	workflowsteptemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_step_template_revision"
 	workflowtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
@@ -228,6 +238,8 @@ func (p *stackguardianProvider) DataSources(_ context.Context) []func() datasour
 		workflowsteptemplaterevisiondatasource.NewDataSource,
 		workflowtemplatedatasource.NewDataSource,
 		workflowtemplaterevisiondatasource.NewDataSource,
+		stacktemplatedatasource.NewDataSource,
+		stacktemplaterevisiondatasource.NewDataSource,
 	}
 }
 
@@ -245,5 +257,7 @@ func (p *stackguardianProvider) Resources(_ context.Context) []func() resource.R
 		rolev4.NewResource,
 		workflowtemplate.NewResource,
 		workflowtemplaterevision.NewResource,
+		stacktemplate.NewResource,
+		stacktemplaterevision.NewResource,
 	}
 }
