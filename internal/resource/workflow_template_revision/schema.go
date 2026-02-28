@@ -8,6 +8,8 @@ import (
 	workflowtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -292,6 +294,9 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 			"template_id": schema.StringAttribute{
 				MarkdownDescription: constants.WorkflowTemplateRevisionTemplateId,
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow template revision"),

@@ -74,6 +74,7 @@ func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRe
 				Optional:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"owner_org": schema.StringAttribute{

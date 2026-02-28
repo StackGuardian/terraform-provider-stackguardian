@@ -29,6 +29,7 @@ func GetClient() *sgclient.Client {
 
 func SampleCreateWorkflowPayload(templateName, sourceConfigKind string) *workflowtemplates.CreateWorkflowTemplateRequest {
 	var sampleCreateWorkflowTemplatePayload = workflowtemplates.CreateWorkflowTemplateRequest{
+		Id:               &templateName,
 		TemplateName:     templateName,
 		SourceConfigKind: (*workflowtemplates.WorkflowTemplateSourceConfigKindEnum)(&sourceConfigKind),
 		TemplateType:     sgsdkgo.TemplateTypeEnum("IAC"),
