@@ -3,6 +3,7 @@ package rolev4_test
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"testing"
 
@@ -86,7 +87,7 @@ func TestAccRole(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testAccResource, workflowGroupResourceName, workflowGroupName, roleResourceName, roleName, workflowGroupName),
@@ -109,7 +110,7 @@ func TestAccRoleRecreateOnExternalDelete(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testAccResource, workflowGroupResourceName, workflowGroupName, roleResourceName, roleName, workflowGroupName),
@@ -160,7 +161,7 @@ resource "stackguardian_rolev4" "%s" {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testResource, roleResourceName, roleName),
@@ -181,7 +182,7 @@ func TestAccRoleV4IncompatibleResourceName(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testAccResource, workflowGroupName, workflowGroupResourceName, roleName, roleResourceName, workflowGroupName),
@@ -237,7 +238,7 @@ resource "stackguardian_rolev4" "rolev4-example-role5" {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: testResource,

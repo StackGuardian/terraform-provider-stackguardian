@@ -1,6 +1,7 @@
 package acctest
 
 import (
+	"net/http"
 	"os"
 	"testing"
 
@@ -11,9 +12,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 )
 
-func ProviderFactories() map[string]func() (tfprotov6.ProviderServer, error) {
+func ProviderFactories(customHeader http.Header) map[string]func() (tfprotov6.ProviderServer, error) {
 	return map[string]func() (tfprotov6.ProviderServer, error){
-		"stackguardian": providerserver.NewProtocol6WithError(stackguardianprovider.New("")()),
+		"stackguardian": providerserver.NewProtocol6WithError(stackguardianprovider.New("", customHeader)()),
 	}
 }
 

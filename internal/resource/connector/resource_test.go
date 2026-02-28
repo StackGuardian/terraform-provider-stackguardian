@@ -1,6 +1,7 @@
 package connector_test
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
@@ -49,7 +50,7 @@ func TestAccConnector(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccResource,
@@ -104,7 +105,7 @@ func TestAccConnectorIncompatibleResourceName(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: testResource,
@@ -154,7 +155,7 @@ func TestAccConnectorOptionalId(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: testResource,
