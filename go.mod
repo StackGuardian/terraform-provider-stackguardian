@@ -2,8 +2,6 @@ module github.com/StackGuardian/terraform-provider-stackguardian
 
 go 1.21.4
 
-replace 	github.com/StackGuardian/sg-sdk-go v1.2.1 => "../../sg-sdk-go.git/feat-workflow-templates"
-
 require (
 	github.com/StackGuardian/sg-sdk-go v1.2.1
 	github.com/hashicorp/terraform-plugin-framework v1.11.0

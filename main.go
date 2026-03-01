@@ -28,8 +28,7 @@ func main() {
 		Debug:   debug,
 	}
 
-	httpHeader := http.Header{}
-	err := providerserver.Serve(context.Background(), sgprovider.New(Version, httpHeader), opts)
+	err := providerserver.Serve(context.Background(), sgprovider.New(Version, http.Header{}), opts)
 
 	if err != nil {
 		log.Fatal(err.Error())
