@@ -91,7 +91,6 @@ func (r *runnerGroupResource) Schema(_ context.Context, _ resource.SchemaRequest
 				MarkdownDescription: constants.DiscoverySettingsBenchmarksRuntimeSource,
 				Optional:            true,
 				Attributes: map[string]schema.Attribute{
-
 					"source_config_dest_kind": schema.StringAttribute{
 						MarkdownDescription: constants.DiscoverySettingsBenchmarksRuntimeSourceSourceConfigDestKind,
 						Optional:            true,

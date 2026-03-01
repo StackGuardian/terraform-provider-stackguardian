@@ -240,3 +240,29 @@ resource "stackguardian_role" "role-example-role4" {
 		},
 	})
 }
+
+func TestAccRoleWithoutAllowedPermissions(t *testing.T) {
+	roleResourceName := "role-example-role5"
+	roleName := "role-example-role5"
+
+	testResource := `
+resource "stackguardian_role" "%s" {
+  resource_name = "%s"
+  description   = "Example of terraform-provider-stackguardian for a Role without allowed permissions"
+  tags = [
+	"example-org",
+  ]
+}`
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(testResource, roleResourceName, roleName),
+			},
+		},
+	})
+}
