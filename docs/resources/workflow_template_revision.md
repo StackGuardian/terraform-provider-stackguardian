@@ -64,7 +64,7 @@ resource "stackguardian_workflow_template_revision" "detailed" {
 - `user_job_cpu` (Number) Limits to set user job CPU.
 - `user_job_memory` (Number) Limits to set user job memory.
 - `user_schedules` (Attributes List) Configuration for scheduling runs for the workflows. (see [below for nested schema](#nestedatt--user_schedules))
-- `wf_steps_config` (Attributes List) Workflow steps configuration. Valid for custom workflow types. (see [below for nested schema](#nestedatt--wf_steps_config))
+- `wf_steps_config` (Attributes List) Workflow steps configuration. Valid only for source_config_kind *CUSTOM*. (see [below for nested schema](#nestedatt--wf_steps_config))
 
 ### Read-Only
 

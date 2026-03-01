@@ -37,7 +37,7 @@ const (
 	WorkflowTemplateRevisionMiniSteps                = "Actions that are required to be performed once workflow execution is complete"
 	WorkflowTemplateRevisionUserSchedules            = "Configuration for scheduling runs for the workflows."
 	WorkflowTemplateRevisionDeploymentPlatformConfig = "Deployment platform configuration for the revision."
-	WorkflowTemplateRevisionWfStepsConfig            = "Workflow steps configuration. Valid for custom workflow types."
+	WorkflowTemplateRevisionWfStepsConfig            = "Workflow steps configuration. Valid only for source_config_kind *CUSTOM*."
 )
 
 // Runtime Source attributes (shared)
