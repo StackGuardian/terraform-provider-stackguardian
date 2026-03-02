@@ -8,6 +8,10 @@ description: |-
 
 # stackguardian_workflow_step_template_revision (Data Source)
 
+<div style="background-color: orange; padding: 12px; border-radius: 6px; color: white; font-weight: bold;">
+⚠️ This feature is currently in BETA.
+</div>
+
 ## Example Usage
 
 ```terraform
@@ -64,7 +68,7 @@ output "workflow_step_template_revision_info" {
 Read-Only:
 
 - `effective_date` (String) Effective date when this resource will be deprecated and no longer available for use.
-- `message` (String) Message to display to users about the deprecation of this resource.
+- `message` (String) Deprecation message
 
 
 <a id="nestedatt--runtime_source"></a>
