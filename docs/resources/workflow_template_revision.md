@@ -11,9 +11,16 @@ description: |-
 ## Example Usage
 
 ```terraform
+resource "stackguardian_workflow_template" "example" {
+  template_name      = "my-terraform-template"
+  source_config_kind = "TERRAFORM"
+  is_public          = "0"
+  tags               = ["terraform", "production"]
+}
+
 # Example 1: Basic workflow template revision
 resource "stackguardian_workflow_template_revision" "basic" {
-  template_id        = "my-terraform-template"
+  template_id        = stackguardian_workflow_template.example.id
   alias              = "v1"
   source_config_kind = "TERRAFORM"
   is_public          = "0"
@@ -22,7 +29,7 @@ resource "stackguardian_workflow_template_revision" "basic" {
 
 # Example 2: Workflow template revision with detailed configuration
 resource "stackguardian_workflow_template_revision" "detailed" {
-  template_id                  = "my-terraform-template"
+  template_id                  = stackguardian_workflow_template.example.id
   alias                        = "v3"
   source_config_kind           = "TERRAFORM"
   is_public                    = "0"
