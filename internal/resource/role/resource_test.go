@@ -3,6 +3,7 @@ package role_test
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"testing"
 
@@ -86,7 +87,7 @@ func TestAccRole(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testAccResource, workflowGroupResourceName, workflowGroupName, roleResourceName, roleName, workflowGroupName),
@@ -109,7 +110,7 @@ func TestAccRoleRecreateOnExternalDelete(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testAccResource, workflowGroupResourceName, workflowGroupName, roleResourceName, roleName, workflowGroupName),
@@ -160,7 +161,7 @@ resource "stackguardian_role" "%s" {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testResource, roleResourceName, roleName),
@@ -213,7 +214,7 @@ resource "stackguardian_role" "role-example-role4" {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_1_0),
 		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(),
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
 				Config: testResource,
@@ -235,6 +236,32 @@ resource "stackguardian_role" "role-example-role4" {
 						knownvalue.StringExact("role_example_role4"),
 					),
 				},
+			},
+		},
+	})
+}
+
+func TestAccRoleWithoutAllowedPermissions(t *testing.T) {
+	roleResourceName := "role-example-role5"
+	roleName := "role-example-role5"
+
+	testResource := `
+resource "stackguardian_role" "%s" {
+  resource_name = "%s"
+  description   = "Example of terraform-provider-stackguardian for a Role without allowed permissions"
+  tags = [
+	"example-org",
+  ]
+}`
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(testResource, roleResourceName, roleName),
 			},
 		},
 	})

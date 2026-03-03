@@ -3,6 +3,7 @@ package sgprovider
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
@@ -18,6 +19,10 @@ import (
 	stackworkflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_workflow_outputs"
 	workflowgroupdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_group"
 	workflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_outputs"
+	workflowsteptemplatedatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_step_template"
+	workflowsteptemplaterevisiondatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_step_template_revision"
+	workflowtemplatedatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_template"
+	workflowtemplaterevisiondatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_template_revision"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/connector"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/policy"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role"
@@ -25,6 +30,10 @@ import (
 	rolev4 "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role_v4"
 	runnergroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/runner_group"
 	workflowgroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_group"
+	workflowsteptemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_step_template"
+	workflowsteptemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_step_template_revision"
+	workflowtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
+	workflowtemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template_revision"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -40,10 +49,11 @@ var (
 )
 
 // New is a helper function to simplify provider server and testing implementation.
-func New(version string) func() provider.Provider {
+func New(version string, customHeader http.Header) func() provider.Provider {
 	return func() provider.Provider {
 		return &stackguardianProvider{
-			version: version,
+			version:       version,
+			customHeaders: customHeader,
 		}
 	}
 }
@@ -53,7 +63,8 @@ type stackguardianProvider struct {
 	// version is set to the provider version on release, "dev" when the
 	// provider is built and ran locally, and "test" when running acceptance
 	// testing.
-	version string
+	version       string
+	customHeaders http.Header
 }
 
 type stackguardianProviderModel struct {
@@ -176,6 +187,7 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 	client := sgclient.NewClient(
 		sgoption.WithApiKey(api_key),
 		sgoption.WithBaseURL(api_uri),
+		sgoption.WithHTTPHeader(p.customHeaders),
 	)
 	//Set the values in our struct
 	provInfo := customTypes.ProviderInfo{
@@ -212,6 +224,10 @@ func (p *stackguardianProvider) DataSources(_ context.Context) []func() datasour
 		policydatasource.NewDataSource,
 		runnergroupdatasource.NewDataSource,
 		runnergrouptoken.NewDataSource,
+		workflowsteptemplatedatasource.NewDataSource,
+		workflowsteptemplaterevisiondatasource.NewDataSource,
+		workflowtemplatedatasource.NewDataSource,
+		workflowtemplaterevisiondatasource.NewDataSource,
 	}
 }
 
@@ -220,10 +236,14 @@ func (p *stackguardianProvider) Resources(_ context.Context) []func() resource.R
 	return []func() resource.Resource{
 		connector.NewResource,
 		workflowgroup.NewResource,
+		workflowsteptemplate.NewResource,
+		workflowsteptemplaterevision.NewResource,
 		role.NewResource,
 		roleassignment.NewResource,
 		policy.NewResource,
 		runnergroup.NewResource,
 		rolev4.NewResource,
+		workflowtemplate.NewResource,
+		workflowtemplaterevision.NewResource,
 	}
 }
