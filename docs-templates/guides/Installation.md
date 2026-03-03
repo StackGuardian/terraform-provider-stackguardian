@@ -22,7 +22,7 @@ To install the StackGuardian provider follow the instructions below.
     provider "stackguardian" {
         api_key  = "<YOUR-API-KEY>"                      # Replace this with your API key
         org_name = "<YOUR-ORG-NAME>"                     # Replace this with your organization name
-        api_uri  = "https://testapi.qa.stackguardian.io" # Use testapi instead of production for testing
+        api_uri  = "https://api.app.stackguardian.io"    # Use "https://api.us.stackguardian.io" for US Region
     }
     ```
 - Run `terraform init` to initialize the provider.
