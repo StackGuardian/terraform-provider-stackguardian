@@ -2060,6 +2060,7 @@ func actionsFromAPI(actions map[string]*sgsdkgo.Actions) (types.Map, diag.Diagno
 						return mapNull, diags3
 					}
 				}
+
 				// Dependencies
 				depListNull := types.ListNull(types.ObjectType{AttrTypes: ActionDependencyModel{}.AttributeTypes()})
 				if ao.Dependencies != nil {
@@ -2202,6 +2203,11 @@ func (m *StackTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Contex
 		apiModel.Notes = sgsdkgo.Optional(m.Notes.ValueString())
 	} else {
 		apiModel.Notes = sgsdkgo.Null[string]()
+	}
+	if !m.LongDescription.IsNull() && !m.LongDescription.IsUnknown() {
+		apiModel.LongDescription = sgsdkgo.Optional(m.LongDescription.ValueString())
+	} else {
+		apiModel.LongDescription = sgsdkgo.Null[string]()
 	}
 	if !m.SourceConfigKind.IsNull() && !m.SourceConfigKind.IsUnknown() {
 		apiModel.SourceConfigKind = sgsdkgo.Optional(stacktemplates.StackTemplateSourceConfigKindEnum(m.SourceConfigKind.ValueString()))

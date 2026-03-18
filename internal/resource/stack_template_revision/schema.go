@@ -737,6 +737,7 @@ func (r *stackTemplateRevisionResource) Schema(_ context.Context, _ resource.Sch
 						"order": schema.MapNestedAttribute{
 							MarkdownDescription: "Ordered map of workflow IDs to their action configurations.",
 							Optional:            true,
+							Computed:            true,
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: actionOrderAttrs,
 							},
