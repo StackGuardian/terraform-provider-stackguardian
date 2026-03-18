@@ -16,6 +16,8 @@ import (
 	runnergroupdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/runner_group"
 	runnergrouptoken "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/runner_group_token"
 	stackoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_outputs"
+	stacktemplatedatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_template"
+	stacktemplaterevisiondatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_template_revision"
 	stackworkflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_workflow_outputs"
 	workflowgroupdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_group"
 	workflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_outputs"
@@ -29,6 +31,8 @@ import (
 	roleassignment "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role_assignment"
 	rolev4 "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role_v4"
 	runnergroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/runner_group"
+	stacktemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/stack_template"
+	stacktemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/stack_template_revision"
 	workflowgroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_group"
 	workflowsteptemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_step_template"
 	workflowsteptemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_step_template_revision"
@@ -228,6 +232,8 @@ func (p *stackguardianProvider) DataSources(_ context.Context) []func() datasour
 		workflowsteptemplaterevisiondatasource.NewDataSource,
 		workflowtemplatedatasource.NewDataSource,
 		workflowtemplaterevisiondatasource.NewDataSource,
+		stacktemplatedatasource.NewDataSource,
+		stacktemplaterevisiondatasource.NewDataSource,
 	}
 }
 
@@ -245,5 +251,7 @@ func (p *stackguardianProvider) Resources(_ context.Context) []func() resource.R
 		rolev4.NewResource,
 		workflowtemplate.NewResource,
 		workflowtemplaterevision.NewResource,
+		stacktemplate.NewResource,
+		stacktemplaterevision.NewResource,
 	}
 }
