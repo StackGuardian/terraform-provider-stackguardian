@@ -53,6 +53,9 @@ func WorkflowTemplateRuntimeSourceConfig() map[string]schema.Attribute {
 				"repo": schema.StringAttribute{
 					MarkdownDescription: constants.RuntimeSourceConfigRepo,
 					Required:            true,
+					PlanModifiers: []planmodifier.String{
+						stringplanmodifier.RequiresReplace(),
+					},
 				},
 				"working_dir": schema.StringAttribute{
 					MarkdownDescription: constants.RuntimeSourceConfigWorkingDir,
