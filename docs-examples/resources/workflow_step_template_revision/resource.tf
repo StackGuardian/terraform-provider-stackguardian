@@ -1,6 +1,5 @@
 resource "stackguardian_workflow_step_template" "example" {
   template_name = "example-workflow-step-template"
-  is_active     = "1"
   is_public     = "0"
   description   = "Example workflow step template"
 

@@ -16,7 +16,6 @@ type StackTemplateResourceModel struct {
 	TemplateName     types.String `tfsdk:"template_name"`
 	OwnerOrg         types.String `tfsdk:"owner_org"`
 	SourceConfigKind types.String `tfsdk:"source_config_kind"`
-	IsActive         types.String `tfsdk:"is_active"`
 	IsPublic         types.String `tfsdk:"is_public"`
 	ShortDescription types.String `tfsdk:"description"`
 	Tags             types.List   `tfsdk:"tags"`
@@ -34,10 +33,6 @@ func (m *StackTemplateResourceModel) ToAPIModel(ctx context.Context) (*stacktemp
 
 	if !m.SourceConfigKind.IsNull() && !m.SourceConfigKind.IsUnknown() {
 		apiModel.SourceConfigKind = (*stacktemplates.StackTemplateSourceConfigKindEnum)(m.SourceConfigKind.ValueStringPointer())
-	}
-
-	if !m.IsActive.IsNull() && !m.IsActive.IsUnknown() {
-		apiModel.IsActive = (*sgsdkgo.IsPublicEnum)(m.IsActive.ValueStringPointer())
 	}
 
 	if !m.IsPublic.IsNull() && !m.IsPublic.IsUnknown() {
@@ -94,10 +89,6 @@ func (m *StackTemplateResourceModel) ToUpdateAPIModel(ctx context.Context) (*sta
 		apiModel.ShortDescription = sgsdkgo.Null[string]()
 	}
 
-	if !m.IsActive.IsNull() && !m.IsActive.IsUnknown() {
-		apiModel.IsActive = sgsdkgo.Optional(sgsdkgo.IsPublicEnum(m.IsActive.ValueString()))
-	}
-
 	if !m.IsPublic.IsNull() && !m.IsPublic.IsUnknown() {
 		apiModel.IsPublic = sgsdkgo.Optional(sgsdkgo.IsPublicEnum(m.IsPublic.ValueString()))
 	}
@@ -146,12 +137,6 @@ func BuildAPIModelToStackTemplateModel(apiResponse *stacktemplates.ReadStackTemp
 		model.SourceConfigKind = flatteners.String(string(*apiResponse.SourceConfigKind))
 	} else {
 		model.SourceConfigKind = types.StringNull()
-	}
-
-	if apiResponse.IsActive != nil {
-		model.IsActive = flatteners.String(string(*apiResponse.IsActive))
-	} else {
-		model.IsActive = types.StringNull()
 	}
 
 	if apiResponse.IsPublic != nil {

@@ -18,7 +18,6 @@ type WorkflowStepTemplateResourceModel struct {
 	Id               types.String `tfsdk:"id"`
 	TemplateName     types.String `tfsdk:"template_name"`
 	TemplateType     types.String `tfsdk:"template_type"`
-	IsActive         types.String `tfsdk:"is_active"`
 	IsPublic         types.String `tfsdk:"is_public"`
 	Description      types.String `tfsdk:"description"`
 	Tags             types.List   `tfsdk:"tags"`
@@ -167,11 +166,6 @@ func (m *WorkflowStepTemplateResourceModel) ToAPIModel(ctx context.Context) (*wo
 		apiModel.Id = &idStr
 	}
 
-	// Set IsActive
-	if !m.IsActive.IsUnknown() && !m.IsActive.IsNull() {
-		apiModel.IsActive = (*workflowsteptemplate.IsPublicEnum)(m.IsActive.ValueStringPointer())
-	}
-
 	// Set IsPublic
 	if !m.IsPublic.IsUnknown() && !m.IsPublic.IsNull() {
 		apiModel.IsPublic = (*workflowsteptemplate.IsPublicEnum)(m.IsPublic.ValueStringPointer())
@@ -248,11 +242,6 @@ func (m *WorkflowStepTemplateResourceModel) ToPatchedAPIModel(ctx context.Contex
 		apiModel.ShortDescription = sgsdkgo.Optional(m.Description.ValueString())
 	}
 
-	// Set IsActive
-	if !m.IsActive.IsUnknown() && !m.IsActive.IsNull() {
-		apiModel.IsActive = sgsdkgo.Optional(workflowsteptemplate.IsPublicEnum(m.IsActive.ValueString()))
-	}
-
 	// Set IsPublic
 	if !m.IsPublic.IsUnknown() && !m.IsPublic.IsNull() {
 		apiModel.IsPublic = sgsdkgo.Optional(workflowsteptemplate.IsPublicEnum(m.IsPublic.ValueString()))
@@ -322,7 +311,6 @@ func BuildAPIModelToWorkflowStepTemplateModel(apiResponse *workflowsteptemplate.
 		TemplateType:     flatteners.String(string(apiResponse.TemplateType)),
 		Description:      flatteners.StringPtr(apiResponse.ShortDescription),
 		SourceConfigKind: flatteners.String(string(apiResponse.SourceConfigKind)),
-		IsActive:         flatteners.StringPtr((*string)(apiResponse.IsActive)),
 		IsPublic:         flatteners.StringPtr((*string)(apiResponse.IsPublic)),
 	}
 

@@ -107,9 +107,6 @@ resource "stackguardian_stack_template_revision" "with_vcs" {
 - `context_tags` (Map of String) Context tags for stack template revision
 - `deprecation` (Attributes) Deprecation information for this resource. (see [below for nested schema](#nestedatt--deprecation))
 - `description` (String) Long description for the stack template revision.
-- `is_active` (String) Whether the stack template is active. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
-	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)
 - `is_public` (String) Whether the stack template is publicly available. Valid values:
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
 	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)

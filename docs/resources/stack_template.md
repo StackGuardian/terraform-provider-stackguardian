@@ -45,9 +45,6 @@ resource "stackguardian_stack_template" "basic" {
 - `context_tags` (Map of String) Context tags for stack template
 - `description` (String) A brief description of the stack template. Must be less than 256 characters.
 - `id` (String) ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>
-- `is_active` (String) Whether the stack template is active. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
-	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)
 - `is_public` (String) Whether the stack template is publicly available. Valid values:
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
 	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)

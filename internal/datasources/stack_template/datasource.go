@@ -70,10 +70,6 @@ func (d *stackTemplateDataSource) Schema(_ context.Context, _ datasource.SchemaR
 				MarkdownDescription: constants.StackTemplateSourceConfigKindCommon,
 				Computed:            true,
 			},
-			"is_active": schema.StringAttribute{
-				MarkdownDescription: constants.StackTemplateIsActiveCommon,
-				Computed:            true,
-			},
 			"is_public": schema.StringAttribute{
 				MarkdownDescription: constants.StackTemplateIsPublicCommon,
 				Computed:            true,

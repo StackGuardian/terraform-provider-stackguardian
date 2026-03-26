@@ -642,14 +642,6 @@ func (r *stackTemplateRevisionResource) Schema(_ context.Context, _ resource.Sch
 				MarkdownDescription: constants.StackTemplateSourceConfigKindCommon,
 				Required:            true,
 			},
-			"is_active": schema.StringAttribute{
-				MarkdownDescription: constants.StackTemplateIsActiveCommon,
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
 			"is_public": schema.StringAttribute{
 				MarkdownDescription: constants.StackTemplateIsPublicCommon,
 				Optional:            true,

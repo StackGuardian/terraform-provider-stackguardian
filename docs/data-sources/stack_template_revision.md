@@ -38,9 +38,6 @@ output "stack_template_revision_output" {
 - `context_tags` (Map of String) Context tags for stack template revision
 - `deprecation` (Attributes) Deprecation information for this resource. (see [below for nested schema](#nestedatt--deprecation))
 - `description` (String) Long description for the stack template revision.
-- `is_active` (String) Whether the stack template is active. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
-	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)
 - `is_public` (String) Whether the stack template is publicly available. Valid values:
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
 	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)
@@ -220,9 +217,6 @@ Read-Only:
 - `deployment_platform_config` (Attributes List) Deployment platform configuration. (see [below for nested schema](#nestedatt--workflows_config--workflows--deployment_platform_config))
 - `description` (String) Description of this workflow.
 - `environment_variables` (Attributes List) Environment variables for the workflow. (see [below for nested schema](#nestedatt--workflows_config--workflows--environment_variables))
-- `is_active` (String) Whether the stack template is active. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
-	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)
 - `number_of_approvals_required` (Number) Number of approvals required.
 - `resource_name` (String) Name of the workflow resource within the stack.
 - `runner_constraints` (Attributes) Runner constraints for the workflow. (see [below for nested schema](#nestedatt--workflows_config--workflows--runner_constraints))

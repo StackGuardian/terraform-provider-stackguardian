@@ -26,10 +26,6 @@ func (d *workflowStepTemplateDatasource) Schema(_ context.Context, _ datasource.
 				MarkdownDescription: constants.WorkflowStepTemplateType,
 				Computed:            true,
 			},
-			"is_active": schema.StringAttribute{
-				MarkdownDescription: constants.WorkflowStepTemplateIsActiveCommon,
-				Computed:            true,
-			},
 			"is_public": schema.StringAttribute{
 				MarkdownDescription: constants.WorkflowStepTemplateIsPublicCommon,
 				Computed:            true,

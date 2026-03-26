@@ -7,10 +7,6 @@ const (
 	<span style="background-color: #eff0f0; color: #e53835;">GIT_REPO</span>,
 	<span style="background-color: #eff0f0; color: #e53835;">S3</span>`
 
-	WorkflowStepTemplateIsActiveCommon = `Whether the workflow step template is active. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
-	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)`
-
 	WorkflowStepTemplateIsPublicCommon = `Whether the workflow step template is publicly available. Valid values:
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
 	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)`
@@ -42,10 +38,6 @@ const (
 	<span style="background-color: #eff0f0; color: #e53835;">IAC</span>,
 	<span style="background-color: #eff0f0; color: #e53835;">IAC_GROUP</span>,
 	<span style="background-color: #eff0f0; color: #e53835;">IAC_POLICY</span>`
-
-	WorkflowStepTemplateIsActive = `Whether the workflow step template is active. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
-	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)`
 
 	WorkflowStepTemplateIsPublic = `Whether the workflow step template is publicly available. Valid values:
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
@@ -108,10 +100,6 @@ const (
 	<span style="background-color: #eff0f0; color: #e53835;">DOCKER_IMAGE</span>,
 	<span style="background-color: #eff0f0; color: #e53835;">GIT_REPO</span>,
 	<span style="background-color: #eff0f0; color: #e53835;">S3</span>`
-
-	WorkflowStepTemplateRevisionIsActive = `Whether the revision is active. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
-	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)`
 
 	WorkflowStepTemplateRevisionIsPublic = `Whether the revision is publicly available. Valid values:
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
