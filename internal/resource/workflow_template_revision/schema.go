@@ -398,10 +398,6 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 			"deprecation": schema.SingleNestedAttribute{
 				MarkdownDescription: constants.TemplateRevisionDeprecation,
 				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
-				},
 				Attributes: map[string]schema.Attribute{
 					"effective_date": schema.StringAttribute{
 						MarkdownDescription: constants.TemplateRevisionDeprecationEffectiveDate,

@@ -94,7 +94,6 @@ func (r *workflowStepTemplateRevisionResource) Schema(_ context.Context, _ resou
 			"deprecation": schema.SingleNestedAttribute{
 				MarkdownDescription: constants.Deprecation,
 				Optional:            true,
-				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"effective_date": schema.StringAttribute{
 						MarkdownDescription: constants.DeprecationEffectiveDate,
