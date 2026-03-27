@@ -53,6 +53,8 @@ resource "stackguardian_workflow_template_revision" "detailed" {
 
 - `source_config_kind` (String) Source configuration kind. Options: <span style="background-color: #eff0f0; color: #e53835;">TERRAFORM</span>, <span style="background-color: #eff0f0; color: #e53835;">OPENTOFU</span>, <span style="background-color: #eff0f0; color: #e53835;">ANSIBLE_PLAYBOOK</span>, <span style="background-color: #eff0f0; color: #e53835;">HELM</span>, <span style="background-color: #eff0f0; color: #e53835;">KUBECTL</span>, <span style="background-color: #eff0f0; color: #e53835;">CLOUDFORMATION</span>, <span style="background-color: #eff0f0; color: #e53835;">CUSTOM</span>
 - `template_id` (String) Resource ID of the parent workflow template.
+- `user_job_cpu` (Number) Limits to set user job CPU.
+- `user_job_memory` (Number) Limits to set user job memory.
 
 ### Optional
 
@@ -72,8 +74,6 @@ resource "stackguardian_workflow_template_revision" "detailed" {
 - `runtime_source` (Attributes) Runtime source configuration for the revision. (see [below for nested schema](#nestedatt--runtime_source))
 - `tags` (List of String) A list of tags associated with the workflow template revision. A maximum of 10 tags are allowed.
 - `terraform_config` (Attributes) Terraform configuration. Valid only for terraform type template (see [below for nested schema](#nestedatt--terraform_config))
-- `user_job_cpu` (Number) Limits to set user job CPU.
-- `user_job_memory` (Number) Limits to set user job memory.
 - `user_schedules` (Attributes List) Configuration for scheduling runs for the workflows. (see [below for nested schema](#nestedatt--user_schedules))
 - `wf_steps_config` (Attributes List) Workflow steps configuration. Valid for custom workflow types. (see [below for nested schema](#nestedatt--wf_steps_config))
 
@@ -139,6 +139,7 @@ Optional:
 Optional:
 
 - `encoded_data` (String) JSON schema for the Form in templates. The schema needs to be base64 encoded.
+- `name` (String) Name of the input schema.
 - `type` (String) Type of the schema.
 - `ui_schema_data` (String) Schema for how the JSON schema is to be visualized. The schema needs to be base64 encoded.
 
@@ -358,7 +359,7 @@ Required:
 
 Optional:
 
-- `auth` (String, Sensitive) Connector id to access private git repository
+- `auth` (String) Connector id to access private git repository
 - `git_core_auto_crlf` (Boolean) Whether to automatically handle CRLF line endings.
 - `git_sparse_checkout_config` (String) Git sparse checkout command line git cli options.
 - `include_sub_module` (Boolean) Whether to include git submodules.

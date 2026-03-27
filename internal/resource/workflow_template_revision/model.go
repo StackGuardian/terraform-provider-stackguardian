@@ -84,6 +84,7 @@ func (EnvironmentVariableModel) AttributeTypes() map[string]attr.Type {
 }
 
 type InputSchemaModel struct {
+	Name         types.String `tfsdk:"name"`
 	Type         types.String `tfsdk:"type"`
 	EncodedData  types.String `tfsdk:"encoded_data"`
 	UISchemaData types.String `tfsdk:"ui_schema_data"`
@@ -91,6 +92,7 @@ type InputSchemaModel struct {
 
 func (InputSchemaModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
+		"name":           types.StringType,
 		"type":           types.StringType,
 		"encoded_data":   types.StringType,
 		"ui_schema_data": types.StringType,
@@ -382,7 +384,6 @@ func (DeploymentPlatformConfigModel) AttributeTypes() map[string]attr.Type {
 		},
 	}
 }
-
 
 type UserSchedulesModel struct {
 	Cron  types.String `tfsdk:"cron"`
@@ -719,10 +720,9 @@ func (m *WorkflowTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Con
 		if diags.HasError() {
 			return nil, diags
 		}
-		runtimeSourceUpdate := workflowtemplates.RuntimeSourceUpdate{
-			SourceConfigDestKind: runtimeSource.SourceConfigDestKind,
-		}
-		apiModel.RuntimeSource = sgsdkgo.Optional(runtimeSourceUpdate)
+		apiModel.RuntimeSource = sgsdkgo.Optional(*runtimeSource)
+	} else {
+		apiModel.RuntimeSource = sgsdkgo.Null[workflowtemplates.RuntimeSourceUpdate]()
 	}
 
 	// Handle TerraformConfig
@@ -789,7 +789,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Con
 }
 
 // Helper functions for type conversion
-func convertRuntimeSourceToAPI(ctx context.Context, runtimeSourceObj types.Object) (*workflowtemplates.RuntimeSource, diag.Diagnostics) {
+func convertRuntimeSourceToAPI(ctx context.Context, runtimeSourceObj types.Object) (*workflowtemplates.RuntimeSourceUpdate, diag.Diagnostics) {
 	if runtimeSourceObj.IsNull() || runtimeSourceObj.IsUnknown() {
 		return nil, nil
 	}
@@ -803,8 +803,10 @@ func convertRuntimeSourceToAPI(ctx context.Context, runtimeSourceObj types.Objec
 		return nil, diags
 	}
 
-	runtimeSource := &workflowtemplates.RuntimeSource{
-		SourceConfigDestKind: workflowtemplates.SourceConfigDestKindEnum(runtimeSourceModel.SourceConfigDestKind.ValueString()).Ptr(),
+	runtimeSource := &workflowtemplates.RuntimeSourceUpdate{}
+
+	if !runtimeSourceModel.SourceConfigDestKind.IsNull() && !runtimeSourceModel.SourceConfigDestKind.IsUnknown() {
+		runtimeSource.SourceConfigDestKind = workflowtemplates.SourceConfigDestKindEnum(runtimeSourceModel.SourceConfigDestKind.ValueString()).Ptr()
 	}
 
 	// Convert config
@@ -818,14 +820,12 @@ func convertRuntimeSourceToAPI(ctx context.Context, runtimeSourceObj types.Objec
 			return nil, diag_cfg
 		}
 
-		runtimeSource.Config = &workflowtemplates.RuntimeSourceConfig{
-			IsPrivate:               configModel.IsPrivate.ValueBoolPointer(),
-			Auth:                    configModel.Auth.ValueStringPointer(),
+		runtimeSource.Config = &workflowtemplates.RuntimeSourceConfigUpdate{
 			GitCoreAutoCRLF:         configModel.GitCoreAutoCrlf.ValueBoolPointer(),
 			GitSparseCheckoutConfig: configModel.GitSparseCheckoutConfig.ValueStringPointer(),
 			IncludeSubModule:        configModel.IncludeSubModule.ValueBoolPointer(),
+			IsPrivate:               configModel.IsPrivate.ValueBoolPointer(),
 			Ref:                     configModel.Ref.ValueStringPointer(),
-			Repo:                    configModel.Repo.ValueString(),
 			WorkingDir:              configModel.WorkingDir.ValueStringPointer(),
 		}
 	}
@@ -1692,13 +1692,14 @@ func convertEnvironmentVariablesFromAPI(ctx context.Context, envVars []sgsdkgo.E
 
 // Conversion helpers for InputSchemas (Flatteners - API to Terraform)
 func convertInputSchemasFromAPI(ctx context.Context, inputSchemas []sgsdkgo.InputSchemas) (types.List, diag.Diagnostics) {
-	if inputSchemas == nil || len(inputSchemas) == 0 {
+	if inputSchemas == nil {
 		return types.ListNull(types.ObjectType{AttrTypes: InputSchemaModel{}.AttributeTypes()}), nil
 	}
 
 	inputSchemaModels := make([]InputSchemaModel, len(inputSchemas))
 	for i, schema := range inputSchemas {
 		inputSchemaModels[i] = InputSchemaModel{
+			Name:         flatteners.StringPtr(schema.Name),
 			Type:         flatteners.String(string(schema.Type)),
 			EncodedData:  flatteners.StringPtr(schema.EncodedData),
 			UISchemaData: flatteners.StringPtr(schema.UiSchemaData),
@@ -1934,6 +1935,7 @@ func convertInputSchemasToAPI(ctx context.Context, inputSchemasList types.List) 
 	inputSchemas := make([]sgsdkgo.InputSchemas, len(inputSchemaModels))
 	for i, schema := range inputSchemaModels {
 		inputSchemas[i] = sgsdkgo.InputSchemas{
+			Name:         schema.Name.ValueStringPointer(),
 			Type:         sgsdkgo.InputSchemasTypeEnum(schema.Type.ValueString()),
 			EncodedData:  schema.EncodedData.ValueStringPointer(),
 			UiSchemaData: schema.UISchemaData.ValueStringPointer(),
