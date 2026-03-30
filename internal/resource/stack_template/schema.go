@@ -38,11 +38,6 @@ func (r *stackTemplateResource) Schema(_ context.Context, _ resource.SchemaReque
 				MarkdownDescription: constants.StackTemplateSourceConfigKindCommon,
 				Required:            true,
 			},
-			"is_active": schema.StringAttribute{
-				MarkdownDescription: constants.StackTemplateIsActiveCommon,
-				Optional:            true,
-				Computed:            true,
-			},
 			"is_public": schema.StringAttribute{
 				MarkdownDescription: constants.StackTemplateIsPublicCommon,
 				Optional:            true,

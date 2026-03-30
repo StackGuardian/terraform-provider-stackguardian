@@ -7,6 +7,10 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -25,12 +29,14 @@ func WorkflowTemplateRuntimeSourceConfig() map[string]schema.Attribute {
 				"auth": schema.StringAttribute{
 					MarkdownDescription: constants.RuntimeSourceConfigAuth,
 					Optional:            true,
-					Sensitive:           true,
 				},
 				"git_core_auto_crlf": schema.BoolAttribute{
 					MarkdownDescription: constants.RuntimeSourceConfigGitCoreCRLF,
 					Optional:            true,
 					Computed:            true,
+					PlanModifiers: []planmodifier.Bool{
+						boolplanmodifier.UseStateForUnknown(),
+					},
 				},
 				"git_sparse_checkout_config": schema.StringAttribute{
 					MarkdownDescription: constants.RuntimeSourceConfigGitSparse,
@@ -44,15 +50,24 @@ func WorkflowTemplateRuntimeSourceConfig() map[string]schema.Attribute {
 					MarkdownDescription: constants.RuntimeSourceConfigIsPrivate,
 					Optional:            true,
 					Computed:            true,
+					PlanModifiers: []planmodifier.Bool{
+						boolplanmodifier.UseStateForUnknown(),
+					},
 				},
 				"ref": schema.StringAttribute{
 					MarkdownDescription: constants.RuntimeSourceConfigRef,
 					Optional:            true,
 					Computed:            true,
+					PlanModifiers: []planmodifier.String{
+						stringplanmodifier.UseStateForUnknown(),
+					},
 				},
 				"repo": schema.StringAttribute{
 					MarkdownDescription: constants.RuntimeSourceConfigRepo,
 					Required:            true,
+					PlanModifiers: []planmodifier.String{
+						stringplanmodifier.RequiresReplace(),
+					},
 				},
 				"working_dir": schema.StringAttribute{
 					MarkdownDescription: constants.RuntimeSourceConfigWorkingDir,
@@ -93,11 +108,17 @@ func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRe
 				MarkdownDescription: constants.WorkflowTemplateIsPublic,
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.Description, "Description for workflow template"),
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"tags": schema.ListAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.Tags, "Tags for workflow template"),
@@ -109,18 +130,27 @@ func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRe
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"shared_orgs_list": schema.ListAttribute{
 				MarkdownDescription: constants.WorkflowTemplateSharedOrgs,
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"runtime_source": schema.SingleNestedAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.RuntimeSource, "template"),
 				Optional:            true,
 				Computed:            true,
 				Attributes:          WorkflowTemplateRuntimeSourceConfig(),
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"vcs_triggers": schema.SingleNestedAttribute{
 				MarkdownDescription: constants.VCSTriggers,

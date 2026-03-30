@@ -41,9 +41,6 @@ output "workflow_step_template_revision_info" {
 - `alias` (String) Alias for the revision to easily identify it.
 - `context_tags` (Map of String) Contextual key-value tags that provide additional context to the main tags.
 - `deprecation` (Attributes) Deprecation information for this resource. (see [below for nested schema](#nestedatt--deprecation))
-- `is_active` (String) Whether the workflow step template is active. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
-	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)
 - `is_public` (String) Whether the workflow step template is publicly available. Valid values:
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
 	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)

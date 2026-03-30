@@ -166,10 +166,6 @@ var dsWorkflowInStackAttrs = map[string]schema.Attribute{
 		ElementType:         types.StringType,
 		Computed:            true,
 	},
-	"is_active": schema.StringAttribute{
-		MarkdownDescription: constants.StackTemplateIsActiveCommon,
-		Computed:            true,
-	},
 	"wf_type": schema.StringAttribute{
 		MarkdownDescription: `Workflow type. Valid values: TERRAFORM, OPENTOFU, CUSTOM`,
 		Computed:            true,
@@ -496,10 +492,6 @@ func (d *stackTemplateRevisionDataSource) Schema(_ context.Context, _ datasource
 			},
 			"source_config_kind": schema.StringAttribute{
 				MarkdownDescription: constants.StackTemplateSourceConfigKindCommon,
-				Computed:            true,
-			},
-			"is_active": schema.StringAttribute{
-				MarkdownDescription: constants.StackTemplateIsActiveCommon,
 				Computed:            true,
 			},
 			"is_public": schema.StringAttribute{

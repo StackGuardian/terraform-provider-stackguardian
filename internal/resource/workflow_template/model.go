@@ -113,8 +113,9 @@ func VCSTriggersToAPIModel(ctx context.Context, m types.Object) (*workflowtempla
 		return nil, diags
 	}
 
-	vcsTriggers := &workflowtemplates.VCSTriggers{
-		Type: workflowtemplates.VCSTriggersTypeEnum(vcsTriggersModel.Type.ValueString()).Ptr(),
+	vcsTriggers := &workflowtemplates.VCSTriggers{}
+	if !vcsTriggersModel.Type.IsNull() && !vcsTriggersModel.Type.IsUnknown() {
+		vcsTriggers.Type = workflowtemplates.VCSTriggersTypeEnum(vcsTriggersModel.Type.ValueString()).Ptr()
 	}
 
 	// Convert create_tag
@@ -297,8 +298,10 @@ func (m *WorkflowTemplateResourceModel) ToUpdateAPIModel(ctx context.Context) (*
 			return nil, diag_rt
 		}
 
-		runtimeSource := &workflowtemplates.RuntimeSourceUpdate{
-			SourceConfigDestKind: workflowtemplates.SourceConfigDestKindEnum(runtimeSourceModel.SourceConfigDestKind.ValueString()).Ptr(),
+		runtimeSource := &workflowtemplates.RuntimeSourceUpdate{}
+
+		if !runtimeSourceModel.SourceConfigDestKind.IsNull() && !runtimeSourceModel.SourceConfigDestKind.IsUnknown() {
+			runtimeSource.SourceConfigDestKind = workflowtemplates.SourceConfigDestKindEnum(runtimeSourceModel.SourceConfigDestKind.ValueString()).Ptr()
 		}
 
 		// Convert config

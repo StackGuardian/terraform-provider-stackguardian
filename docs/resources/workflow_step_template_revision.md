@@ -17,7 +17,6 @@ description: |-
 ```terraform
 resource "stackguardian_workflow_step_template" "example" {
   template_name = "example-workflow-step-template"
-  is_active     = "1"
   is_public     = "0"
   description   = "Example workflow step template"
 
@@ -69,9 +68,6 @@ resource "stackguardian_workflow_step_template_revision" "example" {
 - `context_tags` (Map of String) Contextual key-value tags that provide additional context to the main tags.
 - `deprecation` (Attributes) Deprecation information for this resource. (see [below for nested schema](#nestedatt--deprecation))
 - `description` (String) A brief description of the workflow step template revision. Must be less than 256 characters.
-- `is_active` (String) Whether the workflow step template is active. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
-	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)
 - `is_public` (String) Whether the workflow step template is publicly available. Valid values:
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
 	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)

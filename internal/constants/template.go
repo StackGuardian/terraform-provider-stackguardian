@@ -75,6 +75,7 @@ const (
 
 // Input Schemas attributes
 const (
+	InputSchemaName         = "Name of the input schema."
 	InputSchemaType         = "Type of the schema."
 	InputSchemaEncodedData  = "JSON schema for the Form in templates. The schema needs to be base64 encoded."
 	InputSchemaUISchemaData = "Schema for how the JSON schema is to be visualized. The schema needs to be base64 encoded."

@@ -54,11 +54,6 @@ func (r *workflowStepTemplateRevisionResource) Schema(_ context.Context, _ resou
 				MarkdownDescription: constants.WorkflowStepTemplateSourceConfigKindCommon,
 				Required:            true,
 			},
-			"is_active": schema.StringAttribute{
-				MarkdownDescription: constants.WorkflowStepTemplateIsActiveCommon,
-				Optional:            true,
-				Computed:            true,
-			},
 			"is_public": schema.StringAttribute{
 				MarkdownDescription: constants.WorkflowStepTemplateIsPublicCommon,
 				Optional:            true,
@@ -99,7 +94,6 @@ func (r *workflowStepTemplateRevisionResource) Schema(_ context.Context, _ resou
 			"deprecation": schema.SingleNestedAttribute{
 				MarkdownDescription: constants.Deprecation,
 				Optional:            true,
-				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"effective_date": schema.StringAttribute{
 						MarkdownDescription: constants.DeprecationEffectiveDate,

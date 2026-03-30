@@ -147,11 +147,13 @@ func TestAccWorkflowTemplateRevision_WithConfig(t *testing.T) {
 func testAccWorkflowTemplateRevisionConfig(templateID, alias string) string {
 	return fmt.Sprintf(`
 resource "stackguardian_workflow_template_revision" "test" {
-  template_id = "%s"
-  alias       = "%s"
+  template_id        = "%s"
+  alias              = "%s"
   source_config_kind = "TERRAFORM"
-  is_public   = "0"
-  tags        = ["test", "terraform"]
+  is_public          = "0"
+  user_job_cpu       = 500
+  user_job_memory    = 1024
+  tags               = ["test", "terraform"]
 }
 `, templateID, alias)
 }
@@ -159,12 +161,14 @@ resource "stackguardian_workflow_template_revision" "test" {
 func testAccWorkflowTemplateRevisionConfigUpdated(templateID, alias string) string {
 	return fmt.Sprintf(`
 resource "stackguardian_workflow_template_revision" "test" {
-  template_id = "%s"
-  alias       = "%s"
+  template_id        = "%s"
+  alias              = "%s"
   source_config_kind = "TERRAFORM"
-  is_public   = "0"
-  notes       = "Updated revision notes"
-  tags        = ["test", "terraform", "updated"]
+  is_public          = "0"
+  notes              = "Updated revision notes"
+  user_job_cpu       = 500
+  user_job_memory    = 1024
+  tags               = ["test", "terraform", "updated"]
 }
 `, templateID, alias)
 }

@@ -24,7 +24,6 @@ type WorkflowStepTemplateRevisionResourceModel struct {
 	LongDescription  types.String `tfsdk:"description"`
 	TemplateType     types.String `tfsdk:"template_type"`
 	SourceConfigKind types.String `tfsdk:"source_config_kind"`
-	IsActive         types.String `tfsdk:"is_active"`
 	IsPublic         types.String `tfsdk:"is_public"`
 	Tags             types.List   `tfsdk:"tags"`
 	ContextTags      types.Map    `tfsdk:"context_tags"`
@@ -71,11 +70,6 @@ func (m *WorkflowStepTemplateRevisionResourceModel) ToAPIModel(ctx context.Conte
 	// Set SourceConfigKind
 	if !m.SourceConfigKind.IsUnknown() && !m.SourceConfigKind.IsNull() {
 		apiModel.SourceConfigKind = workflowsteptemplate.WorkflowStepTemplateSourceConfigKindDockerImageEnum
-	}
-
-	// Set IsActive
-	if !m.IsActive.IsUnknown() && !m.IsActive.IsNull() {
-		apiModel.IsActive = (*workflowsteptemplate.IsPublicEnum)(m.IsActive.ValueStringPointer())
 	}
 
 	// Set IsPublic
@@ -167,11 +161,6 @@ func (m *WorkflowStepTemplateRevisionResourceModel) ToPatchedAPIModel(ctx contex
 		apiModel.SourceConfigKind = sgsdkgo.Optional(workflowsteptemplate.WorkflowStepTemplateSourceConfigKindEnum(m.SourceConfigKind.ValueString()))
 	}
 
-	// Set IsActive
-	if !m.IsActive.IsUnknown() && !m.IsActive.IsNull() {
-		apiModel.IsActive = sgsdkgo.Optional(workflowsteptemplate.IsPublicEnum(m.IsActive.ValueString()))
-	}
-
 	// Set IsPublic
 	if !m.IsPublic.IsUnknown() && !m.IsPublic.IsNull() {
 		apiModel.IsPublic = sgsdkgo.Optional(workflowsteptemplate.IsPublicEnum(m.IsPublic.ValueString()))
@@ -251,7 +240,6 @@ func BuildAPIModelToRevisionModel(apiResponse *workflowsteptemplaterevision.Work
 		LongDescription:  flatteners.StringPtr(apiResponse.LongDescription),
 		TemplateType:     flatteners.String(string(apiResponse.TemplateType)),
 		SourceConfigKind: flatteners.String(string(apiResponse.SourceConfigKind)),
-		IsActive:         flatteners.StringPtr((*string)(apiResponse.IsActive)),
 		IsPublic:         flatteners.StringPtr((*string)(apiResponse.IsPublic)),
 	}
 

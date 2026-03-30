@@ -61,11 +61,6 @@ func (r *workflowStepTemplateResource) Schema(_ context.Context, _ resource.Sche
 				MarkdownDescription: constants.WorkflowStepTemplateType,
 				Computed:            true,
 			},
-			"is_active": schema.StringAttribute{
-				MarkdownDescription: constants.WorkflowStepTemplateIsActiveCommon,
-				Optional:            true,
-				Computed:            true,
-			},
 			"is_public": schema.StringAttribute{
 				MarkdownDescription: constants.WorkflowStepTemplateIsPublicCommon,
 				Optional:            true,

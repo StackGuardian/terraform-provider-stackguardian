@@ -40,9 +40,6 @@ output "workflow_step_template_info" {
 
 - `context_tags` (Map of String) Contextual key-value tags that provide additional context to the main tags.
 - `description` (String) A brief description of the workflow step template. Must be less than 256 characters.
-- `is_active` (String) Whether the workflow step template is active. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
-	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)
 - `is_public` (String) Whether the workflow step template is publicly available. Valid values:
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
 	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)

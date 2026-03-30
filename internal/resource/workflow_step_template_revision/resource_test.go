@@ -13,7 +13,6 @@ func testAccWorkflowStepTemplateRevisionConfig(templateName string, revisionAlia
 	return fmt.Sprintf(`
 resource "stackguardian_workflow_step_template" "test" {
   template_name = "%s"
-  is_active     = "0"
   is_public     = "0"
   description   = "Test template for revision"
 

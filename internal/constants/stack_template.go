@@ -12,10 +12,6 @@ const (
 	<span style="background-color: #eff0f0; color: #e53835;">MIXED</span>,
 	<span style="background-color: #eff0f0; color: #e53835;">CUSTOM</span>`
 
-	StackTemplateIsActiveCommon = `Whether the stack template is active. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
-	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)`
-
 	StackTemplateIsPublicCommon = `Whether the stack template is publicly available. Valid values:
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
 	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)`

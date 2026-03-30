@@ -29,7 +29,6 @@ type StackTemplateRevisionResourceModel struct {
 	Notes            types.String `tfsdk:"notes"`
 	LongDescription  types.String `tfsdk:"description"`
 	SourceConfigKind types.String `tfsdk:"source_config_kind"`
-	IsActive         types.String `tfsdk:"is_active"`
 	IsPublic         types.String `tfsdk:"is_public"`
 	Tags             types.List   `tfsdk:"tags"`
 	ContextTags      types.Map    `tfsdk:"context_tags"`
@@ -2139,9 +2138,6 @@ func (m *StackTemplateRevisionResourceModel) ToAPIModel(ctx context.Context, org
 	if !m.SourceConfigKind.IsNull() && !m.SourceConfigKind.IsUnknown() {
 		apiModel.SourceConfigKind = (*stacktemplates.StackTemplateSourceConfigKindEnum)(m.SourceConfigKind.ValueStringPointer())
 	}
-	if !m.IsActive.IsNull() && !m.IsActive.IsUnknown() {
-		apiModel.IsActive = (*sgsdkgo.IsPublicEnum)(m.IsActive.ValueStringPointer())
-	}
 	if !m.IsPublic.IsNull() && !m.IsPublic.IsUnknown() {
 		apiModel.IsPublic = (*sgsdkgo.IsPublicEnum)(m.IsPublic.ValueStringPointer())
 	}
@@ -2213,9 +2209,6 @@ func (m *StackTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Contex
 		apiModel.SourceConfigKind = sgsdkgo.Optional(stacktemplates.StackTemplateSourceConfigKindEnum(m.SourceConfigKind.ValueString()))
 	} else {
 		apiModel.SourceConfigKind = sgsdkgo.Null[stacktemplates.StackTemplateSourceConfigKindEnum]()
-	}
-	if !m.IsActive.IsNull() && !m.IsActive.IsUnknown() {
-		apiModel.IsActive = sgsdkgo.Optional(sgsdkgo.IsPublicEnum(m.IsActive.ValueString()))
 	}
 	if !m.IsPublic.IsNull() && !m.IsPublic.IsUnknown() {
 		apiModel.IsPublic = sgsdkgo.Optional(sgsdkgo.IsPublicEnum(m.IsPublic.ValueString()))
@@ -2294,12 +2287,6 @@ func BuildAPIModelToStackTemplateRevisionModel(ctx context.Context, apiResponse 
 	} else {
 		model.SourceConfigKind = types.StringNull()
 	}
-	if apiResponse.IsActive != nil {
-		model.IsActive = flatteners.String(string(*apiResponse.IsActive))
-	} else {
-		model.IsActive = types.StringNull()
-	}
-
 	// Tags
 	if apiResponse.Tags != nil {
 		tagsList, diagsTags := types.ListValueFrom(context.Background(), types.StringType, apiResponse.Tags)

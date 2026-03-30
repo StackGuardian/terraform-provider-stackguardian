@@ -80,7 +80,7 @@ Required:
 
 Optional:
 
-- `auth` (String, Sensitive) Connector id to access private git repository
+- `auth` (String) Connector id to access private git repository
 - `git_core_auto_crlf` (Boolean) Whether to automatically handle CRLF line endings.
 - `git_sparse_checkout_config` (String) Git sparse checkout command line git cli options.
 - `include_sub_module` (Boolean) Whether to include git submodules.

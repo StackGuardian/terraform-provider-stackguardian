@@ -13,7 +13,6 @@ func testAccWorkflowStepTemplateConfigWithRuntime(name string) string {
 	return fmt.Sprintf(`
 resource "stackguardian_workflow_step_template" "test" {
   template_name = "%s"
-  is_active     = "0"
   is_public     = "0"
   description   = "Test with runtime source"
   
@@ -35,7 +34,6 @@ func TestAccWorkflowStepTemplate_Basic(t *testing.T) {
 	var testAccResource = fmt.Sprintf(`
 resource "stackguardian_workflow_step_template" "test" {
   template_name = "%s"
-  is_active     = "0"
   is_public     = "0"
   description   = "Test with runtime source"
   
@@ -70,7 +68,7 @@ resource "stackguardian_workflow_step_template" "test" {
 				Config: testAccResource,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_step_template.test", "template_name", name),
-					resource.TestCheckResourceAttr("stackguardian_workflow_step_template.test", "is_active", "0"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_step_template.test", "is_public", "0"),
 				),
 			},
 			// Delete testing automatically occurs
