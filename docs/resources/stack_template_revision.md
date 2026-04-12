@@ -8,10 +8,6 @@ description: |-
 
 # stackguardian_stack_template_revision (Resource)
 
-<div style="background-color: orange; padding: 12px; border-radius: 6px; color: white; font-weight: bold;">
-⚠️ This feature is currently in BETA.
-</div>
-
 ## Example Usage
 
 ```terraform
@@ -105,7 +101,7 @@ resource "stackguardian_stack_template_revision" "with_vcs" {
 - `actions` (Attributes Map) JSON-encoded map of actions for the stack template revision. (see [below for nested schema](#nestedatt--actions))
 - `alias` (String) Human-readable alias for the revision (e.g., `v1.0.0`).
 - `context_tags` (Map of String) Context tags for stack template revision
-- `deprecation` (Attributes) Deprecation information for this resource. (see [below for nested schema](#nestedatt--deprecation))
+- `deprecation` (Attributes) Deprecation information for this resource. Revision can only be deprecated once it is published. (see [below for nested schema](#nestedatt--deprecation))
 - `description` (String) Long description for the stack template revision.
 - `is_public` (String) Whether the stack template is publicly available. Valid values:
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),

@@ -8,10 +8,6 @@ description: |-
 
 # stackguardian_workflow_step_template_revision (Resource)
 
-<div style="background-color: orange; padding: 12px; border-radius: 6px; color: white; font-weight: bold;">
-⚠️ This feature is currently in BETA.
-</div>
-
 ## Example Usage
 
 ```terraform
@@ -66,7 +62,7 @@ resource "stackguardian_workflow_step_template_revision" "example" {
 
 - `alias` (String) Alias for the revision to easily identify it.
 - `context_tags` (Map of String) Contextual key-value tags that provide additional context to the main tags.
-- `deprecation` (Attributes) Deprecation information for this resource. (see [below for nested schema](#nestedatt--deprecation))
+- `deprecation` (Attributes) Deprecation information for this resource. Revision can only be deprecated once it is published. (see [below for nested schema](#nestedatt--deprecation))
 - `description` (String) A brief description of the workflow step template revision. Must be less than 256 characters.
 - `is_public` (String) Whether the workflow step template is publicly available. Valid values:
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
