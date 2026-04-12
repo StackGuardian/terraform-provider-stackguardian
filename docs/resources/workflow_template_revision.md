@@ -8,10 +8,6 @@ description: |-
 
 # stackguardian_workflow_template_revision (Resource)
 
-<div style="background-color: orange; padding: 12px; border-radius: 6px; color: white; font-weight: bold;">
-⚠️ This feature is currently in BETA.
-</div>
-
 ## Example Usage
 
 ```terraform
