@@ -100,7 +100,7 @@ func TestAccWorkflowTemplateRevision_Basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccWorkflowTemplateRevisionConfig(templateID, alias),
+				Config: testAccWorkflowTemplateRevisionConfig(templateID, alias, "", `["test", "terraform"]`),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "template_id", templateID),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "alias", alias),
@@ -110,7 +110,7 @@ func TestAccWorkflowTemplateRevision_Basic(t *testing.T) {
 			},
 			// Update and Read testing
 			{
-				Config: testAccWorkflowTemplateRevisionConfigUpdated(templateID, alias),
+				Config: testAccWorkflowTemplateRevisionConfig(templateID, alias, "Updated revision notes", `["test", "terraform", "updated"]`),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "alias", alias),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "notes", "Updated revision notes"),
@@ -158,7 +158,13 @@ func TestAccWorkflowTemplateRevision_WithConfig(t *testing.T) {
 	})
 }
 
-func testAccWorkflowTemplateRevisionConfig(templateID, alias string) string {
+// testAccWorkflowTemplateRevisionConfig returns a config for a basic revision.
+// notes is optional (pass "" to omit). tags is the HCL list literal, e.g. `["test", "terraform"]`.
+func testAccWorkflowTemplateRevisionConfig(templateID, alias, notes, tags string) string {
+	notesLine := ""
+	if notes != "" {
+		notesLine = fmt.Sprintf("  notes              = %q\n", notes)
+	}
 	return fmt.Sprintf(`
 resource "stackguardian_workflow_template_revision" "test" {
   template_id        = "%s"
@@ -167,24 +173,9 @@ resource "stackguardian_workflow_template_revision" "test" {
   is_public          = "0"
   user_job_cpu       = 500
   user_job_memory    = 1024
-  tags               = ["test", "terraform"]
-}
-`, templateID, alias)
-}
-
-func testAccWorkflowTemplateRevisionConfigUpdated(templateID, alias string) string {
-	return fmt.Sprintf(`
-resource "stackguardian_workflow_template_revision" "test" {
-  template_id        = "%s"
-  alias              = "%s"
-  source_config_kind = "TERRAFORM"
-  is_public          = "0"
-  notes              = "Updated revision notes"
-  user_job_cpu       = 500
-  user_job_memory    = 1024
-  tags               = ["test", "terraform", "updated"]
-}
-`, templateID, alias)
+  tags               = %s
+%s}
+`, templateID, alias, tags, notesLine)
 }
 
 func testAccWorkflowTemplateRevisionConfigWithDetails(templateID, alias string) string {
@@ -227,7 +218,7 @@ func TestAccWorkflowTemplateRevision_Lifecycle(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Step 1: Create parent template and revision
 			{
-				Config: testAccWfTemplateRevisionLifecycleCreate(templateName, alias),
+				Config: testAccWfTemplateRevisionLifecycleConfig(templateName, alias, "0", false),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_template.parent", "template_name", templateName),
 					resource.TestCheckResourceAttrSet("stackguardian_workflow_template.parent", "id"),
@@ -238,14 +229,14 @@ func TestAccWorkflowTemplateRevision_Lifecycle(t *testing.T) {
 			},
 			// Step 2: Publish the revision
 			{
-				Config: testAccWfTemplateRevisionLifecyclePublish(templateName, alias),
+				Config: testAccWfTemplateRevisionLifecycleConfig(templateName, alias, "1", false),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "is_public", "1"),
 				),
 			},
 			// Step 3: Deprecate the revision
 			{
-				Config: testAccWfTemplateRevisionLifecycleDeprecate(templateName, alias),
+				Config: testAccWfTemplateRevisionLifecycleConfig(templateName, alias, "1", true),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "is_public", "1"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "deprecation.message", "This revision is deprecated"),
@@ -257,70 +248,35 @@ func TestAccWorkflowTemplateRevision_Lifecycle(t *testing.T) {
 	})
 }
 
-func testAccWfTemplateRevisionLifecycleCreate(templateName, alias string) string {
-	return fmt.Sprintf(`
-resource "stackguardian_workflow_template" "parent" {
-  template_name      = "%s"
-  source_config_kind = "TERRAFORM"
-  is_public          = "0"
-  tags               = ["test", "lifecycle"]
-}
-
-resource "stackguardian_workflow_template_revision" "test" {
-  template_id        = stackguardian_workflow_template.parent.id
-  alias              = "%s"
-  source_config_kind = "TERRAFORM"
-  is_public          = "0"
-  user_job_cpu       = 500
-  user_job_memory    = 1024
-  tags               = ["test", "lifecycle"]
-}
-`, templateName, alias)
-}
-
-func testAccWfTemplateRevisionLifecyclePublish(templateName, alias string) string {
-	return fmt.Sprintf(`
-resource "stackguardian_workflow_template" "parent" {
-  template_name      = "%s"
-  source_config_kind = "TERRAFORM"
-  is_public          = "0"
-  tags               = ["test", "lifecycle"]
-}
-
-resource "stackguardian_workflow_template_revision" "test" {
-  template_id        = stackguardian_workflow_template.parent.id
-  alias              = "%s"
-  source_config_kind = "TERRAFORM"
-  is_public          = "1"
-  user_job_cpu       = 500
-  user_job_memory    = 1024
-  tags               = ["test", "lifecycle"]
-}
-`, templateName, alias)
-}
-
-func testAccWfTemplateRevisionLifecycleDeprecate(templateName, alias string) string {
-	return fmt.Sprintf(`
-resource "stackguardian_workflow_template" "parent" {
-  template_name      = "%s"
-  source_config_kind = "TERRAFORM"
-  is_public          = "0"
-  tags               = ["test", "lifecycle"]
-}
-
-resource "stackguardian_workflow_template_revision" "test" {
-  template_id        = stackguardian_workflow_template.parent.id
-  alias              = "%s"
-  source_config_kind = "TERRAFORM"
-  is_public          = "1"
-  user_job_cpu       = 500
-  user_job_memory    = 1024
-  tags               = ["test", "lifecycle"]
-
+// testAccWfTemplateRevisionLifecycleConfig generates the lifecycle Terraform config.
+// isPublic controls the revision's is_public value.
+// deprecated=true adds a deprecation block to the revision.
+func testAccWfTemplateRevisionLifecycleConfig(templateName, alias, isPublic string, deprecated bool) string {
+	deprecationBlock := ""
+	if deprecated {
+		deprecationBlock = fmt.Sprintf(`
   deprecation = {
     effective_date = "%d"
     message        = "This revision is deprecated"
-  }
+  }`, time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
+	}
+	return fmt.Sprintf(`
+resource "stackguardian_workflow_template" "parent" {
+  template_name      = "%s"
+  source_config_kind = "TERRAFORM"
+  is_public          = "0"
+  tags               = ["test", "lifecycle"]
 }
-`, templateName, alias, time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
+
+resource "stackguardian_workflow_template_revision" "test" {
+  template_id        = stackguardian_workflow_template.parent.id
+  alias              = "%s"
+  source_config_kind = "TERRAFORM"
+  is_public          = "%s"
+  user_job_cpu       = 500
+  user_job_memory    = 1024
+  tags               = ["test", "lifecycle"]
+%s
+}
+`, templateName, alias, isPublic, deprecationBlock)
 }

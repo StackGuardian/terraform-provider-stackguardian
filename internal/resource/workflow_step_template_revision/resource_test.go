@@ -137,7 +137,7 @@ func TestAccWorkflowStepTemplateRevision_Lifecycle(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Step 1: Create parent step template and revision
 			{
-				Config: testAccStepTemplateRevisionLifecycleCreate(templateName, alias),
+				Config: testAccStepTemplateRevisionLifecycleConfig(templateName, alias, "", false),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_step_template.parent", "template_name", templateName),
 					resource.TestCheckResourceAttrSet("stackguardian_workflow_step_template.parent", "id"),
@@ -148,14 +148,14 @@ func TestAccWorkflowStepTemplateRevision_Lifecycle(t *testing.T) {
 			},
 			// Step 2: Publish the revision
 			{
-				Config: testAccStepTemplateRevisionLifecyclePublish(templateName, alias),
+				Config: testAccStepTemplateRevisionLifecycleConfig(templateName, alias, "1", false),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_step_template_revision.test", "is_public", "1"),
 				),
 			},
 			// Step 3: Deprecate the revision
 			{
-				Config: testAccStepTemplateRevisionLifecycleDeprecate(templateName, alias),
+				Config: testAccStepTemplateRevisionLifecycleConfig(templateName, alias, "1", true),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_step_template_revision.test", "deprecation.message", "This revision is deprecated"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_step_template_revision.test", "deprecation.effective_date", fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())),
@@ -166,109 +166,51 @@ func TestAccWorkflowStepTemplateRevision_Lifecycle(t *testing.T) {
 	})
 }
 
-func testAccStepTemplateRevisionLifecycleCreate(templateName, alias string) string {
-	return fmt.Sprintf(`
-resource "stackguardian_workflow_step_template" "parent" {
-  template_name      = "%s"
-  is_public          = "0"
-  source_config_kind = "DOCKER_IMAGE"
-
-  runtime_source = {
-    source_config_dest_kind = "CONTAINER_REGISTRY"
-    config = {
-      docker_image = "ubuntu:latest"
-      is_private   = false
-    }
-  }
-}
-
-resource "stackguardian_workflow_step_template_revision" "test" {
-  template_id        = stackguardian_workflow_step_template.parent.id
-  alias              = "%s"
-  notes              = "Initial revision"
-  source_config_kind = "DOCKER_IMAGE"
-
-  runtime_source = {
-    source_config_dest_kind = "CONTAINER_REGISTRY"
-    config = {
-      docker_image = "ubuntu:20.04"
-      is_private   = false
-    }
-  }
-}
-`, templateName, alias)
-}
-
-func testAccStepTemplateRevisionLifecyclePublish(templateName, alias string) string {
-	return fmt.Sprintf(`
-resource "stackguardian_workflow_step_template" "parent" {
-  template_name      = "%s"
-  is_public          = "0"
-  source_config_kind = "DOCKER_IMAGE"
-
-  runtime_source = {
-    source_config_dest_kind = "CONTAINER_REGISTRY"
-    config = {
-      docker_image = "ubuntu:latest"
-      is_private   = false
-    }
-  }
-}
-
-resource "stackguardian_workflow_step_template_revision" "test" {
-  template_id        = stackguardian_workflow_step_template.parent.id
-  alias              = "%s"
-  notes              = "Initial revision"
-  source_config_kind = "DOCKER_IMAGE"
-
-  is_public          = "1"
-
-  runtime_source = {
-    source_config_dest_kind = "CONTAINER_REGISTRY"
-    config = {
-      docker_image = "ubuntu:20.04"
-      is_private   = false
-    }
-  }
-}
-`, templateName, alias)
-}
-
-func testAccStepTemplateRevisionLifecycleDeprecate(templateName, alias string) string {
-	return fmt.Sprintf(`
-resource "stackguardian_workflow_step_template" "parent" {
-  template_name      = "%s"
-  is_public          = "0"
-  source_config_kind = "DOCKER_IMAGE"
-
-  runtime_source = {
-    source_config_dest_kind = "CONTAINER_REGISTRY"
-    config = {
-      docker_image = "ubuntu:latest"
-      is_private   = false
-    }
-  }
-}
-
-resource "stackguardian_workflow_step_template_revision" "test" {
-  template_id        = stackguardian_workflow_step_template.parent.id
-  alias              = "%s"
-  notes              = "Initial revision"
-  source_config_kind = "DOCKER_IMAGE"
-
-
-  runtime_source = {
-    source_config_dest_kind = "CONTAINER_REGISTRY"
-    config = {
-      docker_image = "ubuntu:20.04"
-      is_private   = false
-    }
-  }
-
+// testAccStepTemplateRevisionLifecycleConfig generates the lifecycle Terraform config.
+// isPublic controls the revision's is_public value (pass "" to omit).
+// deprecated=true adds a deprecation block to the revision.
+func testAccStepTemplateRevisionLifecycleConfig(templateName, alias, isPublic string, deprecated bool) string {
+	isPublicLine := ""
+	if isPublic != "" {
+		isPublicLine = fmt.Sprintf("  is_public          = %q\n", isPublic)
+	}
+	deprecationBlock := ""
+	if deprecated {
+		deprecationBlock = fmt.Sprintf(`
   deprecation = {
     effective_date = "%d"
     message        = "This revision is deprecated"
+  }`, time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
+	}
+	return fmt.Sprintf(`
+resource "stackguardian_workflow_step_template" "parent" {
+  template_name      = "%s"
+  is_public          = "0"
+  source_config_kind = "DOCKER_IMAGE"
+
+  runtime_source = {
+    source_config_dest_kind = "CONTAINER_REGISTRY"
+    config = {
+      docker_image = "ubuntu:latest"
+      is_private   = false
+    }
   }
 }
-`, templateName, alias, time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
+
+resource "stackguardian_workflow_step_template_revision" "test" {
+  template_id        = stackguardian_workflow_step_template.parent.id
+  alias              = "%s"
+  notes              = "Initial revision"
+  source_config_kind = "DOCKER_IMAGE"
+%s
+  runtime_source = {
+    source_config_dest_kind = "CONTAINER_REGISTRY"
+    config = {
+      docker_image = "ubuntu:20.04"
+      is_private   = false
+    }
+  }
+%s
+}
+`, templateName, alias, isPublicLine, deprecationBlock)
 }
