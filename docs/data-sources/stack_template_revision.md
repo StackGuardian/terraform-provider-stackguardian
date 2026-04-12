@@ -36,7 +36,7 @@ output "stack_template_revision_output" {
 - `actions` (Attributes Map) JSON-encoded map of actions for the stack template revision. (see [below for nested schema](#nestedatt--actions))
 - `alias` (String) Human-readable alias for the revision (e.g., `v1.0.0`).
 - `context_tags` (Map of String) Context tags for stack template revision
-- `deprecation` (Attributes) Deprecation information for this resource. (see [below for nested schema](#nestedatt--deprecation))
+- `deprecation` (Attributes) Deprecation information for this resource. Revision can only be deprecated once it is published. (see [below for nested schema](#nestedatt--deprecation))
 - `description` (String) Long description for the stack template revision.
 - `is_public` (String) Whether the stack template is publicly available. Valid values:
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),

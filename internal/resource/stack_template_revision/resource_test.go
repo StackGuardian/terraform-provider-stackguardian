@@ -332,7 +332,6 @@ func TestAccStackTemplateRevision_Lifecycle(t *testing.T) {
 			{
 				Config: testAccStackTemplateRevisionLifecyclePublish(stackTemplateName, wfTemplateName, alias),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "is_active", "1"),
 					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "is_public", "1"),
 				),
 			},
@@ -340,7 +339,6 @@ func TestAccStackTemplateRevision_Lifecycle(t *testing.T) {
 			{
 				Config: testAccStackTemplateRevisionLifecycleDeprecate(stackTemplateName, wfTemplateName, alias),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "is_active", "1"),
 					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "deprecation.message", "This revision is deprecated"),
 					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "deprecation.effective_date", "1776011863"),
 				),
@@ -413,7 +411,6 @@ resource "stackguardian_stack_template_revision" "test" {
   notes              = "Initial revision"
   description        = "Lifecycle test revision"
   source_config_kind = "TERRAFORM"
-  is_active          = "1"
   is_public          = "1"
 
   workflows_config = {
@@ -456,7 +453,6 @@ resource "stackguardian_stack_template_revision" "test" {
   notes              = "Initial revision"
   description        = "Lifecycle test revision"
   source_config_kind = "TERRAFORM"
-  is_active          = "1"
 
   workflows_config = {
     workflows = [

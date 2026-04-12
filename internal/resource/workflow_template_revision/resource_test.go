@@ -271,6 +271,8 @@ resource "stackguardian_workflow_template_revision" "test" {
   alias              = "%s"
   source_config_kind = "TERRAFORM"
   is_public          = "0"
+  user_job_cpu       = 500
+  user_job_memory    = 1024
   tags               = ["test", "lifecycle"]
 }
 `, templateName, alias)
@@ -290,6 +292,8 @@ resource "stackguardian_workflow_template_revision" "test" {
   alias              = "%s"
   source_config_kind = "TERRAFORM"
   is_public          = "1"
+  user_job_cpu       = 500
+  user_job_memory    = 1024
   tags               = ["test", "lifecycle"]
 }
 `, templateName, alias)
@@ -309,6 +313,8 @@ resource "stackguardian_workflow_template_revision" "test" {
   alias              = "%s"
   source_config_kind = "TERRAFORM"
   is_public          = "1"
+  user_job_cpu       = 500
+  user_job_memory    = 1024
   tags               = ["test", "lifecycle"]
 
   deprecation = {

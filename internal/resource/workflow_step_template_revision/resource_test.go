@@ -150,7 +150,6 @@ func TestAccWorkflowStepTemplateRevision_Lifecycle(t *testing.T) {
 			{
 				Config: testAccStepTemplateRevisionLifecyclePublish(templateName, alias),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_step_template_revision.test", "is_active", "1"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_step_template_revision.test", "is_public", "1"),
 				),
 			},
@@ -158,7 +157,6 @@ func TestAccWorkflowStepTemplateRevision_Lifecycle(t *testing.T) {
 			{
 				Config: testAccStepTemplateRevisionLifecycleDeprecate(templateName, alias),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_step_template_revision.test", "is_active", "1"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_step_template_revision.test", "deprecation.message", "This revision is deprecated"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_step_template_revision.test", "deprecation.effective_date", fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())),
 				),
@@ -172,7 +170,6 @@ func testAccStepTemplateRevisionLifecycleCreate(templateName, alias string) stri
 	return fmt.Sprintf(`
 resource "stackguardian_workflow_step_template" "parent" {
   template_name      = "%s"
-  is_active          = "0"
   is_public          = "0"
   source_config_kind = "DOCKER_IMAGE"
 
@@ -206,7 +203,6 @@ func testAccStepTemplateRevisionLifecyclePublish(templateName, alias string) str
 	return fmt.Sprintf(`
 resource "stackguardian_workflow_step_template" "parent" {
   template_name      = "%s"
-  is_active          = "0"
   is_public          = "0"
   source_config_kind = "DOCKER_IMAGE"
 
@@ -224,7 +220,7 @@ resource "stackguardian_workflow_step_template_revision" "test" {
   alias              = "%s"
   notes              = "Initial revision"
   source_config_kind = "DOCKER_IMAGE"
-  is_active          = "1"
+
   is_public          = "1"
 
   runtime_source = {
@@ -242,7 +238,6 @@ func testAccStepTemplateRevisionLifecycleDeprecate(templateName, alias string) s
 	return fmt.Sprintf(`
 resource "stackguardian_workflow_step_template" "parent" {
   template_name      = "%s"
-  is_active          = "0"
   is_public          = "0"
   source_config_kind = "DOCKER_IMAGE"
 
@@ -260,7 +255,7 @@ resource "stackguardian_workflow_step_template_revision" "test" {
   alias              = "%s"
   notes              = "Initial revision"
   source_config_kind = "DOCKER_IMAGE"
-  is_active          = "1"
+
 
   runtime_source = {
     source_config_dest_kind = "CONTAINER_REGISTRY"
