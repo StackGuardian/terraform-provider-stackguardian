@@ -6,10 +6,12 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	sgoption "github.com/StackGuardian/sg-sdk-go/option"
+	"github.com/StackGuardian/sg-sdk-go/stacktemplaterevisions"
 	"github.com/StackGuardian/sg-sdk-go/stacktemplates"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
@@ -75,6 +77,18 @@ func deleteStackTemplateFixture(templateId string) {
 func deleteStackTemplateRevisionFixture(revisionId string) {
 	client := getClient()
 	client.StackTemplateRevisions.DeleteStackTemplateRevision(context.TODO(), org, revisionId, true)
+}
+
+func deprecateStackTemplateRevisionFixture(revisionId string) {
+	client := getClient()
+	effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
+	message := "This revision is deprecated"
+	client.StackTemplateRevisions.UpdateStackTemplateRevision(context.TODO(), org, revisionId, &stacktemplaterevisions.UpdateStackTemplateRevisionRequest{
+		Deprecation: sgsdkgo.Optional(stacktemplaterevisions.Deprecation{
+			EffectiveDate: &effectiveDate,
+			Message:       &message,
+		}),
+	})
 }
 
 // --- Terraform config generators ---
@@ -275,4 +289,194 @@ func TestAccStackTemplateRevision_WithWorkflowsConfig(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestAccStackTemplateRevision_Lifecycle(t *testing.T) {
+	stackTemplateName := "tf-provider-stack-template-lifecycle"
+	wfTemplateName := "tf-provider-wft-lifecycle-for-stack"
+	alias := "v1"
+
+	// Safety-net cleanup. Defers run LIFO, so registration order here is the
+	// reverse of execution order:
+	//   execution: deprecate revision → delete revision → delete stack template → delete workflow template
+	defer deleteWorkflowTemplateFixture(wfTemplateName)
+	defer deleteStackTemplateFixture(stackTemplateName)
+	defer deleteStackTemplateRevisionFixture(fmt.Sprintf("%s:1", stackTemplateName))
+	defer deprecateStackTemplateRevisionFixture(fmt.Sprintf("%s:1", stackTemplateName))
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			// Step 1: Create parent stack template, parent workflow template, and revision
+			{
+				Config: testAccStackTemplateRevisionLifecycleCreate(stackTemplateName, wfTemplateName, alias),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack_template.parent", "template_name", stackTemplateName),
+					resource.TestCheckResourceAttrSet("stackguardian_stack_template.parent", "id"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.wf_parent", "template_name", wfTemplateName),
+					resource.TestCheckResourceAttrSet("stackguardian_workflow_template.wf_parent", "id"),
+					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "alias", alias),
+					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "notes", "Initial revision"),
+					resource.TestCheckResourceAttrSet("stackguardian_stack_template_revision.test", "id"),
+					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "parent_template_id", stackTemplateName),
+				),
+			},
+			// Step 2: Publish the revision
+			{
+				Config: testAccStackTemplateRevisionLifecyclePublish(stackTemplateName, wfTemplateName, alias),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "is_active", "1"),
+					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "is_public", "1"),
+				),
+			},
+			// Step 3: Deprecate the revision
+			{
+				Config: testAccStackTemplateRevisionLifecycleDeprecate(stackTemplateName, wfTemplateName, alias),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "is_active", "1"),
+					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "deprecation.message", "This revision is deprecated"),
+					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "deprecation.effective_date", "1776011863"),
+				),
+			},
+			// Terraform destroy automatically deletes the revision, stack template, and workflow template
+		},
+	})
+}
+
+func testAccStackTemplateRevisionLifecycleCreate(stackTemplateName, wfTemplateName, alias string) string {
+	return fmt.Sprintf(`
+resource "stackguardian_workflow_template" "wf_parent" {
+  template_name      = "%s"
+  source_config_kind = "TERRAFORM"
+  is_public          = "0"
+  tags               = ["test", "lifecycle"]
+}
+
+resource "stackguardian_stack_template" "parent" {
+  template_name      = "%s"
+  source_config_kind = "TERRAFORM"
+  is_public          = "0"
+  tags               = ["test", "lifecycle"]
+}
+
+resource "stackguardian_stack_template_revision" "test" {
+  parent_template_id = stackguardian_stack_template.parent.id
+  alias              = "%s"
+  notes              = "Initial revision"
+  description        = "Lifecycle test revision"
+  source_config_kind = "TERRAFORM"
+
+  workflows_config = {
+    workflows = [
+      {
+        id            = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
+        template_id   = stackguardian_workflow_template.wf_parent.id
+        resource_name = "wf-1"
+
+        terraform_config = {
+          managed_terraform_state = true
+          terraform_version       = "1.5.7"
+        }
+      }
+    ]
+  }
+}
+`, wfTemplateName, stackTemplateName, alias)
+}
+
+func testAccStackTemplateRevisionLifecyclePublish(stackTemplateName, wfTemplateName, alias string) string {
+	return fmt.Sprintf(`
+resource "stackguardian_workflow_template" "wf_parent" {
+  template_name      = "%s"
+  source_config_kind = "TERRAFORM"
+  is_public          = "0"
+  tags               = ["test", "lifecycle"]
+}
+
+resource "stackguardian_stack_template" "parent" {
+  template_name      = "%s"
+  source_config_kind = "TERRAFORM"
+  is_public          = "0"
+  tags               = ["test", "lifecycle"]
+}
+
+resource "stackguardian_stack_template_revision" "test" {
+  parent_template_id = stackguardian_stack_template.parent.id
+  alias              = "%s"
+  notes              = "Initial revision"
+  description        = "Lifecycle test revision"
+  source_config_kind = "TERRAFORM"
+  is_active          = "1"
+  is_public          = "1"
+
+  workflows_config = {
+    workflows = [
+      {
+        id            = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
+        template_id   = stackguardian_workflow_template.wf_parent.id
+        resource_name = "wf-1"
+
+        terraform_config = {
+          managed_terraform_state = true
+          terraform_version       = "1.5.7"
+        }
+      }
+    ]
+  }
+}
+`, wfTemplateName, stackTemplateName, alias)
+}
+
+func testAccStackTemplateRevisionLifecycleDeprecate(stackTemplateName, wfTemplateName, alias string) string {
+	return fmt.Sprintf(`
+resource "stackguardian_workflow_template" "wf_parent" {
+  template_name      = "%s"
+  source_config_kind = "TERRAFORM"
+  is_public          = "0"
+  tags               = ["test", "lifecycle"]
+}
+
+resource "stackguardian_stack_template" "parent" {
+  template_name      = "%s"
+  source_config_kind = "TERRAFORM"
+  is_public          = "0"
+  tags               = ["test", "lifecycle"]
+}
+
+resource "stackguardian_stack_template_revision" "test" {
+  parent_template_id = stackguardian_stack_template.parent.id
+  alias              = "%s"
+  notes              = "Initial revision"
+  description        = "Lifecycle test revision"
+  source_config_kind = "TERRAFORM"
+  is_active          = "1"
+
+  workflows_config = {
+    workflows = [
+      {
+        id            = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
+        template_id   = stackguardian_workflow_template.wf_parent.id
+        resource_name = "wf-1"
+
+        terraform_config = {
+          managed_terraform_state = true
+          terraform_version       = "1.5.7"
+        }
+      }
+    ]
+  }
+
+  deprecation = {
+    effective_date = "1776011863"
+    message        = "This revision is deprecated"
+  }
+}
+`, wfTemplateName, stackTemplateName, alias)
 }

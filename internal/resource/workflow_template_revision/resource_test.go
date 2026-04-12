@@ -6,10 +6,12 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	sgoption "github.com/StackGuardian/sg-sdk-go/option"
+	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -61,6 +63,18 @@ func deleteWorkflowTemplateRevisionFixture(revisionId string) {
 	client := GetClient()
 
 	client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionId, true)
+}
+
+func deprecateWorkflowTemplateRevisionFixture(revisionId string) {
+	client := GetClient()
+	effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
+	message := "This revision is deprecated"
+	client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, revisionId, &workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
+		Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{
+			EffectiveDate: &effectiveDate,
+			Message:       &message,
+		}),
+	})
 }
 
 func TestAccWorkflowTemplateRevision_Basic(t *testing.T) {
@@ -188,4 +202,119 @@ resource "stackguardian_workflow_template_revision" "test" {
   approvers                    = ["approver1", "approver2"]
 }
 `, templateID, alias)
+}
+
+func TestAccWorkflowTemplateRevision_Lifecycle(t *testing.T) {
+	templateName := "tf-provider-wf-template-lifecycle"
+	alias := "v1"
+
+	// Safety-net cleanup. Defers run LIFO, so registration order here is the
+	// reverse of execution order:
+	//   execution: deprecate revision → delete revision → delete parent template
+	defer deleteWorkflowTemplateFixture(templateName)
+	defer deleteWorkflowTemplateRevisionFixture(fmt.Sprintf("%s:1", templateName))
+	defer deprecateWorkflowTemplateRevisionFixture(fmt.Sprintf("%s:1", templateName))
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			// Step 1: Create parent template and revision
+			{
+				Config: testAccWfTemplateRevisionLifecycleCreate(templateName, alias),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.parent", "template_name", templateName),
+					resource.TestCheckResourceAttrSet("stackguardian_workflow_template.parent", "id"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "alias", alias),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "is_public", "0"),
+					resource.TestCheckResourceAttrSet("stackguardian_workflow_template_revision.test", "id"),
+				),
+			},
+			// Step 2: Publish the revision
+			{
+				Config: testAccWfTemplateRevisionLifecyclePublish(templateName, alias),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "is_public", "1"),
+				),
+			},
+			// Step 3: Deprecate the revision
+			{
+				Config: testAccWfTemplateRevisionLifecycleDeprecate(templateName, alias),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "is_public", "1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "deprecation.message", "This revision is deprecated"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "deprecation.effective_date", fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())),
+				),
+			},
+			// Terraform destroy automatically deletes both the revision and the parent template
+		},
+	})
+}
+
+func testAccWfTemplateRevisionLifecycleCreate(templateName, alias string) string {
+	return fmt.Sprintf(`
+resource "stackguardian_workflow_template" "parent" {
+  template_name      = "%s"
+  source_config_kind = "TERRAFORM"
+  is_public          = "0"
+  tags               = ["test", "lifecycle"]
+}
+
+resource "stackguardian_workflow_template_revision" "test" {
+  template_id        = stackguardian_workflow_template.parent.id
+  alias              = "%s"
+  source_config_kind = "TERRAFORM"
+  is_public          = "0"
+  tags               = ["test", "lifecycle"]
+}
+`, templateName, alias)
+}
+
+func testAccWfTemplateRevisionLifecyclePublish(templateName, alias string) string {
+	return fmt.Sprintf(`
+resource "stackguardian_workflow_template" "parent" {
+  template_name      = "%s"
+  source_config_kind = "TERRAFORM"
+  is_public          = "0"
+  tags               = ["test", "lifecycle"]
+}
+
+resource "stackguardian_workflow_template_revision" "test" {
+  template_id        = stackguardian_workflow_template.parent.id
+  alias              = "%s"
+  source_config_kind = "TERRAFORM"
+  is_public          = "1"
+  tags               = ["test", "lifecycle"]
+}
+`, templateName, alias)
+}
+
+func testAccWfTemplateRevisionLifecycleDeprecate(templateName, alias string) string {
+	return fmt.Sprintf(`
+resource "stackguardian_workflow_template" "parent" {
+  template_name      = "%s"
+  source_config_kind = "TERRAFORM"
+  is_public          = "0"
+  tags               = ["test", "lifecycle"]
+}
+
+resource "stackguardian_workflow_template_revision" "test" {
+  template_id        = stackguardian_workflow_template.parent.id
+  alias              = "%s"
+  source_config_kind = "TERRAFORM"
+  is_public          = "1"
+  tags               = ["test", "lifecycle"]
+
+  deprecation = {
+    effective_date = "%d"
+    message        = "This revision is deprecated"
+  }
+}
+`, templateName, alias, time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
 }
