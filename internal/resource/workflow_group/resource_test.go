@@ -150,3 +150,76 @@ func TestAccWorkflowGroupOptionalId(t *testing.T) {
 		},
 	})
 }
+
+func TestAccWorkflowGroupNested_WithIdAndResourceName(t *testing.T) {
+	parentName := "wfgrp-example-workflow-group4"
+	nestedName := "nested-workflow-group"
+
+	testConfig := fmt.Sprintf(`
+resource "stackguardian_workflow_group" "parent" {
+  resource_name = "%s"
+  description   = "Parent workflow group for nested testing"
+  tags          = ["tf-provider-example", "parent"]
+}
+
+resource "stackguardian_workflow_group" "nested" {
+  id            = "%s"
+  resource_name = "${stackguardian_workflow_group.parent.id}/%s"
+  description   = "Nested workflow group with id and resource_name"
+  tags          = ["tf-provider-example", "nested"]
+}
+`, parentName, nestedName, nestedName)
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
+		Steps: []resource.TestStep{
+			{
+				Config: testConfig,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_group.parent", "resource_name", parentName),
+					resource.TestCheckResourceAttrSet("stackguardian_workflow_group.nested", "id"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccWorkflowGroupNested_WithResourceNameOnly(t *testing.T) {
+	parentName := "wfgrp-example-workflow-group5"
+	nestedName := "nested-workflow-group-2"
+
+	testConfig := fmt.Sprintf(`
+resource "stackguardian_workflow_group" "parent" {
+  resource_name = "%s"
+  description   = "Parent workflow group for nested testing"
+  tags          = ["tf-provider-example", "parent"]
+}
+
+resource "stackguardian_workflow_group" "nested" {
+  resource_name = "${stackguardian_workflow_group.parent.id}/%s"
+  description   = "Nested workflow group with resource_name only"
+  tags          = ["tf-provider-example", "nested"]
+}
+`, parentName, nestedName)
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
+		Steps: []resource.TestStep{
+			{
+				Config: testConfig,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_group.parent", "resource_name", parentName),
+					resource.TestCheckResourceAttrSet("stackguardian_workflow_group.nested", "id"),
+				),
+			},
+		},
+	})
+}
