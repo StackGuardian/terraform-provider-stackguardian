@@ -148,6 +148,7 @@ func (r *workflowGroupResource) Create(ctx context.Context, req resource.CreateR
 		}
 		// If id is provided for child replace the id with the full resource
 		// path since the API returns only the wfgrp id without the parent(s)
+		// and the resource definition uses the full path.
 		if reqResp.Data.SubResourceId != nil {
 			reqResp.Data.Id = strings.Replace(*reqResp.Data.SubResourceId, "/wfgrps/", "", 1)
 		}
