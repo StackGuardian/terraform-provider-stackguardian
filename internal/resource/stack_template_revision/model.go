@@ -344,15 +344,20 @@ func (TerraformConfigModel) AttributeTypes() map[string]attr.Type {
 // Deployment platform config
 // ---------------------------------------------------------------------------
 
+var deploymentPlatformConfigConfigAttrTypes = map[string]attr.Type{
+	"integration_id": types.StringType,
+	"profile_name":   types.StringType,
+}
+
 type DeploymentPlatformConfigModel struct {
 	Kind   types.String `tfsdk:"kind"`
-	Config types.String `tfsdk:"config"` // JSON string (map[string]interface{})
+	Config types.Object `tfsdk:"config"`
 }
 
 func (DeploymentPlatformConfigModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"kind":   types.StringType,
-		"config": types.StringType,
+		"config": types.ObjectType{AttrTypes: deploymentPlatformConfigConfigAttrTypes},
 	}
 }
 
@@ -834,9 +839,24 @@ func convertDeploymentPlatformConfigToAPI(ctx context.Context, list types.List) 
 	}
 	result := make([]*sgsdkgo.DeploymentPlatformConfig, len(models))
 	for i, m := range models {
+		kind := sgsdkgo.DeploymentPlatformConfigKindEnum(m.Kind.ValueString())
 		dpc := &sgsdkgo.DeploymentPlatformConfig{
-			Kind:   sgsdkgo.DeploymentPlatformConfigKindEnum(m.Kind.ValueString()),
-			Config: parseJSONToMap(m.Config.ValueString()),
+			Kind: &kind,
+		}
+		if !m.Config.IsNull() && !m.Config.IsUnknown() {
+			var configModel struct {
+				IntegrationId types.String `tfsdk:"integration_id"`
+				ProfileName   types.String `tfsdk:"profile_name"`
+			}
+			if configDiags := m.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
+				UnhandledNullAsEmpty:    true,
+				UnhandledUnknownAsEmpty: true,
+			}); !configDiags.HasError() {
+				dpc.Config = &sgsdkgo.DeploymentPlatformConfigConfig{
+					IntegrationId: configModel.IntegrationId.ValueStringPointer(),
+					ProfileName:   configModel.ProfileName.ValueStringPointer(),
+				}
+			}
 		}
 		result[i] = dpc
 	}
@@ -1736,9 +1756,24 @@ func deploymentPlatformConfigFromAPI(dpcs []*sgsdkgo.DeploymentPlatformConfig) (
 		if dpc == nil {
 			continue
 		}
+		kindStr := ""
+		if dpc.Kind != nil {
+			kindStr = string(*dpc.Kind)
+		}
+		configObj := types.ObjectNull(deploymentPlatformConfigConfigAttrTypes)
+		if dpc.Config != nil {
+			var objDiags diag.Diagnostics
+			configObj, objDiags = types.ObjectValue(deploymentPlatformConfigConfigAttrTypes, map[string]attr.Value{
+				"integration_id": flatteners.StringPtr(dpc.Config.IntegrationId),
+				"profile_name":   flatteners.StringPtr(dpc.Config.ProfileName),
+			})
+			if objDiags.HasError() {
+				return listNull, objDiags
+			}
+		}
 		m := DeploymentPlatformConfigModel{
-			Kind:   flatteners.String(string(dpc.Kind)),
-			Config: marshalToJSONString(dpc.Config),
+			Kind:   flatteners.String(kindStr),
+			Config: configObj,
 		}
 		obj, diags := types.ObjectValueFrom(context.Background(), DeploymentPlatformConfigModel{}.AttributeTypes(), m)
 		if diags.HasError() {

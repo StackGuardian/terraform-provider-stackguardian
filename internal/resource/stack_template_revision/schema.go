@@ -173,9 +173,23 @@ var deploymentPlatformConfigAttrs = map[string]schema.Attribute{
 		MarkdownDescription: constants.DeploymentPlatformKind,
 		Required:            true,
 	},
-	"config": schema.StringAttribute{
-		MarkdownDescription: constants.DeploymentPlatformConfigDetails + " (JSON string)",
-		Optional:            true,
+	"config": schema.SingleNestedAttribute{
+		MarkdownDescription: constants.DeploymentPlatformConfigDetails,
+		Required:            true,
+		Attributes: map[string]schema.Attribute{
+			"integration_id": schema.StringAttribute{
+				MarkdownDescription: constants.DeploymentPlatformIntegrationId,
+				Required:            true,
+			},
+			"profile_name": schema.StringAttribute{
+				MarkdownDescription: constants.DeploymentPlatformProfileName,
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+		},
 	},
 }
 
