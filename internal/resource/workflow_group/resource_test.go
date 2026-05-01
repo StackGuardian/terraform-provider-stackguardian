@@ -163,7 +163,7 @@ resource "stackguardian_workflow_group" "parent" {
 }
 
 resource "stackguardian_workflow_group" "nested" {
-  id            = "%s"
+  id = "${stackguardian_workflow_group.parent.id}/%s"
   resource_name = "${stackguardian_workflow_group.parent.id}/%s"
   description   = "Nested workflow group with id and resource_name"
   tags          = ["tf-provider-example", "nested"]
@@ -183,6 +183,13 @@ resource "stackguardian_workflow_group" "nested" {
 					resource.TestCheckResourceAttr("stackguardian_workflow_group.parent", "resource_name", parentName),
 					resource.TestCheckResourceAttrSet("stackguardian_workflow_group.nested", "id"),
 				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"stackguardian_workflow_group.nested",
+						tfjsonpath.New("id"),
+						knownvalue.StringExact(parentName+"/"+nestedName),
+					),
+				},
 			},
 		},
 	})
