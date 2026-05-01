@@ -31,11 +31,12 @@ type StackResourceModel struct {
 func (m *StackResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Stack, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	apiModel := &sgsdkgo.Stack{
-		ResourceName: sgsdkgo.Optional(m.ResourceName.ValueString()),
+		Id:           m.Id.ValueStringPointer(),
+		ResourceName: m.ResourceName.ValueStringPointer(),
 	}
 
 	if !m.Description.IsUnknown() && !m.Description.IsNull() {
-		apiModel.Description = sgsdkgo.Optional(m.Description.ValueString())
+		apiModel.Description = m.Description.ValueStringPointer()
 	}
 
 	if !m.Tags.IsUnknown() && !m.Tags.IsNull() {
@@ -44,7 +45,7 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Stack, di
 		if diags.HasError() {
 			return nil, diags
 		}
-		apiModel.Tags = sgsdkgo.Optional(tags)
+		apiModel.Tags = tags
 	}
 
 	if !m.EnvironmentVariables.IsUnknown() && !m.EnvironmentVariables.IsNull() {
@@ -53,7 +54,7 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Stack, di
 		if diags.HasError() {
 			return nil, diags
 		}
-		apiModel.EnvironmentVariables = sgsdkgo.Optional(envVars)
+		apiModel.EnvironmentVariables = envVars
 	}
 
 	if !m.DeploymentPlatformConfig.IsUnknown() && !m.DeploymentPlatformConfig.IsNull() {
@@ -62,7 +63,7 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Stack, di
 		if diags.HasError() {
 			return nil, diags
 		}
-		apiModel.DeploymentPlatformConfig = sgsdkgo.Optional(dpc)
+		apiModel.DeploymentPlatformConfig = dpc
 	}
 
 	if !m.Actions.IsUnknown() && !m.Actions.IsNull() {
@@ -71,11 +72,11 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Stack, di
 		if diags.HasError() {
 			return nil, diags
 		}
-		apiModel.Actions = sgsdkgo.Optional(actions)
+		apiModel.Actions = actions
 	}
 
 	if !m.TemplateGroupId.IsUnknown() && !m.TemplateGroupId.IsNull() {
-		apiModel.TemplateGroupId = sgsdkgo.Optional(m.TemplateGroupId.ValueString())
+		apiModel.TemplateGroupId = m.TemplateGroupId.ValueStringPointer()
 	}
 
 	if !m.WorkflowsConfig.IsUnknown() && !m.WorkflowsConfig.IsNull() {
@@ -84,7 +85,7 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Stack, di
 		if diags.HasError() {
 			return nil, diags
 		}
-		apiModel.WorkflowsConfig = sgsdkgo.Optional(*wfc)
+		apiModel.WorkflowsConfig = wfc
 	}
 
 	if !m.UserSchedules.IsUnknown() && !m.UserSchedules.IsNull() {
@@ -93,7 +94,7 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Stack, di
 		if diags.HasError() {
 			return nil, diags
 		}
-		apiModel.UserSchedules = sgsdkgo.Optional(userSchedules)
+		apiModel.UserSchedules = userSchedules
 	}
 
 	if !m.ContextTags.IsUnknown() && !m.ContextTags.IsNull() {
@@ -102,7 +103,7 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Stack, di
 		if diags.HasError() {
 			return nil, diags
 		}
-		apiModel.ContextTags = sgsdkgo.Optional(contextTags)
+		apiModel.ContextTags = contextTags
 	}
 
 	if !m.MiniSteps.IsUnknown() && !m.MiniSteps.IsNull() {
@@ -111,7 +112,7 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Stack, di
 		if diags.HasError() {
 			return nil, diags
 		}
-		apiModel.MiniSteps = sgsdkgo.Optional(*miniSteps)
+		apiModel.MiniSteps = miniSteps
 	}
 
 	return apiModel, diags
@@ -145,7 +146,6 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context) (*sgsdkgo.Pat
 	} else if m.Tags.IsNull() {
 		apiModel.Tags = sgsdkgo.Null[[]string]()
 	}
-
 
 	if !m.EnvironmentVariables.IsUnknown() && !m.EnvironmentVariables.IsNull() {
 		envVars, envDiags := expandEnvironmentVariables(ctx, m.EnvironmentVariables)
@@ -265,10 +265,10 @@ func BuildAPIModelToStackModel(ctx context.Context, apiResponse *sgsdkgo.Generat
 	var diags diag.Diagnostics
 
 	stackModel := &StackResourceModel{
-		Id:               flatteners.String(apiResponse.ResourceId),
-		ResourceName:     flatteners.String(*apiResponse.ResourceName),
-		Description:      flatteners.String(*apiResponse.Description),
-		TemplateGroupId:  flatteners.String(*apiResponse.TemplateGroupId),
+		Id:              flatteners.String(apiResponse.ResourceId),
+		ResourceName:    flatteners.String(*apiResponse.ResourceName),
+		Description:     flatteners.String(*apiResponse.Description),
+		TemplateGroupId: flatteners.String(*apiResponse.TemplateGroupId),
 	}
 
 	// Convert Tags
@@ -331,7 +331,6 @@ func BuildAPIModelToStackModel(ctx context.Context, apiResponse *sgsdkgo.Generat
 		stackModel.WorkflowsConfig = types.ObjectNull(workflowsConfigAttrTypes())
 	}
 
-
 	// Convert UserSchedules
 	if apiResponse.UserSchedules != nil {
 		userSchedulesList, usDiags := flattenUserSchedules(ctx, apiResponse.UserSchedules)
@@ -343,7 +342,6 @@ func BuildAPIModelToStackModel(ctx context.Context, apiResponse *sgsdkgo.Generat
 	} else {
 		stackModel.UserSchedules = types.ListNull(types.ObjectType{AttrTypes: userSchedulesAttrTypes()})
 	}
-
 
 	// Convert ContextTags
 	if apiResponse.ContextTags != nil {
@@ -834,7 +832,6 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.WorkflowsConfig) (
 	})
 }
 
-
 // expandUserSchedules converts Terraform user schedules list to API format
 func expandUserSchedules(ctx context.Context, us types.List) ([]*sgsdkgo.StackUserSchedules, diag.Diagnostics) {
 	if us.IsNull() || us.IsUnknown() {
@@ -850,10 +847,10 @@ func expandUserSchedules(ctx context.Context, us types.List) ([]*sgsdkgo.StackUs
 	result := make([]*sgsdkgo.StackUserSchedules, len(usModels))
 	for i, schedule := range usModels {
 		result[i] = &sgsdkgo.StackUserSchedules{
-			Name:   schedule.Name.ValueStringPointer(),
-			Desc:   schedule.Desc.ValueStringPointer(),
-			Cron:   schedule.Cron.ValueString(),
-			State:  sgsdkgo.StateEnum(schedule.State.ValueString()),
+			Name:  schedule.Name.ValueStringPointer(),
+			Desc:  schedule.Desc.ValueStringPointer(),
+			Cron:  schedule.Cron.ValueString(),
+			State: sgsdkgo.StateEnum(schedule.State.ValueString()),
 		}
 	}
 
@@ -955,13 +952,11 @@ var deploymentPlatformConfigModelAttrs = map[string]attr.Type{
 	"config": types.ObjectType{AttrTypes: deploymentPlatformConfigConfigAttrs},
 }
 
-
 func workflowsConfigAttrTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"workflows": types.ListType{ElemType: types.ObjectType{}},
 	}
 }
-
 
 func userSchedulesAttrTypes() map[string]attr.Type {
 	return map[string]attr.Type{

@@ -26,6 +26,7 @@ import (
 	workflowtemplatedatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_template"
 	workflowtemplaterevisiondatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_template_revision"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/connector"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/poc_nested"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/policy"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role"
 	roleassignment "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role_assignment"
@@ -253,5 +254,6 @@ func (p *stackguardianProvider) Resources(_ context.Context) []func() resource.R
 		workflowtemplaterevision.NewResource,
 		stacktemplate.NewResource,
 		stacktemplaterevision.NewResource,
+		poc_nested.NewResource,
 	}
 }
