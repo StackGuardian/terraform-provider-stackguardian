@@ -60,12 +60,12 @@ internal/
 
 Each resource in `internal/resource/<name>/` contains:
 
-| File | Purpose |
-|------|---------|
-| `resource.go` | CRUD operations, `Configure()`, `ImportState()` |
-| `schema.go` | Schema definitions (`schema.SingleNestedAttribute`, `schema.ListNestedAttribute`, etc.) |
-| `model.go` | Go structs with `tfsdk:` tags + `AttributeTypes()` methods + expander/flattener functions |
-| `resource_test.go` | Acceptance tests |
+| File               | Purpose                                                                                   |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| `resource.go`      | CRUD operations, `Configure()`, `ImportState()`                                           |
+| `schema.go`        | Schema definitions (`schema.SingleNestedAttribute`, `schema.ListNestedAttribute`, etc.)   |
+| `model.go`         | Go structs with `tfsdk:` tags + `AttributeTypes()` methods + expander/flattener functions |
+| `resource_test.go` | Acceptance tests                                                                          |
 
 ### Type conversion conventions
 
@@ -141,16 +141,16 @@ for i, item := range items {
 
 ## Resources
 
-| Resource | `internal/resource/` path |
-|----------|--------------------------|
-| `stackguardian_connector` | `connector/` |
-| `stackguardian_workflow_group` | `workflow_group/` |
-| `stackguardian_role` | `role/` |
-| `stackguardian_role_v4` | `role_v4/` |
-| `stackguardian_role_assignment` | `role_assignment/` |
-| `stackguardian_policy` | `policy/` |
-| `stackguardian_runner_group` | `runner_group/` |
-| `stackguardian_workflow_template` | `workflow_template/` |
+| Resource                                   | `internal/resource/` path     |
+| ------------------------------------------ | ----------------------------- |
+| `stackguardian_connector`                  | `connector/`                  |
+| `stackguardian_workflow_group`             | `workflow_group/`             |
+| `stackguardian_role`                       | `role/`                       |
+| `stackguardian_role_v4`                    | `role_v4/`                    |
+| `stackguardian_role_assignment`            | `role_assignment/`            |
+| `stackguardian_policy`                     | `policy/`                     |
+| `stackguardian_runner_group`               | `runner_group/`               |
+| `stackguardian_workflow_template`          | `workflow_template/`          |
 | `stackguardian_workflow_template_revision` | `workflow_template_revision/` |
 
 ---
@@ -164,5 +164,15 @@ replace github.com/StackGuardian/sg-sdk-go => /path/to/sg-sdk-go.git/feat-workfl
 ```
 
 Key SDK packages:
+
 - `github.com/StackGuardian/sg-sdk-go/sgsdkgo` — shared types (`EnvVars`, `WfStepsConfig`, `MountPoint`, `Optional`, `Null`, etc.)
 - `github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions` — revision-specific types and request structs
+
+---
+
+## Provider Docs
+
+Provider docs are compiled using tfplugindocs utility. The end result is in the docs folder, which should not be manually edited
+
+- Provider docs are generated from templates in docs-templates
+- Examples in those templates are referenced from docs-examples

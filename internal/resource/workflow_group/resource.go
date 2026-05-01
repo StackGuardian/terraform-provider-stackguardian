@@ -99,10 +99,18 @@ func (r *workflowGroupResource) Create(ctx context.Context, req resource.CreateR
 	// Check if resource name is nested. If so, create a child workflow group
 	var reqResp *sgsdkgo.WorkflowGroupCreateResponse
 	var err error
-	if workflows := strings.Split(*payload.ResourceName, "/"); len(workflows) > 1 {
-		resourceName := workflows[len(workflows)-1]
-		payload.ResourceName = &resourceName
-		ParentWfg := strings.Join(workflows[:len(workflows)-1], "/")
+
+	var workflowGroupId string
+	if payload.Id != nil {
+		workflowGroupId = *payload.Id
+	} else {
+		workflowGroupId = *payload.ResourceName
+	}
+
+	if workflowGrps := strings.Split(workflowGroupId, "/"); len(workflowGrps) > 1 {
+		id := workflowGrps[len(workflowGrps)-1]
+		payload.Id = &id
+		ParentWfg := strings.Join(workflowGrps[:len(workflowGrps)-1], "/")
 
 		reqResp, err = r.client.WorkflowGroups.CreateChildWorkflowGroup(ctx, r.org_name,
 			ParentWfg, payload)
@@ -138,10 +146,11 @@ func (r *workflowGroupResource) Create(ctx context.Context, req resource.CreateR
 			resp.Diagnostics.AddError("Error creating child workflowGroup", "Error in creating child workflowGroup API call: "+err.Error())
 			return
 		}
-		//For cases where WFG is a nested one, the resource name is returned as the full path to match the resource_name in resource definition
+		// If id is provided for child replace the id with the full resource
+		// path since the API returns only the wfgrp id without the parent(s)
+		// and the resource definition uses the full path.
 		if reqResp.Data.SubResourceId != nil {
-			fullResourceName := strings.Replace(*reqResp.Data.SubResourceId, "/wfgrps/", "", 1)
-			reqResp.Data.ResourceName = &fullResourceName
+			reqResp.Data.Id = strings.Replace(*reqResp.Data.SubResourceId, "/wfgrps/", "", 1)
 		}
 		responseData = reqResp.Data
 	} else { //If not, create a normal workflow group
@@ -218,7 +227,7 @@ func (r *workflowGroupResource) Read(ctx context.Context, req resource.ReadReque
 			}
 		}
 		tflog.Error(ctx, err.Error())
-		resp.Diagnostics.AddError("Error reading workflowGroup", "Could not read workflowGroup "+state.ResourceName.ValueString()+": "+err.Error())
+		resp.Diagnostics.AddError("Error reading workflowGroup", "Could not read workflowGroup "+id+": "+err.Error())
 		return
 	}
 
