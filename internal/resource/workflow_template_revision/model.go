@@ -401,7 +401,7 @@ func (UserSchedulesModel) AttributeTypes() map[string]attr.Type {
 	}
 }
 
-func convertDeprecationToAPIModel(ctx context.Context, deprecationObj types.Object) (*workflowtemplaterevisions.Deprecation, diag.Diagnostics) {
+func ConvertDeprecationToAPIModel(ctx context.Context, deprecationObj types.Object) (*workflowtemplaterevisions.Deprecation, diag.Diagnostics) {
 	if deprecationObj.IsNull() || deprecationObj.IsUnknown() {
 		return nil, nil
 	}
@@ -418,7 +418,7 @@ func convertDeprecationToAPIModel(ctx context.Context, deprecationObj types.Obje
 	}, nil
 }
 
-func convertRunnerConstraintsToAPIModel(ctx context.Context, runnerConstraintsTerraType types.Object) (*sgsdkgo.RunnerConstraints, diag.Diagnostics) {
+func ConvertRunnerConstraintsToAPIModel(ctx context.Context, runnerConstraintsTerraType types.Object) (*sgsdkgo.RunnerConstraints, diag.Diagnostics) {
 	if runnerConstraintsTerraType.IsNull() || runnerConstraintsTerraType.IsUnknown() {
 		return nil, nil
 	}
@@ -440,7 +440,7 @@ func convertRunnerConstraintsToAPIModel(ctx context.Context, runnerConstraintsTe
 	}, nil
 }
 
-func convertUserSchedulesToAPIModel(ctx context.Context, userSchedulesList types.List) ([]workflowtemplaterevisions.UserSchedules, diag.Diagnostics) {
+func ConvertUserSchedulesToAPIModel(ctx context.Context, userSchedulesList types.List) ([]workflowtemplaterevisions.UserSchedules, diag.Diagnostics) {
 	if userSchedulesList.IsNull() || userSchedulesList.IsUnknown() {
 		return nil, nil
 	}
@@ -480,21 +480,21 @@ func (m *WorkflowTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) 
 	}
 
 	// TODO:
-	deprecation, diags := convertDeprecationToAPIModel(ctx, m.Deprecation)
+	deprecation, diags := ConvertDeprecationToAPIModel(ctx, m.Deprecation)
 	if diags.HasError() {
 		return nil, diags
 	}
 	apiModel.Deprecation = deprecation
 
 	// handle runner constraints
-	runnerConstraints, diags := convertRunnerConstraintsToAPIModel(ctx, m.RunnerConstraints)
+	runnerConstraints, diags := ConvertRunnerConstraintsToAPIModel(ctx, m.RunnerConstraints)
 	if diags.HasError() {
 		return nil, diags
 	}
 	apiModel.RunnerConstraints = runnerConstraints
 
 	// Handle UserSchedules
-	userSchedules, diags := convertUserSchedulesToAPIModel(ctx, m.UserSchedules)
+	userSchedules, diags := ConvertUserSchedulesToAPIModel(ctx, m.UserSchedules)
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -530,7 +530,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) 
 
 	// Handle EnvironmentVariables
 	if !m.EnvironmentVariables.IsNull() && !m.EnvironmentVariables.IsUnknown() {
-		envVars, diags := convertEnvironmentVariablesToAPI(ctx, m.EnvironmentVariables)
+		envVars, diags := ConvertEnvironmentVariablesToAPI(ctx, m.EnvironmentVariables)
 		if diags.HasError() {
 			return nil, diags
 		}
@@ -539,7 +539,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) 
 
 	// Handle InputSchemas
 	if !m.InputSchemas.IsNull() && !m.InputSchemas.IsUnknown() {
-		inputSchemas, diags := convertInputSchemasToAPI(ctx, m.InputSchemas)
+		inputSchemas, diags := ConvertInputSchemasToAPI(ctx, m.InputSchemas)
 		if diags.HasError() {
 			return nil, diags
 		}
@@ -548,7 +548,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) 
 
 	// Handle MiniSteps
 	if !m.MiniSteps.IsNull() && !m.MiniSteps.IsUnknown() {
-		miniSteps, diags := convertMinistepsToAPI(ctx, m.MiniSteps)
+		miniSteps, diags := ConvertMinistepsToAPI(ctx, m.MiniSteps)
 		if diags.HasError() {
 			return nil, diags
 		}
@@ -574,7 +574,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) 
 
 	// Handle TerraformConfig
 	if !m.TerraformConfig.IsNull() && !m.TerraformConfig.IsUnknown() {
-		terraformConfig, diags := convertTerraformConfigToAPI(ctx, m.TerraformConfig)
+		terraformConfig, diags := ConvertTerraformConfigToAPI(ctx, m.TerraformConfig)
 		if diags.HasError() {
 			return nil, diags
 		}
@@ -583,16 +583,16 @@ func (m *WorkflowTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) 
 
 	// Handle DeploymentPlatformConfig
 	if !m.DeploymentPlatformConfig.IsNull() && !m.DeploymentPlatformConfig.IsUnknown() {
-		deploymentConfig, diags := convertDeploymentPlatformConfigToAPI(ctx, m.DeploymentPlatformConfig)
+		deploymentPlatformConfig, diags := ConvertDeploymentPlatformConfigToAPI(ctx, m.DeploymentPlatformConfig)
 		if diags.HasError() {
 			return nil, diags
 		}
-		apiModel.DeploymentPlatformConfig = deploymentConfig
+		apiModel.DeploymentPlatformConfig = deploymentPlatformConfig
 	}
 
 	// Handle WfStepsConfig
 	if !m.WfStepsConfig.IsNull() && !m.WfStepsConfig.IsUnknown() {
-		wfStepsConfigs, diags := convertWfStepsConfigListToAPI(ctx, m.WfStepsConfig)
+		wfStepsConfigs, diags := ConvertWfStepsConfigListToAPI(ctx, m.WfStepsConfig)
 		if diags.HasError() {
 			return nil, diags
 		}
@@ -648,7 +648,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Con
 	}
 
 	// handle deprecation
-	deprecation, diags := convertDeprecationToAPIModel(ctx, m.Deprecation)
+	deprecation, diags := ConvertDeprecationToAPIModel(ctx, m.Deprecation)
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -659,7 +659,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Con
 	}
 
 	// handle runner constraints
-	runnerConstraints, diags := convertRunnerConstraintsToAPIModel(ctx, m.RunnerConstraints)
+	runnerConstraints, diags := ConvertRunnerConstraintsToAPIModel(ctx, m.RunnerConstraints)
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -670,7 +670,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Con
 	}
 
 	// handle user schedules
-	userSchedules, diags := convertUserSchedulesToAPIModel(ctx, m.UserSchedules)
+	userSchedules, diags := ConvertUserSchedulesToAPIModel(ctx, m.UserSchedules)
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -716,7 +716,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Con
 
 	// Handle RuntimeSource
 	if !m.RuntimeSource.IsNull() && !m.RuntimeSource.IsUnknown() {
-		runtimeSource, diags := convertRuntimeSourceToAPI(ctx, m.RuntimeSource)
+		runtimeSource, diags := ConvertRuntimeSourceToAPI(ctx, m.RuntimeSource)
 		if diags.HasError() {
 			return nil, diags
 		}
@@ -727,7 +727,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Con
 
 	// Handle TerraformConfig
 	if !m.TerraformConfig.IsNull() && !m.TerraformConfig.IsUnknown() {
-		terraformConfig, diags := convertTerraformConfigToAPI(ctx, m.TerraformConfig)
+		terraformConfig, diags := ConvertTerraformConfigToAPI(ctx, m.TerraformConfig)
 		diagn.Append(diags...)
 		if !diagn.HasError() && terraformConfig != nil {
 			apiModel.TerraformConfig = sgsdkgo.Optional(*terraformConfig)
@@ -736,16 +736,16 @@ func (m *WorkflowTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Con
 
 	// Handle DeploymentPlatformConfig
 	if !m.DeploymentPlatformConfig.IsNull() && !m.DeploymentPlatformConfig.IsUnknown() {
-		deploymentConfig, diags := convertDeploymentPlatformConfigToAPI(ctx, m.DeploymentPlatformConfig)
+		deploymentConfig, diags := ConvertDeploymentPlatformConfigToAPI(ctx, m.DeploymentPlatformConfig)
 		diagn.Append(diags...)
 		if !diagn.HasError() && deploymentConfig != nil {
-			apiModel.DeploymentPlatformConfig = sgsdkgo.Optional(*deploymentConfig)
+			apiModel.DeploymentPlatformConfig = sgsdkgo.Optional(deploymentConfig)
 		}
 	}
 
 	// Handle WfStepsConfig at root level
 	if !m.WfStepsConfig.IsNull() && !m.WfStepsConfig.IsUnknown() {
-		wfStepsConfigs, diags := convertWfStepsConfigListToAPI(ctx, m.WfStepsConfig)
+		wfStepsConfigs, diags := ConvertWfStepsConfigListToAPI(ctx, m.WfStepsConfig)
 		diagn.Append(diags...)
 		if !diagn.HasError() {
 			apiModel.WfStepsConfig = sgsdkgo.Optional(wfStepsConfigs)
@@ -753,7 +753,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Con
 	}
 
 	// Handle EnvironmentVariables
-	envVars, diags := convertEnvironmentVariablesToAPI(ctx, m.EnvironmentVariables)
+	envVars, diags := ConvertEnvironmentVariablesToAPI(ctx, m.EnvironmentVariables)
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -764,7 +764,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Con
 	}
 
 	// Handle InputSchemas
-	inputSchemas, diags := convertInputSchemasToAPI(ctx, m.InputSchemas)
+	inputSchemas, diags := ConvertInputSchemasToAPI(ctx, m.InputSchemas)
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -775,7 +775,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Con
 	}
 
 	// Handle Ministeps
-	ministeps, diags := convertMinistepsToAPI(ctx, m.MiniSteps)
+	ministeps, diags := ConvertMinistepsToAPI(ctx, m.MiniSteps)
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -789,7 +789,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Con
 }
 
 // Helper functions for type conversion
-func convertRuntimeSourceToAPI(ctx context.Context, runtimeSourceObj types.Object) (*workflowtemplates.RuntimeSourceUpdate, diag.Diagnostics) {
+func ConvertRuntimeSourceToAPI(ctx context.Context, runtimeSourceObj types.Object) (*workflowtemplates.RuntimeSourceUpdate, diag.Diagnostics) {
 	if runtimeSourceObj.IsNull() || runtimeSourceObj.IsUnknown() {
 		return nil, nil
 	}
@@ -833,7 +833,11 @@ func convertRuntimeSourceToAPI(ctx context.Context, runtimeSourceObj types.Objec
 	return runtimeSource, nil
 }
 
-func convertTerraformConfigToAPI(ctx context.Context, terraformConfigObj types.Object) (*sgsdkgo.TerraformConfig, diag.Diagnostics) {
+func ConvertTerraformConfigToAPI(ctx context.Context, terraformConfigObj types.Object) (*sgsdkgo.TerraformConfig, diag.Diagnostics) {
+	if terraformConfigObj.IsNull() || terraformConfigObj.IsUnknown() {
+		return nil, nil
+	}
+
 	diagn := diag.Diagnostics{}
 
 	var terraformConfigModel TerraformConfigModel
@@ -859,7 +863,7 @@ func convertTerraformConfigToAPI(ctx context.Context, terraformConfigObj types.O
 
 	// Convert TerraformBinPath (MountPoints)
 	if !terraformConfigModel.TerraformBinPath.IsNull() && !terraformConfigModel.TerraformBinPath.IsUnknown() {
-		mountPoints, diags := convertMountPointsListToAPI(ctx, terraformConfigModel.TerraformBinPath)
+		mountPoints, diags := ConvertMountPointsListToAPI(ctx, terraformConfigModel.TerraformBinPath)
 		if diags.HasError() {
 			return nil, diags
 		}
@@ -868,7 +872,7 @@ func convertTerraformConfigToAPI(ctx context.Context, terraformConfigObj types.O
 
 	// Convert PostApplyWfStepsConfig
 	if !terraformConfigModel.PostApplyWfStepsConfig.IsNull() && !terraformConfigModel.PostApplyWfStepsConfig.IsUnknown() {
-		wfSteps, diags := convertWfStepsConfigListToAPI(ctx, terraformConfigModel.PostApplyWfStepsConfig)
+		wfSteps, diags := ConvertWfStepsConfigListToAPI(ctx, terraformConfigModel.PostApplyWfStepsConfig)
 		if diags.HasError() {
 			return nil, diags
 		}
@@ -877,7 +881,7 @@ func convertTerraformConfigToAPI(ctx context.Context, terraformConfigObj types.O
 
 	// Convert PreApplyWfStepsConfig
 	if !terraformConfigModel.PreApplyWfStepsConfig.IsNull() && !terraformConfigModel.PreApplyWfStepsConfig.IsUnknown() {
-		wfSteps, diags := convertWfStepsConfigListToAPI(ctx, terraformConfigModel.PreApplyWfStepsConfig)
+		wfSteps, diags := ConvertWfStepsConfigListToAPI(ctx, terraformConfigModel.PreApplyWfStepsConfig)
 		if diags.HasError() {
 			return nil, diags
 		}
@@ -886,7 +890,7 @@ func convertTerraformConfigToAPI(ctx context.Context, terraformConfigObj types.O
 
 	// Convert PrePlanWfStepsConfig
 	if !terraformConfigModel.PrePlanWfStepsConfig.IsNull() && !terraformConfigModel.PrePlanWfStepsConfig.IsUnknown() {
-		wfSteps, diags := convertWfStepsConfigListToAPI(ctx, terraformConfigModel.PrePlanWfStepsConfig)
+		wfSteps, diags := ConvertWfStepsConfigListToAPI(ctx, terraformConfigModel.PrePlanWfStepsConfig)
 		if diags.HasError() {
 			return nil, diags
 		}
@@ -895,7 +899,7 @@ func convertTerraformConfigToAPI(ctx context.Context, terraformConfigObj types.O
 
 	// Convert PostPlanWfStepsConfig
 	if !terraformConfigModel.PostPlanWfStepsConfig.IsNull() && !terraformConfigModel.PostPlanWfStepsConfig.IsUnknown() {
-		wfSteps, diags := convertWfStepsConfigListToAPI(ctx, terraformConfigModel.PostPlanWfStepsConfig)
+		wfSteps, diags := ConvertWfStepsConfigListToAPI(ctx, terraformConfigModel.PostPlanWfStepsConfig)
 		if diags.HasError() {
 			return nil, diags
 		}
@@ -950,7 +954,11 @@ func convertTerraformConfigToAPI(ctx context.Context, terraformConfigObj types.O
 	return terraformConfig, diagn
 }
 
-func convertDeploymentPlatformConfigToAPI(ctx context.Context, deploymentConfigObj types.Object) (*workflowtemplaterevisions.DeploymentPlatformConfig, diag.Diagnostics) {
+func ConvertDeploymentPlatformConfigToAPI(ctx context.Context, deploymentConfigObj types.Object) ([]*workflowtemplaterevisions.DeploymentPlatformConfig, diag.Diagnostics) {
+	if deploymentConfigObj.IsNull() || deploymentConfigObj.IsUnknown() {
+		return nil, nil
+	}
+
 	var deploymentModel DeploymentPlatformConfigModel
 	diags := deploymentConfigObj.As(ctx, &deploymentModel, basetypes.ObjectAsOptions{
 		UnhandledNullAsEmpty:    true,
@@ -981,10 +989,16 @@ func convertDeploymentPlatformConfigToAPI(ctx context.Context, deploymentConfigO
 		}
 	}
 
-	return deploymentConfig, nil
+	deploymentPlatformConfigList := []*workflowtemplaterevisions.DeploymentPlatformConfig{deploymentConfig}
+
+	return deploymentPlatformConfigList, nil
 }
 
-func convertMountPointsListToAPI(ctx context.Context, mountPointsList types.List) ([]sgsdkgo.MountPoint, diag.Diagnostics) {
+func ConvertMountPointsListToAPI(ctx context.Context, mountPointsList types.List) ([]sgsdkgo.MountPoint, diag.Diagnostics) {
+	if mountPointsList.IsNull() || mountPointsList.IsUnknown() {
+		return nil, nil
+	}
+
 	var mountPointModels []MountPointModel
 	diags := mountPointsList.ElementsAs(ctx, &mountPointModels, false)
 	if diags.HasError() {
@@ -1002,7 +1016,11 @@ func convertMountPointsListToAPI(ctx context.Context, mountPointsList types.List
 	return mountPoints, nil
 }
 
-func convertWfStepsConfigListToAPI(ctx context.Context, wfStepsConfigList types.List) ([]sgsdkgo.WfStepsConfig, diag.Diagnostics) {
+func ConvertWfStepsConfigListToAPI(ctx context.Context, wfStepsConfigList types.List) ([]sgsdkgo.WfStepsConfig, diag.Diagnostics) {
+	if wfStepsConfigList.IsNull() || wfStepsConfigList.IsUnknown() {
+		return nil, nil
+	}
+
 	var wfStepModels []WfStepsConfigModel
 	diags := wfStepsConfigList.ElementsAs(ctx, &wfStepModels, false)
 	if diags.HasError() {
@@ -1020,7 +1038,7 @@ func convertWfStepsConfigListToAPI(ctx context.Context, wfStepsConfigList types.
 		}
 
 		// Handle EnvironmentVariables
-		// TODO: replace this with the convertEnvironmentVariablesToAPI
+		// TODO: replace this with the ConvertEnvironmentVariablesToAPI
 		if !wfStep.EnvironmentVariables.IsNull() && !wfStep.EnvironmentVariables.IsUnknown() {
 			var envVarModels []EnvironmentVariableModel
 			diags := wfStep.EnvironmentVariables.ElementsAs(ctx, &envVarModels, false)
@@ -1052,7 +1070,7 @@ func convertWfStepsConfigListToAPI(ctx context.Context, wfStepsConfigList types.
 
 		// Handle MountPoints
 		if !wfStep.MountPoints.IsNull() && !wfStep.MountPoints.IsUnknown() {
-			mountPoints, diags := convertMountPointsListToAPI(ctx, wfStep.MountPoints)
+			mountPoints, diags := ConvertMountPointsListToAPI(ctx, wfStep.MountPoints)
 			if diags.HasError() {
 				return nil, diags
 			}
@@ -1071,7 +1089,7 @@ func convertWfStepsConfigListToAPI(ctx context.Context, wfStepsConfigList types.
 			}
 			wfStepsConfigs[i].WfStepInputData = &sgsdkgo.WfStepInputData{
 				SchemaType: sgsdkgo.WfStepInputDataSchemaTypeEnum(inputDataModel.SchemaType.ValueString()),
-				Data:       parseJSONToMap(inputDataModel.Data.ValueString()),
+				Data:       ParseJSONToMap(inputDataModel.Data.ValueString()),
 			}
 		}
 	}
@@ -1079,8 +1097,8 @@ func convertWfStepsConfigListToAPI(ctx context.Context, wfStepsConfigList types.
 	return wfStepsConfigs, nil
 }
 
-// convertEnvironmentVariablesToAPI converts a list of terraform EnvironmentVariableModel to API EnvVars
-func convertEnvironmentVariablesToAPI(ctx context.Context, envVarsList types.List) ([]sgsdkgo.EnvVars, diag.Diagnostics) {
+// ConvertEnvironmentVariablesToAPI converts a list of terraform EnvironmentVariableModel to API EnvVars
+func ConvertEnvironmentVariablesToAPI(ctx context.Context, envVarsList types.List) ([]sgsdkgo.EnvVars, diag.Diagnostics) {
 	if envVarsList.IsNull() || envVarsList.IsUnknown() {
 		return nil, nil
 	}
@@ -1115,8 +1133,8 @@ func convertEnvironmentVariablesToAPI(ctx context.Context, envVarsList types.Lis
 	return envVars, nil
 }
 
-// convertWfStepInputDataToAPI converts terraform WfStepInputDataModel to API WfStepInputData
-func convertWfStepInputDataToAPI(ctx context.Context, inputDataObj types.Object) (*sgsdkgo.WfStepInputData, diag.Diagnostics) {
+// ConvertWfStepInputDataToAPI converts terraform WfStepInputDataModel to API WfStepInputData
+func ConvertWfStepInputDataToAPI(ctx context.Context, inputDataObj types.Object) (*sgsdkgo.WfStepInputData, diag.Diagnostics) {
 	if inputDataObj.IsNull() || inputDataObj.IsUnknown() {
 		return nil, nil
 	}
@@ -1132,12 +1150,12 @@ func convertWfStepInputDataToAPI(ctx context.Context, inputDataObj types.Object)
 
 	return &sgsdkgo.WfStepInputData{
 		SchemaType: sgsdkgo.WfStepInputDataSchemaTypeEnum(inputDataModel.SchemaType.ValueString()),
-		Data:       parseJSONToMap(inputDataModel.Data.ValueString()),
+		Data:       ParseJSONToMap(inputDataModel.Data.ValueString()),
 	}, nil
 }
 
-// convertWfStepsConfigToAPI converts a single terraform WfStepsConfigModel to API WfStepsConfig
-func convertWfStepsConfigToAPI(ctx context.Context, wfStepModel WfStepsConfigModel) (*sgsdkgo.WfStepsConfig, diag.Diagnostics) {
+// ConvertWfStepsConfigToAPI converts a single terraform WfStepsConfigModel to API WfStepsConfig
+func ConvertWfStepsConfigToAPI(ctx context.Context, wfStepModel WfStepsConfigModel) (*sgsdkgo.WfStepsConfig, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
 
 	wfStepConfig := &sgsdkgo.WfStepsConfig{
@@ -1150,7 +1168,7 @@ func convertWfStepsConfigToAPI(ctx context.Context, wfStepModel WfStepsConfigMod
 
 	// Handle EnvironmentVariables
 	if !wfStepModel.EnvironmentVariables.IsNull() && !wfStepModel.EnvironmentVariables.IsUnknown() {
-		envVars, envDiags := convertEnvironmentVariablesToAPI(ctx, wfStepModel.EnvironmentVariables)
+		envVars, envDiags := ConvertEnvironmentVariablesToAPI(ctx, wfStepModel.EnvironmentVariables)
 		if envDiags.HasError() {
 			return nil, envDiags
 		}
@@ -1159,7 +1177,7 @@ func convertWfStepsConfigToAPI(ctx context.Context, wfStepModel WfStepsConfigMod
 
 	// Handle MountPoints
 	if !wfStepModel.MountPoints.IsNull() && !wfStepModel.MountPoints.IsUnknown() {
-		mountPoints, mountDiags := convertMountPointsListToAPI(ctx, wfStepModel.MountPoints)
+		mountPoints, mountDiags := ConvertMountPointsListToAPI(ctx, wfStepModel.MountPoints)
 		if mountDiags.HasError() {
 			return nil, mountDiags
 		}
@@ -1168,7 +1186,7 @@ func convertWfStepsConfigToAPI(ctx context.Context, wfStepModel WfStepsConfigMod
 
 	// Handle WfStepInputData
 	if !wfStepModel.WfStepInputData.IsNull() && !wfStepModel.WfStepInputData.IsUnknown() {
-		inputData, inputDiags := convertWfStepInputDataToAPI(ctx, wfStepModel.WfStepInputData)
+		inputData, inputDiags := ConvertWfStepInputDataToAPI(ctx, wfStepModel.WfStepInputData)
 		if inputDiags.HasError() {
 			return nil, inputDiags
 		}
@@ -1178,8 +1196,8 @@ func convertWfStepsConfigToAPI(ctx context.Context, wfStepModel WfStepsConfigMod
 	return wfStepConfig, diags
 }
 
-// convertWfStepInputDataFromAPI converts API WfStepInputData to terraform WfStepInputDataModel
-func convertWfStepInputDataFromAPI(ctx context.Context, inputData *sgsdkgo.WfStepInputData) (types.Object, diag.Diagnostics) {
+// ConvertWfStepInputDataFromAPI converts API WfStepInputData to terraform WfStepInputDataModel
+func ConvertWfStepInputDataFromAPI(ctx context.Context, inputData *sgsdkgo.WfStepInputData) (types.Object, diag.Diagnostics) {
 	nullObject := types.ObjectNull(WfStepInputDataModel{}.AttributeTypes())
 	if inputData == nil {
 		return nullObject, nil
@@ -1200,8 +1218,8 @@ func convertWfStepInputDataFromAPI(ctx context.Context, inputData *sgsdkgo.WfSte
 	return inputDataObj, diags
 }
 
-// convertWfStepsConfigFromAPI converts API WfStepsConfig to terraform WfStepsConfigModel
-func convertWfStepsConfigFromAPI(ctx context.Context, wfStepConfig *sgsdkgo.WfStepsConfig) (types.Object, diag.Diagnostics) {
+// ConvertWfStepsConfigFromAPI converts API WfStepsConfig to terraform WfStepsConfigModel
+func ConvertWfStepsConfigFromAPI(ctx context.Context, wfStepConfig *sgsdkgo.WfStepsConfig) (types.Object, diag.Diagnostics) {
 	nullObject := types.ObjectNull(WfStepsConfigModel{}.AttributeTypes())
 	if wfStepConfig == nil {
 		return nullObject, nil
@@ -1216,21 +1234,21 @@ func convertWfStepsConfigFromAPI(ctx context.Context, wfStepConfig *sgsdkgo.WfSt
 	}
 
 	// Handle EnvironmentVariables
-	envVarsList, envDiags := convertEnvironmentVariablesFromAPI(ctx, wfStepConfig.EnvironmentVariables)
+	envVarsList, envDiags := ConvertEnvironmentVariablesFromAPI(ctx, wfStepConfig.EnvironmentVariables)
 	if envDiags.HasError() {
 		return nullObject, envDiags
 	}
 	wfStepModel.EnvironmentVariables = envVarsList
 
 	// Handle MountPoints
-	mountPoints, mountDiags := convertMountPointListFromAPI(ctx, wfStepConfig.MountPoints)
+	mountPoints, mountDiags := ConvertMountPointListFromAPI(ctx, wfStepConfig.MountPoints)
 	if mountDiags.HasError() {
 		return nullObject, mountDiags
 	}
 	wfStepModel.MountPoints = mountPoints
 
 	// Handle WfStepInputData
-	inputData, inputDiags := convertWfStepInputDataFromAPI(ctx, wfStepConfig.WfStepInputData)
+	inputData, inputDiags := ConvertWfStepInputDataFromAPI(ctx, wfStepConfig.WfStepInputData)
 	if inputDiags.HasError() {
 		return nullObject, inputDiags
 	}
@@ -1240,15 +1258,15 @@ func convertWfStepsConfigFromAPI(ctx context.Context, wfStepConfig *sgsdkgo.WfSt
 	return wfStepObj, diags
 }
 
-// convertWfStepsConfigListFromAPI converts API WfStepsConfig list to terraform WfStepsConfigModel list
-func convertWfStepsConfigListFromAPI(ctx context.Context, wfStepsConfigList []sgsdkgo.WfStepsConfig) (types.List, diag.Diagnostics) {
+// ConvertWfStepsConfigListFromAPI converts API WfStepsConfig list to terraform WfStepsConfigModel list
+func ConvertWfStepsConfigListFromAPI(ctx context.Context, wfStepsConfigList []sgsdkgo.WfStepsConfig) (types.List, diag.Diagnostics) {
 	if wfStepsConfigList == nil {
 		return types.ListNull(types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}), nil
 	}
 
 	wfStepModels := make([]WfStepsConfigModel, len(wfStepsConfigList))
 	for i, wfStep := range wfStepsConfigList {
-		wfStepObj, diags := convertWfStepsConfigFromAPI(ctx, &wfStep)
+		wfStepObj, diags := ConvertWfStepsConfigFromAPI(ctx, &wfStep)
 		if diags.HasError() {
 			return types.ListNull(types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}), diags
 		}
@@ -1270,8 +1288,8 @@ func convertWfStepsConfigListFromAPI(ctx context.Context, wfStepsConfigList []sg
 	return wfStepsList, diags
 }
 
-// convertRunnerConstraintsFromAPI converts API RunnerConstraints to terraform types.Object
-func convertRunnerConstraintsFromAPI(ctx context.Context, runnerConstraints *sgsdkgo.RunnerConstraints) (types.Object, diag.Diagnostics) {
+// ConvertRunnerConstraintsFromAPI converts API RunnerConstraints to terraform types.Object
+func ConvertRunnerConstraintsFromAPI(ctx context.Context, runnerConstraints *sgsdkgo.RunnerConstraints) (types.Object, diag.Diagnostics) {
 	nullObject := types.ObjectNull(RunnerConstraintsModel{}.AttributeTypes())
 	if runnerConstraints == nil {
 		return nullObject, nil
@@ -1295,8 +1313,8 @@ func convertRunnerConstraintsFromAPI(ctx context.Context, runnerConstraints *sgs
 	return obj, nil
 }
 
-// convertUserSchedulesFromAPI converts API UserSchedules to terraform types.List
-func convertUserSchedulesFromAPI(ctx context.Context, userSchedules []workflowtemplaterevisions.UserSchedules) (types.List, diag.Diagnostics) {
+// ConvertUserSchedulesFromAPI converts API UserSchedules to terraform types.List
+func ConvertUserSchedulesFromAPI(ctx context.Context, userSchedules []workflowtemplaterevisions.UserSchedules) (types.List, diag.Diagnostics) {
 	nullList := types.ListNull(types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()})
 	if userSchedules == nil {
 		return nullList, nil
@@ -1332,7 +1350,7 @@ func BuildAPIModelToWorkflowTemplateRevisionModel(ctx context.Context, apiRespon
 	}
 
 	// handle deprecation
-	deprecationTerraType, diags := convertDeprecationFromAPI(ctx, apiResponse.Deprecation)
+	deprecationTerraType, diags := ConvertDeprecationFromAPI(ctx, apiResponse.Deprecation)
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -1378,63 +1396,63 @@ func BuildAPIModelToWorkflowTemplateRevisionModel(ctx context.Context, apiRespon
 	}
 
 	// Handle RuntimeSource
-	runtimeSource, diags := convertRuntimeSourceFromAPI(ctx, apiResponse.RuntimeSource)
+	runtimeSource, diags := ConvertRuntimeSourceFromAPI(ctx, apiResponse.RuntimeSource)
 	if diags.HasError() {
 		return nil, diags
 	}
 	model.RuntimeSource = runtimeSource
 
 	// Handle TerraformConfig
-	terraformConfig, diags := convertTerraformConfigFromAPI(ctx, apiResponse.TerraformConfig)
+	terraformConfig, diags := ConvertTerraformConfigFromAPI(ctx, apiResponse.TerraformConfig)
 	if diags.HasError() {
 		return nil, diags
 	}
 	model.TerraformConfig = terraformConfig
 
 	// Handle DeploymentPlatformConfig
-	deploymentConfig, diags := convertDeploymentPlatformConfigFromAPI(ctx, apiResponse.DeploymentPlatformConfig)
+	deploymentConfig, diags := ConvertDeploymentPlatformConfigFromAPI(ctx, apiResponse.DeploymentPlatformConfig)
 	if diags.HasError() {
 		return nil, diags
 	}
 	model.DeploymentPlatformConfig = deploymentConfig
 
 	// Handle EnvironmentVariables
-	envVars, diags := convertEnvironmentVariablesFromAPI(ctx, apiResponse.EnvironmentVariables)
+	envVars, diags := ConvertEnvironmentVariablesFromAPI(ctx, apiResponse.EnvironmentVariables)
 	if diags.HasError() {
 		return nil, diags
 	}
 	model.EnvironmentVariables = envVars
 
 	// Handle InputSchemas
-	inputSchemas, diags := convertInputSchemasFromAPI(ctx, apiResponse.InputSchemas)
+	inputSchemas, diags := ConvertInputSchemasFromAPI(ctx, apiResponse.InputSchemas)
 	if diags.HasError() {
 		return nil, diags
 	}
 	model.InputSchemas = inputSchemas
 
 	// Handle MiniSteps
-	miniSteps, diags := convertMinistepsFromAPI(ctx, apiResponse.Ministeps)
+	miniSteps, diags := ConvertMinistepsFromAPI(ctx, apiResponse.Ministeps)
 	if diags.HasError() {
 		return nil, diags
 	}
 	model.MiniSteps = miniSteps
 
 	// Handle RunnerConstraints
-	runnerConstraints, diags := convertRunnerConstraintsFromAPI(ctx, apiResponse.RunnerConstraints)
+	runnerConstraints, diags := ConvertRunnerConstraintsFromAPI(ctx, apiResponse.RunnerConstraints)
 	if diags.HasError() {
 		return nil, diags
 	}
 	model.RunnerConstraints = runnerConstraints
 
 	// Handle UserSchedules
-	userSchedules, diags := convertUserSchedulesFromAPI(ctx, apiResponse.UserSchedules)
+	userSchedules, diags := ConvertUserSchedulesFromAPI(ctx, apiResponse.UserSchedules)
 	if diags.HasError() {
 		return nil, diags
 	}
 	model.UserSchedules = userSchedules
 
 	// Handle WfStepsConfig
-	wfStepsConfig, diags := convertWfStepsConfigListFromAPI(ctx, apiResponse.WfStepsConfig)
+	wfStepsConfig, diags := ConvertWfStepsConfigListFromAPI(ctx, apiResponse.WfStepsConfig)
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -1445,7 +1463,7 @@ func BuildAPIModelToWorkflowTemplateRevisionModel(ctx context.Context, apiRespon
 
 // Helper functions for reverse conversion (API to Terraform)
 
-func convertDeprecationFromAPI(ctx context.Context, deprecationAPIModle *workflowtemplaterevisions.Deprecation) (types.Object, diag.Diagnostics) {
+func ConvertDeprecationFromAPI(ctx context.Context, deprecationAPIModle *workflowtemplaterevisions.Deprecation) (types.Object, diag.Diagnostics) {
 	nullObject := types.ObjectNull(DeprecationModel{}.AttributeTypes())
 	if deprecationAPIModle == nil {
 		return nullObject, nil
@@ -1464,7 +1482,7 @@ func convertDeprecationFromAPI(ctx context.Context, deprecationAPIModle *workflo
 	return deprecationTerraType, nil
 }
 
-func convertRuntimeSourceFromAPI(ctx context.Context, runtimeSource *workflowtemplates.RuntimeSource) (types.Object, diag.Diagnostics) {
+func ConvertRuntimeSourceFromAPI(ctx context.Context, runtimeSource *workflowtemplates.RuntimeSource) (types.Object, diag.Diagnostics) {
 	nullObject := types.ObjectNull(RuntimeSourceModel{}.AttributeTypes())
 	if runtimeSource == nil {
 		return nullObject, nil
@@ -1504,7 +1522,7 @@ func convertRuntimeSourceFromAPI(ctx context.Context, runtimeSource *workflowtem
 	return runtimeSourceObj, nil
 }
 
-func convertMountPointListFromAPI(ctx context.Context, mountPointListAPI []sgsdkgo.MountPoint) (types.List, diag.Diagnostics) {
+func ConvertMountPointListFromAPI(ctx context.Context, mountPointListAPI []sgsdkgo.MountPoint) (types.List, diag.Diagnostics) {
 	nullObject := types.ListNull(types.ObjectType{AttrTypes: MountPointModel{}.AttributeTypes()})
 	if mountPointListAPI == nil {
 		return nullObject, nil
@@ -1528,7 +1546,7 @@ func convertMountPointListFromAPI(ctx context.Context, mountPointListAPI []sgsdk
 	return mountPointTerraType, nil
 }
 
-func convertTerraformConfigFromAPI(ctx context.Context, terraformConfig *sgsdkgo.TerraformConfig) (types.Object, diag.Diagnostics) {
+func ConvertTerraformConfigFromAPI(ctx context.Context, terraformConfig *sgsdkgo.TerraformConfig) (types.Object, diag.Diagnostics) {
 	nullObject := types.ObjectNull(TerraformConfigModel{}.AttributeTypes())
 	if terraformConfig == nil {
 		return nullObject, nil
@@ -1549,35 +1567,35 @@ func convertTerraformConfigFromAPI(ctx context.Context, terraformConfig *sgsdkgo
 	// TODO: Convert nested fields (TerraformBinPath, WfStepsConfigs, Hooks, Providers)
 
 	// terraform bin path
-	terraformBinTerraType, diags := convertMountPointListFromAPI(ctx, terraformConfig.TerraformBinPath)
+	terraformBinTerraType, diags := ConvertMountPointListFromAPI(ctx, terraformConfig.TerraformBinPath)
 	if diags.HasError() {
 		return nullObject, diags
 	}
 	terraformConfigModel.TerraformBinPath = terraformBinTerraType
 
 	// post apply wf steps config
-	postApplyWfStepsConfig, diags := convertWfStepsConfigListFromAPI(ctx, terraformConfig.PostApplyWfStepsConfig)
+	postApplyWfStepsConfig, diags := ConvertWfStepsConfigListFromAPI(ctx, terraformConfig.PostApplyWfStepsConfig)
 	if diags.HasError() {
 		return nullObject, diags
 	}
 	terraformConfigModel.PostApplyWfStepsConfig = postApplyWfStepsConfig
 
 	// pre apply wf steps config
-	preApplyWfStepsConfig, diags := convertWfStepsConfigListFromAPI(ctx, terraformConfig.PreApplyWfStepsConfig)
+	preApplyWfStepsConfig, diags := ConvertWfStepsConfigListFromAPI(ctx, terraformConfig.PreApplyWfStepsConfig)
 	if diags.HasError() {
 		return nullObject, diags
 	}
 	terraformConfigModel.PreApplyWfStepsConfig = preApplyWfStepsConfig
 
 	// pre plan wf steps config
-	prePlanWfStepsConfig, diags := convertWfStepsConfigListFromAPI(ctx, terraformConfig.PrePlanWfStepsConfig)
+	prePlanWfStepsConfig, diags := ConvertWfStepsConfigListFromAPI(ctx, terraformConfig.PrePlanWfStepsConfig)
 	if diags.HasError() {
 		return nullObject, diags
 	}
 	terraformConfigModel.PrePlanWfStepsConfig = prePlanWfStepsConfig
 
 	// post plan wf steps config
-	postPlanWfStepsConfig, diags := convertWfStepsConfigListFromAPI(ctx, terraformConfig.PostPlanWfStepsConfig)
+	postPlanWfStepsConfig, diags := ConvertWfStepsConfigListFromAPI(ctx, terraformConfig.PostPlanWfStepsConfig)
 	if diags.HasError() {
 		return nullObject, diags
 	}
@@ -1626,11 +1644,13 @@ func convertTerraformConfigFromAPI(ctx context.Context, terraformConfig *sgsdkgo
 	return terraformConfigObj, nil
 }
 
-func convertDeploymentPlatformConfigFromAPI(ctx context.Context, deploymentConfig *workflowtemplaterevisions.DeploymentPlatformConfig) (types.Object, diag.Diagnostics) {
+func ConvertDeploymentPlatformConfigFromAPI(ctx context.Context, deploymentConfigList []*workflowtemplaterevisions.DeploymentPlatformConfig) (types.Object, diag.Diagnostics) {
 	nullObject := types.ObjectNull(DeploymentPlatformConfigModel{}.AttributeTypes())
-	if deploymentConfig == nil {
+	if len(deploymentConfigList) == 0 {
 		return nullObject, nil
 	}
+
+	deploymentConfig := deploymentConfigList[0]
 
 	configModel := DeploymentPlatformConfigConfigModel{
 		IntegrationId: flatteners.String(deploymentConfig.Config.IntegrationId),
@@ -1656,7 +1676,7 @@ func convertDeploymentPlatformConfigFromAPI(ctx context.Context, deploymentConfi
 }
 
 // Conversion helpers for EnvironmentVariables (Flatteners - API to Terraform)
-func convertEnvironmentVariablesFromAPI(ctx context.Context, envVars []sgsdkgo.EnvVars) (types.List, diag.Diagnostics) {
+func ConvertEnvironmentVariablesFromAPI(ctx context.Context, envVars []sgsdkgo.EnvVars) (types.List, diag.Diagnostics) {
 	nullObject := types.ListNull(types.ObjectType{AttrTypes: EnvironmentVariableModel{}.AttributeTypes()})
 
 	if envVars == nil {
@@ -1691,7 +1711,7 @@ func convertEnvironmentVariablesFromAPI(ctx context.Context, envVars []sgsdkgo.E
 }
 
 // Conversion helpers for InputSchemas (Flatteners - API to Terraform)
-func convertInputSchemasFromAPI(ctx context.Context, inputSchemas []sgsdkgo.InputSchemas) (types.List, diag.Diagnostics) {
+func ConvertInputSchemasFromAPI(ctx context.Context, inputSchemas []sgsdkgo.InputSchemas) (types.List, diag.Diagnostics) {
 	if inputSchemas == nil {
 		return types.ListNull(types.ObjectType{AttrTypes: InputSchemaModel{}.AttributeTypes()}), nil
 	}
@@ -1715,7 +1735,7 @@ func convertInputSchemasFromAPI(ctx context.Context, inputSchemas []sgsdkgo.Inpu
 }
 
 // Conversion helpers for MiniSteps (Flatteners - API to Terraform)
-func convertMinistepsFromAPI(ctx context.Context, ministeps *workflowtemplaterevisions.Ministeps) (types.Object, diag.Diagnostics) {
+func ConvertMinistepsFromAPI(ctx context.Context, ministeps *workflowtemplaterevisions.Ministeps) (types.Object, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	nullObject := types.ObjectNull(MinistepsModel{}.AttributeTypes())
 	if ministeps == nil {
@@ -1730,27 +1750,27 @@ func convertMinistepsFromAPI(ctx context.Context, ministeps *workflowtemplaterev
 
 		if ministeps.Notifications.Email != nil {
 			emailModel := MinistepsEmailModel{}
-			emailModel.ApprovalRequired, diags = convertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.APPROVAL_REQUIRED)
+			emailModel.ApprovalRequired, diags = ConvertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.APPROVAL_REQUIRED)
 			if diags.HasError() {
 				return nullObject, diags
 			}
 
-			emailModel.Cancelled, diags = convertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.CANCELLED)
+			emailModel.Cancelled, diags = ConvertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.CANCELLED)
 			if diags.HasError() {
 				return nullObject, diags
 			}
 
-			emailModel.Completed, diags = convertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.COMPLETED)
+			emailModel.Completed, diags = ConvertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.COMPLETED)
 			if diags.HasError() {
 				return nullObject, diags
 			}
 
-			emailModel.DriftDetected, diags = convertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.DRIFT_DETECTED)
+			emailModel.DriftDetected, diags = ConvertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.DRIFT_DETECTED)
 			if diags.HasError() {
 				return nullObject, diags
 			}
 
-			emailModel.Errored, diags = convertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.ERRORED)
+			emailModel.Errored, diags = ConvertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.ERRORED)
 			if diags.HasError() {
 				return nullObject, diags
 			}
@@ -1776,27 +1796,27 @@ func convertMinistepsFromAPI(ctx context.Context, ministeps *workflowtemplaterev
 	// Convert Webhooks
 	if ministeps.Webhooks != nil {
 		webhooksModel := MinistepsWebhooksContainerModel{}
-		webhooksModel.ApprovalRequired, diags = convertWebhookFromAPI(ctx, ministeps.Webhooks.APPROVAL_REQUIRED)
+		webhooksModel.ApprovalRequired, diags = ConvertWebhookFromAPI(ctx, ministeps.Webhooks.APPROVAL_REQUIRED)
 		if diags.HasError() {
 			return nullObject, diags
 		}
 
-		webhooksModel.Cancelled, diags = convertWebhookFromAPI(ctx, ministeps.Webhooks.CANCELLED)
+		webhooksModel.Cancelled, diags = ConvertWebhookFromAPI(ctx, ministeps.Webhooks.CANCELLED)
 		if diags.HasError() {
 			return nullObject, diags
 		}
 
-		webhooksModel.Completed, diags = convertWebhookFromAPI(ctx, ministeps.Webhooks.COMPLETED)
+		webhooksModel.Completed, diags = ConvertWebhookFromAPI(ctx, ministeps.Webhooks.COMPLETED)
 		if diags.HasError() {
 			return nullObject, diags
 		}
 
-		webhooksModel.DriftDetected, diags = convertWebhookFromAPI(ctx, ministeps.Webhooks.DRIFT_DETECTED)
+		webhooksModel.DriftDetected, diags = ConvertWebhookFromAPI(ctx, ministeps.Webhooks.DRIFT_DETECTED)
 		if diags.HasError() {
 			return nullObject, diags
 		}
 
-		webhooksModel.Errored, diags = convertWebhookFromAPI(ctx, ministeps.Webhooks.ERRORED)
+		webhooksModel.Errored, diags = ConvertWebhookFromAPI(ctx, ministeps.Webhooks.ERRORED)
 		if diags.HasError() {
 			return nullObject, diags
 		}
@@ -1814,11 +1834,11 @@ func convertMinistepsFromAPI(ctx context.Context, ministeps *workflowtemplaterev
 	if ministeps.WfChaining != nil {
 		wfChainingModel := MinistepsWfChainingContainerModel{}
 
-		wfChainingModel.Completed, diags = convertWorkflowChainingFromAPI(ctx, ministeps.WfChaining.COMPLETED)
+		wfChainingModel.Completed, diags = ConvertWorkflowChainingFromAPI(ctx, ministeps.WfChaining.COMPLETED)
 		if diags.HasError() {
 			return nullObject, diags
 		}
-		wfChainingModel.Errored, diags = convertWorkflowChainingFromAPI(ctx, ministeps.WfChaining.ERRORED)
+		wfChainingModel.Errored, diags = ConvertWorkflowChainingFromAPI(ctx, ministeps.WfChaining.ERRORED)
 
 		wfChainingObj, diags := types.ObjectValueFrom(ctx, MinistepsWfChainingContainerModel{}.AttributeTypes(), wfChainingModel)
 		if diags.HasError() {
@@ -1838,7 +1858,7 @@ func convertMinistepsFromAPI(ctx context.Context, ministeps *workflowtemplaterev
 }
 
 // Helper function to convert notification recipients
-func convertNotificationRecipientsFromAPI(ctx context.Context, recipients []workflowtemplaterevisions.MinistepsNotificationRecepients) (types.List, diag.Diagnostics) {
+func ConvertNotificationRecipientsFromAPI(ctx context.Context, recipients []workflowtemplaterevisions.MinistepsNotificationRecepients) (types.List, diag.Diagnostics) {
 	nullObj := types.ListNull(types.ObjectType{AttrTypes: MinistepsNotificationRecipientsModel{}.AttributeTypes()})
 	if recipients == nil {
 		return nullObj, nil
@@ -1867,7 +1887,7 @@ func convertNotificationRecipientsFromAPI(ctx context.Context, recipients []work
 }
 
 // Helper function to convert webhooks
-func convertWebhookFromAPI(ctx context.Context, webhooks []workflowtemplaterevisions.MinistepsWebhooksSchema) (types.List, diag.Diagnostics) {
+func ConvertWebhookFromAPI(ctx context.Context, webhooks []workflowtemplaterevisions.MinistepsWebhooksSchema) (types.List, diag.Diagnostics) {
 	nullObj := types.ListNull(types.ObjectType{AttrTypes: MinistepsWebhooksModel{}.AttributeTypes()})
 	if webhooks == nil {
 		return nullObj, nil
@@ -1893,7 +1913,7 @@ func convertWebhookFromAPI(ctx context.Context, webhooks []workflowtemplaterevis
 }
 
 // Helper function to convert workflow chaining
-func convertWorkflowChainingFromAPI(ctx context.Context, wfChainingList []workflowtemplaterevisions.MinistepsWfChainingSchema) (types.List, diag.Diagnostics) {
+func ConvertWorkflowChainingFromAPI(ctx context.Context, wfChainingList []workflowtemplaterevisions.MinistepsWfChainingSchema) (types.List, diag.Diagnostics) {
 	nullObj := types.ListNull(types.ObjectType{AttrTypes: MinistepsWorkflowChainingModel{}.AttributeTypes()})
 	if wfChainingList == nil {
 		return nullObj, nil
@@ -1921,7 +1941,7 @@ func convertWorkflowChainingFromAPI(ctx context.Context, wfChainingList []workfl
 
 // Conversion helpers for EnvironmentVariables (Expanders - Terraform to API)
 // Conversion helpers for InputSchemas (Expanders - Terraform to API)
-func convertInputSchemasToAPI(ctx context.Context, inputSchemasList types.List) ([]sgsdkgo.InputSchemas, diag.Diagnostics) {
+func ConvertInputSchemasToAPI(ctx context.Context, inputSchemasList types.List) ([]sgsdkgo.InputSchemas, diag.Diagnostics) {
 	if inputSchemasList.IsNull() || inputSchemasList.IsUnknown() {
 		return nil, nil
 	}
@@ -1945,7 +1965,7 @@ func convertInputSchemasToAPI(ctx context.Context, inputSchemasList types.List) 
 	return inputSchemas, nil
 }
 
-func convertMinistepsToAPI(ctx context.Context, ministepsObj types.Object) (*workflowtemplaterevisions.Ministeps, diag.Diagnostics) {
+func ConvertMinistepsToAPI(ctx context.Context, ministepsObj types.Object) (*workflowtemplaterevisions.Ministeps, diag.Diagnostics) {
 	if ministepsObj.IsNull() || ministepsObj.IsUnknown() {
 		return nil, nil
 	}
@@ -1986,27 +2006,27 @@ func convertMinistepsToAPI(ctx context.Context, ministepsObj types.Object) (*wor
 			}
 
 			miniSteps.Notifications.Email = &workflowtemplaterevisions.MinistepsNotificationsEmail{}
-			miniSteps.Notifications.Email.APPROVAL_REQUIRED, diags = convertNotificationRecipientsToAPI(ctx, emailModel.ApprovalRequired)
+			miniSteps.Notifications.Email.APPROVAL_REQUIRED, diags = ConvertNotificationRecipientsToAPI(ctx, emailModel.ApprovalRequired)
 			if diags.HasError() {
 				return nil, diags
 			}
 
-			miniSteps.Notifications.Email.CANCELLED, diags = convertNotificationRecipientsToAPI(ctx, emailModel.Cancelled)
+			miniSteps.Notifications.Email.CANCELLED, diags = ConvertNotificationRecipientsToAPI(ctx, emailModel.Cancelled)
 			if diags.HasError() {
 				return nil, diags
 			}
 
-			miniSteps.Notifications.Email.COMPLETED, diags = convertNotificationRecipientsToAPI(ctx, emailModel.Completed)
+			miniSteps.Notifications.Email.COMPLETED, diags = ConvertNotificationRecipientsToAPI(ctx, emailModel.Completed)
 			if diags.HasError() {
 				return nil, diags
 			}
 
-			miniSteps.Notifications.Email.DRIFT_DETECTED, diags = convertNotificationRecipientsToAPI(ctx, emailModel.DriftDetected)
+			miniSteps.Notifications.Email.DRIFT_DETECTED, diags = ConvertNotificationRecipientsToAPI(ctx, emailModel.DriftDetected)
 			if diags.HasError() {
 				return nil, diags
 			}
 
-			miniSteps.Notifications.Email.ERRORED, diags = convertNotificationRecipientsToAPI(ctx, emailModel.Errored)
+			miniSteps.Notifications.Email.ERRORED, diags = ConvertNotificationRecipientsToAPI(ctx, emailModel.Errored)
 			if diags.HasError() {
 				return nil, diags
 			}
@@ -2026,23 +2046,23 @@ func convertMinistepsToAPI(ctx context.Context, ministepsObj types.Object) (*wor
 
 		miniSteps.Webhooks = &workflowtemplaterevisions.MinistepsWebhooks{}
 
-		miniSteps.Webhooks.APPROVAL_REQUIRED, diags = convertWebhookToAPI(ctx, webhooksModel.ApprovalRequired)
+		miniSteps.Webhooks.APPROVAL_REQUIRED, diags = ConvertWebhookToAPI(ctx, webhooksModel.ApprovalRequired)
 		if diags.HasError() {
 			return nil, diags
 		}
-		miniSteps.Webhooks.CANCELLED, diags = convertWebhookToAPI(ctx, webhooksModel.Cancelled)
+		miniSteps.Webhooks.CANCELLED, diags = ConvertWebhookToAPI(ctx, webhooksModel.Cancelled)
 		if diags.HasError() {
 			return nil, diags
 		}
-		miniSteps.Webhooks.COMPLETED, diags = convertWebhookToAPI(ctx, webhooksModel.Completed)
+		miniSteps.Webhooks.COMPLETED, diags = ConvertWebhookToAPI(ctx, webhooksModel.Completed)
 		if diags.HasError() {
 			return nil, diags
 		}
-		miniSteps.Webhooks.DRIFT_DETECTED, diags = convertWebhookToAPI(ctx, webhooksModel.DriftDetected)
+		miniSteps.Webhooks.DRIFT_DETECTED, diags = ConvertWebhookToAPI(ctx, webhooksModel.DriftDetected)
 		if diags.HasError() {
 			return nil, diags
 		}
-		miniSteps.Webhooks.ERRORED, diags = convertWebhookToAPI(ctx, webhooksModel.Errored)
+		miniSteps.Webhooks.ERRORED, diags = ConvertWebhookToAPI(ctx, webhooksModel.Errored)
 		if diags.HasError() {
 			return nil, diags
 		}
@@ -2061,11 +2081,11 @@ func convertMinistepsToAPI(ctx context.Context, ministepsObj types.Object) (*wor
 
 		miniSteps.WfChaining = &workflowtemplaterevisions.MinistepsWorkflowChaining{}
 
-		miniSteps.WfChaining.COMPLETED, diags = convertWorkflowChainingToAPI(ctx, wfChainingModel.Completed)
+		miniSteps.WfChaining.COMPLETED, diags = ConvertWorkflowChainingToAPI(ctx, wfChainingModel.Completed)
 		if diags.HasError() {
 			return nil, diags
 		}
-		miniSteps.WfChaining.ERRORED, diags = convertWorkflowChainingToAPI(ctx, wfChainingModel.Errored)
+		miniSteps.WfChaining.ERRORED, diags = ConvertWorkflowChainingToAPI(ctx, wfChainingModel.Errored)
 		if diags.HasError() {
 			return nil, diags
 		}
@@ -2075,7 +2095,7 @@ func convertMinistepsToAPI(ctx context.Context, ministepsObj types.Object) (*wor
 }
 
 // Helper function to convert notification recipients to API
-func convertNotificationRecipientsToAPI(ctx context.Context, recepientsObj types.List) ([]workflowtemplaterevisions.MinistepsNotificationRecepients, diag.Diagnostics) {
+func ConvertNotificationRecipientsToAPI(ctx context.Context, recepientsObj types.List) ([]workflowtemplaterevisions.MinistepsNotificationRecepients, diag.Diagnostics) {
 	if recepientsObj.IsNull() || recepientsObj.IsUnknown() {
 		return nil, nil
 	}
@@ -2100,7 +2120,7 @@ func convertNotificationRecipientsToAPI(ctx context.Context, recepientsObj types
 }
 
 // Helper function to convert webhook to API
-func convertWebhookToAPI(ctx context.Context, webhookObj types.List) ([]workflowtemplaterevisions.MinistepsWebhooksSchema, diag.Diagnostics) {
+func ConvertWebhookToAPI(ctx context.Context, webhookObj types.List) ([]workflowtemplaterevisions.MinistepsWebhooksSchema, diag.Diagnostics) {
 	if webhookObj.IsNull() || webhookObj.IsUnknown() {
 		return nil, nil
 	}
@@ -2126,7 +2146,7 @@ func convertWebhookToAPI(ctx context.Context, webhookObj types.List) ([]workflow
 }
 
 // Helper function to convert workflow chaining to API
-func convertWorkflowChainingToAPI(ctx context.Context, chainingObj types.List) ([]workflowtemplaterevisions.MinistepsWfChainingSchema, diag.Diagnostics) {
+func ConvertWorkflowChainingToAPI(ctx context.Context, chainingObj types.List) ([]workflowtemplaterevisions.MinistepsWfChainingSchema, diag.Diagnostics) {
 	if chainingObj.IsNull() || chainingObj.IsUnknown() {
 		return nil, nil
 	}
@@ -2151,7 +2171,7 @@ func convertWorkflowChainingToAPI(ctx context.Context, chainingObj types.List) (
 	return wfChainingAPIModel, nil
 }
 
-func parseJSONToMap(jsonStr string) map[string]interface{} {
+func ParseJSONToMap(jsonStr string) map[string]interface{} {
 	var result map[string]interface{}
 	if jsonStr == "" {
 		return result

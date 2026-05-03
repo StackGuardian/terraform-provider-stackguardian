@@ -601,10 +601,6 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 							"profile_name": schema.StringAttribute{
 								MarkdownDescription: constants.DeploymentPlatformProfileName,
 								Optional:            true,
-								Computed:            true,
-								PlanModifiers: []planmodifier.String{
-									stringplanmodifier.UseStateForUnknown(),
-								},
 							},
 						},
 					},
