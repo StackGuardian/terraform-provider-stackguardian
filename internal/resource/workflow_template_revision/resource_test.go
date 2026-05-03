@@ -83,7 +83,7 @@ func TestAccWorkflowTemplateRevision_Basic(t *testing.T) {
 
 	err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Errorf(err.Error())
 	}
 	defer deleteWorkflowTemplateFixture(templateID)
 	defer deleteWorkflowTemplateRevisionFixture(fmt.Sprintf("%s:1", templateID))
@@ -176,6 +176,60 @@ resource "stackguardian_workflow_template_revision" "test" {
   tags               = %s
 %s}
 `, templateID, alias, tags, notesLine)
+}
+
+func TestAccWorkflowTemplateRevision_WithDeploymentPlatformConfig(t *testing.T) {
+	templateID := "test-workflow-template-revision-dpc"
+	alias := "revision-dpc"
+
+	err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	defer deleteWorkflowTemplateFixture(templateID)
+	defer deleteWorkflowTemplateRevisionFixture(fmt.Sprintf("%s:1", templateID))
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowTemplateRevisionConfigWithDeploymentPlatformConfig(templateID, alias),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "template_id", templateID),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "alias", alias),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "deployment_platform_config.kind", "AWS_RBAC"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "deployment_platform_config.config.integration_id", "/integrations/test-integration"),
+				),
+			},
+		},
+	})
+}
+
+func testAccWorkflowTemplateRevisionConfigWithDeploymentPlatformConfig(templateID, alias string) string {
+	return fmt.Sprintf(`
+resource "stackguardian_workflow_template_revision" "test" {
+  template_id        = "%s"
+  alias              = "%s"
+  source_config_kind = "TERRAFORM"
+  is_public          = "0"
+  user_job_cpu       = 500
+  user_job_memory    = 1024
+
+  deployment_platform_config = {
+    kind = "AWS_RBAC"
+    config = {
+      integration_id = "/integrations/test-integration"
+    }
+  }
+}
+`, templateID, alias)
 }
 
 func testAccWorkflowTemplateRevisionConfigWithDetails(templateID, alias string) string {
