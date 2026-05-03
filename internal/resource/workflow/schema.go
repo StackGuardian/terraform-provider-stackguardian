@@ -351,6 +351,7 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.Id,
+				Optional:            true,
 				Computed:            true,
 			},
 			"workflow_group_id": schema.StringAttribute{
@@ -422,6 +423,10 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"mini_steps": schema.SingleNestedAttribute{
 				MarkdownDescription: "Mini steps configuration for the workflow.",
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"notifications": schema.SingleNestedAttribute{
 						MarkdownDescription: constants.MiniStepsNotifications,
@@ -463,6 +468,10 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"runner_constraints": schema.SingleNestedAttribute{
 				Optional: true,
+				Computed: true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
 						MarkdownDescription: constants.RunnerConstraintsType,
@@ -521,6 +530,10 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				MarkdownDescription: "List of approvers for the workflow.",
 				ElementType:         types.StringType,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"number_of_approvals_required": schema.Int64Attribute{
 				MarkdownDescription: "Number of approvals required before workflow execution.",
@@ -547,25 +560,84 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"vcs_config": schema.SingleNestedAttribute{
-				MarkdownDescription: "Version control system configuration.",
+				MarkdownDescription: "VCS (version control) configuration for the workflow.",
 				Optional:            true,
 				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"repo_url": schema.StringAttribute{
-						MarkdownDescription: "Repository URL.",
-						Optional:            true,
-					},
-					"repo_branch": schema.StringAttribute{
-						MarkdownDescription: "Repository branch.",
-						Optional:            true,
-					},
-					"terraform_backend_config_file_path": schema.StringAttribute{
-						MarkdownDescription: "Path to Terraform backend config file.",
-						Optional:            true,
-					},
-				},
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseStateForUnknown(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"iac_vcs_config": schema.SingleNestedAttribute{
+						MarkdownDescription: "IaC VCS configuration.",
+						Optional:            true,
+						Attributes: map[string]schema.Attribute{
+							"use_marketplace_template": schema.BoolAttribute{
+								MarkdownDescription: "Whether to use a marketplace template.",
+								Required:            true,
+							},
+							"iac_template_id": schema.StringAttribute{
+								MarkdownDescription: "ID of the IaC template from the marketplace.",
+								Optional:            true,
+							},
+							"custom_source": schema.SingleNestedAttribute{
+								MarkdownDescription: "Custom source configuration.",
+								Optional:            true,
+								Attributes: map[string]schema.Attribute{
+									"source_config_dest_kind": schema.StringAttribute{
+										MarkdownDescription: constants.RuntimeSourceDestKind,
+										Required:            true,
+									},
+									"config": schema.SingleNestedAttribute{
+										MarkdownDescription: "Source configuration details.",
+										Required:            true,
+										Attributes: map[string]schema.Attribute{
+											"is_private": schema.BoolAttribute{
+												Optional: true,
+											},
+											"auth": schema.StringAttribute{
+												Optional:  true,
+												Sensitive: true,
+											},
+											"working_dir": schema.StringAttribute{
+												Optional: true,
+											},
+											"git_sparse_checkout_config": schema.StringAttribute{
+												Optional: true,
+											},
+											"git_core_auto_crlf": schema.BoolAttribute{
+												Optional: true,
+											},
+											"ref": schema.StringAttribute{
+												Optional: true,
+											},
+											"repo": schema.StringAttribute{
+												Optional: true,
+											},
+											"include_sub_module": schema.BoolAttribute{
+												Optional: true,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					"iac_input_data": schema.SingleNestedAttribute{
+						MarkdownDescription: "IaC input data for the workflow.",
+						Optional:            true,
+						Attributes: map[string]schema.Attribute{
+							"schema_id": schema.StringAttribute{
+								Optional: true,
+							},
+							"schema_type": schema.StringAttribute{
+								Required: true,
+							},
+							"data": schema.StringAttribute{
+								MarkdownDescription: "Input data as a JSON string.",
+								Required:            true,
+							},
+						},
+					},
 				},
 			},
 			"terraform_config": terraformConfigSchema,
@@ -592,10 +664,6 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							"profile_name": schema.StringAttribute{
 								MarkdownDescription: constants.DeploymentPlatformProfileName,
 								Optional:            true,
-								Computed:            true,
-								PlanModifiers: []planmodifier.String{
-									stringplanmodifier.UseStateForUnknown(),
-								},
 							},
 						},
 					},
