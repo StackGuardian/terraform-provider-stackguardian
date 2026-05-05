@@ -7,8 +7,10 @@ import (
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
+	workflowtemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template_revision"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -16,6 +18,8 @@ var (
 	_ resource.Resource                = &workflowResource{}
 	_ resource.ResourceWithConfigure   = &workflowResource{}
 	_ resource.ResourceWithImportState = &workflowResource{}
+
+	_ resource.ResourceWithModifyPlan = &workflowResource{}
 )
 
 type workflowResource struct {
@@ -174,6 +178,23 @@ func (r *workflowResource) Delete(ctx context.Context, req resource.DeleteReques
 	if err != nil {
 		resp.Diagnostics.AddError("Error deleting workflow", "Error in deleting workflow API call: "+err.Error())
 		return
+	}
+}
+
+func (r *workflowResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var plan workflowResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if plan.WfType.ValueString() == "CUSTOM" {
+		plan.TerraformConfig = types.ObjectNull(workflowtemplaterevision.TerraformConfigModel{}.AttributeTypes())
+		resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 	}
 }
 

@@ -204,8 +204,8 @@ func TestAccWorkflowTemplateRevision_WithDeploymentPlatformConfig(t *testing.T) 
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "template_id", templateID),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "alias", alias),
-					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "deployment_platform_config.kind", "AWS_RBAC"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "deployment_platform_config.config.integration_id", "/integrations/test-integration"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "deployment_platform_config.0.kind", "AWS_RBAC"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "deployment_platform_config.0.config.integration_id", "/integrations/test-integration"),
 				),
 			},
 		},
@@ -222,12 +222,12 @@ resource "stackguardian_workflow_template_revision" "test" {
   user_job_cpu       = 500
   user_job_memory    = 1024
 
-  deployment_platform_config = {
+  deployment_platform_config = [{
     kind = "AWS_RBAC"
     config = {
       integration_id = "/integrations/test-integration"
     }
-  }
+  }]
 }
 `, templateID, alias)
 }

@@ -578,29 +578,31 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				},
 			},
 			"terraform_config": terraformConfigSchema,
-			"deployment_platform_config": schema.SingleNestedAttribute{
+			"deployment_platform_config": schema.ListNestedAttribute{
 				MarkdownDescription: constants.WorkflowTemplateRevisionDeploymentPlatformConfig,
 				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
 				},
-				Attributes: map[string]schema.Attribute{
-					"kind": schema.StringAttribute{
-						MarkdownDescription: constants.DeploymentPlatformKind,
-						Required:            true,
-					},
-					"config": schema.SingleNestedAttribute{
-						MarkdownDescription: constants.DeploymentPlatformConfigDetails,
-						Required:            true,
-						Attributes: map[string]schema.Attribute{
-							"integration_id": schema.StringAttribute{
-								MarkdownDescription: constants.DeploymentPlatformIntegrationId,
-								Required:            true,
-							},
-							"profile_name": schema.StringAttribute{
-								MarkdownDescription: constants.DeploymentPlatformProfileName,
-								Optional:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"kind": schema.StringAttribute{
+							MarkdownDescription: constants.DeploymentPlatformKind,
+							Required:            true,
+						},
+						"config": schema.SingleNestedAttribute{
+							MarkdownDescription: constants.DeploymentPlatformConfigDetails,
+							Required:            true,
+							Attributes: map[string]schema.Attribute{
+								"integration_id": schema.StringAttribute{
+									MarkdownDescription: constants.DeploymentPlatformIntegrationId,
+									Required:            true,
+								},
+								"profile_name": schema.StringAttribute{
+									MarkdownDescription: constants.DeploymentPlatformProfileName,
+									Optional:            true,
+								},
 							},
 						},
 					},

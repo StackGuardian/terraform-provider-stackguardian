@@ -19,6 +19,7 @@ import (
 
 var ministepsNotificationRecepients = schema.ListNestedAttribute{
 	Optional: true,
+	Computed: true,
 	NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
 			"recipients": schema.ListAttribute{
@@ -45,6 +46,7 @@ var ministepsWebhooks = schema.ListNestedAttribute{
 			"webhook_secret": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWebhookSecret,
 				Optional:            true,
+				Computed:            true,
 			},
 		},
 	},
@@ -61,18 +63,22 @@ var ministepsWorkflowChaining = schema.ListNestedAttribute{
 			"stack_id": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingStackId,
 				Optional:            true,
+				Computed:            true,
 			},
 			"stack_run_payload": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingStackPayload,
 				Optional:            true,
+				Computed:            true,
 			},
 			"workflow_id": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingWorkflowId,
 				Optional:            true,
+				Computed:            true,
 			},
 			"workflow_run_payload": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingWorkflowPayload,
 				Optional:            true,
+				Computed:            true,
 			},
 		},
 	},
@@ -353,6 +359,9 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				MarkdownDescription: constants.Id,
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"workflow_group_id": schema.StringAttribute{
 				MarkdownDescription: "ID of the parent workflow group.",
@@ -375,11 +384,7 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"wf_type": schema.StringAttribute{
 				MarkdownDescription: "Type of workflow (e.g., Terraform, Ansible, etc.).",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+				Required:            true,
 			},
 			"environment_variables": schema.ListNestedAttribute{
 				MarkdownDescription: "Environment variables for the workflow.",
@@ -390,34 +395,6 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: environmentVariables,
-				},
-			},
-			"input_schemas": schema.ListNestedAttribute{
-				MarkdownDescription: "Input schemas for the workflow.",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
-				},
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"name": schema.StringAttribute{
-							MarkdownDescription: constants.InputSchemaName,
-							Optional:            true,
-						},
-						"type": schema.StringAttribute{
-							MarkdownDescription: constants.InputSchemaType,
-							Optional:            true,
-						},
-						"encoded_data": schema.StringAttribute{
-							MarkdownDescription: constants.InputSchemaEncodedData,
-							Optional:            true,
-						},
-						"ui_schema_data": schema.StringAttribute{
-							MarkdownDescription: constants.InputSchemaUISchemaData,
-							Optional:            true,
-						},
-					},
 				},
 			},
 			"mini_steps": schema.SingleNestedAttribute{
@@ -431,10 +408,12 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"notifications": schema.SingleNestedAttribute{
 						MarkdownDescription: constants.MiniStepsNotifications,
 						Optional:            true,
+						Computed:            true,
 						Attributes: map[string]schema.Attribute{
 							"email": schema.SingleNestedAttribute{
 								MarkdownDescription: constants.MiniStepsNotificationsEmail,
 								Optional:            true,
+								Computed:            true,
 								Attributes: map[string]schema.Attribute{
 									"approval_required": ministepsNotificationRecepients,
 									"cancelled":         ministepsNotificationRecepients,
@@ -448,6 +427,7 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"webhooks": schema.SingleNestedAttribute{
 						MarkdownDescription: constants.MiniStepsWebhooks,
 						Optional:            true,
+						Computed:            true,
 						Attributes: map[string]schema.Attribute{
 							"approval_required": ministepsWebhooks,
 							"cancelled":         ministepsWebhooks,
@@ -458,6 +438,7 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					},
 					"wf_chaining": schema.SingleNestedAttribute{
 						Optional:            true,
+						Computed:            true,
 						MarkdownDescription: constants.MiniStepsWorkflowChaining,
 						Attributes: map[string]schema.Attribute{
 							"completed": ministepsWorkflowChaining,
@@ -496,6 +477,10 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"user_schedules": schema.ListNestedAttribute{
 				MarkdownDescription: "User-defined schedules for the workflow.",
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"cron": schema.StringAttribute{
@@ -513,6 +498,10 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						"name": schema.StringAttribute{
 							MarkdownDescription: constants.UserScheduleName,
 							Optional:            true,
+							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 					},
 				},
@@ -574,6 +563,9 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							"use_marketplace_template": schema.BoolAttribute{
 								MarkdownDescription: "Whether to use a marketplace template.",
 								Required:            true,
+								PlanModifiers: []planmodifier.Bool{
+									boolplanmodifier.RequiresReplace(),
+								},
 							},
 							"iac_template_id": schema.StringAttribute{
 								MarkdownDescription: "ID of the IaC template from the marketplace.",
@@ -606,6 +598,10 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 											},
 											"git_core_auto_crlf": schema.BoolAttribute{
 												Optional: true,
+												Computed: true,
+												PlanModifiers: []planmodifier.Bool{
+													boolplanmodifier.UseStateForUnknown(),
+												},
 											},
 											"ref": schema.StringAttribute{
 												Optional: true,
@@ -628,6 +624,7 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Attributes: map[string]schema.Attribute{
 							"schema_id": schema.StringAttribute{
 								Optional: true,
+								Computed: true,
 							},
 							"schema_type": schema.StringAttribute{
 								Required: true,
@@ -641,29 +638,31 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"terraform_config": terraformConfigSchema,
-			"deployment_platform_config": schema.SingleNestedAttribute{
+			"deployment_platform_config": schema.ListNestedAttribute{
 				MarkdownDescription: "Deployment platform configuration.",
 				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
 				},
-				Attributes: map[string]schema.Attribute{
-					"kind": schema.StringAttribute{
-						MarkdownDescription: constants.DeploymentPlatformKind,
-						Required:            true,
-					},
-					"config": schema.SingleNestedAttribute{
-						MarkdownDescription: constants.DeploymentPlatformConfigDetails,
-						Required:            true,
-						Attributes: map[string]schema.Attribute{
-							"integration_id": schema.StringAttribute{
-								MarkdownDescription: constants.DeploymentPlatformIntegrationId,
-								Required:            true,
-							},
-							"profile_name": schema.StringAttribute{
-								MarkdownDescription: constants.DeploymentPlatformProfileName,
-								Optional:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"kind": schema.StringAttribute{
+							MarkdownDescription: constants.DeploymentPlatformKind,
+							Required:            true,
+						},
+						"config": schema.SingleNestedAttribute{
+							MarkdownDescription: constants.DeploymentPlatformConfigDetails,
+							Required:            true,
+							Attributes: map[string]schema.Attribute{
+								"integration_id": schema.StringAttribute{
+									MarkdownDescription: constants.DeploymentPlatformIntegrationId,
+									Required:            true,
+								},
+								"profile_name": schema.StringAttribute{
+									MarkdownDescription: constants.DeploymentPlatformProfileName,
+									Optional:            true,
+								},
 							},
 						},
 					},

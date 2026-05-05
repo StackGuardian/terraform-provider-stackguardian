@@ -20,9 +20,6 @@ import (
 //
 // nolint: contextcheck
 func Int64(in int64) basetypes.Int64Value {
-	if in == 0 {
-		return types.Int64Null()
-	}
 	return types.Int64Value(in)
 }
 

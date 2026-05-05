@@ -39,7 +39,7 @@ type WorkflowTemplateRevisionResourceModel struct {
 	UserJobMemory             types.Int64  `tfsdk:"user_job_memory"`
 	RuntimeSource             types.Object `tfsdk:"runtime_source"`
 	TerraformConfig           types.Object `tfsdk:"terraform_config"`
-	DeploymentPlatformConfig  types.Object `tfsdk:"deployment_platform_config"`
+	DeploymentPlatformConfig  types.List   `tfsdk:"deployment_platform_config"`
 	WfStepsConfig             types.List   `tfsdk:"wf_steps_config"`
 }
 
@@ -954,44 +954,50 @@ func ConvertTerraformConfigToAPI(ctx context.Context, terraformConfigObj types.O
 	return terraformConfig, diagn
 }
 
-func ConvertDeploymentPlatformConfigToAPI(ctx context.Context, deploymentConfigObj types.Object) ([]*workflowtemplaterevisions.DeploymentPlatformConfig, diag.Diagnostics) {
-	if deploymentConfigObj.IsNull() || deploymentConfigObj.IsUnknown() {
+func ConvertDeploymentPlatformConfigToAPI(ctx context.Context, deploymentConfigList types.List) ([]*workflowtemplaterevisions.DeploymentPlatformConfig, diag.Diagnostics) {
+	if deploymentConfigList.IsNull() || deploymentConfigList.IsUnknown() {
 		return nil, nil
 	}
 
-	var deploymentModel DeploymentPlatformConfigModel
-	diags := deploymentConfigObj.As(ctx, &deploymentModel, basetypes.ObjectAsOptions{
-		UnhandledNullAsEmpty:    true,
-		UnhandledUnknownAsEmpty: true,
-	})
+	var deploymentModels []DeploymentPlatformConfigModel
+	diags := deploymentConfigList.ElementsAs(ctx, &deploymentModels, false)
 	if diags.HasError() {
 		return nil, diags
 	}
 
-	deploymentConfig := &workflowtemplaterevisions.DeploymentPlatformConfig{
-		Kind: workflowtemplaterevisions.DeploymentPlatformConfigKindEnum(deploymentModel.Kind.ValueString()),
-	}
+	result := make([]*workflowtemplaterevisions.DeploymentPlatformConfig, 0, len(deploymentModels))
+	for _, deploymentModel := range deploymentModels {
+		deploymentConfig := &workflowtemplaterevisions.DeploymentPlatformConfig{}
 
-	// Convert config
-	if !deploymentModel.Config.IsNull() && !deploymentModel.Config.IsUnknown() {
-		var configModel DeploymentPlatformConfigConfigModel
-		diags := deploymentModel.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
-			UnhandledNullAsEmpty:    true,
-			UnhandledUnknownAsEmpty: true,
-		})
-		if diags.HasError() {
-			return nil, diags
+		if !deploymentModel.Kind.IsNull() {
+			deploymentConfig.Kind = workflowtemplaterevisions.DeploymentPlatformConfigKindEnum(deploymentModel.Kind.ValueString())
 		}
 
-		deploymentConfig.Config = workflowtemplaterevisions.DeploymentPlatformConfigConfig{
-			IntegrationId: configModel.IntegrationId.ValueString(),
-			ProfileName:   configModel.ProfileName.ValueStringPointer(),
+		if !deploymentModel.Config.IsNull() && !deploymentModel.Config.IsUnknown() {
+			var configModel DeploymentPlatformConfigConfigModel
+			diags := deploymentModel.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
+				UnhandledNullAsEmpty:    true,
+				UnhandledUnknownAsEmpty: true,
+			})
+			if diags.HasError() {
+				return nil, diags
+			}
+
+			deploymentConfig.Config = workflowtemplaterevisions.DeploymentPlatformConfigConfig{}
+
+			if !configModel.IntegrationId.IsNull() {
+				deploymentConfig.Config.IntegrationId = configModel.IntegrationId.ValueString()
+			}
+
+			if !configModel.ProfileName.IsNull() {
+				deploymentConfig.Config.ProfileName = configModel.ProfileName.ValueStringPointer()
+			}
 		}
+
+		result = append(result, deploymentConfig)
 	}
 
-	deploymentPlatformConfigList := []*workflowtemplaterevisions.DeploymentPlatformConfig{deploymentConfig}
-
-	return deploymentPlatformConfigList, nil
+	return result, nil
 }
 
 func ConvertMountPointsListToAPI(ctx context.Context, mountPointsList types.List) ([]sgsdkgo.MountPoint, diag.Diagnostics) {
@@ -1644,35 +1650,38 @@ func ConvertTerraformConfigFromAPI(ctx context.Context, terraformConfig *sgsdkgo
 	return terraformConfigObj, nil
 }
 
-func ConvertDeploymentPlatformConfigFromAPI(ctx context.Context, deploymentConfigList []*workflowtemplaterevisions.DeploymentPlatformConfig) (types.Object, diag.Diagnostics) {
-	nullObject := types.ObjectNull(DeploymentPlatformConfigModel{}.AttributeTypes())
-	if len(deploymentConfigList) == 0 {
-		return nullObject, nil
+func ConvertDeploymentPlatformConfigFromAPI(ctx context.Context, deploymentConfigList []*workflowtemplaterevisions.DeploymentPlatformConfig) (types.List, diag.Diagnostics) {
+	elemType := types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()}
+	nullList := types.ListNull(elemType)
+
+	if deploymentConfigList == nil {
+		return nullList, nil
 	}
 
-	deploymentConfig := deploymentConfigList[0]
+	models := make([]DeploymentPlatformConfigModel, 0, len(deploymentConfigList))
+	for _, deploymentConfig := range deploymentConfigList {
+		configModel := DeploymentPlatformConfigConfigModel{
+			IntegrationId: flatteners.String(deploymentConfig.Config.IntegrationId),
+			ProfileName:   flatteners.StringPtr(deploymentConfig.Config.ProfileName),
+		}
 
-	configModel := DeploymentPlatformConfigConfigModel{
-		IntegrationId: flatteners.String(deploymentConfig.Config.IntegrationId),
-		ProfileName:   flatteners.StringPtr(deploymentConfig.Config.ProfileName),
+		configObj, diags := types.ObjectValueFrom(ctx, DeploymentPlatformConfigConfigModel{}.AttributeTypes(), configModel)
+		if diags.HasError() {
+			return nullList, diags
+		}
+
+		models = append(models, DeploymentPlatformConfigModel{
+			Kind:   flatteners.String(string(deploymentConfig.Kind)),
+			Config: configObj,
+		})
 	}
 
-	configObj, diags := types.ObjectValueFrom(ctx, DeploymentPlatformConfigConfigModel{}.AttributeTypes(), configModel)
+	listVal, diags := types.ListValueFrom(ctx, elemType, models)
 	if diags.HasError() {
-		return nullObject, diags
+		return nullList, diags
 	}
 
-	deploymentConfigModel := DeploymentPlatformConfigModel{
-		Kind:   flatteners.String(string(deploymentConfig.Kind)),
-		Config: configObj,
-	}
-
-	deploymentConfigObj, diags := types.ObjectValueFrom(ctx, DeploymentPlatformConfigModel{}.AttributeTypes(), deploymentConfigModel)
-	if diags.HasError() {
-		return nullObject, diags
-	}
-
-	return deploymentConfigObj, nil
+	return listVal, nil
 }
 
 // Conversion helpers for EnvironmentVariables (Flatteners - API to Terraform)
@@ -1878,7 +1887,7 @@ func ConvertNotificationRecipientsFromAPI(ctx context.Context, recipients []work
 		recepientsListTerraModel = append(recepientsListTerraModel, recepientsTerraModel)
 	}
 
-	obj, diags := types.ListValueFrom(ctx, types.ListType{ElemType: types.StringType}, recepientsListTerraModel)
+	obj, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: MinistepsNotificationRecipientsModel{}.AttributeTypes()}, recepientsListTerraModel)
 	if diags.HasError() {
 		return nullObj, diags
 	}
@@ -2131,7 +2140,7 @@ func ConvertWebhookToAPI(ctx context.Context, webhookObj types.List) ([]workflow
 		return nil, diags
 	}
 
-	var ministepsWebhooksList []workflowtemplaterevisions.MinistepsWebhooksSchema
+	ministepsWebhooksList := []workflowtemplaterevisions.MinistepsWebhooksSchema{}
 	for _, webhooksList := range webhooksModel {
 		webhookAPIModel := workflowtemplaterevisions.MinistepsWebhooksSchema{
 			WebhookName:   webhooksList.WebhookName.ValueString(),
@@ -2157,7 +2166,7 @@ func ConvertWorkflowChainingToAPI(ctx context.Context, chainingObj types.List) (
 		return nil, diags
 	}
 
-	var wfChainingAPIModel []workflowtemplaterevisions.MinistepsWfChainingSchema
+	wfChainingAPIModel := []workflowtemplaterevisions.MinistepsWfChainingSchema{}
 	for _, chainingModel := range chainingListModel {
 		wfChainingAPIModel = append(wfChainingAPIModel, workflowtemplaterevisions.MinistepsWfChainingSchema{
 			WorkflowGroupId:    chainingModel.WorkflowGroupId.ValueString(),
