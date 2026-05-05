@@ -2,7 +2,6 @@ package workflowtemplaterevision
 
 import (
 	"context"
-	"encoding/json"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
@@ -1069,7 +1068,7 @@ func ConvertWfStepsConfigListToAPI(ctx context.Context, wfStepsConfigList types.
 			}
 			wfStepsConfigs[i].WfStepInputData = &sgsdkgo.WfStepInputData{
 				SchemaType: sgsdkgo.WfStepInputDataSchemaTypeEnum(inputDataModel.SchemaType.ValueString()),
-				Data:       ParseJSONToMap(inputDataModel.Data.ValueString()),
+				Data:       expanders.ParseJSONToMap(inputDataModel.Data.ValueString()),
 			}
 		}
 	}
@@ -1130,7 +1129,7 @@ func ConvertWfStepInputDataToAPI(ctx context.Context, inputDataObj types.Object)
 
 	return &sgsdkgo.WfStepInputData{
 		SchemaType: sgsdkgo.WfStepInputDataSchemaTypeEnum(inputDataModel.SchemaType.ValueString()),
-		Data:       ParseJSONToMap(inputDataModel.Data.ValueString()),
+		Data:       expanders.ParseJSONToMap(inputDataModel.Data.ValueString()),
 	}, nil
 }
 
@@ -1183,15 +1182,9 @@ func ConvertWfStepInputDataFromAPI(ctx context.Context, inputData *sgsdkgo.WfSte
 		return nullObject, nil
 	}
 
-	// Convert map back to JSON string
-	dataJSON, err := json.Marshal(inputData.Data)
-	if err != nil {
-		dataJSON = []byte("{}")
-	}
-
 	inputDataModel := WfStepInputDataModel{
 		SchemaType: flatteners.String((string)(inputData.SchemaType)),
-		Data:       types.StringValue(string(dataJSON)),
+		Data:       flatteners.JSONInterfaceToString(inputData.Data),
 	}
 
 	inputDataObj, diags := types.ObjectValueFrom(ctx, WfStepInputDataModel{}.AttributeTypes(), inputDataModel)
@@ -1906,8 +1899,8 @@ func ConvertWorkflowChainingFromAPI(ctx context.Context, wfChainingList []workfl
 			WorkflowGroupId:    flatteners.String(wfChaining.WorkflowGroupId),
 			StackId:            flatteners.StringPtr(wfChaining.StackId),
 			WorkflowId:         flatteners.StringPtr(wfChaining.WorkflowId),
-			WorkflowRunPayload: JSONInterfaceToString(wfChaining.WorkflowRunPayload),
-			StackRunPayload:    JSONInterfaceToString(wfChaining.StackRunPayload),
+			WorkflowRunPayload: flatteners.JSONInterfaceToString(wfChaining.WorkflowRunPayload),
+			StackRunPayload:    flatteners.JSONInterfaceToString(wfChaining.StackRunPayload),
 		}
 		workflowChainingListTerraModel = append(workflowChainingListTerraModel, model)
 	}
@@ -2146,59 +2139,13 @@ func ConvertWorkflowChainingToAPI(ctx context.Context, chainingObj types.List) (
 			WorkflowId:      chainingModel.WorkflowId.ValueStringPointer(),
 		}
 		if s := chainingModel.WorkflowRunPayload.ValueString(); s != "" {
-			entry.WorkflowRunPayload = JSONStringToInterface(s)
+			entry.WorkflowRunPayload = expanders.JSONStringToInterface(s)
 		}
 		if s := chainingModel.StackRunPayload.ValueString(); s != "" {
-			entry.StackRunPayload = JSONStringToInterface(s)
+			entry.StackRunPayload = expanders.JSONStringToInterface(s)
 		}
 		wfChainingAPIModel = append(wfChainingAPIModel, entry)
 	}
 
 	return wfChainingAPIModel, nil
-}
-
-// TODO: move JSONStringToInterface to expanders
-func JSONStringToInterface(s string) any {
-	if s == "" {
-		return nil
-	}
-	var v any
-	_ = json.Unmarshal([]byte(s), &v)
-	return v
-}
-
-// TODO: move JSONInterfaceToString to flattners
-func JSONInterfaceToString(v interface{}) types.String {
-	if v == nil {
-		return types.StringNull()
-	}
-	b, err := json.Marshal(v)
-	if err != nil {
-		return types.StringNull()
-	}
-	return types.StringValue(string(b))
-}
-
-// TODO: move JSONInterfaceToStringDefault to flattners
-func JSONInterfaceToStringDefault(v interface{}) types.String {
-	if v == nil {
-		return types.StringValue("")
-	}
-	b, err := json.Marshal(v)
-	if err != nil {
-		return types.StringNull()
-	}
-	return types.StringValue(string(b))
-}
-
-// TODO: move ParseJSONToMap to expanders
-func ParseJSONToMap(jsonStr string) map[string]interface{} {
-	var result map[string]interface{}
-	if jsonStr == "" {
-		return result
-	}
-	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
-		return make(map[string]interface{})
-	}
-	return result
 }

@@ -462,7 +462,7 @@ func convertVcsConfigToAPIModel(ctx context.Context, vcsConfigObj types.Object) 
 		result.IacInputData = &sgsdkgo.IacInputData{
 			SchemaId:   iacInputDataModel.SchemaId.ValueStringPointer(),
 			SchemaType: sgsdkgo.IacInputDataSchemaTypeEnum(iacInputDataModel.SchemaType.ValueString()),
-			Data:       workflowtemplaterevision.ParseJSONToMap(iacInputDataModel.Data.ValueString()),
+			Data:       expanders.ParseJSONToMap(iacInputDataModel.Data.ValueString()),
 		}
 	}
 
@@ -540,8 +540,8 @@ func convertWorkflowChainingFromAPI(ctx context.Context, wfChainingList []workfl
 			WorkflowGroupId:    flatteners.String(c.WorkflowGroupId),
 			StackId:            flatteners.StringPtr(c.StackId),
 			WorkflowId:         flatteners.StringPtr(c.WorkflowId),
-			WorkflowRunPayload: workflowtemplaterevision.JSONInterfaceToStringDefault(c.WorkflowRunPayload),
-			StackRunPayload:    workflowtemplaterevision.JSONInterfaceToStringDefault(c.StackRunPayload),
+			WorkflowRunPayload: flatteners.JSONInterfaceToStringDefault(c.WorkflowRunPayload),
+			StackRunPayload:    flatteners.JSONInterfaceToStringDefault(c.StackRunPayload),
 		})
 	}
 
