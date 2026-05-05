@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
 
-type workflowResourceModel struct {
+type WorkflowResourceModel struct {
 	Id                        types.String `tfsdk:"id"`
 	WorkflowGroupId           types.String `tfsdk:"workflow_group_id"`
 	ResourceName              types.String `tfsdk:"resource_name"`
@@ -37,7 +37,7 @@ type workflowResourceModel struct {
 	WfStepsConfig             types.List   `tfsdk:"wf_steps_config"`
 }
 
-func (m workflowResourceModel) AttributeTypes(ctx context.Context) map[string]attr.Type {
+func (m WorkflowResourceModel) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
 		"id":                           types.StringType,
 		"workflow_group_id":            types.StringType,
@@ -145,7 +145,7 @@ func (m VcsConfigModel) AttributeTypes(ctx context.Context) map[string]attr.Type
 // ToAPIModel
 // ---------------------------------------------------------------------------
 
-func (m workflowResourceModel) ToAPIModel(ctx context.Context) (*sgworkflows.Workflow, diag.Diagnostics) {
+func (m WorkflowResourceModel) ToAPIModel(ctx context.Context) (*sgworkflows.Workflow, diag.Diagnostics) {
 	tags, diags := expanders.StringList(ctx, m.Tags)
 	if diags.HasError() {
 		return nil, diags
@@ -192,6 +192,22 @@ func (m workflowResourceModel) ToAPIModel(ctx context.Context) (*sgworkflows.Wor
 	miniSteps, diags := workflowtemplaterevision.ConvertMinistepsToAPI(ctx, m.MiniSteps)
 	if diags.HasError() {
 		return nil, diags
+	}
+
+	// This ensures that "" is not sent in the payload while making a call to
+	// update the workflow since webhook secret cannot be null and it is not allowed in
+	// the api.
+	//
+	// Since in workflow webhook secret is a optional & computed field in provider schema
+	// it's has to be set after apply else it will complain that the attribute is unknown.
+	// Therefore if the API returns nil for this attribute we set it to "".
+	if miniSteps != nil && miniSteps.Webhooks != nil {
+		w := miniSteps.Webhooks
+		w.APPROVAL_REQUIRED = nilifyEmptyWebhookSecrets(w.APPROVAL_REQUIRED)
+		w.CANCELLED = nilifyEmptyWebhookSecrets(w.CANCELLED)
+		w.COMPLETED = nilifyEmptyWebhookSecrets(w.COMPLETED)
+		w.DRIFT_DETECTED = nilifyEmptyWebhookSecrets(w.DRIFT_DETECTED)
+		w.ERRORED = nilifyEmptyWebhookSecrets(w.ERRORED)
 	}
 
 	userSchedules, diags := workflowtemplaterevision.ConvertUserSchedulesToAPIModel(ctx, m.UserSchedules)
@@ -254,7 +270,7 @@ func (m workflowResourceModel) ToAPIModel(ctx context.Context) (*sgworkflows.Wor
 	}, nil
 }
 
-func (m workflowResourceModel) ToUpdateAPIModel(ctx context.Context) (*sgworkflows.PatchedWorkflow, diag.Diagnostics) {
+func (m WorkflowResourceModel) ToUpdateAPIModel(ctx context.Context) (*sgworkflows.PatchedWorkflow, diag.Diagnostics) {
 	workflow, diags := m.ToAPIModel(ctx)
 	if diags.HasError() {
 		return nil, diags
@@ -454,6 +470,195 @@ func convertVcsConfigToAPIModel(ctx context.Context, vcsConfigObj types.Object) 
 }
 
 // ---------------------------------------------------------------------------
+// convertMinistepsFromAPI (and helpers)
+// ---------------------------------------------------------------------------
+
+func nilifyEmptyWebhookSecrets(webhooks []workflowtemplaterevisions.MinistepsWebhooksSchema) []workflowtemplaterevisions.MinistepsWebhooksSchema {
+	for i := range webhooks {
+		if webhooks[i].WebhookSecret != nil && *webhooks[i].WebhookSecret == "" {
+			webhooks[i].WebhookSecret = nil
+		}
+	}
+	return webhooks
+}
+
+func convertNotificationRecipientsFromAPI(ctx context.Context, recipients []workflowtemplaterevisions.MinistepsNotificationRecepients) (types.List, diag.Diagnostics) {
+	elemType := types.ObjectType{AttrTypes: workflowtemplaterevision.MinistepsNotificationRecipientsModel{}.AttributeTypes()}
+	if recipients == nil {
+		return types.ListValueMust(elemType, []attr.Value{}), nil
+	}
+
+	models := []workflowtemplaterevision.MinistepsNotificationRecipientsModel{}
+	for _, r := range recipients {
+		recipientsList, diags := types.ListValueFrom(ctx, types.StringType, r.Recipients)
+		if diags.HasError() {
+			return types.ListNull(elemType), diags
+		}
+		models = append(models, workflowtemplaterevision.MinistepsNotificationRecipientsModel{
+			Recipients: recipientsList,
+		})
+	}
+
+	list, diags := types.ListValueFrom(ctx, elemType, models)
+	if diags.HasError() {
+		return types.ListNull(elemType), diags
+	}
+	return list, nil
+}
+
+func convertWebhookFromAPI(ctx context.Context, webhooks []workflowtemplaterevisions.MinistepsWebhooksSchema) (types.List, diag.Diagnostics) {
+	elemType := types.ObjectType{AttrTypes: workflowtemplaterevision.MinistepsWebhooksModel{}.AttributeTypes()}
+	if webhooks == nil {
+		return types.ListValueMust(elemType, []attr.Value{}), nil
+	}
+
+	models := []workflowtemplaterevision.MinistepsWebhooksModel{}
+	for _, w := range webhooks {
+		models = append(models, workflowtemplaterevision.MinistepsWebhooksModel{
+			WebhookName:   flatteners.String(w.WebhookName),
+			WebhookUrl:    flatteners.String(w.WebhookUrl),
+			WebhookSecret: flatteners.StringPtrDefault(w.WebhookSecret),
+		})
+	}
+
+	list, diags := types.ListValueFrom(ctx, elemType, models)
+	if diags.HasError() {
+		return types.ListNull(elemType), diags
+	}
+	return list, nil
+}
+
+func convertWorkflowChainingFromAPI(ctx context.Context, wfChainingList []workflowtemplaterevisions.MinistepsWfChainingSchema) (types.List, diag.Diagnostics) {
+	elemType := types.ObjectType{AttrTypes: workflowtemplaterevision.MinistepsWorkflowChainingModel{}.AttributeTypes()}
+	if wfChainingList == nil {
+		return types.ListValueMust(elemType, []attr.Value{}), nil
+	}
+
+	models := []workflowtemplaterevision.MinistepsWorkflowChainingModel{}
+	for _, c := range wfChainingList {
+		models = append(models, workflowtemplaterevision.MinistepsWorkflowChainingModel{
+			WorkflowGroupId:    flatteners.String(c.WorkflowGroupId),
+			StackId:            flatteners.StringPtr(c.StackId),
+			WorkflowId:         flatteners.StringPtr(c.WorkflowId),
+			WorkflowRunPayload: workflowtemplaterevision.JSONInterfaceToStringDefault(c.WorkflowRunPayload),
+			StackRunPayload:    workflowtemplaterevision.JSONInterfaceToStringDefault(c.StackRunPayload),
+		})
+	}
+
+	list, diags := types.ListValueFrom(ctx, elemType, models)
+	if diags.HasError() {
+		return types.ListNull(elemType), diags
+	}
+	return list, nil
+}
+
+func convertMinistepsFromAPI(ctx context.Context, ministeps *workflowtemplaterevisions.Ministeps) (types.Object, diag.Diagnostics) {
+	ministepsModel := workflowtemplaterevision.MinistepsModel{}
+
+	buildEmailModel := func(email *workflowtemplaterevisions.MinistepsNotificationsEmail) (workflowtemplaterevision.MinistepsEmailModel, diag.Diagnostics) {
+		m := workflowtemplaterevision.MinistepsEmailModel{}
+		var src workflowtemplaterevisions.MinistepsNotificationsEmail
+		if email != nil {
+			src = *email
+		}
+		var d diag.Diagnostics
+		var err diag.Diagnostics
+		m.ApprovalRequired, err = convertNotificationRecipientsFromAPI(ctx, src.APPROVAL_REQUIRED)
+		d.Append(err...)
+		m.Cancelled, err = convertNotificationRecipientsFromAPI(ctx, src.CANCELLED)
+		d.Append(err...)
+		m.Completed, err = convertNotificationRecipientsFromAPI(ctx, src.COMPLETED)
+		d.Append(err...)
+		m.DriftDetected, err = convertNotificationRecipientsFromAPI(ctx, src.DRIFT_DETECTED)
+		d.Append(err...)
+		m.Errored, err = convertNotificationRecipientsFromAPI(ctx, src.ERRORED)
+		d.Append(err...)
+		return m, d
+	}
+
+	// Notifications
+	{
+		notificationsModel := workflowtemplaterevision.MinistepsNotificationsModel{}
+		var notifSrc *workflowtemplaterevisions.MinistepsNotificationsEmail
+		if ministeps != nil && ministeps.Notifications != nil {
+			notifSrc = ministeps.Notifications.Email
+		}
+		emailModel, diags := buildEmailModel(notifSrc)
+		if diags.HasError() {
+			return types.ObjectNull(workflowtemplaterevision.MinistepsModel{}.AttributeTypes()), diags
+		}
+		emailObj, diags := types.ObjectValueFrom(ctx, workflowtemplaterevision.MinistepsEmailModel{}.AttributeTypes(), emailModel)
+		if diags.HasError() {
+			return types.ObjectNull(workflowtemplaterevision.MinistepsModel{}.AttributeTypes()), diags
+		}
+		notificationsModel.Email = emailObj
+		notificationsObj, diags := types.ObjectValueFrom(ctx, workflowtemplaterevision.MinistepsNotificationsModel{}.AttributeTypes(), notificationsModel)
+		if diags.HasError() {
+			return types.ObjectNull(workflowtemplaterevision.MinistepsModel{}.AttributeTypes()), diags
+		}
+		ministepsModel.Notifications = notificationsObj
+	}
+
+	// Webhooks
+	{
+		webhooksModel := workflowtemplaterevision.MinistepsWebhooksContainerModel{}
+		var webhooksSrc workflowtemplaterevisions.MinistepsWebhooks
+		if ministeps != nil && ministeps.Webhooks != nil {
+			webhooksSrc = *ministeps.Webhooks
+		}
+		var d diag.Diagnostics
+		var err diag.Diagnostics
+		webhooksModel.ApprovalRequired, err = convertWebhookFromAPI(ctx, webhooksSrc.APPROVAL_REQUIRED)
+		d.Append(err...)
+		webhooksModel.Cancelled, err = convertWebhookFromAPI(ctx, webhooksSrc.CANCELLED)
+		d.Append(err...)
+		webhooksModel.Completed, err = convertWebhookFromAPI(ctx, webhooksSrc.COMPLETED)
+		d.Append(err...)
+		webhooksModel.DriftDetected, err = convertWebhookFromAPI(ctx, webhooksSrc.DRIFT_DETECTED)
+		d.Append(err...)
+		webhooksModel.Errored, err = convertWebhookFromAPI(ctx, webhooksSrc.ERRORED)
+		d.Append(err...)
+		if d.HasError() {
+			return types.ObjectNull(workflowtemplaterevision.MinistepsModel{}.AttributeTypes()), d
+		}
+		webhooksObj, diags := types.ObjectValueFrom(ctx, workflowtemplaterevision.MinistepsWebhooksContainerModel{}.AttributeTypes(), webhooksModel)
+		if diags.HasError() {
+			return types.ObjectNull(workflowtemplaterevision.MinistepsModel{}.AttributeTypes()), diags
+		}
+		ministepsModel.Webhooks = webhooksObj
+	}
+
+	// WfChaining
+	{
+		wfChainingModel := workflowtemplaterevision.MinistepsWfChainingContainerModel{}
+		var chainingSrc workflowtemplaterevisions.MinistepsWorkflowChaining
+		if ministeps != nil && ministeps.WfChaining != nil {
+			chainingSrc = *ministeps.WfChaining
+		}
+		var d diag.Diagnostics
+		var err diag.Diagnostics
+		wfChainingModel.Completed, err = convertWorkflowChainingFromAPI(ctx, chainingSrc.COMPLETED)
+		d.Append(err...)
+		wfChainingModel.Errored, err = convertWorkflowChainingFromAPI(ctx, chainingSrc.ERRORED)
+		d.Append(err...)
+		if d.HasError() {
+			return types.ObjectNull(workflowtemplaterevision.MinistepsModel{}.AttributeTypes()), d
+		}
+		wfChainingObj, diags := types.ObjectValueFrom(ctx, workflowtemplaterevision.MinistepsWfChainingContainerModel{}.AttributeTypes(), wfChainingModel)
+		if diags.HasError() {
+			return types.ObjectNull(workflowtemplaterevision.MinistepsModel{}.AttributeTypes()), diags
+		}
+		ministepsModel.WfChaining = wfChainingObj
+	}
+
+	ministepsObj, diags := types.ObjectValueFrom(ctx, workflowtemplaterevision.MinistepsModel{}.AttributeTypes(), ministepsModel)
+	if diags.HasError() {
+		return types.ObjectNull(workflowtemplaterevision.MinistepsModel{}.AttributeTypes()), diags
+	}
+	return ministepsObj, nil
+}
+
+// ---------------------------------------------------------------------------
 // convertTerraformConfigFromAPI
 // ---------------------------------------------------------------------------
 
@@ -620,9 +825,13 @@ func convertTerraformConfigFromAPI(ctx context.Context, terraformConfig *sgsdkgo
 // convertWorkflowFromAPI
 // ---------------------------------------------------------------------------
 
-func convertWorkflowFromAPI(ctx context.Context, response *sgworkflows.WorkflowReadResponse, workflowGroupId string) (workflowResourceModel, diag.Diagnostics) {
+func ConvertWorkflowFromAPI(ctx context.Context, response *sgworkflows.WorkflowReadResponse, workflowGroupId string) (WorkflowResourceModel, diag.Diagnostics) {
+	return convertWorkflowFromAPI(ctx, response, workflowGroupId)
+}
+
+func convertWorkflowFromAPI(ctx context.Context, response *sgworkflows.WorkflowReadResponse, workflowGroupId string) (WorkflowResourceModel, diag.Diagnostics) {
 	var allDiags diag.Diagnostics
-	model := workflowResourceModel{}
+	model := WorkflowResourceModel{}
 
 	wf := response.Msg
 	if wf == nil {
@@ -684,7 +893,7 @@ func convertWorkflowFromAPI(ctx context.Context, response *sgworkflows.WorkflowR
 	allDiags.Append(diags...)
 	model.WfStepsConfig = wfStepsConfigList
 
-	miniSteps, diags := workflowtemplaterevision.ConvertMinistepsFromAPI(ctx, wf.MiniSteps)
+	miniSteps, diags := convertMinistepsFromAPI(ctx, wf.MiniSteps)
 	allDiags.Append(diags...)
 	model.MiniSteps = miniSteps
 
