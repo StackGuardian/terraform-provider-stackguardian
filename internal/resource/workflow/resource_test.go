@@ -114,8 +114,8 @@ description = "updated desc"
 }
 
 func TestAccWorkflow_Basic_With_VCS_Config(t *testing.T) {
-	wfGrpName := "tf-provider-workflow-test-wfgrp"
-	resourceName := "tf-provider-workflow-basic"
+	wfGrpName := "tf-provider-workflow-test-vcs-config"
+	resourceName := "tf-provider-workflow"
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
@@ -175,7 +175,6 @@ func TestAccWorkflow_Basic_With_VCS_Config(t *testing.T) {
 func TestAccWorkflow_TerraformConfig(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-test-wfgrp-terraform-config"
 	resourceName := "tf-provider-workflow-basic-terraform-config"
-	updatedDescription := "Updated workflow description"
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
@@ -183,6 +182,27 @@ func TestAccWorkflow_TerraformConfig(t *testing.T) {
 	}
 	defer deleteWorkflowGroupFixture(wfGrpName)          // runs last (registered first)
 	defer deleteWorkflowFixture(wfGrpName, resourceName) // runs first (registered second)
+
+	terraform_config := `
+	terraform_config = {
+		pre_plan_wf_steps_config = [{
+			name = "test-step"
+			wf_step_template_id = "/sg-provider-test/taher-null-resource:%s"
+		}]
+
+		pre_plan_hooks = [
+			"%s"
+		]
+		
+		mount_points = [{
+			"source": "/source_dir"
+			"target": "%s"
+		}]		
+
+		managed_terraform_state = false
+		terraform_version = "v1.5.7"
+	}
+`
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -196,7 +216,7 @@ func TestAccWorkflow_TerraformConfig(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read
 			{
-				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", ""),
+				Config: testAccWorkflow(wfGrpName, resourceName, "TERRAFORM", fmt.Sprintf(terraform_config, "1", "sleep 3", "target_dir")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
@@ -205,11 +225,266 @@ func TestAccWorkflow_TerraformConfig(t *testing.T) {
 			},
 			// Update and Read
 			{
-				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", updatedDescription),
+				Config: testAccWorkflow(wfGrpName, resourceName, "TERRAFORM", fmt.Sprintf(terraform_config, "2", "echo sleep", "updated_dir")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "description", updatedDescription),
+				),
+			},
+		},
+	})
+}
+
+func TestAccWorkflow_WfStepsConfig(t *testing.T) {
+	wfGrpName := "tf-provider-workflow-test-wfsteps-wfgrp"
+	resourceName := "tf-provider-workflow-wfsteps"
+
+	err := createWorkflowGroupFixture(wfGrpName)
+	if err != nil {
+		t.Errorf("failed to create workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(wfGrpName)
+	defer deleteWorkflowFixture(wfGrpName, resourceName)
+
+	wf_steps_config := `
+	wf_steps_config = [
+		{
+			name                = "test-step"
+			wf_step_template_id = "/stackguardian/terraform:11"
+			wf_step_input_data  = {
+				schema_type = "FORM_JSONSCHEMA"
+				data        = jsonencode({
+					terraformVersion      = "1.3.5"
+					managedTerraformState = false
+					terraformAction       = "plan-destroy"
+				})
+			}
+			approval = false
+			timeout  = 2100
+		},
+		{
+			name                = "calls"
+			wf_step_template_id = "/demo-org/ansible:6"
+			wf_step_input_data  = {
+				schema_type = "FORM_JSONSCHEMA"
+				data        = jsonencode({
+					playbookPath     = "playbook.yaml"
+					captureOutputs   = true
+					ansibleLocalhost = false
+					ansibleAction    = "run"
+				})
+			}
+			approval = false
+			timeout  = 2100
+		}
+	]
+`
+
+	wf_steps_config_updated := `
+	wf_steps_config = [
+		{
+			name                = "calls"
+			wf_step_template_id = "/demo-org/ansible:6"
+			wf_step_input_data  = {
+				schema_type = "FORM_JSONSCHEMA"
+				data        = jsonencode({
+					playbookPath     = "updated-playbook.yaml"
+					captureOutputs   = true
+					ansibleLocalhost = false
+					ansibleAction    = "run"
+				})
+			}
+			approval = false
+			timeout  = 3600
+		}
+	]
+`
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			// Create and Read
+			{
+				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", wf_steps_config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
+					resource.TestCheckResourceAttrSet("stackguardian_workflow.test", "id"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "wf_steps_config.#", "2"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "wf_steps_config.0.name", "test-step"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "wf_steps_config.0.wf_step_template_id", "/stackguardian/terraform:11"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "wf_steps_config.1.name", "calls"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "wf_steps_config.1.wf_step_template_id", "/demo-org/ansible:6"),
+				),
+			},
+			// Update and Read
+			{
+				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", wf_steps_config_updated),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "wf_steps_config.#", "1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "wf_steps_config.0.timeout", "3600"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccWorkflow_MiniSteps(t *testing.T) {
+	wfGrpName := "tf-provider-workflow-test-ministeps-wfgrp"
+	resourceName := "tf-provider-workflow-ministeps"
+
+	err := createWorkflowGroupFixture(wfGrpName)
+	if err != nil {
+		t.Errorf("failed to create workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(wfGrpName)
+	defer deleteWorkflowFixture(wfGrpName, resourceName)
+
+	mini_steps_config := `
+	mini_steps = {
+		webhooks = {
+			completed = [
+				{
+					webhook_name = "test_webhook"
+					webhook_url  = "https://www.myservice.com/ping/"
+				}
+			]
+			drift_detected = []
+			errored        = []
+		}
+		notifications = {
+			email = {
+				approval_required = []
+				cancelled         = []
+				completed         = []
+				errored = [
+					{
+						recipients = ["taherkathanawala@stackguardian.io"]
+					}
+				]
+			}
+		}
+		wf_chaining = {
+			completed = [
+				{
+					workflow_group_id = "ansible"
+					workflow_id       = "ansible-workflow"
+					stack_id          = ""
+				}
+			]
+			errored = [
+				{
+					workflow_group_id    = "test-cli-driven-workflow"
+					workflow_id          = "test-cli-driven-workflow"
+					workflow_run_payload = jsonencode({
+						TerraformAction = {
+							action = "apply"
+						}
+					})
+					stack_id = ""
+				}
+			]
+		}
+	}
+`
+
+	mini_steps_config_updated := `
+	mini_steps = {
+		webhooks = {
+			completed = [
+				{
+					webhook_name = "test_webhook"
+					webhook_url  = "https://www.myservice.com/ping/updated/"
+				}
+			]
+			drift_detected = []
+			errored        = []
+		}
+		notifications = {
+			email = {
+				approval_required = []
+				cancelled         = []
+				completed         = []
+				errored = [
+					{
+						recipients = ["taherkathanawala@stackguardian.io", "second@stackguardian.io"]
+					}
+				]
+			}
+		}
+		wf_chaining = {
+			completed = [
+				{
+					workflow_group_id = "ansible"
+					workflow_id       = "ansible-workflow"
+					stack_id          = ""
+				}
+			]
+			errored = [
+				{
+					workflow_group_id    = "test-cli-driven-workflow"
+					workflow_id          = "test-cli-driven-workflow"
+					workflow_run_payload = jsonencode({
+						TerraformAction = {
+							action = "apply"
+						}
+					})
+					stack_id = ""
+				}
+			]
+		}
+	}
+`
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			// Create and Read
+			{
+				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", mini_steps_config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
+					resource.TestCheckResourceAttrSet("stackguardian_workflow.test", "id"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.#", "1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.0.webhook_name", "test_webhook"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.0.webhook_url", "https://www.myservice.com/ping/"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.notifications.email.errored.#", "1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.notifications.email.errored.0.recipients.#", "1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.notifications.email.errored.0.recipients.0", "taherkathanawala@stackguardian.io"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.wf_chaining.completed.#", "1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.wf_chaining.completed.0.workflow_group_id", "ansible"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.wf_chaining.completed.0.workflow_id", "ansible-workflow"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.wf_chaining.errored.#", "1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.wf_chaining.errored.0.workflow_group_id", "test-cli-driven-workflow"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.wf_chaining.errored.0.workflow_id", "test-cli-driven-workflow"),
+				),
+			},
+			// Update and Read
+			{
+				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", mini_steps_config_updated),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.0.webhook_url", "https://www.myservice.com/ping/updated/"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.notifications.email.errored.0.recipients.#", "2"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.notifications.email.errored.0.recipients.1", "second@stackguardian.io"),
 				),
 			},
 		},

@@ -54,7 +54,7 @@ func (r *workflowResource) Configure(_ context.Context, req resource.ConfigureRe
 }
 
 func (r *workflowResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan workflowResourceModel
+	var plan WorkflowResourceModel
 
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -93,7 +93,7 @@ func (r *workflowResource) Create(ctx context.Context, req resource.CreateReques
 }
 
 func (r *workflowResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state workflowResourceModel
+	var state WorkflowResourceModel
 
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -118,8 +118,8 @@ func (r *workflowResource) Read(ctx context.Context, req resource.ReadRequest, r
 }
 
 func (r *workflowResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan workflowResourceModel
-	var state workflowResourceModel
+	var plan WorkflowResourceModel
+	var state WorkflowResourceModel
 
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -166,7 +166,7 @@ func (r *workflowResource) Update(ctx context.Context, req resource.UpdateReques
 }
 
 func (r *workflowResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state workflowResourceModel
+	var state WorkflowResourceModel
 
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -186,7 +186,7 @@ func (r *workflowResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 		return
 	}
 
-	var plan workflowResourceModel
+	var plan WorkflowResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return

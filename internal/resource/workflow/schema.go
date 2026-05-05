@@ -20,6 +20,9 @@ import (
 var ministepsNotificationRecepients = schema.ListNestedAttribute{
 	Optional: true,
 	Computed: true,
+	PlanModifiers: []planmodifier.List{
+		listplanmodifier.UseStateForUnknown(),
+	},
 	NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
 			"recipients": schema.ListAttribute{
@@ -33,6 +36,10 @@ var ministepsNotificationRecepients = schema.ListNestedAttribute{
 
 var ministepsWebhooks = schema.ListNestedAttribute{
 	Optional: true,
+	Computed: true,
+	PlanModifiers: []planmodifier.List{
+		listplanmodifier.UseStateForUnknown(),
+	},
 	NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
 			"webhook_name": schema.StringAttribute{
@@ -47,6 +54,9 @@ var ministepsWebhooks = schema.ListNestedAttribute{
 				MarkdownDescription: constants.MiniStepsWebhookSecret,
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	},
@@ -54,6 +64,10 @@ var ministepsWebhooks = schema.ListNestedAttribute{
 
 var ministepsWorkflowChaining = schema.ListNestedAttribute{
 	Optional: true,
+	Computed: true,
+	PlanModifiers: []planmodifier.List{
+		listplanmodifier.UseStateForUnknown(),
+	},
 	NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
 			"workflow_group_id": schema.StringAttribute{
@@ -64,21 +78,33 @@ var ministepsWorkflowChaining = schema.ListNestedAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingStackId,
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"stack_run_payload": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingStackPayload,
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"workflow_id": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingWorkflowId,
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"workflow_run_payload": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingWorkflowPayload,
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	},
@@ -409,11 +435,17 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						MarkdownDescription: constants.MiniStepsNotifications,
 						Optional:            true,
 						Computed:            true,
+						PlanModifiers: []planmodifier.Object{
+							objectplanmodifier.UseStateForUnknown(),
+						},
 						Attributes: map[string]schema.Attribute{
 							"email": schema.SingleNestedAttribute{
 								MarkdownDescription: constants.MiniStepsNotificationsEmail,
 								Optional:            true,
 								Computed:            true,
+								PlanModifiers: []planmodifier.Object{
+									objectplanmodifier.UseStateForUnknown(),
+								},
 								Attributes: map[string]schema.Attribute{
 									"approval_required": ministepsNotificationRecepients,
 									"cancelled":         ministepsNotificationRecepients,
@@ -428,6 +460,9 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						MarkdownDescription: constants.MiniStepsWebhooks,
 						Optional:            true,
 						Computed:            true,
+						PlanModifiers: []planmodifier.Object{
+							objectplanmodifier.UseStateForUnknown(),
+						},
 						Attributes: map[string]schema.Attribute{
 							"approval_required": ministepsWebhooks,
 							"cancelled":         ministepsWebhooks,
@@ -440,6 +475,9 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:            true,
 						Computed:            true,
 						MarkdownDescription: constants.MiniStepsWorkflowChaining,
+						PlanModifiers: []planmodifier.Object{
+							objectplanmodifier.UseStateForUnknown(),
+						},
 						Attributes: map[string]schema.Attribute{
 							"completed": ministepsWorkflowChaining,
 							"errored":   ministepsWorkflowChaining,

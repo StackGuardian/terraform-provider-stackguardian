@@ -19,6 +19,7 @@ import (
 	stacktemplatedatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_template"
 	stacktemplaterevisiondatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_template_revision"
 	stackworkflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_workflow_outputs"
+	workflowdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow"
 	workflowgroupdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_group"
 	workflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_outputs"
 	workflowsteptemplatedatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_step_template"
@@ -225,6 +226,7 @@ func (p *stackguardianProvider) DataSources(_ context.Context) []func() datasour
 		workflowoutputs.NewDataSource,
 		connectordatasource.NewDataSource,
 		roleassignmentdatasource.NewDataSource,
+		workflowdatasource.NewDataSource,
 		workflowgroupdatasource.NewDataSource,
 		roledatasource.NewDataSource,
 		policydatasource.NewDataSource,
