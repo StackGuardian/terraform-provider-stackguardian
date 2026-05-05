@@ -154,7 +154,6 @@ var terraformConfigSchema = schema.SingleNestedAttribute{
 				Attributes: mount_point,
 			},
 		},
-		// TODO: confirm the description
 		"timeout": schema.Int64Attribute{
 			MarkdownDescription: constants.TerraformTimeout,
 			Optional:            true,
@@ -288,7 +287,6 @@ var mount_point = map[string]schema.Attribute{
 		MarkdownDescription: constants.MountPointTarget,
 		Optional:            true,
 	},
-	// TODO: confirm the description
 	"read_only": schema.BoolAttribute{
 		MarkdownDescription: constants.MountPointReadOnly,
 		Optional:            true,
@@ -420,7 +418,6 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 					Attributes: environmentVariables,
 				},
 			},
-			// TODO: Update descriptions for encoded_data and ui_schema_data
 			"input_schemas": schema.ListNestedAttribute{
 				MarkdownDescription: constants.WorkflowTemplateRevisionInputSchemas,
 				Optional:            true,
