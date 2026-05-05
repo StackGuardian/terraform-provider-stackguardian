@@ -412,6 +412,10 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				MarkdownDescription: "Type of workflow (e.g., Terraform, Ansible, etc.).",
 				Required:            true,
 			},
+			"upgrade_mode": schema.StringAttribute{
+				MarkdownDescription: "Controls how the workflow is updated when the underlying template changes. Accepted values: `RESET_TO_TEMPLATE`, `PRESERVE_SETTINGS`.",
+				Optional:            true,
+			},
 			"environment_variables": schema.ListNestedAttribute{
 				MarkdownDescription: "Environment variables for the workflow.",
 				Optional:            true,
