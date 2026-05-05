@@ -6,8 +6,10 @@ import (
 	"strings"
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
+	sgworkflows "github.com/StackGuardian/sg-sdk-go/workflows"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	workflowtemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template_revision"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -142,7 +144,18 @@ func (r *workflowResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	_, err := r.client.Workflows.UpdateWorkflow(ctx, r.org_name, id, workflowGroupId, payload)
+	var upgradeMode *sgworkflows.UpgradeModeEnum
+	if !plan.UpgradeMode.IsNull() && !plan.UpgradeMode.IsUnknown() {
+		mode, err := sgworkflows.NewUpgradeModeEnumFromString(plan.UpgradeMode.ValueString())
+		if err != nil {
+			resp.Diagnostics.Append(diag.NewErrorDiagnostic("Invalid upgrade mode", fmt.Sprintf("%s upgrade mode is not valid", plan.UpgradeMode.ValueString())))
+			return
+		}
+
+		upgradeMode = &mode
+	}
+
+	_, err := r.client.Workflows.UpdateWorkflow(ctx, r.org_name, id, workflowGroupId, upgradeMode, payload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error updating workflow", "Error in updating workflow API call: "+err.Error())

@@ -619,10 +619,19 @@ func TestAccWorkflow_TemplateRevisionUpgrade(t *testing.T) {
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
-	//templateId := "/sg-provider-test/testing-provider:1"
-	//updatedTemplateId := "/sg-provider-test/testing-provider:3"
 	templateId := "/sg-provider-test/testing-provider-postman:1"
 	updatedTemplateId := "/sg-provider-test/testing-provider-postman:2"
+
+	vcsConfig := func(id string) string {
+		return fmt.Sprintf(`
+vcs_config = {
+  iac_vcs_config = {
+    use_marketplace_template = true
+    iac_template_id          = "%s"
+  }
+}
+`, id)
+	}
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -633,45 +642,23 @@ func TestAccWorkflow_TemplateRevisionUpgrade(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create workflow pinned to revision 1
 			{
-				Config: testAccWorkflowConfigWithTemplateRevision(wfGrpName, resourceName, templateId),
+				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", vcsConfig(templateId)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow.upgrade", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.upgrade", "resource_name", resourceName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.upgrade", "vcs_config.iac_vcs_config.iac_template_id", templateId),
-					resource.TestCheckResourceAttrSet("stackguardian_workflow.upgrade", "id"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "vcs_config.iac_vcs_config.iac_template_id", templateId),
+					resource.TestCheckResourceAttrSet("stackguardian_workflow.test", "id"),
 				),
 			},
-			// Upgrade to revision 3
+			// Upgrade to revision 2
 			{
-				Config: testAccWorkflowConfigWithTemplateRevision(wfGrpName, resourceName, updatedTemplateId),
+				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", vcsConfig(updatedTemplateId)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow.upgrade", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.upgrade", "resource_name", resourceName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.upgrade", "vcs_config.iac_vcs_config.iac_template_id", updatedTemplateId),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "vcs_config.iac_vcs_config.iac_template_id", updatedTemplateId),
 				),
 			},
 		},
 	})
-}
-
-func testAccWorkflowConfigWithTemplateRevision(wfGrpName, resourceName string, templateId string) string {
-	return fmt.Sprintf(`
-resource "stackguardian_workflow" "upgrade" {
-  workflow_group_id = "%s"
-  resource_name     = "%s"
-  tags              = ["test", "terraform", "upgrade"]
-
-  vcs_config = {
-    iac_vcs_config = {
-      use_marketplace_template = true
-      iac_template_id          = "%s"
-    }
-  }
-  
-  user_schedules = [{
-	  cron = "0 12 ? * 2 *"
-	  state = "ENABLED"
-  }]
-}
-`, wfGrpName, resourceName, templateId)
 }

@@ -21,6 +21,7 @@ type WorkflowResourceModel struct {
 	ResourceName              types.String `tfsdk:"resource_name"`
 	Description               types.String `tfsdk:"description"`
 	WfType                    types.String `tfsdk:"wf_type"`
+	UpgradeMode               types.String `tfsdk:"upgrade_mode"`
 	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
 	MiniSteps                 types.Object `tfsdk:"mini_steps"`
 	RunnerConstraints         types.Object `tfsdk:"runner_constraints"`
@@ -44,6 +45,7 @@ func (m WorkflowResourceModel) AttributeTypes(ctx context.Context) map[string]at
 		"resource_name":                types.StringType,
 		"description":                  types.StringType,
 		"wf_type":                      types.StringType,
+		"upgrade_mode":                 types.StringType,
 		"environment_variables":        types.ListType{ElemType: types.ObjectType{AttrTypes: workflowtemplaterevision.EnvironmentVariableModel{}.AttributeTypes()}},
 		"mini_steps":                   types.ObjectType{AttrTypes: workflowtemplaterevision.MinistepsModel{}.AttributeTypes()},
 		"runner_constraints":           types.ObjectType{AttrTypes: workflowtemplaterevision.RunnerConstraintsModel{}.AttributeTypes()},
