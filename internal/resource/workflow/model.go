@@ -22,7 +22,6 @@ type workflowResourceModel struct {
 	Description               types.String `tfsdk:"description"`
 	WfType                    types.String `tfsdk:"wf_type"`
 	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
-	InputSchemas              types.List   `tfsdk:"input_schemas"`
 	MiniSteps                 types.Object `tfsdk:"mini_steps"`
 	RunnerConstraints         types.Object `tfsdk:"runner_constraints"`
 	Tags                      types.List   `tfsdk:"tags"`
@@ -34,7 +33,7 @@ type workflowResourceModel struct {
 	UserJobMemory             types.Int64  `tfsdk:"user_job_memory"`
 	VcsConfig                 types.Object `tfsdk:"vcs_config"`
 	TerraformConfig           types.Object `tfsdk:"terraform_config"`
-	DeploymentPlatformConfig  types.Object `tfsdk:"deployment_platform_config"`
+	DeploymentPlatformConfig  types.List   `tfsdk:"deployment_platform_config"`
 	WfStepsConfig             types.List   `tfsdk:"wf_steps_config"`
 }
 
@@ -46,7 +45,6 @@ func (m workflowResourceModel) AttributeTypes(ctx context.Context) map[string]at
 		"description":                  types.StringType,
 		"wf_type":                      types.StringType,
 		"environment_variables":        types.ListType{ElemType: types.ObjectType{AttrTypes: workflowtemplaterevision.EnvironmentVariableModel{}.AttributeTypes()}},
-		"input_schemas":                types.ListType{ElemType: types.ObjectType{AttrTypes: workflowtemplaterevision.InputSchemaModel{}.AttributeTypes()}},
 		"mini_steps":                   types.ObjectType{AttrTypes: workflowtemplaterevision.MinistepsModel{}.AttributeTypes()},
 		"runner_constraints":           types.ObjectType{AttrTypes: workflowtemplaterevision.RunnerConstraintsModel{}.AttributeTypes()},
 		"tags":                         types.ListType{ElemType: types.StringType},
@@ -58,7 +56,7 @@ func (m workflowResourceModel) AttributeTypes(ctx context.Context) map[string]at
 		"user_job_memory":              types.Int64Type,
 		"vcs_config":                   types.ObjectType{AttrTypes: VcsConfigModel{}.AttributeTypes(ctx)},
 		"terraform_config":             types.ObjectType{AttrTypes: workflowtemplaterevision.TerraformConfigModel{}.AttributeTypes()},
-		"deployment_platform_config":   types.ObjectType{AttrTypes: workflowtemplaterevision.DeploymentPlatformConfigModel{}.AttributeTypes()},
+		"deployment_platform_config":   types.ListType{ElemType: types.ObjectType{AttrTypes: workflowtemplaterevision.DeploymentPlatformConfigModel{}.AttributeTypes()}},
 		"wf_steps_config":              types.ListType{ElemType: types.ObjectType{AttrTypes: workflowtemplaterevision.WfStepsConfigModel{}.AttributeTypes()}},
 	}
 }
@@ -456,6 +454,169 @@ func convertVcsConfigToAPIModel(ctx context.Context, vcsConfigObj types.Object) 
 }
 
 // ---------------------------------------------------------------------------
+// convertTerraformConfigFromAPI
+// ---------------------------------------------------------------------------
+
+func convertTerraformConfigFromAPI(ctx context.Context, terraformConfig *sgsdkgo.TerraformConfig) (types.Object, diag.Diagnostics) {
+	nullObject := types.ObjectNull(workflowtemplaterevision.TerraformConfigModel{}.AttributeTypes())
+	if terraformConfig == nil {
+		return nullObject, nil
+	}
+
+	terraformVersion := flatteners.StringPtr(terraformConfig.TerraformVersion)
+	if terraformVersion.IsNull() || terraformVersion.IsUnknown() {
+		terraformVersion = types.StringValue("")
+	}
+
+	driftCheck := flatteners.BoolPtr(terraformConfig.DriftCheck)
+	if driftCheck.IsNull() || driftCheck.IsUnknown() {
+		driftCheck = types.BoolValue(false)
+	}
+
+	driftCron := flatteners.StringPtr(terraformConfig.DriftCron)
+	if driftCron.IsNull() || driftCron.IsUnknown() {
+		driftCron = types.StringValue("0 */6 * * ? *")
+	}
+
+	managedTerraformState := flatteners.BoolPtr(terraformConfig.ManagedTerraformState)
+	if managedTerraformState.IsNull() || managedTerraformState.IsUnknown() {
+		managedTerraformState = types.BoolValue(false)
+	}
+
+	approvalPreApply := flatteners.BoolPtr(terraformConfig.ApprovalPreApply)
+	if approvalPreApply.IsNull() || approvalPreApply.IsUnknown() {
+		approvalPreApply = types.BoolValue(false)
+	}
+
+	terraformPlanOptions := flatteners.StringPtr(terraformConfig.TerraformPlanOptions)
+	if terraformPlanOptions.IsNull() || terraformPlanOptions.IsUnknown() {
+		terraformPlanOptions = types.StringValue("")
+	}
+
+	terraformInitOptions := flatteners.StringPtr(terraformConfig.TerraformInitOptions)
+	if terraformInitOptions.IsNull() || terraformInitOptions.IsUnknown() {
+		terraformInitOptions = types.StringValue("")
+	}
+
+	timeout := flatteners.Int64Ptr(terraformConfig.Timeout)
+	if timeout.IsNull() || timeout.IsUnknown() {
+		timeout = types.Int64Value(0)
+	}
+
+	runPreInitHooksOnDrift := flatteners.BoolPtr(terraformConfig.RunPreInitHooksOnDrift)
+	if runPreInitHooksOnDrift.IsNull() || runPreInitHooksOnDrift.IsUnknown() {
+		runPreInitHooksOnDrift = types.BoolValue(false)
+	}
+
+	mountPointElemType := types.ObjectType{AttrTypes: workflowtemplaterevision.MountPointModel{}.AttributeTypes()}
+	wfStepsElemType := types.ObjectType{AttrTypes: workflowtemplaterevision.WfStepsConfigModel{}.AttributeTypes()}
+
+	terraformBinPath, diags := workflowtemplaterevision.ConvertMountPointListFromAPI(ctx, terraformConfig.TerraformBinPath)
+	if diags.HasError() {
+		return nullObject, diags
+	}
+	if terraformBinPath.IsNull() || terraformBinPath.IsUnknown() {
+		terraformBinPath = types.ListValueMust(mountPointElemType, []attr.Value{})
+	}
+
+	postApplyWfStepsConfig, diags := workflowtemplaterevision.ConvertWfStepsConfigListFromAPI(ctx, terraformConfig.PostApplyWfStepsConfig)
+	if diags.HasError() {
+		return nullObject, diags
+	}
+	if postApplyWfStepsConfig.IsNull() || postApplyWfStepsConfig.IsUnknown() {
+		postApplyWfStepsConfig = types.ListValueMust(wfStepsElemType, []attr.Value{})
+	}
+
+	preApplyWfStepsConfig, diags := workflowtemplaterevision.ConvertWfStepsConfigListFromAPI(ctx, terraformConfig.PreApplyWfStepsConfig)
+	if diags.HasError() {
+		return nullObject, diags
+	}
+	if preApplyWfStepsConfig.IsNull() || preApplyWfStepsConfig.IsUnknown() {
+		preApplyWfStepsConfig = types.ListValueMust(wfStepsElemType, []attr.Value{})
+	}
+
+	prePlanWfStepsConfig, diags := workflowtemplaterevision.ConvertWfStepsConfigListFromAPI(ctx, terraformConfig.PrePlanWfStepsConfig)
+	if diags.HasError() {
+		return nullObject, diags
+	}
+	if prePlanWfStepsConfig.IsNull() || prePlanWfStepsConfig.IsUnknown() {
+		prePlanWfStepsConfig = types.ListValueMust(wfStepsElemType, []attr.Value{})
+	}
+
+	postPlanWfStepsConfig, diags := workflowtemplaterevision.ConvertWfStepsConfigListFromAPI(ctx, terraformConfig.PostPlanWfStepsConfig)
+	if diags.HasError() {
+		return nullObject, diags
+	}
+	if postPlanWfStepsConfig.IsNull() || postPlanWfStepsConfig.IsUnknown() {
+		postPlanWfStepsConfig = types.ListValueMust(wfStepsElemType, []attr.Value{})
+	}
+
+	preInitHooks, diags := flatteners.ListOfStringToTerraformList(terraformConfig.PreInitHooks)
+	if diags.HasError() {
+		return nullObject, diags
+	}
+	if preInitHooks.IsNull() || preInitHooks.IsUnknown() {
+		preInitHooks = types.ListValueMust(types.StringType, []attr.Value{})
+	}
+
+	prePlanHooks, diags := flatteners.ListOfStringToTerraformList(terraformConfig.PrePlanHooks)
+	if diags.HasError() {
+		return nullObject, diags
+	}
+	if prePlanHooks.IsNull() || prePlanHooks.IsUnknown() {
+		prePlanHooks = types.ListValueMust(types.StringType, []attr.Value{})
+	}
+
+	postPlanHooks, diags := flatteners.ListOfStringToTerraformList(terraformConfig.PostPlanHooks)
+	if diags.HasError() {
+		return nullObject, diags
+	}
+	if postPlanHooks.IsNull() || postPlanHooks.IsUnknown() {
+		postPlanHooks = types.ListValueMust(types.StringType, []attr.Value{})
+	}
+
+	preApplyHooks, diags := flatteners.ListOfStringToTerraformList(terraformConfig.PreApplyHooks)
+	if diags.HasError() {
+		return nullObject, diags
+	}
+	if preApplyHooks.IsNull() || preApplyHooks.IsUnknown() {
+		preApplyHooks = types.ListValueMust(types.StringType, []attr.Value{})
+	}
+
+	postApplyHooks, diags := flatteners.ListOfStringToTerraformList(terraformConfig.PostApplyHooks)
+	if diags.HasError() {
+		return nullObject, diags
+	}
+	if postApplyHooks.IsNull() || postApplyHooks.IsUnknown() {
+		postApplyHooks = types.ListValueMust(types.StringType, []attr.Value{})
+	}
+
+	terraformConfigModel := workflowtemplaterevision.TerraformConfigModel{
+		TerraformVersion:       terraformVersion,
+		DriftCheck:             driftCheck,
+		DriftCron:              driftCron,
+		ManagedTerraformState:  managedTerraformState,
+		ApprovalPreApply:       approvalPreApply,
+		TerraformPlanOptions:   terraformPlanOptions,
+		TerraformInitOptions:   terraformInitOptions,
+		TerraformBinPath:       terraformBinPath,
+		Timeout:                timeout,
+		PostApplyWfStepsConfig: postApplyWfStepsConfig,
+		PreApplyWfStepsConfig:  preApplyWfStepsConfig,
+		PrePlanWfStepsConfig:   prePlanWfStepsConfig,
+		PostPlanWfStepsConfig:  postPlanWfStepsConfig,
+		PreInitHooks:           preInitHooks,
+		PrePlanHooks:           prePlanHooks,
+		PostPlanHooks:          postPlanHooks,
+		PreApplyHooks:          preApplyHooks,
+		PostApplyHooks:         postApplyHooks,
+		RunPreInitHooksOnDrift: runPreInitHooksOnDrift,
+	}
+
+	return types.ObjectValueFrom(ctx, workflowtemplaterevision.TerraformConfigModel{}.AttributeTypes(), terraformConfigModel)
+}
+
+// ---------------------------------------------------------------------------
 // convertWorkflowFromAPI
 // ---------------------------------------------------------------------------
 
@@ -505,7 +666,7 @@ func convertWorkflowFromAPI(ctx context.Context, response *sgworkflows.WorkflowR
 	allDiags.Append(diags...)
 	model.EnvironmentVariables = envVarsList
 
-	terraformConfig, diags := workflowtemplaterevision.ConvertTerraformConfigFromAPI(ctx, wf.TerraformConfig)
+	terraformConfig, diags := convertTerraformConfigFromAPI(ctx, wf.TerraformConfig)
 	allDiags.Append(diags...)
 	model.TerraformConfig = terraformConfig
 
@@ -538,8 +699,6 @@ func convertWorkflowFromAPI(ctx context.Context, response *sgworkflows.WorkflowR
 	vcsConfig, diags := convertVcsConfigFromAPIModel(ctx, wf.VcsConfig)
 	allDiags.Append(diags...)
 	model.VcsConfig = vcsConfig
-
-	model.InputSchemas = types.ListNull(types.ObjectType{AttrTypes: workflowtemplaterevision.InputSchemaModel{}.AttributeTypes()})
 
 	return model, allDiags
 }
