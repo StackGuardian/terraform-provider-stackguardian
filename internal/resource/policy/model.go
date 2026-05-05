@@ -162,8 +162,6 @@ func (m *policyVCSConfigModel) ToAPIModel() (*sgsdkgo.PolicyVcsConfig, diag.Diag
 			return nil, diags
 		}
 
-		// TODO: Implement logic for additional config
-
 		policyVCSConfigAPIModel.CustomSource, diags = policyCustomSourceModel.ToAPIModel()
 		if diags.HasError() {
 			return nil, diags
