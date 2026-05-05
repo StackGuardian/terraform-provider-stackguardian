@@ -479,7 +479,6 @@ func (m *WorkflowTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) 
 		UserJobMemory:             expanders.IntPtr(m.UserJobMemory.ValueInt64Pointer()),
 	}
 
-	// TODO:
 	deprecation, diags := ConvertDeprecationToAPIModel(ctx, m.Deprecation)
 	if diags.HasError() {
 		return nil, diags
@@ -602,7 +601,6 @@ func (m *WorkflowTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) 
 	return apiModel, nil
 }
 
-// TODO: Review Update function
 func (m *WorkflowTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Context) (*workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest, diag.Diagnostics) {
 	diagn := diag.Diagnostics{}
 
@@ -1044,35 +1042,11 @@ func ConvertWfStepsConfigListToAPI(ctx context.Context, wfStepsConfigList types.
 		}
 
 		// Handle EnvironmentVariables
-		// TODO: replace this with the ConvertEnvironmentVariablesToAPI
-		if !wfStep.EnvironmentVariables.IsNull() && !wfStep.EnvironmentVariables.IsUnknown() {
-			var envVarModels []EnvironmentVariableModel
-			diags := wfStep.EnvironmentVariables.ElementsAs(ctx, &envVarModels, false)
-			if diags.HasError() {
-				return nil, diags
-			}
-
-			envVars := make([]sgsdkgo.EnvVars, len(envVarModels))
-			for j, envVar := range envVarModels {
-				var configModel EnvironmentVariableConfigModel
-				diags := envVar.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
-					UnhandledNullAsEmpty:    true,
-					UnhandledUnknownAsEmpty: true,
-				})
-				if diags.HasError() {
-					return nil, diags
-				}
-				envVars[j] = sgsdkgo.EnvVars{
-					Kind: sgsdkgo.EnvVarsKindEnum(envVar.Kind.ValueString()),
-					Config: &sgsdkgo.EnvVarConfig{
-						VarName:   configModel.VarName.ValueString(),
-						SecretId:  configModel.SecretId.ValueStringPointer(),
-						TextValue: configModel.TextValue.ValueStringPointer(),
-					},
-				}
-			}
-			wfStepsConfigs[i].EnvironmentVariables = envVars
+		envVars, diags := ConvertEnvironmentVariablesToAPI(ctx, wfStep.EnvironmentVariables)
+		if diags.HasError() {
+			return nil, diags
 		}
+		wfStepsConfigs[i].EnvironmentVariables = envVars
 
 		// Handle MountPoints
 		if !wfStep.MountPoints.IsNull() && !wfStep.MountPoints.IsUnknown() {
@@ -1570,8 +1544,6 @@ func ConvertTerraformConfigFromAPI(ctx context.Context, terraformConfig *sgsdkgo
 		RunPreInitHooksOnDrift: flatteners.BoolPtr(terraformConfig.RunPreInitHooksOnDrift),
 	}
 
-	// TODO: Convert nested fields (TerraformBinPath, WfStepsConfigs, Hooks, Providers)
-
 	// terraform bin path
 	terraformBinTerraType, diags := ConvertMountPointListFromAPI(ctx, terraformConfig.TerraformBinPath)
 	if diags.HasError() {
@@ -1933,9 +1905,9 @@ func ConvertWorkflowChainingFromAPI(ctx context.Context, wfChainingList []workfl
 		model := MinistepsWorkflowChainingModel{
 			WorkflowGroupId:    flatteners.String(wfChaining.WorkflowGroupId),
 			StackId:            flatteners.StringPtr(wfChaining.StackId),
-			StackRunPayload:    flatteners.StringPtr(wfChaining.StackRunPayload),
 			WorkflowId:         flatteners.StringPtr(wfChaining.WorkflowId),
-			WorkflowRunPayload: flatteners.StringPtr(wfChaining.WorkflowRunPayload),
+			WorkflowRunPayload: JSONInterfaceToString(wfChaining.WorkflowRunPayload),
+			StackRunPayload:    JSONInterfaceToString(wfChaining.StackRunPayload),
 		}
 		workflowChainingListTerraModel = append(workflowChainingListTerraModel, model)
 	}
@@ -2168,18 +2140,58 @@ func ConvertWorkflowChainingToAPI(ctx context.Context, chainingObj types.List) (
 
 	wfChainingAPIModel := []workflowtemplaterevisions.MinistepsWfChainingSchema{}
 	for _, chainingModel := range chainingListModel {
-		wfChainingAPIModel = append(wfChainingAPIModel, workflowtemplaterevisions.MinistepsWfChainingSchema{
-			WorkflowGroupId:    chainingModel.WorkflowGroupId.ValueString(),
-			StackId:            chainingModel.StackId.ValueStringPointer(),
-			StackRunPayload:    chainingModel.StackRunPayload.ValueStringPointer(),
-			WorkflowId:         chainingModel.WorkflowId.ValueStringPointer(),
-			WorkflowRunPayload: chainingModel.WorkflowRunPayload.ValueStringPointer(),
-		})
+		entry := workflowtemplaterevisions.MinistepsWfChainingSchema{
+			WorkflowGroupId: chainingModel.WorkflowGroupId.ValueString(),
+			StackId:         chainingModel.StackId.ValueStringPointer(),
+			WorkflowId:      chainingModel.WorkflowId.ValueStringPointer(),
+		}
+		if s := chainingModel.WorkflowRunPayload.ValueString(); s != "" {
+			entry.WorkflowRunPayload = JSONStringToInterface(s)
+		}
+		if s := chainingModel.StackRunPayload.ValueString(); s != "" {
+			entry.StackRunPayload = JSONStringToInterface(s)
+		}
+		wfChainingAPIModel = append(wfChainingAPIModel, entry)
 	}
 
 	return wfChainingAPIModel, nil
 }
 
+// TODO: move JSONStringToInterface to expanders
+func JSONStringToInterface(s string) any {
+	if s == "" {
+		return nil
+	}
+	var v any
+	_ = json.Unmarshal([]byte(s), &v)
+	return v
+}
+
+// TODO: move JSONInterfaceToString to flattners
+func JSONInterfaceToString(v interface{}) types.String {
+	if v == nil {
+		return types.StringNull()
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return types.StringNull()
+	}
+	return types.StringValue(string(b))
+}
+
+// TODO: move JSONInterfaceToStringDefault to flattners
+func JSONInterfaceToStringDefault(v interface{}) types.String {
+	if v == nil {
+		return types.StringValue("")
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return types.StringNull()
+	}
+	return types.StringValue(string(b))
+}
+
+// TODO: move ParseJSONToMap to expanders
 func ParseJSONToMap(jsonStr string) map[string]interface{} {
 	var result map[string]interface{}
 	if jsonStr == "" {
