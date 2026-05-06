@@ -90,6 +90,7 @@ func (r *workflowResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	workflowTerraModel.WorkflowGroupId = plan.WorkflowGroupId
+	workflowTerraModel.UpgradeMode = plan.UpgradeMode
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &workflowTerraModel)...)
 }
@@ -115,6 +116,7 @@ func (r *workflowResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 	workflowTerraModel.WorkflowGroupId = state.WorkflowGroupId
+	workflowTerraModel.UpgradeMode = state.UpgradeMode
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &workflowTerraModel)...)
 }
@@ -174,6 +176,7 @@ func (r *workflowResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	workflowTerraModel.WorkflowGroupId = state.WorkflowGroupId
+	workflowTerraModel.UpgradeMode = plan.UpgradeMode
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &workflowTerraModel)...)
 }
@@ -209,6 +212,7 @@ func (r *workflowResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 		plan.TerraformConfig = types.ObjectNull(workflowtemplaterevision.TerraformConfigModel{}.AttributeTypes())
 		resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 	}
+
 }
 
 func (r *workflowResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
