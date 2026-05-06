@@ -663,17 +663,33 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"iac_input_data": schema.SingleNestedAttribute{
 						MarkdownDescription: "IaC input data for the workflow.",
 						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.Object{
+							objectplanmodifier.UseStateForUnknown(),
+						},
 						Attributes: map[string]schema.Attribute{
 							"schema_id": schema.StringAttribute{
 								Optional: true,
 								Computed: true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"schema_type": schema.StringAttribute{
-								Required: true,
+								MarkdownDescription: "Schema type for the input data. Allowed values are `FORM_JSONSCHEMA`, `RAW_HCL`, `RAW_JSON`, `NO_CODE_JSON`, `NONE`. Required when creating workflow using template and not defined in template.",
+								Optional:            true,
+								Computed:            true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"data": schema.StringAttribute{
-								MarkdownDescription: "Input data as a JSON string.",
-								Required:            true,
+								MarkdownDescription: "Input data as a JSON string. Required if creating workflow using template not defined in template.",
+								Optional:            true,
+								Computed:            true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 						},
 					},

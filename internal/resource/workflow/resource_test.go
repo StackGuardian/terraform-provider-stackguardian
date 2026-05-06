@@ -504,8 +504,42 @@ func TestAccWorkflow_WithMarketplaceTemplate(t *testing.T) {
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
-	//templateId := "/sg-provider-test/testing-provider:3"
-	templateId := "/sg-provider-test/testing-provider-postman:1"
+	templateId := "/sg-provider-test/testing-provider:3"
+
+	baseConfig := func(extraAttrs string) string {
+		return fmt.Sprintf(`
+%s
+
+terraform_config = {
+  terraform_version = "v1.5.7"
+}
+
+mini_steps = {
+  notifications = {
+    email = {
+      approval_required = [
+        { recipients = ["taher.kathanawala@gmail.com"] }
+      ]
+    }
+  }
+  webhooks = {
+    errored = [
+      {
+        webhook_name = "on_error"
+        webhook_url  = "https://www.myservice.com/error/"
+      }
+    ]
+  }
+}
+
+vcs_config = {
+  iac_vcs_config = {
+    use_marketplace_template = true
+    iac_template_id          = "%s"
+  }
+}
+`, extraAttrs, templateId)
+	}
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -516,94 +550,33 @@ func TestAccWorkflow_WithMarketplaceTemplate(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read
 			{
-				Config: testAccWorkflowConfigWithMarketplaceTemplate(wfGrpName, resourceName, templateId),
+				Config: testAccWorkflow(wfGrpName, resourceName, "TERRAFORM", baseConfig(`tags = ["test", "terraform", "marketplace"]`)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow.marketplace", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.marketplace", "resource_name", resourceName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.marketplace", "vcs_config.iac_vcs_config.use_marketplace_template", "true"),
-					resource.TestCheckResourceAttr("stackguardian_workflow.marketplace", "vcs_config.iac_vcs_config.iac_template_id", templateId),
-					resource.TestCheckResourceAttrSet("stackguardian_workflow.marketplace", "id"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "vcs_config.iac_vcs_config.use_marketplace_template", "true"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "vcs_config.iac_vcs_config.iac_template_id", templateId),
+					resource.TestCheckResourceAttrSet("stackguardian_workflow.test", "id"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.errored.#", "1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.errored.0.webhook_name", "on_error"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.errored.0.webhook_url", "https://www.myservice.com/error/"),
 				),
 			},
 			// Update and Read
 			{
-				Config: testAccWorkflowConfigWithMarketplaceTemplateUpdated(wfGrpName, resourceName, templateId),
+				Config: testAccWorkflow(wfGrpName, resourceName, "TERRAFORM", baseConfig(`
+description = "Updated marketplace workflow"
+tags        = ["test", "terraform", "marketplace", "updated"]
+`)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow.marketplace", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.marketplace", "resource_name", resourceName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.marketplace", "description", "Updated marketplace workflow"),
-					resource.TestCheckResourceAttr("stackguardian_workflow.marketplace", "vcs_config.iac_vcs_config.iac_template_id", templateId),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "description", "Updated marketplace workflow"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "vcs_config.iac_vcs_config.iac_template_id", templateId),
 				),
 			},
 		},
 	})
-}
-
-func testAccWorkflowConfigWithMarketplaceTemplate(wfGrpName, resourceName, templateId string) string {
-	return fmt.Sprintf(`
-resource "stackguardian_workflow" "marketplace" {
-  workflow_group_id = "%s"
-  resource_name     = "%s"
-  tags              = ["test", "terraform", "marketplace"]
-  
-  wf_type = "TERRAFORM"
-  
-  terraform_config = {
-	terraform_version = "v1.5.7"
-  }
-
-  mini_steps = {
-	notifications = {
-	  email = {
-	    approval_required = [
-		  {recepients = ["taher.kathanawala@gmail.com"]}
-		]
-	  }
-	}
-  }
-
-  vcs_config = {
-    iac_vcs_config = {
-      use_marketplace_template = true
-      iac_template_id          = "%s"
-    }
-  }
-}
-`, wfGrpName, resourceName, templateId)
-}
-
-func testAccWorkflowConfigWithMarketplaceTemplateUpdated(wfGrpName, resourceName, templateId string) string {
-	return fmt.Sprintf(`
-resource "stackguardian_workflow" "marketplace" {
-  workflow_group_id = "%s"
-  resource_name     = "%s"
-  description       = "Updated marketplace workflow"
-  tags              = ["test", "terraform", "marketplace", "updated"]
-
-  wf_type = "TERRAFORM"
-  
-  terraform_config = {
-	terraform_version = "v1.5.7"
-  }
-
-  mini_steps = {
-	notifications = {
-	  email = {
-	    approval_required = [
-		  {recepients = ["taher.k@gmail.com"]}
-		]
-	  }
-	}
-  }
-  
-  vcs_config = {
-    iac_vcs_config = {
-      use_marketplace_template = true
-      iac_template_id          = "%s"
-    }
-  }
-}
-`, wfGrpName, resourceName, templateId)
 }
 
 func TestAccWorkflow_TemplateRevisionUpgrade(t *testing.T) {
@@ -619,18 +592,120 @@ func TestAccWorkflow_TemplateRevisionUpgrade(t *testing.T) {
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
-	templateId := "/sg-provider-test/testing-provider-postman:1"
-	updatedTemplateId := "/sg-provider-test/testing-provider-postman:2"
+	templateId := "/sg-provider-test/testing-provider:1"
+	updatedTemplateId := "/sg-provider-test/testing-provider:4"
+	upgradeMode := "PRESERVE_SETTINGS"
+	//upgradeMode := "RESET_TO_TEMPLATE"
 
-	vcsConfig := func(id string) string {
+	config := func(templateID, description, envValue, webhookURL string) string {
 		return fmt.Sprintf(`
+description  = "%s"
+upgrade_mode = "%s"
+
+tags = ["test", "terraform", "upgrade"]
+
+context_tags = {
+  environment = "test"
+  team        = "sg-provider"
+}
+
+environment_variables = [
+  {
+    config = {
+      var_name   = "MY_ENV_VAR"
+      text_value = "%s"
+    }
+    kind = "PLAIN_TEXT"
+  },
+  {
+    config = {
+      var_name   = "ANOTHER_VAR"
+      text_value = "constant"
+    }
+    kind = "PLAIN_TEXT"
+  }
+]
+
+runner_constraints = {
+  type = "shared"
+}
+
+approvers                    = ["taher.kathanawala@stackguardian.io"]
+number_of_approvals_required = 1
+
+user_schedules = [
+  {
+    cron  = "0 12 ? * 2 *"
+    state = "ENABLED"
+    desc  = "Weekly Monday run"
+  }
+]
+
+mini_steps = {
+  webhooks = {
+    approval_required = []
+    cancelled         = []
+    completed = [
+      {
+        webhook_name = "on_complete"
+        webhook_url  = "%s"
+      }
+    ]
+    drift_detected = []
+    errored = [
+      {
+        webhook_name = "on_error"
+        webhook_url  = "https://www.myservice.com/error/"
+      }
+    ]
+  }
+  notifications = {
+    email = {
+      approval_required = []
+      cancelled         = []
+      completed = [
+        {
+          recipients = ["taher.kathanawala@stackguardian.io"]
+        }
+      ]
+      drift_detected = []
+      errored = [
+        {
+          recipients = ["taher.kathanawala@stackguardian.io", "team@stackguardian.io"]
+        }
+      ]
+    }
+  }
+  wf_chaining = {
+    completed = [
+      {
+        workflow_group_id = "ansible"
+        workflow_id       = "ansible-workflow"
+        stack_id          = ""
+      }
+    ]
+    errored = [
+      {
+        workflow_group_id    = "test-cli-driven-workflow"
+        workflow_id          = "test-cli-driven-workflow"
+        workflow_run_payload = jsonencode({
+          TerraformAction = {
+            action = "apply"
+          }
+        })
+        stack_id = ""
+      }
+    ]
+  }
+}
+
 vcs_config = {
   iac_vcs_config = {
     use_marketplace_template = true
     iac_template_id          = "%s"
   }
 }
-`, id)
+`, description, upgradeMode, envValue, webhookURL, templateID)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -640,23 +715,65 @@ vcs_config = {
 		},
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
-			// Create workflow pinned to revision 1
+			// Create with full config pinned to revision 1
 			{
-				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", vcsConfig(templateId)),
+				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM",
+					config(templateId, "workflow for template revision upgrade testing", "initial_value", "https://www.myservice.com/ping/")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "vcs_config.iac_vcs_config.iac_template_id", templateId),
 					resource.TestCheckResourceAttrSet("stackguardian_workflow.test", "id"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "description", "workflow for template revision upgrade testing"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "tags.#", "3"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "context_tags.environment", "test"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "context_tags.team", "sg-provider"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "environment_variables.#", "2"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "environment_variables.0.config.var_name", "MY_ENV_VAR"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "environment_variables.0.config.text_value", "initial_value"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "environment_variables.0.kind", "PLAIN_TEXT"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "environment_variables.1.config.var_name", "ANOTHER_VAR"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "runner_constraints.type", "shared"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "approvers.#", "1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "approvers.0", "taher.kathanawala@stackguardian.io"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "number_of_approvals_required", "1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "user_schedules.#", "1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "user_schedules.0.cron", "0 12 ? * 2 *"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "user_schedules.0.state", "ENABLED"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.#", "1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.0.webhook_name", "on_complete"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.0.webhook_url", "https://www.myservice.com/ping/"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.errored.#", "1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.errored.0.webhook_name", "on_error"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.notifications.email.completed.#", "1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.notifications.email.completed.0.recipients.0", "taher.kathanawala@stackguardian.io"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.notifications.email.errored.0.recipients.#", "2"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.wf_chaining.completed.#", "1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.wf_chaining.completed.0.workflow_group_id", "ansible"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.wf_chaining.completed.0.workflow_id", "ansible-workflow"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.wf_chaining.errored.#", "1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.wf_chaining.errored.0.workflow_group_id", "test-cli-driven-workflow"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "vcs_config.iac_vcs_config.iac_template_id", templateId),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "vcs_config.iac_vcs_config.use_marketplace_template", "true"),
 				),
 			},
-			// Upgrade to revision 2
+			// Upgrade to revision 2 — mutate several fields alongside the template bump
 			{
-				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", vcsConfig(updatedTemplateId)),
+				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM",
+					config(updatedTemplateId, "updated after template upgrade", "updated_value", "https://www.myservice.com/ping/updated/")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "description", "updated after template upgrade"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "environment_variables.0.config.text_value", "updated_value"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.0.webhook_url", "https://www.myservice.com/ping/updated/"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "vcs_config.iac_vcs_config.iac_template_id", updatedTemplateId),
+					// unchanged fields persist correctly after upgrade
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "environment_variables.1.config.var_name", "ANOTHER_VAR"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "runner_constraints.type", "shared"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "approvers.0", "taher.kathanawala@stackguardian.io"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "user_schedules.0.cron", "0 12 ? * 2 *"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.wf_chaining.completed.0.workflow_group_id", "ansible"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.notifications.email.errored.0.recipients.#", "2"),
 				),
 			},
 		},

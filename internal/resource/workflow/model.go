@@ -461,10 +461,12 @@ func convertVcsConfigToAPIModel(ctx context.Context, vcsConfigObj types.Object) 
 			return nil, diags
 		}
 
-		result.IacInputData = &sgsdkgo.IacInputData{
-			SchemaId:   iacInputDataModel.SchemaId.ValueStringPointer(),
-			SchemaType: sgsdkgo.IacInputDataSchemaTypeEnum(iacInputDataModel.SchemaType.ValueString()),
-			Data:       expanders.ParseJSONToMap(iacInputDataModel.Data.ValueString()),
+		if !iacInputDataModel.SchemaId.IsNull() {
+			result.IacInputData = &sgsdkgo.IacInputData{
+				SchemaId:   iacInputDataModel.SchemaId.ValueStringPointer(),
+				SchemaType: sgsdkgo.IacInputDataSchemaTypeEnum(iacInputDataModel.SchemaType.ValueString()),
+				Data:       expanders.ParseJSONToMap(iacInputDataModel.Data.ValueString()),
+			}
 		}
 	}
 
@@ -862,8 +864,7 @@ func convertWorkflowFromAPI(ctx context.Context, response *sgworkflows.WorkflowR
 	allDiags.Append(diags...)
 	model.Approvers = approvers
 
-	contextTagsElems := make(map[string]attr.Value, len(wf.ContextTags))
-	contextTags, diags := types.MapValue(types.StringType, contextTagsElems)
+	contextTags, diags := types.MapValueFrom(ctx, types.StringType, wf.ContextTags)
 	allDiags.Append(diags...)
 	model.ContextTags = contextTags
 
@@ -880,6 +881,9 @@ func convertWorkflowFromAPI(ctx context.Context, response *sgworkflows.WorkflowR
 	terraformConfig, diags := convertTerraformConfigFromAPI(ctx, wf.TerraformConfig)
 	allDiags.Append(diags...)
 	model.TerraformConfig = terraformConfig
+	if model.WfType.ValueString() == "CUSTOM" {
+		model.TerraformConfig = types.ObjectNull(workflowtemplaterevision.TerraformConfigModel{}.AttributeTypes())
+	}
 
 	runnerConstraints, diags := workflowtemplaterevision.ConvertRunnerConstraintsFromAPI(ctx, wf.RunnerConstraints)
 	allDiags.Append(diags...)
@@ -982,7 +986,7 @@ func convertVcsConfigFromAPIModel(ctx context.Context, vcsConfig *sgsdkgo.VcsCon
 		iacInputDataModel := IacInputDataModel{
 			SchemaId:   flatteners.StringPtr(vcsConfig.IacInputData.SchemaId),
 			SchemaType: types.StringValue(string(vcsConfig.IacInputData.SchemaType)),
-			Data:       types.StringNull(),
+			Data:       flatteners.JSONInterfaceToString(vcsConfig.IacInputData.Data),
 		}
 		var diags diag.Diagnostics
 		iacInputDataObj, diags = types.ObjectValueFrom(ctx, IacInputDataModel{}.AttributeTypes(ctx), iacInputDataModel)
@@ -990,7 +994,15 @@ func convertVcsConfigFromAPIModel(ctx context.Context, vcsConfig *sgsdkgo.VcsCon
 			return nullObj, diags
 		}
 	} else {
-		iacInputDataObj = types.ObjectNull(IacInputDataModel{}.AttributeTypes(ctx))
+		var diags diag.Diagnostics
+		iacInputDataObj, diags = types.ObjectValueFrom(ctx, IacInputDataModel{}.AttributeTypes(ctx), IacInputDataModel{
+			SchemaId:   types.StringValue(""),
+			SchemaType: types.StringValue("RAW_JSON"),
+			Data:       types.StringValue("{}"),
+		})
+		if diags.HasError() {
+			return nullObj, diags
+		}
 	}
 
 	vcsModel := VcsConfigModel{
