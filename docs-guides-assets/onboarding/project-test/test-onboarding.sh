@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# TODO: refactor with test-quickstart to have a single test entrypoint not dependent from
-# the location as the directory of the script.
-
 usage() {
     echo "Usage: $0 [-p <provider>] [-a <arch>] [-v <version>] [-f github-release-public|github-release-draft|local-build]" 1>&2;
     exit 1;

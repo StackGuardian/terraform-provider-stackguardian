@@ -54,6 +54,9 @@ internal/
   flatteners/               # SDK types → Terraform types
   provider/                 # Provider registration
   resource/<name>/          # Resource implementations
+  docs/                     # Directory for compiled docs. Not to be edited manually it is generated using tfplugindocs
+  docs-templates/           # Directory where you define what docs for resources and datasources will contain
+  docs-examples/            # Examples to be used in docs are defined here. These are referenced by the docs-templates
 ```
 
 ### Per-resource file pattern
@@ -67,6 +70,17 @@ Each resource in `internal/resource/<name>/` contains:
 | `model.go`         | Go structs with `tfsdk:` tags + `AttributeTypes()` methods + expander/flattener functions |
 | `resource_test.go` | Acceptance tests                                                                          |
 
+### Creating a Resource
+
+- Create a struct for a resource with `client sgclient.Client` and `org_name string`
+- Then create functions `NewResource` where you return the struct created in the previous resource
+- Create functions Metadata, Configure and ImportState
+- Then create the schema.go and define the schema for the resource based on a struct in the sdk. Ask for which struct to use.
+- Then create model.go where you will create a struct with terraform `types.*` as per the schema. This file will also contain conversions from SDK Go types to terraform `types.*` and vice versa. Use `Type conversion conventions` in this file as a guide.
+- Then define the CRUD methods Create, Update, Read and Delete.
+- Create function will first read the plan and convert the plan to api model, use the response from create to make the read call for the resource to build the terraform `types.*`. Similarly will be the case for Update.
+- Read and Delete are quite straight forward.
+
 ### Type conversion conventions
 
 - **Expanders** (`expanders/` + inside `model.go`): convert Terraform `types.*` → SDK Go types
@@ -77,6 +91,8 @@ Each resource in `internal/resource/<name>/` contains:
 - Use `flatteners.ListOfStringToTerraformList()` for `[]string → types.List`
 - Use `expanders.MapStringString()` for `types.Map → map[string]string`
 - Use `sgsdkgo.Optional(value)` and `sgsdkgo.Null[T]()` for optional SDK fields
+- There is a Terraform model struct for each resource. Each attribute in that resource if it is a complex type has it's own struct. That struct should have a ToAPIModel method to it and it should be used while converting from terraform `types.*` to SDK Go types. For simple types we use expanders
+- For the converting complex structs from SDK Go types to terraform `types.*` create a function with naming convention like `policiesConfigToTerraType` which accepts the SDK Go types and returns terraform `types.*` or terraform model in case it is a list where the SDK Go type needs to iterated and each value from it needs to be converted to terraform model before converting the list to terraform `types.*`.
 
 ### Model struct rules
 
@@ -157,18 +173,8 @@ for i, item := range items {
 
 ## SDK Location
 
-During development the SDK is replaced with a local path in `go.mod`:
-
-```
-replace github.com/StackGuardian/sg-sdk-go => /path/to/sg-sdk-go.git/feat-workflow-templates
-```
-
-Key SDK packages:
-
-- `github.com/StackGuardian/sg-sdk-go/sgsdkgo` — shared types (`EnvVars`, `WfStepsConfig`, `MountPoint`, `Optional`, `Null`, etc.)
-- `github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions` — revision-specific types and request structs
-
----
+- During development the SDK is replaced with a local path in `go.mod`: `/Users/taherkathanawala/workspace/sg-sdk-go.git/main`
+- Strictly while development use the sdk on this path and not the actual sdk being used.
 
 ## Provider Docs
 

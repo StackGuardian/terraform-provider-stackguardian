@@ -1,11 +1,10 @@
-package workflowtemplaterevision
+package workflow
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
-	workflowtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -20,6 +19,10 @@ import (
 
 var ministepsNotificationRecepients = schema.ListNestedAttribute{
 	Optional: true,
+	Computed: true,
+	PlanModifiers: []planmodifier.List{
+		listplanmodifier.UseStateForUnknown(),
+	},
 	NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
 			"recipients": schema.ListAttribute{
@@ -33,6 +36,10 @@ var ministepsNotificationRecepients = schema.ListNestedAttribute{
 
 var ministepsWebhooks = schema.ListNestedAttribute{
 	Optional: true,
+	Computed: true,
+	PlanModifiers: []planmodifier.List{
+		listplanmodifier.UseStateForUnknown(),
+	},
 	NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
 			"webhook_name": schema.StringAttribute{
@@ -46,6 +53,10 @@ var ministepsWebhooks = schema.ListNestedAttribute{
 			"webhook_secret": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWebhookSecret,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	},
@@ -53,6 +64,10 @@ var ministepsWebhooks = schema.ListNestedAttribute{
 
 var ministepsWorkflowChaining = schema.ListNestedAttribute{
 	Optional: true,
+	Computed: true,
+	PlanModifiers: []planmodifier.List{
+		listplanmodifier.UseStateForUnknown(),
+	},
 	NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
 			"workflow_group_id": schema.StringAttribute{
@@ -62,18 +77,34 @@ var ministepsWorkflowChaining = schema.ListNestedAttribute{
 			"stack_id": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingStackId,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"stack_run_payload": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingStackPayload,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"workflow_id": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingWorkflowId,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"workflow_run_payload": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingWorkflowPayload,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	},
@@ -345,67 +376,38 @@ var wfStepsConfig = schema.NestedAttributeObject{
 	},
 }
 
-// Schema defines the schema for the resource.
-func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+// Schema defines the schema for the workflow resource.
+func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a workflow template revision resource.",
+		MarkdownDescription: "Manages a workflow resource in a workflow group.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.Id,
-				Computed:            true,
-			},
-			"template_id": schema.StringAttribute{
-				MarkdownDescription: constants.WorkflowTemplateRevisionTemplateId,
 				Required:            true,
+			},
+			"workflow_group_id": schema.StringAttribute{
+				MarkdownDescription: constants.WorkflowWorkflowGroupId,
+				Required:            true,
+			},
+			"resource_name": schema.StringAttribute{
+				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "workflow"),
+				Optional:            true,
+				Computed:            true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow template revision"),
+				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow"),
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"alias": schema.StringAttribute{
-				MarkdownDescription: constants.TemplateRevisionAlias,
-				Optional:            true,
-			},
-			"notes": schema.StringAttribute{
-				MarkdownDescription: constants.TemplateRevisionNotes,
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"source_config_kind": schema.StringAttribute{
-				MarkdownDescription: constants.SourceConfigKind,
+			"wf_type": schema.StringAttribute{
+				MarkdownDescription: constants.WorkflowType,
 				Required:            true,
-			},
-			"is_public": schema.StringAttribute{
-				MarkdownDescription: constants.TemplateRevisionIsPublic,
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"deprecation": schema.SingleNestedAttribute{
-				MarkdownDescription: constants.TemplateRevisionDeprecation,
-				Optional:            true,
-				Attributes: map[string]schema.Attribute{
-					"effective_date": schema.StringAttribute{
-						MarkdownDescription: constants.TemplateRevisionDeprecationEffectiveDate,
-						Optional:            true,
-					},
-					"message": schema.StringAttribute{
-						MarkdownDescription: constants.DeprecationMessage,
-						Optional:            true,
-					},
-				},
 			},
 			"environment_variables": schema.ListNestedAttribute{
 				MarkdownDescription: constants.WfEnvironmentVariables,
@@ -418,45 +420,29 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 					Attributes: environmentVariables,
 				},
 			},
-			"input_schemas": schema.ListNestedAttribute{
-				MarkdownDescription: constants.WorkflowTemplateRevisionInputSchemas,
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
-				},
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"name": schema.StringAttribute{
-							MarkdownDescription: constants.InputSchemaName,
-							Optional:            true,
-						},
-						"type": schema.StringAttribute{
-							MarkdownDescription: constants.InputSchemaType,
-							Optional:            true,
-						},
-						"encoded_data": schema.StringAttribute{
-							MarkdownDescription: constants.InputSchemaEncodedData,
-							Optional:            true,
-						},
-						"ui_schema_data": schema.StringAttribute{
-							MarkdownDescription: constants.InputSchemaUISchemaData,
-							Optional:            true,
-						},
-					},
-				},
-			},
 			"mini_steps": schema.SingleNestedAttribute{
 				MarkdownDescription: constants.WfMiniSteps,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"notifications": schema.SingleNestedAttribute{
 						MarkdownDescription: constants.MiniStepsNotifications,
 						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.Object{
+							objectplanmodifier.UseStateForUnknown(),
+						},
 						Attributes: map[string]schema.Attribute{
 							"email": schema.SingleNestedAttribute{
 								MarkdownDescription: constants.MiniStepsNotificationsEmail,
 								Optional:            true,
+								Computed:            true,
+								PlanModifiers: []planmodifier.Object{
+									objectplanmodifier.UseStateForUnknown(),
+								},
 								Attributes: map[string]schema.Attribute{
 									"approval_required": ministepsNotificationRecepients,
 									"cancelled":         ministepsNotificationRecepients,
@@ -470,6 +456,10 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 					"webhooks": schema.SingleNestedAttribute{
 						MarkdownDescription: constants.MiniStepsWebhooks,
 						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.Object{
+							objectplanmodifier.UseStateForUnknown(),
+						},
 						Attributes: map[string]schema.Attribute{
 							"approval_required": ministepsWebhooks,
 							"cancelled":         ministepsWebhooks,
@@ -480,7 +470,11 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 					},
 					"wf_chaining": schema.SingleNestedAttribute{
 						Optional:            true,
+						Computed:            true,
 						MarkdownDescription: constants.MiniStepsWorkflowChaining,
+						PlanModifiers: []planmodifier.Object{
+							objectplanmodifier.UseStateForUnknown(),
+						},
 						Attributes: map[string]schema.Attribute{
 							"completed": ministepsWorkflowChaining,
 							"errored":   ministepsWorkflowChaining,
@@ -489,7 +483,12 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				},
 			},
 			"runner_constraints": schema.SingleNestedAttribute{
-				Optional: true,
+				MarkdownDescription: constants.WorkflowRunnerConstraints,
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
 						MarkdownDescription: constants.RunnerConstraintsType,
@@ -503,7 +502,7 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				},
 			},
 			"tags": schema.ListAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow template revision"),
+				MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow"),
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
@@ -514,6 +513,10 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 			"user_schedules": schema.ListNestedAttribute{
 				MarkdownDescription: constants.WfUserSchedules,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"cron": schema.StringAttribute{
@@ -531,12 +534,16 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 						"name": schema.StringAttribute{
 							MarkdownDescription: constants.UserScheduleName,
 							Optional:            true,
+							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 					},
 				},
 			},
 			"context_tags": schema.MapAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.ContextTags, "workflow template revision"),
+				MarkdownDescription: fmt.Sprintf(constants.ContextTags, "workflow"),
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
@@ -548,6 +555,10 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				MarkdownDescription: constants.WfApprovers,
 				ElementType:         types.StringType,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"number_of_approvals_required": schema.Int64Attribute{
 				MarkdownDescription: constants.WfNumberOfApprovals,
@@ -559,19 +570,132 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 			},
 			"user_job_cpu": schema.Int64Attribute{
 				MarkdownDescription: constants.WfUserJobCPU,
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"user_job_memory": schema.Int64Attribute{
 				MarkdownDescription: constants.WfUserJobMemory,
-				Required:            true,
-			},
-			"runtime_source": schema.SingleNestedAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.RuntimeSource, "revision"),
 				Optional:            true,
 				Computed:            true,
-				Attributes:          workflowtemplate.WorkflowTemplateRuntimeSourceConfig(),
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
+			},
+			"vcs_config": schema.SingleNestedAttribute{
+				MarkdownDescription: constants.WorkflowVcsConfig,
+				Optional:            true,
+				Computed:            true,
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseStateForUnknown(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"iac_vcs_config": schema.SingleNestedAttribute{
+						MarkdownDescription: constants.WorkflowIacVcsConfig,
+						Optional:            true,
+						Attributes: map[string]schema.Attribute{
+							"use_marketplace_template": schema.BoolAttribute{
+								MarkdownDescription: constants.WorkflowUseMarketplaceTemplate,
+								Required:            true,
+								PlanModifiers: []planmodifier.Bool{
+									boolplanmodifier.RequiresReplace(),
+								},
+							},
+							"iac_template_id": schema.StringAttribute{
+								MarkdownDescription: constants.WorkflowIacTemplateId,
+								Optional:            true,
+							},
+							"custom_source": schema.SingleNestedAttribute{
+								MarkdownDescription: constants.WorkflowCustomSource,
+								Optional:            true,
+								Attributes: map[string]schema.Attribute{
+									"source_config_dest_kind": schema.StringAttribute{
+										MarkdownDescription: constants.RuntimeSourceDestKind,
+										Required:            true,
+									},
+									"config": schema.SingleNestedAttribute{
+										MarkdownDescription: constants.RuntimeSourceConfig,
+										Required:            true,
+										Attributes: map[string]schema.Attribute{
+											"is_private": schema.BoolAttribute{
+												MarkdownDescription: constants.RuntimeSourceConfigIsPrivate,
+												Optional:            true,
+											},
+											"auth": schema.StringAttribute{
+												MarkdownDescription: constants.RuntimeSourceConfigAuth,
+												Optional:            true,
+												Sensitive:           true,
+											},
+											"working_dir": schema.StringAttribute{
+												MarkdownDescription: constants.RuntimeSourceConfigWorkingDir,
+												Optional:            true,
+											},
+											"git_sparse_checkout_config": schema.StringAttribute{
+												MarkdownDescription: constants.RuntimeSourceConfigGitSparse,
+												Optional:            true,
+											},
+											"git_core_auto_crlf": schema.BoolAttribute{
+												MarkdownDescription: constants.RuntimeSourceConfigGitCoreCRLF,
+												Optional:            true,
+												Computed:            true,
+												PlanModifiers: []planmodifier.Bool{
+													boolplanmodifier.UseStateForUnknown(),
+												},
+											},
+											"ref": schema.StringAttribute{
+												MarkdownDescription: constants.RuntimeSourceConfigRef,
+												Optional:            true,
+											},
+											"repo": schema.StringAttribute{
+												MarkdownDescription: constants.RuntimeSourceConfigRepo,
+												Optional:            true,
+											},
+											"include_sub_module": schema.BoolAttribute{
+												MarkdownDescription: constants.RuntimeSourceConfigIncludeSubmodule,
+												Optional:            true,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					"iac_input_data": schema.SingleNestedAttribute{
+						MarkdownDescription: constants.WorkflowIacInputData,
+						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.Object{
+							objectplanmodifier.UseStateForUnknown(),
+						},
+						Attributes: map[string]schema.Attribute{
+							"schema_id": schema.StringAttribute{
+								MarkdownDescription: constants.WorkflowIacInputDataSchemaId,
+								Optional:            true,
+								Computed:            true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
+							},
+							"schema_type": schema.StringAttribute{
+								MarkdownDescription: "Schema type for the input data. Allowed values are `FORM_JSONSCHEMA`, `RAW_HCL`, `RAW_JSON`, `NO_CODE_JSON`, `NONE`. Required when creating workflow using template and not defined in template.",
+								Optional:            true,
+								Computed:            true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
+							},
+							"data": schema.StringAttribute{
+								MarkdownDescription: "Input data as a JSON string. Required if creating workflow using template not defined in template.",
+								Optional:            true,
+								Computed:            true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
+							},
+						},
+					},
 				},
 			},
 			"terraform_config": terraformConfigSchema,

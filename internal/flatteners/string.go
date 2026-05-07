@@ -32,3 +32,11 @@ func StringPtr(in *string) basetypes.StringValue {
 	}
 	return String(*in)
 }
+
+func StringPtrDefault(in *string) basetypes.StringValue {
+	if in == nil {
+		return String("")
+	}
+
+	return String(*in)
+}
