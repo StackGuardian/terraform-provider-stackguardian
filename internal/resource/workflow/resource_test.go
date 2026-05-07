@@ -53,8 +53,7 @@ func testAccWorkflow(wfGrpName, resourceName, wf_type, additionalConfig string) 
 	return fmt.Sprintf(`
 resource "stackguardian_workflow" "test" {
   workflow_group_id = "%s"
-  resource_name     = "%s"
-  
+  id      = "%s"
   wf_type = "%s"
   
   %s
@@ -96,8 +95,7 @@ description = "updated desc"
 				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", terraform_config),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
-					resource.TestCheckResourceAttrSet("stackguardian_workflow.test", "id"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
 				),
 			},
 			// Update and Read
@@ -105,7 +103,7 @@ description = "updated desc"
 				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", update_terraform_config),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "description", "updated desc"),
 				),
 			},
@@ -155,8 +153,7 @@ func TestAccWorkflow_Basic_With_VCS_Config(t *testing.T) {
 				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", fmt.Sprintf(terraform_config, "test")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
-					resource.TestCheckResourceAttrSet("stackguardian_workflow.test", "id"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
 				),
 			},
 			// Update and Read
@@ -164,7 +161,7 @@ func TestAccWorkflow_Basic_With_VCS_Config(t *testing.T) {
 				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", fmt.Sprintf(terraform_config, "updated desc")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "description", "updated desc"),
 				),
 			},
@@ -219,8 +216,7 @@ func TestAccWorkflow_TerraformConfig(t *testing.T) {
 				Config: testAccWorkflow(wfGrpName, resourceName, "TERRAFORM", fmt.Sprintf(terraform_config, "1", "sleep 3", "target_dir")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
-					resource.TestCheckResourceAttrSet("stackguardian_workflow.test", "id"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
 				),
 			},
 			// Update and Read
@@ -228,7 +224,7 @@ func TestAccWorkflow_TerraformConfig(t *testing.T) {
 				Config: testAccWorkflow(wfGrpName, resourceName, "TERRAFORM", fmt.Sprintf(terraform_config, "2", "echo sleep", "updated_dir")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
 				),
 			},
 		},
@@ -315,8 +311,7 @@ func TestAccWorkflow_WfStepsConfig(t *testing.T) {
 				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", wf_steps_config),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
-					resource.TestCheckResourceAttrSet("stackguardian_workflow.test", "id"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "wf_steps_config.#", "2"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "wf_steps_config.0.name", "test-step"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "wf_steps_config.0.wf_step_template_id", "/stackguardian/terraform:11"),
@@ -329,7 +324,7 @@ func TestAccWorkflow_WfStepsConfig(t *testing.T) {
 				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", wf_steps_config_updated),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "wf_steps_config.#", "1"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "wf_steps_config.0.timeout", "3600"),
 				),
@@ -460,8 +455,7 @@ func TestAccWorkflow_MiniSteps(t *testing.T) {
 				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", mini_steps_config),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
-					resource.TestCheckResourceAttrSet("stackguardian_workflow.test", "id"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.#", "1"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.0.webhook_name", "test_webhook"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.0.webhook_url", "https://www.myservice.com/ping/"),
@@ -481,7 +475,7 @@ func TestAccWorkflow_MiniSteps(t *testing.T) {
 				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", mini_steps_config_updated),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.0.webhook_url", "https://www.myservice.com/ping/updated/"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.notifications.email.errored.0.recipients.#", "2"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.notifications.email.errored.0.recipients.1", "second@stackguardian.io"),
@@ -553,10 +547,9 @@ vcs_config = {
 				Config: testAccWorkflow(wfGrpName, resourceName, "TERRAFORM", baseConfig(`tags = ["test", "terraform", "marketplace"]`)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "vcs_config.iac_vcs_config.use_marketplace_template", "true"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "vcs_config.iac_vcs_config.iac_template_id", templateId),
-					resource.TestCheckResourceAttrSet("stackguardian_workflow.test", "id"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.errored.#", "1"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.errored.0.webhook_name", "on_error"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.errored.0.webhook_url", "https://www.myservice.com/error/"),
@@ -570,7 +563,7 @@ tags        = ["test", "terraform", "marketplace", "updated"]
 `)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "description", "Updated marketplace workflow"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "vcs_config.iac_vcs_config.iac_template_id", templateId),
 				),
@@ -709,8 +702,7 @@ vcs_config = {
 					config(templateId, "workflow for template revision upgrade testing", "initial_value", "https://www.myservice.com/ping/")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
-					resource.TestCheckResourceAttrSet("stackguardian_workflow.test", "id"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "description", "workflow for template revision upgrade testing"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "tags.#", "3"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "context_tags.environment", "test"),
@@ -747,7 +739,7 @@ vcs_config = {
 					config(updatedTemplateId, "updated after template upgrade", "updated_value", "https://www.myservice.com/ping/updated/")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "resource_name", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "description", "updated after template upgrade"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "environment_variables.0.config.text_value", "updated_value"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.0.webhook_url", "https://www.myservice.com/ping/updated/"),

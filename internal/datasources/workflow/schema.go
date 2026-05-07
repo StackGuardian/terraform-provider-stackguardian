@@ -233,7 +233,7 @@ func (d *workflowDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.Id,
-				Computed:            true,
+				Required:            true,
 			},
 			"workflow_group_id": schema.StringAttribute{
 				MarkdownDescription: "ID of the parent workflow group.",
@@ -241,7 +241,7 @@ func (d *workflowDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			},
 			"resource_name": schema.StringAttribute{
 				MarkdownDescription: "Name of the workflow.",
-				Required:            true,
+				Computed:            true,
 			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow"),

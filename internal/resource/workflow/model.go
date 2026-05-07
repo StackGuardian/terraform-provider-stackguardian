@@ -250,6 +250,7 @@ func (m WorkflowResourceModel) ToAPIModel(ctx context.Context) (*sgworkflows.Wor
 	}
 
 	return &sgworkflows.Workflow{
+		Id:                        m.Id.ValueStringPointer(),
 		ResourceName:              m.ResourceName.ValueStringPointer(),
 		Description:               m.Description.ValueStringPointer(),
 		WfType:                    wfType,
