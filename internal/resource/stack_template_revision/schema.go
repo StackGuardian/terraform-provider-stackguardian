@@ -494,7 +494,7 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 		},
 	},
 	"mini_steps": schema.SingleNestedAttribute{
-		MarkdownDescription: constants.WorkflowTemplateRevisionMiniSteps,
+		MarkdownDescription: constants.WfMiniSteps,
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
 			"notifications": schema.SingleNestedAttribute{
