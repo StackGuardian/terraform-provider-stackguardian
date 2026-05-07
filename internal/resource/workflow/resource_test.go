@@ -53,9 +53,10 @@ func testAccWorkflow(wfGrpName, resourceName, wf_type, additionalConfig string) 
 	return fmt.Sprintf(`
 resource "stackguardian_workflow" "test" {
   workflow_group_id = "%s"
-  id      = "%s"
-  wf_type = "%s"
-  
+  id                = "%s"
+  resource_name     = "test-workflow"
+  wf_type           = "%s"
+
   %s
 }
 `, wfGrpName, resourceName, wf_type, additionalConfig)
