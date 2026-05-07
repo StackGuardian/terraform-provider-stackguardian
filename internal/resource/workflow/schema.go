@@ -383,22 +383,19 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.Id,
+				Required:            true,
+			},
+			"workflow_group_id": schema.StringAttribute{
+				MarkdownDescription: constants.WorkflowWorkflowGroupId,
+				Required:            true,
+			},
+			"resource_name": schema.StringAttribute{
+				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "workflow"),
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
-			},
-			"workflow_group_id": schema.StringAttribute{
-				MarkdownDescription: constants.WorkflowWorkflowGroupId,
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"resource_name": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "workflow"),
-				Required:            true,
 			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow"),
