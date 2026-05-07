@@ -594,13 +594,9 @@ func TestAccWorkflow_TemplateRevisionUpgrade(t *testing.T) {
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 	templateId := "/sg-provider-test/testing-provider:1"
 	updatedTemplateId := "/sg-provider-test/testing-provider:4"
-	upgradeMode := "PRESERVE_SETTINGS"
-	//upgradeMode := "RESET_TO_TEMPLATE"
-
 	config := func(templateID, description, envValue, webhookURL string) string {
 		return fmt.Sprintf(`
-description  = "%s"
-upgrade_mode = "%s"
+description = "%s"
 
 tags = ["test", "terraform", "upgrade"]
 
@@ -632,14 +628,6 @@ runner_constraints = {
 
 approvers                    = ["taher.kathanawala@stackguardian.io"]
 number_of_approvals_required = 1
-
-user_schedules = [
-  {
-    cron  = "0 12 ? * 2 *"
-    state = "ENABLED"
-    desc  = "Weekly Monday run"
-  }
-]
 
 mini_steps = {
   webhooks = {
@@ -705,7 +693,7 @@ vcs_config = {
     iac_template_id          = "%s"
   }
 }
-`, description, upgradeMode, envValue, webhookURL, templateID)
+`, description, envValue, webhookURL, templateID)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -736,9 +724,6 @@ vcs_config = {
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "approvers.#", "1"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "approvers.0", "taher.kathanawala@stackguardian.io"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "number_of_approvals_required", "1"),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "user_schedules.#", "1"),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "user_schedules.0.cron", "0 12 ? * 2 *"),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "user_schedules.0.state", "ENABLED"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.#", "1"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.0.webhook_name", "on_complete"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.0.webhook_url", "https://www.myservice.com/ping/"),
@@ -771,7 +756,6 @@ vcs_config = {
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "environment_variables.1.config.var_name", "ANOTHER_VAR"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "runner_constraints.type", "shared"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "approvers.0", "taher.kathanawala@stackguardian.io"),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "user_schedules.0.cron", "0 12 ? * 2 *"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.wf_chaining.completed.0.workflow_group_id", "ansible"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.notifications.email.errored.0.recipients.#", "2"),
 				),

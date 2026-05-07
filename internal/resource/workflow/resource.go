@@ -9,7 +9,6 @@ import (
 	sgworkflows "github.com/StackGuardian/sg-sdk-go/workflows"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	workflowtemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template_revision"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -90,7 +89,6 @@ func (r *workflowResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	workflowTerraModel.WorkflowGroupId = plan.WorkflowGroupId
-	workflowTerraModel.UpgradeMode = plan.UpgradeMode
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &workflowTerraModel)...)
 }
@@ -116,7 +114,6 @@ func (r *workflowResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 	workflowTerraModel.WorkflowGroupId = state.WorkflowGroupId
-	workflowTerraModel.UpgradeMode = state.UpgradeMode
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &workflowTerraModel)...)
 }
@@ -146,18 +143,7 @@ func (r *workflowResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	var upgradeMode *sgworkflows.UpgradeModeEnum
-	if !plan.UpgradeMode.IsNull() && !plan.UpgradeMode.IsUnknown() {
-		mode, err := sgworkflows.NewUpgradeModeEnumFromString(plan.UpgradeMode.ValueString())
-		if err != nil {
-			resp.Diagnostics.Append(diag.NewErrorDiagnostic("Invalid upgrade mode", fmt.Sprintf("%s upgrade mode is not valid", plan.UpgradeMode.ValueString())))
-			return
-		}
-
-		upgradeMode = &mode
-	}
-
-	_, err := r.client.Workflows.UpdateWorkflow(ctx, r.org_name, id, workflowGroupId, upgradeMode, payload)
+	_, err := r.client.Workflows.UpdateWorkflow(ctx, r.org_name, id, workflowGroupId, sgworkflows.UpgradeModeEnumPreserveSettings.Ptr(), payload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error updating workflow", "Error in updating workflow API call: "+err.Error())
@@ -176,7 +162,6 @@ func (r *workflowResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	workflowTerraModel.WorkflowGroupId = state.WorkflowGroupId
-	workflowTerraModel.UpgradeMode = plan.UpgradeMode
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &workflowTerraModel)...)
 }

@@ -412,10 +412,6 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				MarkdownDescription: constants.WorkflowType,
 				Required:            true,
 			},
-			"upgrade_mode": schema.StringAttribute{
-				MarkdownDescription: constants.WorkflowUpgradeMode,
-				Optional:            true,
-			},
 			"environment_variables": schema.ListNestedAttribute{
 				MarkdownDescription: constants.WfEnvironmentVariables,
 				Optional:            true,
