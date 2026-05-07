@@ -408,7 +408,7 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				},
 			},
 			"environment_variables": schema.ListNestedAttribute{
-				MarkdownDescription: constants.WorkflowTemplateRevisionEnvironmentVariables,
+				MarkdownDescription: constants.WfEnvironmentVariables,
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.List{
@@ -447,7 +447,7 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				},
 			},
 			"mini_steps": schema.SingleNestedAttribute{
-				MarkdownDescription: constants.WorkflowTemplateRevisionMiniSteps,
+				MarkdownDescription: constants.WfMiniSteps,
 				Optional:            true,
 				Attributes: map[string]schema.Attribute{
 					"notifications": schema.SingleNestedAttribute{
@@ -512,7 +512,7 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				},
 			},
 			"user_schedules": schema.ListNestedAttribute{
-				MarkdownDescription: constants.WorkflowTemplateRevisionUserSchedules,
+				MarkdownDescription: constants.WfUserSchedules,
 				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -545,12 +545,12 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				},
 			},
 			"approvers": schema.ListAttribute{
-				MarkdownDescription: constants.WorkflowTemplateRevisionApprovers,
+				MarkdownDescription: constants.WfApprovers,
 				ElementType:         types.StringType,
 				Optional:            true,
 			},
 			"number_of_approvals_required": schema.Int64Attribute{
-				MarkdownDescription: constants.WorkflowTemplateRevisionNumberOfApprovals,
+				MarkdownDescription: constants.WfNumberOfApprovals,
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Int64{
@@ -558,11 +558,11 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				},
 			},
 			"user_job_cpu": schema.Int64Attribute{
-				MarkdownDescription: constants.WorkflowTemplateRevisionUserJobCPU,
+				MarkdownDescription: constants.WfUserJobCPU,
 				Required:            true,
 			},
 			"user_job_memory": schema.Int64Attribute{
-				MarkdownDescription: constants.WorkflowTemplateRevisionUserJobMemory,
+				MarkdownDescription: constants.WfUserJobMemory,
 				Required:            true,
 			},
 			"runtime_source": schema.SingleNestedAttribute{
@@ -576,7 +576,7 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 			},
 			"terraform_config": terraformConfigSchema,
 			"deployment_platform_config": schema.ListNestedAttribute{
-				MarkdownDescription: constants.WorkflowTemplateRevisionDeploymentPlatformConfig,
+				MarkdownDescription: constants.WfDeploymentPlatformConfig,
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.List{
@@ -606,7 +606,7 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				},
 			},
 			"wf_steps_config": schema.ListNestedAttribute{
-				MarkdownDescription: constants.WorkflowTemplateRevisionWfStepsConfig,
+				MarkdownDescription: constants.WfStepsConfig,
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.List{

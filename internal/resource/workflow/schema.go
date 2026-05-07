@@ -390,14 +390,14 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"workflow_group_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the parent workflow group.",
+				MarkdownDescription: constants.WorkflowWorkflowGroupId,
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"resource_name": schema.StringAttribute{
-				MarkdownDescription: "Name of the workflow.",
+				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "workflow"),
 				Required:            true,
 			},
 			"description": schema.StringAttribute{
@@ -409,15 +409,15 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"wf_type": schema.StringAttribute{
-				MarkdownDescription: "Type of workflow (e.g., Terraform, Ansible, etc.).",
+				MarkdownDescription: constants.WorkflowType,
 				Required:            true,
 			},
 			"upgrade_mode": schema.StringAttribute{
-				MarkdownDescription: "Controls how the workflow is updated when the underlying template changes. Accepted values: `RESET_TO_TEMPLATE`, `PRESERVE_SETTINGS`.",
+				MarkdownDescription: constants.WorkflowUpgradeMode,
 				Optional:            true,
 			},
 			"environment_variables": schema.ListNestedAttribute{
-				MarkdownDescription: "Environment variables for the workflow.",
+				MarkdownDescription: constants.WfEnvironmentVariables,
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.List{
@@ -428,7 +428,7 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"mini_steps": schema.SingleNestedAttribute{
-				MarkdownDescription: "Mini steps configuration for the workflow.",
+				MarkdownDescription: constants.WfMiniSteps,
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Object{
@@ -490,8 +490,9 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"runner_constraints": schema.SingleNestedAttribute{
-				Optional: true,
-				Computed: true,
+				MarkdownDescription: constants.WorkflowRunnerConstraints,
+				Optional:            true,
+				Computed:            true,
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseStateForUnknown(),
 				},
@@ -517,7 +518,7 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"user_schedules": schema.ListNestedAttribute{
-				MarkdownDescription: "User-defined schedules for the workflow.",
+				MarkdownDescription: constants.WfUserSchedules,
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.List{
@@ -558,7 +559,7 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"approvers": schema.ListAttribute{
-				MarkdownDescription: "List of approvers for the workflow.",
+				MarkdownDescription: constants.WfApprovers,
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
@@ -567,7 +568,7 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"number_of_approvals_required": schema.Int64Attribute{
-				MarkdownDescription: "Number of approvals required before workflow execution.",
+				MarkdownDescription: constants.WfNumberOfApprovals,
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Int64{
@@ -575,7 +576,7 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"user_job_cpu": schema.Int64Attribute{
-				MarkdownDescription: "CPU allocation for workflow execution.",
+				MarkdownDescription: constants.WfUserJobCPU,
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Int64{
@@ -583,7 +584,7 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"user_job_memory": schema.Int64Attribute{
-				MarkdownDescription: "Memory allocation for workflow execution.",
+				MarkdownDescription: constants.WfUserJobMemory,
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Int64{
@@ -591,7 +592,7 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"vcs_config": schema.SingleNestedAttribute{
-				MarkdownDescription: "VCS (version control) configuration for the workflow.",
+				MarkdownDescription: constants.WorkflowVcsConfig,
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Object{
@@ -599,22 +600,22 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 				Attributes: map[string]schema.Attribute{
 					"iac_vcs_config": schema.SingleNestedAttribute{
-						MarkdownDescription: "IaC VCS configuration.",
+						MarkdownDescription: constants.WorkflowIacVcsConfig,
 						Optional:            true,
 						Attributes: map[string]schema.Attribute{
 							"use_marketplace_template": schema.BoolAttribute{
-								MarkdownDescription: "Whether to use a marketplace template.",
+								MarkdownDescription: constants.WorkflowUseMarketplaceTemplate,
 								Required:            true,
 								PlanModifiers: []planmodifier.Bool{
 									boolplanmodifier.RequiresReplace(),
 								},
 							},
 							"iac_template_id": schema.StringAttribute{
-								MarkdownDescription: "ID of the IaC template from the marketplace.",
+								MarkdownDescription: constants.WorkflowIacTemplateId,
 								Optional:            true,
 							},
 							"custom_source": schema.SingleNestedAttribute{
-								MarkdownDescription: "Custom source configuration.",
+								MarkdownDescription: constants.WorkflowCustomSource,
 								Optional:            true,
 								Attributes: map[string]schema.Attribute{
 									"source_config_dest_kind": schema.StringAttribute{
@@ -622,37 +623,45 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 										Required:            true,
 									},
 									"config": schema.SingleNestedAttribute{
-										MarkdownDescription: "Source configuration details.",
+										MarkdownDescription: constants.RuntimeSourceConfig,
 										Required:            true,
 										Attributes: map[string]schema.Attribute{
 											"is_private": schema.BoolAttribute{
-												Optional: true,
+												MarkdownDescription: constants.RuntimeSourceConfigIsPrivate,
+												Optional:            true,
 											},
 											"auth": schema.StringAttribute{
-												Optional:  true,
-												Sensitive: true,
+												MarkdownDescription: constants.RuntimeSourceConfigAuth,
+												Optional:            true,
+												Sensitive:           true,
 											},
 											"working_dir": schema.StringAttribute{
-												Optional: true,
+												MarkdownDescription: constants.RuntimeSourceConfigWorkingDir,
+												Optional:            true,
 											},
 											"git_sparse_checkout_config": schema.StringAttribute{
-												Optional: true,
+												MarkdownDescription: constants.RuntimeSourceConfigGitSparse,
+												Optional:            true,
 											},
 											"git_core_auto_crlf": schema.BoolAttribute{
-												Optional: true,
-												Computed: true,
+												MarkdownDescription: constants.RuntimeSourceConfigGitCoreCRLF,
+												Optional:            true,
+												Computed:            true,
 												PlanModifiers: []planmodifier.Bool{
 													boolplanmodifier.UseStateForUnknown(),
 												},
 											},
 											"ref": schema.StringAttribute{
-												Optional: true,
+												MarkdownDescription: constants.RuntimeSourceConfigRef,
+												Optional:            true,
 											},
 											"repo": schema.StringAttribute{
-												Optional: true,
+												MarkdownDescription: constants.RuntimeSourceConfigRepo,
+												Optional:            true,
 											},
 											"include_sub_module": schema.BoolAttribute{
-												Optional: true,
+												MarkdownDescription: constants.RuntimeSourceConfigIncludeSubmodule,
+												Optional:            true,
 											},
 										},
 									},
@@ -661,7 +670,7 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						},
 					},
 					"iac_input_data": schema.SingleNestedAttribute{
-						MarkdownDescription: "IaC input data for the workflow.",
+						MarkdownDescription: constants.WorkflowIacInputData,
 						Optional:            true,
 						Computed:            true,
 						PlanModifiers: []planmodifier.Object{
@@ -669,8 +678,9 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						},
 						Attributes: map[string]schema.Attribute{
 							"schema_id": schema.StringAttribute{
-								Optional: true,
-								Computed: true,
+								MarkdownDescription: constants.WorkflowIacInputDataSchemaId,
+								Optional:            true,
+								Computed:            true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.UseStateForUnknown(),
 								},
@@ -697,7 +707,7 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"terraform_config": terraformConfigSchema,
 			"deployment_platform_config": schema.ListNestedAttribute{
-				MarkdownDescription: "Deployment platform configuration.",
+				MarkdownDescription: constants.WfDeploymentPlatformConfig,
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.List{
@@ -727,7 +737,7 @@ func (r *workflowResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"wf_steps_config": schema.ListNestedAttribute{
-				MarkdownDescription: "Workflow steps configuration.",
+				MarkdownDescription: constants.WfStepsConfig,
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.List{

@@ -27,17 +27,8 @@ const (
 
 // Workflow Template Revision attributes
 const (
-	WorkflowTemplateRevisionTemplateId               = "Resource ID of the parent workflow template."
-	WorkflowTemplateRevisionApprovers                = "List of approvers for approvals during workflow execution."
-	WorkflowTemplateRevisionNumberOfApprovals        = "Number of approvals required."
-	WorkflowTemplateRevisionUserJobCPU               = "Limits to set user job CPU."
-	WorkflowTemplateRevisionUserJobMemory            = "Limits to set user job memory."
-	WorkflowTemplateRevisionEnvironmentVariables     = "List of environment variables for the revision."
-	WorkflowTemplateRevisionInputSchemas             = "JSONSchema Form representation of input JSON data"
-	WorkflowTemplateRevisionMiniSteps                = "Actions that are required to be performed once workflow execution is complete"
-	WorkflowTemplateRevisionUserSchedules            = "Configuration for scheduling runs for the workflows."
-	WorkflowTemplateRevisionDeploymentPlatformConfig = "Deployment platform configuration for the revision."
-	WorkflowTemplateRevisionWfStepsConfig            = "Workflow steps configuration. Valid for custom workflow types."
+	WorkflowTemplateRevisionTemplateId   = "Resource ID of the parent workflow template."
+	WorkflowTemplateRevisionInputSchemas = "JSONSchema Form representation of input JSON data"
 )
 
 // Runtime Source attributes (shared)

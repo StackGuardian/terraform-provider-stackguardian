@@ -217,6 +217,19 @@ const (
 	DeprecationEffectiveDate    = "Effective date when this resource will be deprecated and no longer available for use."
 )
 
+// Common Workflow and Workflow Template Revision attributes
+const (
+	WfApprovers         = "List of approvers for approvals during workflow execution."
+	WfNumberOfApprovals = "Number of approvals required."
+	WfUserJobCPU        = "Limits to set user job CPU."
+	WfUserJobMemory     = "Limits to set user job memory."
+	WfMiniSteps         = "Actions that are required to be performed once workflow execution is complete"
+	WfUserSchedules     = "Configuration for scheduling runs for the workflows."
+	WfStepsConfig       = "Workflow steps configuration. Valid for custom workflow types."
+	WfEnvironmentVariables                    = "Environment variables for worklfow in workflow runs."
+	WfDeploymentPlatformConfig                = "Deployment platform configuration."
+)
+
 ////////////// Data Source
 
 // Common
