@@ -183,6 +183,7 @@ func TestAccWorkflow_TerraformConfig(t *testing.T) {
 
 	terraform_config := `
 	terraform_config = {
+		drift_cron = "0 */6 * * ? *"
 		pre_plan_wf_steps_config = [{
 			name = "test-step"
 			wf_step_template_id = "/sg-provider-test/taher-null-resource:%s"
@@ -506,6 +507,7 @@ func TestAccWorkflow_WithMarketplaceTemplate(t *testing.T) {
 %s
 
 terraform_config = {
+  drift_cron = "0 */6 * * ? *"
   terraform_version = "v1.5.7"
 }
 
