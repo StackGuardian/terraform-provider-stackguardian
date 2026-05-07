@@ -6,10 +6,10 @@ on:
       - main
   pull_request:
     branches:
-      - 'main'
-    types: [opened, edited, reopened, synchronize, ready_for_review]
+      - "main"
+    types: [ opened, edited, reopened, synchronize, ready_for_review ]
   schedule:
-    - cron: '0 4 * * 1'
+    - cron: "0 4 * * 1"
   workflow_dispatch:
   workflow_call:
 
@@ -28,13 +28,13 @@ jobs:
       - name: "Install Go"
         uses: actions/setup-go@v5
         with:
-          go-version-file: 'go.mod'
+          go-version-file: "go.mod"
 
       - name: "Install Terraform"
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
-          terraform_version: '1.9.8'
+          terraform_version: "1.14.0"
 
       - name: "Build Provider"
         run: make build
@@ -42,10 +42,10 @@ jobs:
       - name: "Test Provider with acceptance tests"
         run: make test-acc
         env:
-          STACKGUARDIAN_API_URI: '${{ secrets.SG_PRD_API_URI }}'
-          STACKGUARDIAN_API_KEY: '${{ secrets.SG_PRD_API_KEY }}'
-          STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'
-          TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY: '${{ secrets.TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY }}'
+          STACKGUARDIAN_API_URI: "${{ secrets.SG_PRD_API_URI }}"
+          STACKGUARDIAN_API_KEY: "${{ secrets.SG_PRD_API_KEY }}"
+          STACKGUARDIAN_ORG_NAME: "${{ secrets.SG_PRD_ORG_NAME }}"
+          TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY: "${{ secrets.TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY }}"
 
       # - name: "Test Provider with quickstart example"
       #   run: |
