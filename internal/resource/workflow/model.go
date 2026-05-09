@@ -249,9 +249,14 @@ func (m WorkflowResourceModel) ToAPIModel(ctx context.Context) (*sgworkflows.Wor
 		userJobMemory = &v
 	}
 
+	var resourceName *string
+	if v := m.ResourceName.ValueString(); v != "" {
+		resourceName = &v
+	}
+
 	return &sgworkflows.Workflow{
 		Id:                        m.Id.ValueStringPointer(),
-		ResourceName:              m.ResourceName.ValueStringPointer(),
+		ResourceName:              resourceName,
 		Description:               m.Description.ValueStringPointer(),
 		WfType:                    wfType,
 		Tags:                      tags,

@@ -54,7 +54,6 @@ func testAccWorkflow(wfGrpName, resourceName, wf_type, additionalConfig string) 
 resource "stackguardian_workflow" "test" {
   workflow_group_id = "%s"
   id                = "%s"
-  resource_name     = "test-workflow"
   wf_type           = "%s"
 
   %s
