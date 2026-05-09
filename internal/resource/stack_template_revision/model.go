@@ -710,7 +710,7 @@ func convertWfStepsConfigToAPI(ctx context.Context, list types.List) ([]sgsdkgo.
 	result := make([]sgsdkgo.WfStepsConfig, len(models))
 	for i, m := range models {
 		step := sgsdkgo.WfStepsConfig{
-			Name:             m.Name.ValueString(),
+			Name:             m.Name.ValueStringPointer(),
 			Approval:         m.Approval.ValueBoolPointer(),
 			Timeout:          expanders.IntPtr(m.Timeout.ValueInt64Pointer()),
 			WfStepTemplateId: m.WfStepTemplateId.ValueStringPointer(),
@@ -735,8 +735,12 @@ func convertWfStepsConfigToAPI(ctx context.Context, list types.List) ([]sgsdkgo.
 			if diags := m.WfStepInputData.As(ctx, &idm, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 				return nil, diags
 			}
+			schemaType, err := sgsdkgo.NewWfStepInputDataSchemaTypeEnumFromString(idm.SchemaType.ValueString())
+			if err != nil {
+				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid schema type", fmt.Sprintf("Value '%s' is not a valid schema type", idm.SchemaType.ValueString()))}
+			}
 			step.WfStepInputData = &sgsdkgo.WfStepInputData{
-				SchemaType: sgsdkgo.WfStepInputDataSchemaTypeEnum(idm.SchemaType.ValueString()),
+				SchemaType: &schemaType,
 				Data:       parseJSONToMap(idm.Data.ValueString()),
 			}
 		}
@@ -856,7 +860,7 @@ func convertRunnerConstraintsToAPI(ctx context.Context, obj types.Object) (*sgsd
 		return nil, diags
 	}
 	return &sgsdkgo.RunnerConstraints{
-		Type:  sgsdkgo.RunnerConstraintsTypeEnum(m.Type.ValueString()),
+		Type:  (*sgsdkgo.RunnerConstraintsTypeEnum)(m.Type.ValueStringPointer()),
 		Names: names,
 	}, nil
 }
@@ -871,11 +875,12 @@ func convertUserSchedulesToAPI(ctx context.Context, list types.List) ([]*sgsdkgo
 	}
 	result := make([]*sgsdkgo.UserSchedules, len(models))
 	for i, m := range models {
+		state := sgsdkgo.StateEnum(m.State.ValueString())
 		us := &sgsdkgo.UserSchedules{
 			Name:  m.Name.ValueStringPointer(),
 			Desc:  m.Desc.ValueStringPointer(),
-			Cron:  m.Cron.ValueString(),
-			State: sgsdkgo.StateEnum(m.State.ValueString()),
+			Cron:  m.Cron.ValueStringPointer(),
+			State: &state,
 		}
 		result[i] = us
 	}
@@ -903,7 +908,7 @@ func convertVcsConfigToAPI(ctx context.Context, obj types.Object, orgName string
 			prefixedIacTemplateId = &v
 		}
 		iacVcs := &sgsdkgo.IacvcsConfig{
-			UseMarketplaceTemplate: iacModel.UseMarketplaceTemplate.ValueBool(),
+			UseMarketplaceTemplate: iacModel.UseMarketplaceTemplate.ValueBoolPointer(),
 			IacTemplateId:          prefixedIacTemplateId,
 		}
 		if !iacModel.CustomSource.IsNull() && !iacModel.CustomSource.IsUnknown() {
@@ -911,8 +916,12 @@ func convertVcsConfigToAPI(ctx context.Context, obj types.Object, orgName string
 			if diags := iacModel.CustomSource.As(ctx, &csModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 				return nil, diags
 			}
+			sourceConfigDestKind, err := sgsdkgo.NewCustomSourceSourceConfigDestKindEnumFromString(csModel.SourceConfigDestKind.ValueString())
+			if err != nil {
+				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid source_config_dest_kind", err.Error())}
+			}
 			cs := &sgsdkgo.CustomSource{
-				SourceConfigDestKind: sgsdkgo.CustomSourceSourceConfigDestKindEnum(csModel.SourceConfigDestKind.ValueString()),
+				SourceConfigDestKind: &sourceConfigDestKind,
 			}
 			if !csModel.Config.IsNull() && !csModel.Config.IsUnknown() {
 				var csCfgModel CustomSourceConfigModel
@@ -940,9 +949,13 @@ func convertVcsConfigToAPI(ctx context.Context, obj types.Object, orgName string
 		if diags := m.IacInputData.As(ctx, &idModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 			return nil, diags
 		}
+		schemaType, err := sgsdkgo.NewIacInputDataSchemaTypeEnumFromString(idModel.SchemaType.ValueString())
+		if err != nil {
+			return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid schema type", fmt.Sprintf("Value '%s' is not a valid schema type", idModel.SchemaType.ValueString()))}
+		}
 		vcsConfig.IacInputData = &sgsdkgo.IacInputData{
 			SchemaId:   idModel.SchemaId.ValueStringPointer(),
-			SchemaType: sgsdkgo.IacInputDataSchemaTypeEnum(idModel.SchemaType.ValueString()),
+			SchemaType: &schemaType,
 			Data:       parseJSONToMap(idModel.Data.ValueString()),
 		}
 	}
@@ -1373,7 +1386,7 @@ func convertWorkflowsConfigToAPI(ctx context.Context, obj types.Object, orgName 
 				return nil, diags
 			}
 			wf.IacInputData = &sgsdkgo.TemplatesIacInputData{
-				SchemaType: idm.SchemaType.ValueString(),
+				SchemaType: idm.SchemaType.ValueStringPointer(),
 				Data:       parseJSONToMap(idm.Data.ValueString()),
 			}
 		}
@@ -1599,7 +1612,7 @@ func wfStepsConfigFromAPI(steps []sgsdkgo.WfStepsConfig) (types.List, diag.Diagn
 		if s.WfStepInputData != nil {
 			dataStr := marshalToJSONString(s.WfStepInputData.Data)
 			idm := WfStepInputDataModel{
-				SchemaType: flatteners.String(string(s.WfStepInputData.SchemaType)),
+				SchemaType: flatteners.String(string(*s.WfStepInputData.SchemaType)),
 				Data:       dataStr,
 			}
 			var diags2 diag.Diagnostics
@@ -1609,7 +1622,7 @@ func wfStepsConfigFromAPI(steps []sgsdkgo.WfStepsConfig) (types.List, diag.Diagn
 			}
 		}
 		m := WfStepsConfigModel{
-			Name:                 flatteners.String(s.Name),
+			Name:                 flatteners.StringPtr(s.Name),
 			EnvironmentVariables: envList,
 			Approval:             flatteners.BoolPtr(s.Approval),
 			Timeout:              flatteners.Int64Ptr(s.Timeout),
@@ -1759,7 +1772,7 @@ func runnerConstraintsFromAPI(rc *sgsdkgo.RunnerConstraints) (types.Object, diag
 		return nullObj, diags
 	}
 	m := RunnerConstraintsModel{
-		Type:  flatteners.String(string(rc.Type)),
+		Type:  flatteners.StringPtr((*string)(rc.Type)),
 		Names: namesList,
 	}
 	return types.ObjectValueFrom(context.Background(), RunnerConstraintsModel{}.AttributeTypes(), m)
@@ -1778,8 +1791,8 @@ func userSchedulesFromAPI(uss []*sgsdkgo.UserSchedules) (types.List, diag.Diagno
 		m := UserSchedulesModel{
 			Name:  flatteners.StringPtr(us.Name),
 			Desc:  flatteners.StringPtr(us.Desc),
-			Cron:  flatteners.String(us.Cron),
-			State: flatteners.String(string(us.State)),
+			Cron:  flatteners.StringPtr(us.Cron),
+			State: flatteners.StringPtr((*string)(us.State)),
 		}
 		obj, diags := types.ObjectValueFrom(context.Background(), UserSchedulesModel{}.AttributeTypes(), m)
 		if diags.HasError() {
@@ -1806,14 +1819,14 @@ func vcsConfigFromAPI(vc *sgsdkgo.VcsConfig) (types.Object, diag.Diagnostics) {
 			strippedIacTemplateId = &base
 		}
 		iacM := IacVcsConfigModel{
-			UseMarketplaceTemplate: types.BoolValue(vc.IacVcsConfig.UseMarketplaceTemplate),
+			UseMarketplaceTemplate: flatteners.BoolPtr(vc.IacVcsConfig.UseMarketplaceTemplate),
 			IacTemplateId:          flatteners.StringPtr(strippedIacTemplateId),
 			CustomSource:           types.ObjectNull(CustomSourceModel{}.AttributeTypes()),
 		}
 		if vc.IacVcsConfig.CustomSource != nil {
 			cs := vc.IacVcsConfig.CustomSource
 			csM := CustomSourceModel{
-				SourceConfigDestKind: flatteners.String(string(cs.SourceConfigDestKind)),
+				SourceConfigDestKind: flatteners.String(string(*cs.SourceConfigDestKind)),
 				Config:               types.ObjectNull(CustomSourceConfigModel{}.AttributeTypes()),
 			}
 			if cs.Config != nil {
@@ -1851,7 +1864,7 @@ func vcsConfigFromAPI(vc *sgsdkgo.VcsConfig) (types.Object, diag.Diagnostics) {
 	if vc.IacInputData != nil {
 		idM := IacInputDataModel{
 			SchemaId:   flatteners.StringPtr(vc.IacInputData.SchemaId),
-			SchemaType: flatteners.String(string(vc.IacInputData.SchemaType)),
+			SchemaType: flatteners.String(string(*vc.IacInputData.SchemaType)),
 			Data:       marshalToJSONString(vc.IacInputData.Data),
 		}
 		var diags diag.Diagnostics
@@ -1905,7 +1918,7 @@ func workflowsConfigFromAPI(wc *stacktemplaterevisions.StackTemplateRevisionWork
 		iacInputDataObj := types.ObjectNull(WfStepInputDataModel{}.AttributeTypes())
 		if wf.IacInputData != nil {
 			idm := WfStepInputDataModel{
-				SchemaType: flatteners.String(wf.IacInputData.SchemaType),
+				SchemaType: flatteners.String(string(*wf.IacInputData.SchemaType)),
 				Data:       marshalToJSONString(wf.IacInputData.Data),
 			}
 			iacInputDataObj, diags = types.ObjectValueFrom(context.Background(), WfStepInputDataModel{}.AttributeTypes(), idm)

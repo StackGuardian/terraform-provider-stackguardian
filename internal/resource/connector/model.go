@@ -197,7 +197,7 @@ func (m *ConnectorDiscoverySettingsBenchmarksModel) toAPIModel() (*sgsdkgo.Disco
 			return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Error in converting sourceConfigDestKind", err.Error())}
 		}
 		benchmarkRuntimeResource := sgsdkgo.CustomSource{
-			SourceConfigDestKind: destKind,
+			SourceConfigDestKind: &destKind,
 		}
 
 		if runtimeSourceModel.Config.IsUnknown() {
@@ -540,7 +540,7 @@ func BuildAPIModelToConnectorModel(apiResponse *sgsdkgo.GeneratedConnectorReadRe
 
 				if benchmark.RuntimeSource != nil {
 					runtimeSourceModelValue := ConnectorDiscoverySettingsBenchmarksRuntimeSourceModel{
-						SourceConfigDestKind: flatteners.String(string(benchmark.RuntimeSource.SourceConfigDestKind)),
+						SourceConfigDestKind: flatteners.StringPtr((*string)(benchmark.RuntimeSource.SourceConfigDestKind)),
 					}
 					if benchmark.RuntimeSource.Config != nil {
 						configModel := ConnectorDiscoverySettingsBenchmarksRuntimeSourceCustomSourceConfigModel{

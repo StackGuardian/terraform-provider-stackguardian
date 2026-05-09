@@ -8,7 +8,7 @@ import (
 )
 
 func ListOfStringToTerraformList(l []string) (types.List, diag.Diagnostics) {
-	if l == nil {
+	if len(l) == 0 {
 		return types.ListNull(types.StringType), nil
 	}
 
