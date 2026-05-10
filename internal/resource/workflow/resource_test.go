@@ -111,6 +111,54 @@ description = "updated desc"
 	})
 }
 
+func TestAccWorkflow_Basic_Terraform(t *testing.T) {
+	wfGrpName := "tf-provider-workflow-test-wfgrp-terraform"
+	resourceName := "tf-provider-workflow-test-wfgrp-terraform"
+
+	err := createWorkflowGroupFixture(wfGrpName)
+	if err != nil {
+		t.Errorf("failed to create workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(wfGrpName)
+	defer deleteWorkflowFixture(wfGrpName, resourceName)
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	additionalConfig := `
+  terraform_config = {
+    terraform_version = "1.5.0"
+  }
+
+  vcs_config = {
+    iac_vcs_config = {
+      use_marketplace_template = true
+      iac_template_id          = "/sg-provider-test/testing-provider:2"
+    }
+  }
+`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			// Create and Read
+			{
+				Config: testAccWorkflow(wfGrpName, resourceName, "TERRAFORM", additionalConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "wf_type", "TERRAFORM"),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "terraform_config.terraform_version", "1.5.0"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccWorkflow_Basic_With_VCS_Config(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-test-vcs-config"
 	resourceName := "tf-provider-workflow"
