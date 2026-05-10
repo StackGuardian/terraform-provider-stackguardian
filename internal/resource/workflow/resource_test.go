@@ -49,7 +49,7 @@ func deleteWorkflowFixture(wfGrpName, workflowName string) {
 	client.Workflows.DeleteWorkflow(context.TODO(), org, workflowName, wfGrpName)
 }
 
-func testAccWorkflow(wfGrpName, resourceName, wf_type, additionalConfig string) string {
+func testAccWorkflow(wfGrpName, id, wf_type, additionalConfig string) string {
 	return fmt.Sprintf(`
 resource "stackguardian_workflow" "test" {
   workflow_group_id = "%s"
@@ -58,12 +58,12 @@ resource "stackguardian_workflow" "test" {
 
   %s
 }
-`, wfGrpName, resourceName, wf_type, additionalConfig)
+`, wfGrpName, id, wf_type, additionalConfig)
 }
 
 func TestAccWorkflow_Basic(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-test-wfgrp"
-	resourceName := "tf-provider-workflow-basic"
+	id := "tf-provider-workflow-basic"
 
 	terraform_config := `
 description = "desc"
@@ -77,8 +77,8 @@ description = "updated desc"
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(wfGrpName)          // runs last (registered first)
-	defer deleteWorkflowFixture(wfGrpName, resourceName) // runs first (registered second)
+	defer deleteWorkflowGroupFixture(wfGrpName)   // runs last (registered first)
+	defer deleteWorkflowFixture(wfGrpName, id)    // runs first (registered second)
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -92,18 +92,18 @@ description = "updated desc"
 		Steps: []resource.TestStep{
 			// Create and Read
 			{
-				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", terraform_config),
+				Config: testAccWorkflow(wfGrpName, id, "CUSTOM", terraform_config),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", id),
 				),
 			},
 			// Update and Read
 			{
-				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", update_terraform_config),
+				Config: testAccWorkflow(wfGrpName, id, "CUSTOM", update_terraform_config),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "description", "updated desc"),
 				),
 			},
@@ -113,14 +113,14 @@ description = "updated desc"
 
 func TestAccWorkflow_Basic_Terraform(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-test-wfgrp-terraform"
-	resourceName := "tf-provider-workflow-test-wfgrp-terraform"
+	id := "tf-provider-workflow-test-wfgrp-terraform"
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
 	defer deleteWorkflowGroupFixture(wfGrpName)
-	defer deleteWorkflowFixture(wfGrpName, resourceName)
+	defer deleteWorkflowFixture(wfGrpName, id)
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -147,10 +147,10 @@ func TestAccWorkflow_Basic_Terraform(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read
 			{
-				Config: testAccWorkflow(wfGrpName, resourceName, "TERRAFORM", additionalConfig),
+				Config: testAccWorkflow(wfGrpName, id, "TERRAFORM", additionalConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "wf_type", "TERRAFORM"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "terraform_config.terraform_version", "1.5.0"),
 				),
@@ -161,14 +161,14 @@ func TestAccWorkflow_Basic_Terraform(t *testing.T) {
 
 func TestAccWorkflow_Basic_With_VCS_Config(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-test-vcs-config"
-	resourceName := "tf-provider-workflow"
+	id := "tf-provider-workflow"
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(wfGrpName)          // runs last (registered first)
-	defer deleteWorkflowFixture(wfGrpName, resourceName) // runs first (registered second)
+	defer deleteWorkflowGroupFixture(wfGrpName)   // runs last (registered first)
+	defer deleteWorkflowFixture(wfGrpName, id)    // runs first (registered second)
 
 	terraform_config := `
   description = "%s"
@@ -179,7 +179,7 @@ func TestAccWorkflow_Basic_With_VCS_Config(t *testing.T) {
     	config = {
     	  is_private = false
     	  repo = "https://github.com/dummy/test-repo.git"
-    	} 
+    	}
     	source_config_dest_kind = "GIT_OTHER"
       }
     }
@@ -198,18 +198,18 @@ func TestAccWorkflow_Basic_With_VCS_Config(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read
 			{
-				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", fmt.Sprintf(terraform_config, "test")),
+				Config: testAccWorkflow(wfGrpName, id, "CUSTOM", fmt.Sprintf(terraform_config, "test")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", id),
 				),
 			},
 			// Update and Read
 			{
-				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", fmt.Sprintf(terraform_config, "updated desc")),
+				Config: testAccWorkflow(wfGrpName, id, "CUSTOM", fmt.Sprintf(terraform_config, "updated desc")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "description", "updated desc"),
 				),
 			},
@@ -219,14 +219,14 @@ func TestAccWorkflow_Basic_With_VCS_Config(t *testing.T) {
 
 func TestAccWorkflow_TerraformConfig(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-test-wfgrp-terraform-config"
-	resourceName := "tf-provider-workflow-basic-terraform-config"
+	id := "tf-provider-workflow-basic-terraform-config"
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(wfGrpName)          // runs last (registered first)
-	defer deleteWorkflowFixture(wfGrpName, resourceName) // runs first (registered second)
+	defer deleteWorkflowGroupFixture(wfGrpName)   // runs last (registered first)
+	defer deleteWorkflowFixture(wfGrpName, id)    // runs first (registered second)
 
 	terraform_config := `
 	terraform_config = {
@@ -239,11 +239,11 @@ func TestAccWorkflow_TerraformConfig(t *testing.T) {
 		pre_plan_hooks = [
 			"%s"
 		]
-		
+
 		mount_points = [{
 			"source": "/source_dir"
 			"target": "%s"
-		}]		
+		}]
 
 		managed_terraform_state = false
 		terraform_version = "v1.5.7"
@@ -262,18 +262,18 @@ func TestAccWorkflow_TerraformConfig(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read
 			{
-				Config: testAccWorkflow(wfGrpName, resourceName, "TERRAFORM", fmt.Sprintf(terraform_config, "1", "sleep 3", "target_dir")),
+				Config: testAccWorkflow(wfGrpName, id, "TERRAFORM", fmt.Sprintf(terraform_config, "1", "sleep 3", "target_dir")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", id),
 				),
 			},
 			// Update and Read
 			{
-				Config: testAccWorkflow(wfGrpName, resourceName, "TERRAFORM", fmt.Sprintf(terraform_config, "2", "echo sleep", "updated_dir")),
+				Config: testAccWorkflow(wfGrpName, id, "TERRAFORM", fmt.Sprintf(terraform_config, "2", "echo sleep", "updated_dir")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", id),
 				),
 			},
 		},
@@ -282,14 +282,14 @@ func TestAccWorkflow_TerraformConfig(t *testing.T) {
 
 func TestAccWorkflow_WfStepsConfig(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-test-wfsteps-wfgrp"
-	resourceName := "tf-provider-workflow-wfsteps"
+	id := "tf-provider-workflow-wfsteps"
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
 	defer deleteWorkflowGroupFixture(wfGrpName)
-	defer deleteWorkflowFixture(wfGrpName, resourceName)
+	defer deleteWorkflowFixture(wfGrpName, id)
 
 	wf_steps_config := `
 	wf_steps_config = [
@@ -357,10 +357,10 @@ func TestAccWorkflow_WfStepsConfig(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read
 			{
-				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", wf_steps_config),
+				Config: testAccWorkflow(wfGrpName, id, "CUSTOM", wf_steps_config),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "wf_steps_config.#", "2"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "wf_steps_config.0.name", "test-step"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "wf_steps_config.0.wf_step_template_id", "/stackguardian/terraform:11"),
@@ -370,10 +370,10 @@ func TestAccWorkflow_WfStepsConfig(t *testing.T) {
 			},
 			// Update and Read
 			{
-				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", wf_steps_config_updated),
+				Config: testAccWorkflow(wfGrpName, id, "CUSTOM", wf_steps_config_updated),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "wf_steps_config.#", "1"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "wf_steps_config.0.timeout", "3600"),
 				),
@@ -384,14 +384,14 @@ func TestAccWorkflow_WfStepsConfig(t *testing.T) {
 
 func TestAccWorkflow_MiniSteps(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-test-ministeps-wfgrp"
-	resourceName := "tf-provider-workflow-ministeps"
+	id := "tf-provider-workflow-ministeps"
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
 	defer deleteWorkflowGroupFixture(wfGrpName)
-	defer deleteWorkflowFixture(wfGrpName, resourceName)
+	defer deleteWorkflowFixture(wfGrpName, id)
 
 	mini_steps_config := `
 	mini_steps = {
@@ -501,10 +501,10 @@ func TestAccWorkflow_MiniSteps(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read
 			{
-				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", mini_steps_config),
+				Config: testAccWorkflow(wfGrpName, id, "CUSTOM", mini_steps_config),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.#", "1"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.0.webhook_name", "test_webhook"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.0.webhook_url", "https://www.myservice.com/ping/"),
@@ -521,10 +521,10 @@ func TestAccWorkflow_MiniSteps(t *testing.T) {
 			},
 			// Update and Read
 			{
-				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM", mini_steps_config_updated),
+				Config: testAccWorkflow(wfGrpName, id, "CUSTOM", mini_steps_config_updated),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.0.webhook_url", "https://www.myservice.com/ping/updated/"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.notifications.email.errored.0.recipients.#", "2"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.notifications.email.errored.0.recipients.1", "second@stackguardian.io"),
@@ -536,14 +536,14 @@ func TestAccWorkflow_MiniSteps(t *testing.T) {
 
 func TestAccWorkflow_WithMarketplaceTemplate(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-test-marketplace-wfgrp"
-	resourceName := "tf-provider-workflow-marketplace"
+	id := "tf-provider-workflow-marketplace"
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
 	defer deleteWorkflowGroupFixture(wfGrpName)
-	defer deleteWorkflowFixture(wfGrpName, resourceName)
+	defer deleteWorkflowFixture(wfGrpName, id)
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -594,10 +594,10 @@ vcs_config = {
 		Steps: []resource.TestStep{
 			// Create and Read
 			{
-				Config: testAccWorkflow(wfGrpName, resourceName, "TERRAFORM", baseConfig(`tags = ["test", "terraform", "marketplace"]`)),
+				Config: testAccWorkflow(wfGrpName, id, "TERRAFORM", baseConfig(`tags = ["test", "terraform", "marketplace"]`)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "vcs_config.iac_vcs_config.use_marketplace_template", "true"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "vcs_config.iac_vcs_config.iac_template_id", templateId),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.errored.#", "1"),
@@ -607,13 +607,13 @@ vcs_config = {
 			},
 			// Update and Read
 			{
-				Config: testAccWorkflow(wfGrpName, resourceName, "TERRAFORM", baseConfig(`
+				Config: testAccWorkflow(wfGrpName, id, "TERRAFORM", baseConfig(`
 description = "Updated marketplace workflow"
 tags        = ["test", "terraform", "marketplace", "updated"]
 `)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "description", "Updated marketplace workflow"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "vcs_config.iac_vcs_config.iac_template_id", templateId),
 				),
@@ -624,14 +624,14 @@ tags        = ["test", "terraform", "marketplace", "updated"]
 
 func TestAccWorkflow_TemplateRevisionUpgrade(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-test-upgrade-wfgrp"
-	resourceName := "tf-provider-workflow-upgrade"
+	id := "tf-provider-workflow-upgrade"
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
 	defer deleteWorkflowGroupFixture(wfGrpName)
-	defer deleteWorkflowFixture(wfGrpName, resourceName)
+	defer deleteWorkflowFixture(wfGrpName, id)
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -748,11 +748,11 @@ vcs_config = {
 		Steps: []resource.TestStep{
 			// Create with full config pinned to revision 1
 			{
-				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM",
+				Config: testAccWorkflow(wfGrpName, id, "CUSTOM",
 					config(templateId, "workflow for template revision upgrade testing", "initial_value", "https://www.myservice.com/ping/")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "description", "workflow for template revision upgrade testing"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "tags.#", "3"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "context_tags.environment", "test"),
@@ -785,11 +785,11 @@ vcs_config = {
 			},
 			// Upgrade to revision 2 — mutate several fields alongside the template bump
 			{
-				Config: testAccWorkflow(wfGrpName, resourceName, "CUSTOM",
+				Config: testAccWorkflow(wfGrpName, id, "CUSTOM",
 					config(updatedTemplateId, "updated after template upgrade", "updated_value", "https://www.myservice.com/ping/updated/")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", resourceName),
+					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "description", "updated after template upgrade"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "environment_variables.0.config.text_value", "updated_value"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.0.webhook_url", "https://www.myservice.com/ping/updated/"),
