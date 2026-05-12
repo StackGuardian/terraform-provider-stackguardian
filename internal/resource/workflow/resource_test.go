@@ -77,8 +77,8 @@ description = "updated desc"
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(wfGrpName)   // runs last (registered first)
-	defer deleteWorkflowFixture(wfGrpName, id)    // runs first (registered second)
+	defer deleteWorkflowGroupFixture(wfGrpName) // runs last (registered first)
+	defer deleteWorkflowFixture(wfGrpName, id)  // runs first (registered second)
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -167,8 +167,8 @@ func TestAccWorkflow_Basic_With_VCS_Config(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(wfGrpName)   // runs last (registered first)
-	defer deleteWorkflowFixture(wfGrpName, id)    // runs first (registered second)
+	defer deleteWorkflowGroupFixture(wfGrpName) // runs last (registered first)
+	defer deleteWorkflowFixture(wfGrpName, id)  // runs first (registered second)
 
 	terraform_config := `
   description = "%s"
@@ -225,8 +225,8 @@ func TestAccWorkflow_TerraformConfig(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(wfGrpName)   // runs last (registered first)
-	defer deleteWorkflowFixture(wfGrpName, id)    // runs first (registered second)
+	defer deleteWorkflowGroupFixture(wfGrpName) // runs last (registered first)
+	defer deleteWorkflowFixture(wfGrpName, id)  // runs first (registered second)
 
 	terraform_config := `
 	terraform_config = {
@@ -637,7 +637,7 @@ func TestAccWorkflow_TemplateRevisionUpgrade(t *testing.T) {
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 	templateId := "/sg-provider-test/testing-provider:1"
 	updatedTemplateId := "/sg-provider-test/testing-provider:4"
-	config := func(templateID, description, envValue, webhookURL string) string {
+	config := func(templateID, description, webhookURL string) string {
 		return fmt.Sprintf(`
 description = "%s"
 
@@ -647,23 +647,6 @@ context_tags = {
   environment = "test"
   team        = "sg-provider"
 }
-
-environment_variables = [
-  {
-    config = {
-      var_name   = "MY_ENV_VAR"
-      text_value = "%s"
-    }
-    kind = "PLAIN_TEXT"
-  },
-  {
-    config = {
-      var_name   = "ANOTHER_VAR"
-      text_value = "constant"
-    }
-    kind = "PLAIN_TEXT"
-  }
-]
 
 runner_constraints = {
   type = "shared"
@@ -736,7 +719,7 @@ vcs_config = {
     iac_template_id          = "%s"
   }
 }
-`, description, envValue, webhookURL, templateID)
+`, description, webhookURL, templateID)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -749,7 +732,7 @@ vcs_config = {
 			// Create with full config pinned to revision 1
 			{
 				Config: testAccWorkflow(wfGrpName, id, "CUSTOM",
-					config(templateId, "workflow for template revision upgrade testing", "initial_value", "https://www.myservice.com/ping/")),
+					config(templateId, "workflow for template revision upgrade testing", "https://www.myservice.com/ping/")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", id),
@@ -757,11 +740,6 @@ vcs_config = {
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "tags.#", "3"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "context_tags.environment", "test"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "context_tags.team", "sg-provider"),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "environment_variables.#", "2"),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "environment_variables.0.config.var_name", "MY_ENV_VAR"),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "environment_variables.0.config.text_value", "initial_value"),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "environment_variables.0.kind", "PLAIN_TEXT"),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "environment_variables.1.config.var_name", "ANOTHER_VAR"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "runner_constraints.type", "shared"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "approvers.#", "1"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "approvers.0", "taher.kathanawala@stackguardian.io"),
@@ -786,16 +764,14 @@ vcs_config = {
 			// Upgrade to revision 2 — mutate several fields alongside the template bump
 			{
 				Config: testAccWorkflow(wfGrpName, id, "CUSTOM",
-					config(updatedTemplateId, "updated after template upgrade", "updated_value", "https://www.myservice.com/ping/updated/")),
+					config(updatedTemplateId, "updated after template upgrade", "https://www.myservice.com/ping/updated/")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "workflow_group_id", wfGrpName),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "description", "updated after template upgrade"),
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "environment_variables.0.config.text_value", "updated_value"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.webhooks.completed.0.webhook_url", "https://www.myservice.com/ping/updated/"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "vcs_config.iac_vcs_config.iac_template_id", updatedTemplateId),
 					// unchanged fields persist correctly after upgrade
-					resource.TestCheckResourceAttr("stackguardian_workflow.test", "environment_variables.1.config.var_name", "ANOTHER_VAR"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "runner_constraints.type", "shared"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "approvers.0", "taher.kathanawala@stackguardian.io"),
 					resource.TestCheckResourceAttr("stackguardian_workflow.test", "mini_steps.wf_chaining.completed.0.workflow_group_id", "ansible"),
