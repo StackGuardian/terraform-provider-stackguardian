@@ -52,7 +52,7 @@ func testAccWorkflowGit(wfGrpName, resourceName, wfType, additionalConfig string
 	return fmt.Sprintf(`
 resource "stackguardian_workflow_git" "test" {
   workflow_group_id = %q
-  resource_name     = %q
+  id			    = %q
   wf_type           = %q
 
   %s
@@ -103,7 +103,7 @@ func TestAccWorkflowGit_WithVcsConfig(t *testing.T) {
 				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config("initial description")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "resource_name", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "description", "initial description"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_config.iac_vcs_config.custom_source.config.repo", "https://github.com/dummy/test-repo.git"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_config.iac_vcs_config.custom_source.source_config_dest_kind", "GIT_OTHER"),
@@ -113,7 +113,7 @@ func TestAccWorkflowGit_WithVcsConfig(t *testing.T) {
 				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config("updated description")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "resource_name", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "description", "updated description"),
 				),
 			},
@@ -167,7 +167,7 @@ func TestAccWorkflowGit_WithTerraformConfig(t *testing.T) {
 				Config: testAccWorkflowGit(wfGrpName, id, "TERRAFORM", config("1.5.0")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "resource_name", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "wf_type", "TERRAFORM"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "terraform_config.terraform_version", "1.5.0"),
 				),
@@ -176,7 +176,7 @@ func TestAccWorkflowGit_WithTerraformConfig(t *testing.T) {
 				Config: testAccWorkflowGit(wfGrpName, id, "TERRAFORM", config("1.6.0")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "resource_name", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "terraform_config.terraform_version", "1.6.0"),
 				),
 			},
@@ -234,7 +234,7 @@ func TestAccWorkflowGit_WithEnvironmentVariables(t *testing.T) {
 			{
 				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config("initial-value")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "resource_name", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "environment_variables.0.kind", "PLAIN_TEXT"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "environment_variables.0.config.var_name", "MY_VAR"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "environment_variables.0.config.text_value", "initial-value"),
@@ -243,7 +243,7 @@ func TestAccWorkflowGit_WithEnvironmentVariables(t *testing.T) {
 			{
 				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config("updated-value")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "resource_name", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "environment_variables.0.config.text_value", "updated-value"),
 				),
 			},
@@ -297,7 +297,7 @@ func TestAccWorkflowGit_WithTagsAndContextTags(t *testing.T) {
 			{
 				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config("v1", "staging")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "resource_name", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "tags.0", "v1"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "context_tags.env", "staging"),
 				),
@@ -305,7 +305,7 @@ func TestAccWorkflowGit_WithTagsAndContextTags(t *testing.T) {
 			{
 				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config("v2", "production")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "resource_name", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "tags.0", "v2"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "context_tags.env", "production"),
 				),
@@ -357,7 +357,7 @@ func TestAccWorkflowGit_WithApprovers(t *testing.T) {
 			{
 				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config(1)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "resource_name", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "approvers.0", "approver@example.com"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "number_of_approvals_required", "1"),
 				),
@@ -365,7 +365,7 @@ func TestAccWorkflowGit_WithApprovers(t *testing.T) {
 			{
 				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config(2)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "resource_name", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "number_of_approvals_required", "2"),
 				),
 			},
@@ -421,7 +421,7 @@ func TestAccWorkflowGit_WithUserSchedules(t *testing.T) {
 			{
 				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config("0 8 ? * MON *")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "resource_name", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "user_schedules.0.cron", "0 8 ? * MON *"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "user_schedules.0.state", "ENABLED"),
 				),
@@ -429,7 +429,7 @@ func TestAccWorkflowGit_WithUserSchedules(t *testing.T) {
 			{
 				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config("0 9 ? * MON *")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "resource_name", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "user_schedules.0.cron", "0 9 ? * MON *"),
 				),
 			},
@@ -498,14 +498,14 @@ func TestAccWorkflowGit_WithRunnerConstraints(t *testing.T) {
 			{
 				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", configShared),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "resource_name", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "runner_constraints.type", "shared"),
 				),
 			},
 			{
 				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", configWithNames),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "resource_name", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "runner_constraints.type", "private"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "runner_constraints.names.0", "runner-1"),
 				),

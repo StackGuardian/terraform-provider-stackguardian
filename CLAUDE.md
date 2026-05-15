@@ -111,6 +111,7 @@ These are required while writing the implementing or making changes in model.go
 - Schema `ListNestedAttribute` → `types.List` field with `ElemType: types.ObjectType{...}`
 - Schema `BoolAttribute` → `types.BoolType` in `AttributeTypes()` (not `StringType`)
 - If a `schema.StringAttribute` description says the value is a JSON string, marshal it in `ToAPIModel`/`ToUpdateAPIModel` (Go value → `json.Marshal` → string) and unmarshal it in `convertXxxFromAPI` (string → `json.Unmarshal` → Go value). Treat a marshal/unmarshal error as a diagnostic error and return early.
+- For any attribute that is both `Optional` and `Computed`, guard against null/unknown in `ToAPIModel` before setting its value. `ValueBoolPointer()` returns `&false` for unknown and `ValueStringPointer()` returns `&""` for unknown — both send unintended values to the API. Use: `if !m.Field.IsNull() && !m.Field.IsUnknown() { cfg.Field = m.Field.ValueBoolPointer() }`
 
 ---
 

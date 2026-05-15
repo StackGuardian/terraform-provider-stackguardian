@@ -518,16 +518,19 @@ func (CustomSourceConfigModel) AttributeTypes() map[string]attr.Type {
 }
 
 func (m CustomSourceConfigModel) ToAPIModel() *sgsdkgo.CustomSourceConfig {
-	return &sgsdkgo.CustomSourceConfig{
+	cfg := &sgsdkgo.CustomSourceConfig{
 		IsPrivate:               m.IsPrivate.ValueBoolPointer(),
 		Auth:                    m.Auth.ValueStringPointer(),
 		WorkingDir:              m.WorkingDir.ValueStringPointer(),
 		GitSparseCheckoutConfig: m.GitSparseCheckoutConfig.ValueStringPointer(),
-		GitCoreAutoCrlf:         m.GitCoreAutoCrlf.ValueBoolPointer(),
 		Ref:                     m.Ref.ValueStringPointer(),
 		Repo:                    m.Repo.ValueStringPointer(),
 		IncludeSubModule:        m.IncludeSubModule.ValueBoolPointer(),
 	}
+	if !m.GitCoreAutoCrlf.IsNull() && !m.GitCoreAutoCrlf.IsUnknown() {
+		cfg.GitCoreAutoCrlf = m.GitCoreAutoCrlf.ValueBoolPointer()
+	}
+	return cfg
 }
 
 type CustomSourceModel struct {
@@ -795,17 +798,23 @@ func (TerraformConfigModel) AttributeTypes() map[string]attr.Type {
 
 func (m TerraformConfigModel) ToAPIModel(ctx context.Context) (*sgsdkgo.TerraformConfig, diag.Diagnostics) {
 	cfg := &sgsdkgo.TerraformConfig{
-		TerraformVersion:        m.TerraformVersion.ValueStringPointer(),
-		DriftCheck:              m.DriftCheck.ValueBoolPointer(),
-		DriftCron:               m.DriftCron.ValueStringPointer(),
-		ManagedTerraformState:   m.ManagedTerraformState.ValueBoolPointer(),
-		ApprovalPreApply:        m.ApprovalPreApply.ValueBoolPointer(),
-		TerraformPlanOptions:    m.TerraformPlanOptions.ValueStringPointer(),
-		TerraformInitOptions:    m.TerraformInitOptions.ValueStringPointer(),
-		Timeout:                 expanders.IntPtr(m.Timeout.ValueInt64Pointer()),
-		RunPreInitHooksOnDrift:  m.RunPreInitHooksOnDrift.ValueBoolPointer(),
-		RunPrePlanHooksOnDrift:  m.RunPrePlanHooksOnDrift.ValueBoolPointer(),
-		RunPostPlanHooksOnDrift: m.RunPostPlanHooksOnDrift.ValueBoolPointer(),
+		TerraformVersion:      m.TerraformVersion.ValueStringPointer(),
+		DriftCheck:            m.DriftCheck.ValueBoolPointer(),
+		DriftCron:             m.DriftCron.ValueStringPointer(),
+		ManagedTerraformState: m.ManagedTerraformState.ValueBoolPointer(),
+		ApprovalPreApply:      m.ApprovalPreApply.ValueBoolPointer(),
+		TerraformPlanOptions:  m.TerraformPlanOptions.ValueStringPointer(),
+		TerraformInitOptions:  m.TerraformInitOptions.ValueStringPointer(),
+		Timeout:               expanders.IntPtr(m.Timeout.ValueInt64Pointer()),
+	}
+	if !m.RunPreInitHooksOnDrift.IsNull() && !m.RunPreInitHooksOnDrift.IsUnknown() {
+		cfg.RunPreInitHooksOnDrift = m.RunPreInitHooksOnDrift.ValueBoolPointer()
+	}
+	if !m.RunPrePlanHooksOnDrift.IsNull() && !m.RunPrePlanHooksOnDrift.IsUnknown() {
+		cfg.RunPrePlanHooksOnDrift = m.RunPrePlanHooksOnDrift.ValueBoolPointer()
+	}
+	if !m.RunPostPlanHooksOnDrift.IsNull() && !m.RunPostPlanHooksOnDrift.IsUnknown() {
+		cfg.RunPostPlanHooksOnDrift = m.RunPostPlanHooksOnDrift.ValueBoolPointer()
 	}
 
 	if !m.TerraformBinPath.IsNull() && !m.TerraformBinPath.IsUnknown() {
@@ -1006,9 +1015,14 @@ func (m WorkflowGitResourceModel) ToAPIModel(ctx context.Context) (*sgworkflows.
 		userJobMemory = &v
 	}
 
+	var resourceName *string
+	if !m.ResourceName.IsNull() && !m.ResourceName.IsUnknown() {
+		resourceName = m.ResourceName.ValueStringPointer()
+	}
+
 	return &sgworkflows.Workflow{
 		Id:                        m.Id.ValueStringPointer(),
-		ResourceName:              m.ResourceName.ValueStringPointer(),
+		ResourceName:              resourceName,
 		Description:               m.Description.ValueStringPointer(),
 		WfType:                    wfType,
 		Tags:                      tags,

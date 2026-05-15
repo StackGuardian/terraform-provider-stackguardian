@@ -25,15 +25,15 @@ func (r *workflowGitResource) Schema(_ context.Context, _ resource.SchemaRequest
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.Id,
+				Required:            true,
+			},
+			"resource_name": schema.StringAttribute{
+				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "workflow_git"),
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
-			},
-			"resource_name": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "workflow_git"),
-				Required:            true,
 			},
 			"workflow_group_id": schema.StringAttribute{
 				MarkdownDescription: constants.WorkflowWorkflowGroupId,
