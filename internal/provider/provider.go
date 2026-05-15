@@ -19,7 +19,7 @@ import (
 	stacktemplatedatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_template"
 	stacktemplaterevisiondatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_template_revision"
 	stackworkflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_workflow_outputs"
-	workflowdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow"
+	workflowgitdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_git"
 	workflowgroupdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_group"
 	workflowoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_outputs"
 	workflowsteptemplatedatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/workflow_step_template"
@@ -34,7 +34,7 @@ import (
 	runnergroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/runner_group"
 	stacktemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/stack_template"
 	stacktemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/stack_template_revision"
-	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow"
+	workflowgit "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_git"
 	workflowgroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_group"
 	workflowsteptemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_step_template"
 	workflowsteptemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_step_template_revision"
@@ -225,7 +225,6 @@ func (p *stackguardianProvider) DataSources(_ context.Context) []func() datasour
 		workflowoutputs.NewDataSource,
 		connectordatasource.NewDataSource,
 		roleassignmentdatasource.NewDataSource,
-		workflowdatasource.NewDataSource,
 		workflowgroupdatasource.NewDataSource,
 		roledatasource.NewDataSource,
 		policydatasource.NewDataSource,
@@ -237,6 +236,7 @@ func (p *stackguardianProvider) DataSources(_ context.Context) []func() datasour
 		workflowtemplaterevisiondatasource.NewDataSource,
 		stacktemplatedatasource.NewDataSource,
 		stacktemplaterevisiondatasource.NewDataSource,
+		workflowgitdatasource.NewDataSource,
 	}
 }
 
@@ -256,6 +256,6 @@ func (p *stackguardianProvider) Resources(_ context.Context) []func() resource.R
 		workflowtemplaterevision.NewResource,
 		stacktemplate.NewResource,
 		stacktemplaterevision.NewResource,
-		workflow.NewResource,
+		workflowgit.NewResource,
 	}
 }

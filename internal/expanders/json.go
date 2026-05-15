@@ -11,7 +11,7 @@ func JSONStringToInterface(s string) any {
 	return v
 }
 
-func ParseJSONToMap(jsonStr string) map[string]interface{} {
+func JSONStringToMap(jsonStr string) map[string]interface{} {
 	var result map[string]interface{}
 	if jsonStr == "" {
 		return result

@@ -34,7 +34,7 @@ const (
 // Runtime Source attributes (shared)
 const (
 	RuntimeSource                       = "Runtime source configuration for the %s."
-	RuntimeSourceDestKind               = `Destination kind for the source configuration. Options: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_OAUTH_SSH</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS</span>`
+	RuntimeSourceDestKind               = `VCS provider kind. Options: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_OAUTH_SSH</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS</span>`
 	RuntimeSourceConfig                 = "Configuration for the runtime environment."
 	RuntimeSourceConfigAuth             = "Connector id to access private git repository"
 	RuntimeSourceConfigGitCoreCRLF      = "Whether to automatically handle CRLF line endings."
@@ -61,7 +61,7 @@ const (
 	EnvVarConfigVarName   = "Name of the variable."
 	EnvVarConfigSecretId  = `ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>`
 	EnvVarConfigTextValue = `Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>`
-	EnvVarKind            = `Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>`
+	EnvVarKind            = `Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>`
 )
 
 // Input Schemas attributes
@@ -91,13 +91,13 @@ const (
 
 // Runner Constraints attributes
 const (
-	RunnerConstraintsType  = `Type of runner. Valid options: <span style="background-color: #eff0f0; color: #e53835;">shared</span> or <span style="background-color: #eff0f0; color: #e53835;">external</span>`
-	RunnerConstraintsNames = "Id of the runner group"
+	RunnerConstraintsType  = `Type of runner. Valid options: <span style="background-color: #eff0f0; color: #e53835;">shared</span> or <span style="background-color: #eff0f0; color: #e53835;">private</span>`
+	RunnerConstraintsNames = "Id of the runner group. Allowed only if type is external."
 )
 
 // User Schedules attributes
 const (
-	UserScheduleCron  = "Cron expression defining the schedule."
+	UserScheduleCron  = `Cron expression defining the schedule. Use [AWS cron](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-scheduled-rule-pattern.html) expression format.`
 	UserScheduleState = `State of the schedule. Options: <span style="background-color: #eff0f0; color: #e53835;">ENABLED</span>, <span style="background-color: #eff0f0; color: #e53835;">DISABLED</span>`
 	UserScheduleDesc  = "Description of the schedule."
 	UserScheduleName  = "Name of the schedule."
@@ -153,5 +153,7 @@ const (
 	TerraformPostPlanHooks          = "Hooks to run after plan."
 	TerraformPreApplyHooks          = "Hooks to run before apply."
 	TerraformPostApplyHooks         = "Hooks to run after apply."
-	TerraformRunPreInitHooksOnDrift = "Run pre-init hooks on drift detection."
+	TerraformRunPreInitHooksOnDrift  = "Run pre-init hooks on drift detection."
+	TerraformRunPrePlanHooksOnDrift  = "Run pre-plan hooks on drift detection."
+	TerraformRunPostPlanHooksOnDrift = "Run post-plan hooks on drift detection."
 )

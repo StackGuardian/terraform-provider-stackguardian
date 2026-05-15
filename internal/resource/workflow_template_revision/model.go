@@ -434,7 +434,7 @@ func ConvertRunnerConstraintsToAPIModel(ctx context.Context, runnerConstraintsTe
 	}
 
 	return &sgsdkgo.RunnerConstraints{
-		Type:  sgsdkgo.RunnerConstraintsTypeEnum(runnerConstraintsModel.Type.ValueString()),
+		Type:  (*sgsdkgo.RunnerConstraintsTypeEnum)(runnerConstraintsModel.Type.ValueStringPointer()),
 		Names: names,
 	}, nil
 }
@@ -1033,7 +1033,7 @@ func ConvertWfStepsConfigListToAPI(ctx context.Context, wfStepsConfigList types.
 	wfStepsConfigs := make([]sgsdkgo.WfStepsConfig, len(wfStepModels))
 	for i, wfStep := range wfStepModels {
 		wfStepsConfigs[i] = sgsdkgo.WfStepsConfig{
-			Name:             wfStep.Name.ValueString(),
+			Name:             wfStep.Name.ValueStringPointer(),
 			Approval:         wfStep.Approval.ValueBoolPointer(),
 			Timeout:          expanders.IntPtr(wfStep.Timeout.ValueInt64Pointer()),
 			WfStepTemplateId: wfStep.WfStepTemplateId.ValueStringPointer(),
@@ -1066,9 +1066,13 @@ func ConvertWfStepsConfigListToAPI(ctx context.Context, wfStepsConfigList types.
 			if diags.HasError() {
 				return nil, diags
 			}
+			schemaType, err := sgsdkgo.NewWfStepInputDataSchemaTypeEnumFromString(inputDataModel.SchemaType.ValueString())
+			if err != nil {
+				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid workflow step input data", "The provided workflow step input data is invalid: "+err.Error())}
+			}
 			wfStepsConfigs[i].WfStepInputData = &sgsdkgo.WfStepInputData{
-				SchemaType: sgsdkgo.WfStepInputDataSchemaTypeEnum(inputDataModel.SchemaType.ValueString()),
-				Data:       expanders.ParseJSONToMap(inputDataModel.Data.ValueString()),
+				SchemaType: schemaType.Ptr(),
+				Data:       expanders.JSONStringToMap(inputDataModel.Data.ValueString()),
 			}
 		}
 	}
@@ -1127,9 +1131,13 @@ func ConvertWfStepInputDataToAPI(ctx context.Context, inputDataObj types.Object)
 		return nil, diags
 	}
 
+	schemaType, err := sgsdkgo.NewWfStepInputDataSchemaTypeEnumFromString(inputDataModel.SchemaType.ValueString())
+	if err != nil {
+		return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid workflow step input data", "The provided workflow step input data is invalid: "+err.Error())}
+	}
 	return &sgsdkgo.WfStepInputData{
-		SchemaType: sgsdkgo.WfStepInputDataSchemaTypeEnum(inputDataModel.SchemaType.ValueString()),
-		Data:       expanders.ParseJSONToMap(inputDataModel.Data.ValueString()),
+		SchemaType: schemaType.Ptr(),
+		Data:       expanders.JSONStringToMap(inputDataModel.Data.ValueString()),
 	}, nil
 }
 
@@ -1138,7 +1146,7 @@ func ConvertWfStepsConfigToAPI(ctx context.Context, wfStepModel WfStepsConfigMod
 	diags := diag.Diagnostics{}
 
 	wfStepConfig := &sgsdkgo.WfStepsConfig{
-		Name:             wfStepModel.Name.ValueString(),
+		Name:             wfStepModel.Name.ValueStringPointer(),
 		Approval:         wfStepModel.Approval.ValueBoolPointer(),
 		Timeout:          expanders.IntPtr(wfStepModel.Timeout.ValueInt64Pointer()),
 		WfStepTemplateId: wfStepModel.WfStepTemplateId.ValueStringPointer(),
@@ -1183,7 +1191,7 @@ func ConvertWfStepInputDataFromAPI(ctx context.Context, inputData *sgsdkgo.WfSte
 	}
 
 	inputDataModel := WfStepInputDataModel{
-		SchemaType: flatteners.String((string)(inputData.SchemaType)),
+		SchemaType: flatteners.String(string(*inputData.SchemaType)),
 		Data:       flatteners.JSONInterfaceToString(inputData.Data),
 	}
 
@@ -1199,7 +1207,7 @@ func ConvertWfStepsConfigFromAPI(ctx context.Context, wfStepConfig *sgsdkgo.WfSt
 	}
 
 	wfStepModel := WfStepsConfigModel{
-		Name:             flatteners.String(wfStepConfig.Name),
+		Name:             flatteners.StringPtr(wfStepConfig.Name),
 		Approval:         flatteners.BoolPtr(wfStepConfig.Approval),
 		Timeout:          flatteners.Int64Ptr(wfStepConfig.Timeout),
 		WfStepTemplateId: flatteners.StringPtr(wfStepConfig.WfStepTemplateId),
@@ -1274,7 +1282,7 @@ func ConvertRunnerConstraintsFromAPI(ctx context.Context, runnerConstraints *sgs
 	}
 
 	model := RunnerConstraintsModel{
-		Type:  flatteners.String(string(runnerConstraints.Type)),
+		Type:  flatteners.StringPtr((*string)(runnerConstraints.Type)),
 		Names: namesList,
 	}
 
