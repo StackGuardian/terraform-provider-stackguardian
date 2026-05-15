@@ -115,7 +115,7 @@ Read-Only:
 Read-Only:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--actions--order--parameters--environment_variables--config))
-- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
 
 <a id="nestedatt--actions--order--parameters--environment_variables--config"></a>
 ### Nested Schema for `actions.order.parameters.environment_variables.config`
@@ -156,7 +156,7 @@ Read-Only:
 Read-Only:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--actions--order--parameters--wf_steps_config--environment_variables--config))
-- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
 
 <a id="nestedatt--actions--order--parameters--wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `actions.order.parameters.wf_steps_config.environment_variables.config`
@@ -244,7 +244,7 @@ Read-Only:
 Read-Only:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--workflows_config--workflows--environment_variables--config))
-- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
 
 <a id="nestedatt--workflows_config--workflows--environment_variables--config"></a>
 ### Nested Schema for `workflows_config.workflows.environment_variables.config`
@@ -262,8 +262,8 @@ Read-Only:
 
 Read-Only:
 
-- `names` (List of String) Id of the runner group
-- `type` (String) Type of runner. Valid options: <span style="background-color: #eff0f0; color: #e53835;">shared</span> or <span style="background-color: #eff0f0; color: #e53835;">external</span>
+- `names` (List of String) Id of the runner group. Allowed only if type is external.
+- `type` (String) Type of runner. Valid options: <span style="background-color: #eff0f0; color: #e53835;">shared</span> or <span style="background-color: #eff0f0; color: #e53835;">private</span>
 
 
 <a id="nestedatt--workflows_config--workflows--terraform_config"></a>
@@ -311,7 +311,7 @@ Read-Only:
 Read-Only:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config--post_apply_wf_steps_config--environment_variables--config))
-- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
 
 <a id="nestedatt--workflows_config--workflows--terraform_config--post_apply_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `workflows_config.workflows.terraform_config.post_apply_wf_steps_config.environment_variables.config`
@@ -364,7 +364,7 @@ Read-Only:
 Read-Only:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config--post_plan_wf_steps_config--environment_variables--config))
-- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
 
 <a id="nestedatt--workflows_config--workflows--terraform_config--post_plan_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `workflows_config.workflows.terraform_config.post_plan_wf_steps_config.environment_variables.config`
@@ -417,7 +417,7 @@ Read-Only:
 Read-Only:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config--pre_apply_wf_steps_config--environment_variables--config))
-- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
 
 <a id="nestedatt--workflows_config--workflows--terraform_config--pre_apply_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `workflows_config.workflows.terraform_config.pre_apply_wf_steps_config.environment_variables.config`
@@ -470,7 +470,7 @@ Read-Only:
 Read-Only:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config--pre_plan_wf_steps_config--environment_variables--config))
-- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
 
 <a id="nestedatt--workflows_config--workflows--terraform_config--pre_plan_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `workflows_config.workflows.terraform_config.pre_plan_wf_steps_config.environment_variables.config`
@@ -519,7 +519,7 @@ Read-Only:
 
 Read-Only:
 
-- `cron` (String) Cron expression defining the schedule.
+- `cron` (String) Cron expression defining the schedule. Use [AWS cron](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-scheduled-rule-pattern.html) expression format.
 - `desc` (String)
 - `name` (String)
 - `state` (String) State of the schedule. Options: <span style="background-color: #eff0f0; color: #e53835;">ENABLED</span>, <span style="background-color: #eff0f0; color: #e53835;">DISABLED</span>
@@ -558,7 +558,7 @@ Read-Only:
 Read-Only:
 
 - `config` (Attributes) Source configuration details. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source--config))
-- `source_config_dest_kind` (String) Destination kind for the source configuration. Options: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_OAUTH_SSH</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS</span>
+- `source_config_dest_kind` (String) VCS provider kind. Options: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_OAUTH_SSH</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS</span>
 
 <a id="nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source--config"></a>
 ### Nested Schema for `workflows_config.workflows.vcs_config.iac_vcs_config.custom_source.config`
@@ -598,7 +598,7 @@ Read-Only:
 Read-Only:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--workflows_config--workflows--wf_steps_config--environment_variables--config))
-- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
 
 <a id="nestedatt--workflows_config--workflows--wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `workflows_config.workflows.wf_steps_config.environment_variables.config`
