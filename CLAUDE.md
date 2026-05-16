@@ -221,7 +221,9 @@ schemas of those attributes and re-use them.
 
 6. **Diagnostics convention in `model.go`:** Check diags after every step in all converter functions (`ToAPIModel`, `ToUpdateAPIModel`, `convertXxxFromAPI`) and return early if there is an error. For `convertXxxFromAPI`, return `nullObj` / `nullList` (never the zero value) on every error path — see the null guards pattern above.
 
-7. **`Computed`-only fields inside `ListNestedAttribute` need `UseStateForUnknown()`.**  For top-level `Computed` attributes Terraform carries the state value forward automatically. But inside a `ListNestedAttribute`, Terraform plans the entire list element object fresh each time — any `Computed` field with no config value is marked `(known after apply)` even when state already has a value. This produces a perpetual diff after the first apply. Fix: add `stringplanmodifier.UseStateForUnknown()` (or the equivalent for other types) to every `Computed`-only field inside a nested list object.
+7. **`Computed` need `UseStateForUnknown()`.** For top-level `Computed` attributes Terraform carries the state value forward automatically. But for nested attributes, Terraform plans the entire list element object fresh each time — any `Computed` field with no config value is marked `(known after apply)` even when state already has a value. This produces a perpetual diff after the first apply. Fix: add `stringplanmodifier.UseStateForUnknown()` (or the equivalent for other types) to every `Computed` field inside a nested list object.
+
+8. **Attributes that are `Computed`**: In `converXxxFromAPI` method they need to set to some value if they are nil. If it is `types.Object` then all attributes inside that attribute need to have a nil value.
 
 ---
 

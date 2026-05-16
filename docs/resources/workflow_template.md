@@ -92,7 +92,7 @@ Optional:
 Required:
 
 - `create_tag` (Attributes) Trigger configuration on tag creation in VCS (see [below for nested schema](#nestedatt--vcs_triggers--create_tag))
-- `type` (String) VCS provider type. Options: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_OAUTH_SSH</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>
+- `type` (String) The VCS platform type. Determines which webhook integration is used. Supported values: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_OAUTH_SSH</span>, <span style="background-color: #eff0f0; color: #e53835;">BITBUCKET_ORG</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS_SP</span>.
 
 <a id="nestedatt--vcs_triggers--create_tag"></a>
 ### Nested Schema for `vcs_triggers.create_tag`

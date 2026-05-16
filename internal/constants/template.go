@@ -49,7 +49,7 @@ const (
 // VCS Triggers attributes
 const (
 	VCSTriggers                         = "VCS trigger configuration for the workflow."
-	VCSTriggersType                     = `VCS provider type. Options: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_OAUTH_SSH</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>`
+	VCSTriggersType                     = `The VCS platform type. Determines which webhook integration is used. Supported values: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_OAUTH_SSH</span>, <span style="background-color: #eff0f0; color: #e53835;">BITBUCKET_ORG</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS_SP</span>.`
 	VCSTriggersCreateTag                = "Trigger configuration on tag creation in VCS"
 	VCSTriggersCreateTagRevision        = "Create new revision on tag creation"
 	VCSTriggersCreateTagRevisionEnabled = "Whether to create revision when tag is created."

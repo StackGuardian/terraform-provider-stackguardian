@@ -38,6 +38,7 @@ type WorkflowGitResourceModel struct {
 	TerraformConfig           types.Object `tfsdk:"terraform_config"`
 	DeploymentPlatformConfig  types.List   `tfsdk:"deployment_platform_config"`
 	WfStepsConfig             types.List   `tfsdk:"wf_steps_config"`
+	VcsTriggers               types.Object `tfsdk:"vcs_triggers"`
 }
 
 func (m WorkflowGitResourceModel) AttributeTypes(ctx context.Context) map[string]attr.Type {
@@ -61,6 +62,7 @@ func (m WorkflowGitResourceModel) AttributeTypes(ctx context.Context) map[string
 		"terraform_config":             types.ObjectType{AttrTypes: TerraformConfigModel{}.AttributeTypes()},
 		"deployment_platform_config":   types.ListType{ElemType: types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()}},
 		"wf_steps_config":              types.ListType{ElemType: types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}},
+		"vcs_triggers":                 types.ObjectType{AttrTypes: VcsTriggersModel{}.AttributeTypes()},
 	}
 }
 
@@ -465,6 +467,197 @@ func (m UserSchedulesModel) ToAPIModel() sgsdkgo.UserSchedules {
 		Desc:  m.Desc.ValueStringPointer(),
 		Name:  m.Name.ValueStringPointer(),
 	}
+}
+
+// ---------------------------------------------------------------------------
+// VcsTriggers
+// ---------------------------------------------------------------------------
+
+type VcsTriggerActionConfigModel struct {
+	Enabled types.Bool `tfsdk:"enabled"`
+}
+
+func (VcsTriggerActionConfigModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"enabled": types.BoolType,
+	}
+}
+
+type VcsTriggersModel struct {
+	TrackedBranch           types.String `tfsdk:"tracked_branch"`
+	ApprovalPreApply        types.Bool   `tfsdk:"approval_pre_apply"`
+	PlanOnly                types.Bool   `tfsdk:"plan_only"`
+	FileTriggersEnabled     types.Bool   `tfsdk:"file_triggers_enabled"`
+	FileTriggerPatterns     types.List   `tfsdk:"file_trigger_patterns"`
+	GlHookId                types.String `tfsdk:"gl_hook_id"`
+	BbHookId                types.String `tfsdk:"bb_hook_id"`
+	GhWebhookUrl            types.String `tfsdk:"gh_webhook_url"`
+	AdoHooksId              types.Map    `tfsdk:"ado_hooks_id"`
+	AllPullRequests         types.Map    `tfsdk:"all_pull_requests"`
+	PullRequestOpened       types.Map    `tfsdk:"pull_request_opened"`
+	PullRequestModified     types.Map    `tfsdk:"pull_request_modified"`
+	CreateTag               types.Map    `tfsdk:"create_tag"`
+	Push                    types.Map    `tfsdk:"push"`
+}
+
+func (VcsTriggersModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"tracked_branch":             types.StringType,
+		"approval_pre_apply":         types.BoolType,
+		"plan_only":                  types.BoolType,
+		"file_triggers_enabled":      types.BoolType,
+		"file_trigger_patterns":      types.ListType{ElemType: types.StringType},
+		"gl_hook_id":                 types.StringType,
+		"bb_hook_id":                 types.StringType,
+		"gh_webhook_url":             types.StringType,
+		"ado_hooks_id":               types.MapType{ElemType: types.StringType},
+		"all_pull_requests":          types.MapType{ElemType: types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}},
+		"pull_request_opened":        types.MapType{ElemType: types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}},
+		"pull_request_modified":      types.MapType{ElemType: types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}},
+		"create_tag":                 types.MapType{ElemType: types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}},
+		"push":                       types.MapType{ElemType: types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}},
+	}
+}
+
+func (m VcsTriggersModel) ToAPIModel(ctx context.Context) (*sgsdkgo.VcsTriggers, diag.Diagnostics) {
+	result := &sgsdkgo.VcsTriggers{}
+
+	if !m.TrackedBranch.IsNull() && !m.TrackedBranch.IsUnknown() {
+		result.TrackedBranch = m.TrackedBranch.ValueStringPointer()
+	}
+	if !m.ApprovalPreApply.IsNull() && !m.ApprovalPreApply.IsUnknown() {
+		result.ApprovalPreApply = m.ApprovalPreApply.ValueBoolPointer()
+	}
+	if !m.PlanOnly.IsNull() && !m.PlanOnly.IsUnknown() {
+		result.PlanOnly = m.PlanOnly.ValueBoolPointer()
+	}
+	if !m.FileTriggersEnabled.IsNull() && !m.FileTriggersEnabled.IsUnknown() {
+		result.FileTriggersEnabled = m.FileTriggersEnabled.ValueBoolPointer()
+	}
+	if !m.FileTriggerPatterns.IsNull() && !m.FileTriggerPatterns.IsUnknown() {
+		patterns, diags := expanders.StringList(ctx, m.FileTriggerPatterns)
+		if diags.HasError() {
+			return nil, diags
+		}
+		result.FileTriggerPatterns = patterns
+	}
+	if !m.AdoHooksId.IsNull() && !m.AdoHooksId.IsUnknown() {
+		adoMap, diags := expanders.MapStringString(ctx, m.AdoHooksId)
+		if diags.HasError() {
+			return nil, diags
+		}
+		result.AdoHooksId = adoMap
+	}
+
+	for _, pair := range []struct {
+		src  types.Map
+		dest *map[string]sgsdkgo.VcsTriggerActionConfig
+	}{
+		{m.AllPullRequests, &result.AllPullRequests},
+		{m.PullRequestOpened, &result.PullRequestOpened},
+		{m.PullRequestModified, &result.PullRequestModified},
+		{m.CreateTag, &result.CreateTag},
+		{m.Push, &result.Push},
+	} {
+		if !pair.src.IsNull() && !pair.src.IsUnknown() {
+			var models map[string]VcsTriggerActionConfigModel
+			diags := pair.src.ElementsAs(ctx, &models, false)
+			if diags.HasError() {
+				return nil, diags
+			}
+			v := make(map[string]sgsdkgo.VcsTriggerActionConfig, len(models))
+			for k, cfg := range models {
+				v[k] = sgsdkgo.VcsTriggerActionConfig{Enabled: cfg.Enabled.ValueBool()}
+			}
+			*pair.dest = v
+		}
+	}
+
+	return result, nil
+}
+
+func convertVcsTriggersToAPI(ctx context.Context, obj types.Object) (*sgsdkgo.VcsTriggers, diag.Diagnostics) {
+	if obj.IsNull() || obj.IsUnknown() {
+		return nil, nil
+	}
+	var m VcsTriggersModel
+	diags := obj.As(ctx, &m, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, diags
+	}
+	return m.ToAPIModel(ctx)
+}
+
+func convertVcsTriggersFromAPI(ctx context.Context, vt *sgsdkgo.VcsTriggers) (types.Object, diag.Diagnostics) {
+	nullObj := types.ObjectNull(VcsTriggersModel{}.AttributeTypes())
+	if vt == nil || flatteners.IsEmptyObject(vt) {
+		return nullObj, nil
+	}
+
+	fileTriggerPatterns, diags := flatteners.ListOfStringToTerraformList(vt.FileTriggerPatterns)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+
+	adoHooksId, diags := flatteners.MapStringStringOrEmpty(ctx, vt.AdoHooksId)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+
+	flattenActionMap := func(v map[string]sgsdkgo.VcsTriggerActionConfig) (types.Map, diag.Diagnostics) {
+		elemType := types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}
+		if len(v) == 0 {
+			return types.MapNull(elemType), nil
+		}
+		models := make(map[string]VcsTriggerActionConfigModel, len(v))
+		for k, cfg := range v {
+			models[k] = VcsTriggerActionConfigModel{Enabled: types.BoolValue(cfg.Enabled)}
+		}
+		return types.MapValueFrom(ctx, elemType, models)
+	}
+
+	allPullRequests, diags := flattenActionMap(vt.AllPullRequests)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	pullRequestOpened, diags := flattenActionMap(vt.PullRequestOpened)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	pullRequestModified, diags := flattenActionMap(vt.PullRequestModified)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	createTag, diags := flattenActionMap(vt.CreateTag)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	push, diags := flattenActionMap(vt.Push)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+
+	m := VcsTriggersModel{
+		TrackedBranch:           flatteners.StringPtr(vt.TrackedBranch),
+		ApprovalPreApply:        flatteners.BoolPtr(vt.ApprovalPreApply),
+		PlanOnly:                flatteners.BoolPtr(vt.PlanOnly),
+		FileTriggersEnabled:     flatteners.BoolPtr(vt.FileTriggersEnabled),
+		FileTriggerPatterns:     fileTriggerPatterns,
+		GlHookId:                flatteners.StringPtrDefault(vt.GlHookId),
+		BbHookId:                flatteners.StringPtrDefault(vt.BbHookId),
+		GhWebhookUrl:            flatteners.StringPtrDefault(vt.GhWebhookUrl),
+		AdoHooksId:              adoHooksId,
+		AllPullRequests:         allPullRequests,
+		PullRequestOpened:       pullRequestOpened,
+		PullRequestModified:     pullRequestModified,
+		CreateTag:               createTag,
+		Push:                    push,
+	}
+	obj, d := types.ObjectValueFrom(ctx, VcsTriggersModel{}.AttributeTypes(), m)
+	if d.HasError() {
+		return nullObj, d
+	}
+	return obj, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -991,6 +1184,17 @@ func (m WorkflowGitResourceModel) ToAPIModel(ctx context.Context) (*sgworkflows.
 		return nil, diags
 	}
 
+	vcsTriggers, diags := convertVcsTriggersToAPI(ctx, m.VcsTriggers)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	if vcsTriggers != nil && vcsConfig != nil && vcsConfig.IacVcsConfig != nil &&
+		vcsConfig.IacVcsConfig.CustomSource != nil && vcsConfig.IacVcsConfig.CustomSource.SourceConfigDestKind != nil {
+		t := sgsdkgo.VcsTriggersTypeEnum(*vcsConfig.IacVcsConfig.CustomSource.SourceConfigDestKind)
+		vcsTriggers.Type = &t
+	}
+
 	var wfType *sgsdkgo.WfTypeEnum
 	if !m.WfType.IsNull() && !m.WfType.IsUnknown() {
 		t := sgsdkgo.WfTypeEnum(m.WfType.ValueString())
@@ -1039,6 +1243,7 @@ func (m WorkflowGitResourceModel) ToAPIModel(ctx context.Context) (*sgworkflows.
 		UserSchedules:             userSchedules,
 		DeploymentPlatformConfig:  deploymentPlatformConfig,
 		VcsConfig:                 vcsConfig,
+		VcsTriggers:               vcsTriggers,
 	}, nil
 }
 
@@ -1160,6 +1365,12 @@ func (m WorkflowGitResourceModel) ToUpdateAPIModel(ctx context.Context) (*sgwork
 		patched.UserSchedules = sgsdkgo.Null[[]*sgsdkgo.UserSchedules]()
 	}
 
+	if workflow.VcsTriggers != nil {
+		patched.VcsTriggers = sgsdkgo.Optional(*workflow.VcsTriggers)
+	} else {
+		patched.VcsTriggers = sgsdkgo.Null[sgsdkgo.VcsTriggers]()
+	}
+
 	return patched, diags
 }
 
@@ -1244,6 +1455,10 @@ func ConvertWorkflowGitFromAPI(ctx context.Context, response *sgworkflows.Workfl
 	vcsConfig, diags := convertVcsConfigFromAPI(ctx, wf.VcsConfig)
 	allDiags.Append(diags...)
 	model.VcsConfig = vcsConfig
+
+	vcsTriggers, diags := convertVcsTriggersFromAPI(ctx, wf.VcsTriggers)
+	allDiags.Append(diags...)
+	model.VcsTriggers = vcsTriggers
 
 	return model, allDiags
 }

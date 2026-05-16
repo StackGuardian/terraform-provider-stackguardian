@@ -88,6 +88,25 @@ func (r *workflowGitResource) Create(ctx context.Context, req resource.CreateReq
 
 	id := createResp.Data.Id
 
+	if !plan.VcsTriggers.IsNull() && !plan.VcsTriggers.IsUnknown() && payload.VcsTriggers != nil {
+		vcsTriggerReq := &sgworkflows.CreateVcsTriggersRequest{
+			VcsTriggers: payload.VcsTriggers,
+		}
+		if payload.VcsConfig != nil {
+			vcsTriggerReq.VcsConfig = payload.VcsConfig
+		}
+
+		_, err := r.client.Workflows.CreateVcsTriggers(ctx, r.org_name, plan.WorkflowGroupId.ValueString(), id, vcsTriggerReq)
+		if err != nil {
+			r.client.Workflows.DeleteWorkflow(ctx, r.org_name, id, plan.WorkflowGroupId.ValueString())
+			resp.Diagnostics.AddError(
+				"Error creating vcs_triggers for workflow_git",
+				"VCS trigger registration failed: "+err.Error()+". The workflow was deleted to avoid leaving orphaned resources.",
+			)
+			return
+		}
+	}
+
 	readResp, err := r.client.Workflows.ReadWorkflow(ctx, r.org_name, id, plan.WorkflowGroupId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading created workflow_git", "Could not read the created workflow_git: "+err.Error())
@@ -160,6 +179,31 @@ func (r *workflowGitResource) Update(ctx context.Context, req resource.UpdateReq
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error updating workflow_git", "Error in updating workflow_git API call: "+err.Error())
 		return
+	}
+
+	if !plan.VcsTriggers.IsNull() && !plan.VcsTriggers.IsUnknown() {
+		createPayload, diags := plan.ToAPIModel(ctx)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		createPayload.VcsConfig.IacVcsConfig.UseMarketplaceTemplate = expanders.BoolPtr(false)
+		if createPayload.VcsTriggers != nil {
+			vcsTriggerReq := &sgworkflows.CreateVcsTriggersRequest{
+				VcsTriggers: createPayload.VcsTriggers,
+			}
+			if createPayload.VcsConfig != nil {
+				vcsTriggerReq.VcsConfig = createPayload.VcsConfig
+			}
+			_, err := r.client.Workflows.CreateVcsTriggers(ctx, r.org_name, workflowGroupId, id, vcsTriggerReq)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					"Error updating vcs_triggers for workflow_git",
+					"VCS trigger update failed: "+err.Error(),
+				)
+				return
+			}
+		}
 	}
 
 	readResp, err := r.client.Workflows.ReadWorkflow(ctx, r.org_name, id, workflowGroupId)
