@@ -215,11 +215,11 @@ func (d *workflowGitDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 								Computed:            true,
 							},
 							"schema_type": schema.StringAttribute{
-								MarkdownDescription: "Schema type for the input data.",
+								MarkdownDescription: constants.WorkflowIacInputDataSchemaType,
 								Computed:            true,
 							},
 							"data": schema.StringAttribute{
-								MarkdownDescription: "Input data as a JSON string.",
+								MarkdownDescription: constants.WorkflowIacInputDataData,
 								Computed:            true,
 							},
 						},
@@ -357,6 +357,75 @@ func (d *workflowGitDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 				Computed:            true,
 				NestedObject:        dsWfStepsConfig(),
 			},
+			"vcs_triggers": schema.SingleNestedAttribute{
+				MarkdownDescription: constants.VCSTriggers,
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"tracked_branch": schema.StringAttribute{
+						MarkdownDescription: constants.VCSTriggersTrackedBranch,
+						Computed:            true,
+					},
+					"approval_pre_apply": schema.BoolAttribute{
+						MarkdownDescription: constants.VCSTriggersApprovalPreApply,
+						Computed:            true,
+					},
+					"plan_only": schema.BoolAttribute{
+						MarkdownDescription: constants.VCSTriggersPlanOnly,
+						Computed:            true,
+					},
+					"file_triggers_enabled": schema.BoolAttribute{
+						MarkdownDescription: constants.VCSTriggersFileTriggersEnabled,
+						Computed:            true,
+					},
+					"file_trigger_patterns": schema.ListAttribute{
+						MarkdownDescription: constants.VCSTriggersFileTriggerPatterns,
+						Computed:            true,
+						ElementType:         types.StringType,
+					},
+					"gl_hook_id": schema.StringAttribute{
+						MarkdownDescription: constants.VCSTriggersGlHookId,
+						Computed:            true,
+					},
+					"bb_hook_id": schema.StringAttribute{
+						MarkdownDescription: constants.VCSTriggersBbHookId,
+						Computed:            true,
+					},
+					"gh_webhook_url": schema.StringAttribute{
+						MarkdownDescription: constants.VCSTriggersGhWebhookUrl,
+						Computed:            true,
+					},
+					"ado_hooks_id": schema.MapAttribute{
+						MarkdownDescription: constants.VCSTriggersAdoHooksId,
+						Computed:            true,
+						ElementType:         types.StringType,
+					},
+					"all_pull_requests": schema.MapNestedAttribute{
+						MarkdownDescription: constants.VCSTriggersAllPullRequests,
+						Computed:            true,
+						NestedObject:        dsVcsTriggerActionNestedObject(),
+					},
+					"pull_request_opened": schema.MapNestedAttribute{
+						MarkdownDescription: constants.VCSTriggersPullRequestOpened,
+						Computed:            true,
+						NestedObject:        dsVcsTriggerActionNestedObject(),
+					},
+					"pull_request_modified": schema.MapNestedAttribute{
+						MarkdownDescription: constants.VCSTriggersPullRequestModified,
+						Computed:            true,
+						NestedObject:        dsVcsTriggerActionNestedObject(),
+					},
+					"create_tag": schema.MapNestedAttribute{
+						MarkdownDescription: constants.VCSTriggersCreateTagAction,
+						Computed:            true,
+						NestedObject:        dsVcsTriggerActionNestedObject(),
+					},
+					"push": schema.MapNestedAttribute{
+						MarkdownDescription: constants.VCSTriggersPush,
+						Computed:            true,
+						NestedObject:        dsVcsTriggerActionNestedObject(),
+					},
+				},
+			},
 		},
 	}
 }
@@ -486,6 +555,16 @@ func dsMiniStepsWebhook() schema.NestedAttributeObject {
 			"webhook_secret": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWebhookSecret,
 				Computed:            true,
+			},
+		},
+	}
+}
+
+func dsVcsTriggerActionNestedObject() schema.NestedAttributeObject {
+	return schema.NestedAttributeObject{
+		Attributes: map[string]schema.Attribute{
+			"enabled": schema.BoolAttribute{
+				Computed: true,
 			},
 		},
 	}

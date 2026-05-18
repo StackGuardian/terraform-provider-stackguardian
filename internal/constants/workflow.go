@@ -12,4 +12,6 @@ const (
 	WorkflowCustomSource             = "Custom VCS source configuration."
 	WorkflowIacInputData             = "IaC input data for the workflow."
 	WorkflowIacInputDataSchemaId     = "Schema ID for the input data."
+	WorkflowIacInputDataSchemaType   = "Schema type for the input data. Allowed values are `FORM_JSONSCHEMA`, `RAW_HCL`, `RAW_JSON`, `NO_CODE_JSON`, `NONE`."
+	WorkflowIacInputDataData         = "Input data as a JSON string."
 )
