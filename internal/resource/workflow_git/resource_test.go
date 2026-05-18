@@ -437,6 +437,300 @@ func TestAccWorkflowGit_WithUserSchedules(t *testing.T) {
 	})
 }
 
+func TestAccWorkflowGit_WithVcsTriggers_Push(t *testing.T) {
+	wfGrpName := "tf-provider-workflow-git-vcs-triggers-push-wfgrp"
+	id := "tf-provider-workflow-git-vcs-triggers-push"
+
+	err := createWorkflowGroupFixture(wfGrpName)
+	if err != nil {
+		t.Errorf("failed to create workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(wfGrpName)
+	defer deleteWorkflowGitFixture(wfGrpName, id)
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	configPush := func(planOnly bool) string {
+		return fmt.Sprintf(`
+  vcs_config = {
+    iac_vcs_config = {
+      custom_source = {
+        config = {
+          is_private = false
+          repo       = "https://github.com/dummy/test-repo.git"
+        }
+        source_config_dest_kind = "GITHUB_COM"
+      }
+    }
+  }
+
+  vcs_triggers = {
+    tracked_branch = "main"
+    plan_only      = %t
+
+    push = {
+      createWfRun = { enabled = true }
+    }
+  }
+`, planOnly)
+	}
+
+	configPushWithFilters := func(patterns string) string {
+		return fmt.Sprintf(`
+  vcs_config = {
+    iac_vcs_config = {
+      custom_source = {
+        config = {
+          is_private = false
+          repo       = "https://github.com/dummy/test-repo.git"
+        }
+        source_config_dest_kind = "GITHUB_COM"
+      }
+    }
+  }
+
+  vcs_triggers = {
+    tracked_branch        = "main"
+    file_triggers_enabled = true
+    file_trigger_patterns = %s
+
+    push = {
+      createWfRun = { enabled = true }
+    }
+  }
+`, patterns)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", configPush(false)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_triggers.tracked_branch", "main"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_triggers.plan_only", "false"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_triggers.push.createWfRun.enabled", "true"),
+				),
+			},
+			{
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", configPush(true)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_triggers.plan_only", "true"),
+				),
+			},
+			{
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", configPushWithFilters(`["*.tf"]`)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_triggers.file_triggers_enabled", "true"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_triggers.file_trigger_patterns.0", "*.tf"),
+				),
+			},
+			{
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", configPushWithFilters(`["*.tf", "infra/**/*.json"]`)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_triggers.file_trigger_patterns.0", "*.tf"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_triggers.file_trigger_patterns.1", "infra/**/*.json"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccWorkflowGit_WithVcsTriggers_PullRequest(t *testing.T) {
+	wfGrpName := "tf-provider-workflow-git-vcs-triggers-pr-wfgrp"
+	id := "tf-provider-workflow-git-vcs-triggers-pr"
+
+	err := createWorkflowGroupFixture(wfGrpName)
+	if err != nil {
+		t.Errorf("failed to create workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(wfGrpName)
+	defer deleteWorkflowGitFixture(wfGrpName, id)
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	configWithBoth := `
+  vcs_config = {
+    iac_vcs_config = {
+      custom_source = {
+        config = {
+          is_private = false
+          repo       = "https://github.com/dummy/test-repo.git"
+        }
+        source_config_dest_kind = "GITHUB_COM"
+      }
+    }
+  }
+
+  vcs_triggers = {
+    tracked_branch = "main"
+
+    pull_request_opened = {
+      createWfRun = { enabled = true }
+    }
+    pull_request_modified = {
+      createWfRun = { enabled = true }
+    }
+  }
+`
+
+	configOpenedOnly := `
+  vcs_config = {
+    iac_vcs_config = {
+      custom_source = {
+        config = {
+          is_private = false
+          repo       = "https://github.com/dummy/test-repo.git"
+        }
+        source_config_dest_kind = "GITHUB_COM"
+      }
+    }
+  }
+
+  vcs_triggers = {
+    tracked_branch = "main"
+
+    pull_request_opened = {
+      createWfRun = { enabled = true }
+    }
+  }
+`
+
+	configAllPR := func(enabled bool) string {
+		return fmt.Sprintf(`
+  vcs_config = {
+    iac_vcs_config = {
+      custom_source = {
+        config = {
+          is_private = false
+          repo       = "https://github.com/dummy/test-repo.git"
+        }
+        source_config_dest_kind = "GITHUB_COM"
+      }
+    }
+  }
+
+  vcs_triggers = {
+    all_pull_requests = {
+      createWfRun = { enabled = %t }
+    }
+  }
+`, enabled)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", configWithBoth),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_triggers.tracked_branch", "main"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_triggers.pull_request_opened.createWfRun.enabled", "true"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_triggers.pull_request_modified.createWfRun.enabled", "true"),
+				),
+			},
+			{
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", configOpenedOnly),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_triggers.pull_request_opened.createWfRun.enabled", "true"),
+					resource.TestCheckNoResourceAttr("stackguardian_workflow_git.test", "vcs_triggers.pull_request_modified"),
+				),
+			},
+			{
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", configAllPR(true)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_triggers.all_pull_requests.createWfRun.enabled", "true"),
+				),
+			},
+			{
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", configAllPR(false)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_triggers.all_pull_requests.createWfRun.enabled", "false"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccWorkflowGit_WithVcsTriggers_CreateTag(t *testing.T) {
+	wfGrpName := "tf-provider-workflow-git-vcs-triggers-tag-wfgrp"
+	id := "tf-provider-workflow-git-vcs-triggers-tag"
+
+	err := createWorkflowGroupFixture(wfGrpName)
+	if err != nil {
+		t.Errorf("failed to create workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(wfGrpName)
+	defer deleteWorkflowGitFixture(wfGrpName, id)
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	config := func(enabled bool) string {
+		return fmt.Sprintf(`
+  vcs_config = {
+    iac_vcs_config = {
+      custom_source = {
+        config = {
+          is_private = false
+          repo       = "https://github.com/dummy/test-repo.git"
+        }
+        source_config_dest_kind = "GITHUB_COM"
+      }
+    }
+  }
+
+  vcs_triggers = {
+    create_tag = {
+      createWfRun = { enabled = %t }
+    }
+  }
+`, enabled)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config(true)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_triggers.create_tag.createWfRun.enabled", "true"),
+				),
+			},
+			{
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config(false)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_triggers.create_tag.createWfRun.enabled", "false"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccWorkflowGit_WithRunnerConstraints(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-git-runner-wfgrp"
 	id := "tf-provider-workflow-git-runner"
