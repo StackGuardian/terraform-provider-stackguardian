@@ -58,6 +58,7 @@ output "workflow_git_repo" {
 - `user_job_memory` (Number) Limits to set user job memory.
 - `user_schedules` (Attributes List) Configuration for scheduling runs for the workflows. (see [below for nested schema](#nestedatt--user_schedules))
 - `vcs_config` (Attributes) VCS configuration for the workflow. (see [below for nested schema](#nestedatt--vcs_config))
+- `vcs_triggers` (Attributes) VCS trigger configuration for the workflow. (see [below for nested schema](#nestedatt--vcs_triggers))
 - `wf_steps_config` (Attributes List) Workflow steps configuration. Valid for custom workflow types. (see [below for nested schema](#nestedatt--wf_steps_config))
 - `wf_type` (String) Type of workflow. Options: <span style="background-color: #eff0f0; color: #e53835;">TERRAFORM</span>, <span style="background-color: #eff0f0; color: #e53835;">OPENTOFU</span>, <span style="background-color: #eff0f0; color: #e53835;">ANSIBLE_PLAYBOOK</span>, <span style="background-color: #eff0f0; color: #e53835;">HELM</span>, <span style="background-color: #eff0f0; color: #e53835;">KUBECTL</span>, <span style="background-color: #eff0f0; color: #e53835;">CLOUDFORMATION</span>, <span style="background-color: #eff0f0; color: #e53835;">CUSTOM</span>
 
@@ -548,7 +549,7 @@ Read-Only:
 
 - `data` (String) Input data as a JSON string.
 - `schema_id` (String) Schema ID for the input data.
-- `schema_type` (String) Schema type for the input data.
+- `schema_type` (String) Schema type for the input data. Allowed values are `FORM_JSONSCHEMA`, `RAW_HCL`, `RAW_JSON`, `NO_CODE_JSON`, `NONE`.
 
 
 <a id="nestedatt--vcs_config--iac_vcs_config"></a>
@@ -581,6 +582,67 @@ Read-Only:
 - `working_dir` (String) Working directory within the repository.
 
 
+
+
+
+<a id="nestedatt--vcs_triggers"></a>
+### Nested Schema for `vcs_triggers`
+
+Read-Only:
+
+- `ado_hooks_id` (Map of String) Map of Azure DevOps service hook subscription IDs created by StackGuardian, keyed by event type (e.g. `git.push`, `git.pullrequest.created`). Populated automatically on first apply. Read-only.
+- `all_pull_requests` (Attributes Map) Actions to trigger on StackGuardian for all pull request events, regardless of target branch. Supported action key: `createWfRun`. When `createWfRun.enabled` is `true`, this overrides `pull_request_opened`, `pull_request_modified`, and `tracked_branch` — any PR event fires a workflow run without branch filtering. When absent or disabled, `pull_request_opened` and `pull_request_modified` are evaluated individually, each subject to `tracked_branch`. (see [below for nested schema](#nestedatt--vcs_triggers--all_pull_requests))
+- `approval_pre_apply` (Boolean) When `true`, workflow runs triggered by push or tag events run `apply` but require manual approval before the apply executes. Has no effect on pull request events — those always run `plan` regardless. Ignored when `plan_only` is `true`; `plan_only` takes precedence.
+- `bb_hook_id` (String) The Bitbucket webhook ID created by StackGuardian when the VCS trigger is registered. Populated automatically on first apply. Read-only.
+- `create_tag` (Attributes Map) Actions to trigger on StackGuardian when a git tag is created. Supported action key: `createWfRun`. When `createWfRun.enabled` is `true`, a workflow run is created with the tag set as the VCS ref. The Terraform action follows `plan_only` / `approval_pre_apply` — unlike pull request events, tag events are not hardcoded to `plan`. (see [below for nested schema](#nestedatt--vcs_triggers--create_tag))
+- `file_trigger_patterns` (List of String) List of [fnmatch](https://docs.python.org/3/library/fnmatch.html) glob patterns matched against the files changed in the event (e.g. `["*.tf", "infra/**/*.json"]`). A workflow run is triggered only if at least one changed file matches at least one pattern. Only evaluated when `file_triggers_enabled` is `true`; has no effect otherwise.
+- `file_triggers_enabled` (Boolean) When `true`, activates file-based filtering using the patterns in `file_trigger_patterns`. A webhook event only triggers a workflow run if at least one changed file matches a pattern. Must be `true` for `file_trigger_patterns` to have any effect; setting patterns without enabling this flag is a no-op.
+- `gh_webhook_url` (String) The StackGuardian webhook URL registered to receive GitHub events for this workflow. Populated automatically on first apply. Read-only.
+- `gl_hook_id` (String) The GitLab webhook ID created by StackGuardian when the VCS trigger is registered. Populated automatically on first apply. Read-only.
+- `plan_only` (Boolean) When `true`, all workflow runs triggered by push or tag events execute `plan` instead of `apply`. Takes precedence over `approval_pre_apply` — setting both to `true` results in `plan` only, with no apply or approval step. Has no effect on pull request events — those always run `plan` regardless.
+- `pull_request_modified` (Attributes Map) Actions to trigger on StackGuardian when new commits are pushed to an open pull request. Supported action key: `createWfRun`. Only evaluated when `all_pull_requests.createWfRun.enabled` is `false` or absent. When `createWfRun.enabled` is `true`, a workflow run is created if the PR's target branch equals `tracked_branch`. The triggered run always executes `plan`, regardless of `plan_only` or `approval_pre_apply`. (see [below for nested schema](#nestedatt--vcs_triggers--pull_request_modified))
+- `pull_request_opened` (Attributes Map) Actions to trigger on StackGuardian when a pull request is opened. Supported action key: `createWfRun`. Only evaluated when `all_pull_requests.createWfRun.enabled` is `false` or absent. When `createWfRun.enabled` is `true`, a workflow run is created if the PR's target branch equals `tracked_branch`. The triggered run always executes `plan`, regardless of `plan_only` or `approval_pre_apply`. (see [below for nested schema](#nestedatt--vcs_triggers--pull_request_opened))
+- `push` (Attributes Map) Actions to trigger on StackGuardian on a push event. Supported action key: `createWfRun`. When `createWfRun.enabled` is `true`, a workflow run is created only when the pushed branch equals `tracked_branch`. The Terraform action is `plan` if `plan_only` is `true`, `apply` with a manual approval gate if `approval_pre_apply` is `true`, or `apply` by default. (see [below for nested schema](#nestedatt--vcs_triggers--push))
+- `tracked_branch` (String) The branch that push and pull request events must target to trigger a workflow run. For push events, the pushed-to branch must equal this value. For pull request events, the PR's base (target) branch must equal this value — unless `all_pull_requests.createWfRun.enabled` is `true`, which bypasses this check entirely. If omitted, falls back to the branch set in the workflow's VCS config, then to the repository's default branch.
+
+<a id="nestedatt--vcs_triggers--all_pull_requests"></a>
+### Nested Schema for `vcs_triggers.all_pull_requests`
+
+Read-Only:
+
+- `enabled` (Boolean)
+
+
+<a id="nestedatt--vcs_triggers--create_tag"></a>
+### Nested Schema for `vcs_triggers.create_tag`
+
+Read-Only:
+
+- `enabled` (Boolean)
+
+
+<a id="nestedatt--vcs_triggers--pull_request_modified"></a>
+### Nested Schema for `vcs_triggers.pull_request_modified`
+
+Read-Only:
+
+- `enabled` (Boolean)
+
+
+<a id="nestedatt--vcs_triggers--pull_request_opened"></a>
+### Nested Schema for `vcs_triggers.pull_request_opened`
+
+Read-Only:
+
+- `enabled` (Boolean)
+
+
+<a id="nestedatt--vcs_triggers--push"></a>
+### Nested Schema for `vcs_triggers.push`
+
+Read-Only:
+
+- `enabled` (Boolean)
 
 
 

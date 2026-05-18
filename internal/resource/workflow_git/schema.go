@@ -269,12 +269,12 @@ func (r *workflowGitResource) Schema(_ context.Context, _ resource.SchemaRequest
 							},
 							"schema_type": schema.StringAttribute{
 								MarkdownDescription: constants.WorkflowIacInputDataSchemaType,
-								Optional:            true,
+								Required:            true,
 								Validators:          nonEmptyString,
 							},
 							"data": schema.StringAttribute{
 								MarkdownDescription: constants.WorkflowIacInputDataData,
-								Optional:            true,
+								Required:            true,
 								Validators:          nonEmptyString,
 							},
 						},

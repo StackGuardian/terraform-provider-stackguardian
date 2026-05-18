@@ -814,10 +814,7 @@ func (m VcsConfigModel) ToAPIModel(ctx context.Context) (*sgsdkgo.VcsConfig, dia
 		if diags.HasError() {
 			return nil, diags
 		}
-		if !iacInputDataModel.SchemaId.IsNull() {
-			iacInputData := iacInputDataModel.ToAPIModel()
-			result.IacInputData = iacInputData
-		}
+		result.IacInputData = iacInputDataModel.ToAPIModel()
 	}
 
 	return result, nil
@@ -1821,8 +1818,8 @@ func convertWorkflowChainingFromAPI(ctx context.Context, chainingList []workflow
 			WorkflowGroupId:    flatteners.String(c.WorkflowGroupId),
 			StackId:            flatteners.StringPtr(c.StackId),
 			WorkflowId:         flatteners.StringPtr(c.WorkflowId),
-			WorkflowRunPayload: flatteners.JSONInterfaceToStringDefault(c.WorkflowRunPayload),
-			StackRunPayload:    flatteners.JSONInterfaceToStringDefault(c.StackRunPayload),
+			WorkflowRunPayload: flatteners.JSONInterfaceToString(c.WorkflowRunPayload),
+			StackRunPayload:    flatteners.JSONInterfaceToString(c.StackRunPayload),
 		})
 	}
 	if len(models) == 0 {

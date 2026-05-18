@@ -171,11 +171,14 @@ Optional:
 <a id="nestedatt--vcs_config--iac_input_data"></a>
 ### Nested Schema for `vcs_config.iac_input_data`
 
-Optional:
+Required:
 
 - `data` (String) Input data as a JSON string.
-- `schema_id` (String) Schema ID for the input data.
 - `schema_type` (String) Schema type for the input data. Allowed values are `FORM_JSONSCHEMA`, `RAW_HCL`, `RAW_JSON`, `NO_CODE_JSON`, `NONE`.
+
+Optional:
+
+- `schema_id` (String) Schema ID for the input data.
 
 
 
