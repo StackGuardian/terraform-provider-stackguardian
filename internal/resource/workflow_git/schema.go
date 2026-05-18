@@ -268,12 +268,12 @@ func (r *workflowGitResource) Schema(_ context.Context, _ resource.SchemaRequest
 								Validators:          nonEmptyString,
 							},
 							"schema_type": schema.StringAttribute{
-								MarkdownDescription: "Schema type for the input data. Allowed values are `FORM_JSONSCHEMA`, `RAW_HCL`, `RAW_JSON`, `NO_CODE_JSON`, `NONE`.",
+								MarkdownDescription: constants.WorkflowIacInputDataSchemaType,
 								Optional:            true,
 								Validators:          nonEmptyString,
 							},
 							"data": schema.StringAttribute{
-								MarkdownDescription: "Input data as a JSON string.",
+								MarkdownDescription: constants.WorkflowIacInputDataData,
 								Optional:            true,
 								Validators:          nonEmptyString,
 							},
@@ -629,12 +629,12 @@ func vcsTriggerActionNestedObject() schema.NestedAttributeObject {
 func vcsTriggers() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"tracked_branch": schema.StringAttribute{
-			MarkdownDescription: "The branch that push and pull request events must target to trigger a workflow run. For push events, the pushed-to branch must equal this value. For pull request events, the PR's base (target) branch must equal this value — unless `all_pull_requests.createWfRun.enabled` is `true`, which bypasses this check entirely. If omitted, falls back to the branch set in the workflow's VCS config, then to the repository's default branch.",
+			MarkdownDescription: constants.VCSTriggersTrackedBranch,
 			Optional:            true,
 			Validators:          nonEmptyString,
 		},
 		"approval_pre_apply": schema.BoolAttribute{
-			MarkdownDescription: "When `true`, workflow runs triggered by push or tag events run `apply` but require manual approval before the apply executes. Has no effect on pull request events — those always run `plan` regardless. Ignored when `plan_only` is `true`; `plan_only` takes precedence.",
+			MarkdownDescription: constants.VCSTriggersApprovalPreApply,
 			Optional:            true,
 			Computed:            true,
 			PlanModifiers: []planmodifier.Bool{
@@ -642,7 +642,7 @@ func vcsTriggers() map[string]schema.Attribute {
 			},
 		},
 		"plan_only": schema.BoolAttribute{
-			MarkdownDescription: "When `true`, all workflow runs triggered by push or tag events execute `plan` instead of `apply`. Takes precedence over `approval_pre_apply` — setting both to `true` results in `plan` only, with no apply or approval step. Has no effect on pull request events — those always run `plan` regardless.",
+			MarkdownDescription: constants.VCSTriggersPlanOnly,
 			Optional:            true,
 			Computed:            true,
 			PlanModifiers: []planmodifier.Bool{
@@ -650,7 +650,7 @@ func vcsTriggers() map[string]schema.Attribute {
 			},
 		},
 		"file_triggers_enabled": schema.BoolAttribute{
-			MarkdownDescription: "When `true`, activates file-based filtering using the patterns in `file_trigger_patterns`. A webhook event only triggers a workflow run if at least one changed file matches a pattern. Must be `true` for `file_trigger_patterns` to have any effect; setting patterns without enabling this flag is a no-op.",
+			MarkdownDescription: constants.VCSTriggersFileTriggersEnabled,
 			Optional:            true,
 			Computed:            true,
 			PlanModifiers: []planmodifier.Bool{
@@ -658,12 +658,12 @@ func vcsTriggers() map[string]schema.Attribute {
 			},
 		},
 		"file_trigger_patterns": schema.ListAttribute{
-			MarkdownDescription: "List of [fnmatch](https://docs.python.org/3/library/fnmatch.html) glob patterns matched against the files changed in the event (e.g. `[\"*.tf\", \"infra/**/*.json\"]`). A workflow run is triggered only if at least one changed file matches at least one pattern. Only evaluated when `file_triggers_enabled` is `true`; has no effect otherwise.",
+			MarkdownDescription: constants.VCSTriggersFileTriggerPatterns,
 			Optional:            true,
 			ElementType:         types.StringType,
 		},
 		"gl_hook_id": schema.StringAttribute{
-			MarkdownDescription: "The GitLab webhook ID created by StackGuardian when the VCS trigger is registered. Populated automatically on first apply. Read-only.",
+			MarkdownDescription: constants.VCSTriggersGlHookId,
 			Computed:            true,
 			Validators:          nonEmptyString,
 			PlanModifiers: []planmodifier.String{
@@ -671,7 +671,7 @@ func vcsTriggers() map[string]schema.Attribute {
 			},
 		},
 		"bb_hook_id": schema.StringAttribute{
-			MarkdownDescription: "The Bitbucket webhook ID created by StackGuardian when the VCS trigger is registered. Populated automatically on first apply. Read-only.",
+			MarkdownDescription: constants.VCSTriggersBbHookId,
 			Computed:            true,
 			Validators:          nonEmptyString,
 			PlanModifiers: []planmodifier.String{
@@ -679,7 +679,7 @@ func vcsTriggers() map[string]schema.Attribute {
 			},
 		},
 		"gh_webhook_url": schema.StringAttribute{
-			MarkdownDescription: "The StackGuardian webhook URL registered to receive GitHub events for this workflow. Populated automatically on first apply. Read-only.",
+			MarkdownDescription: constants.VCSTriggersGhWebhookUrl,
 			Computed:            true,
 			Validators:          nonEmptyString,
 			PlanModifiers: []planmodifier.String{
@@ -687,7 +687,7 @@ func vcsTriggers() map[string]schema.Attribute {
 			},
 		},
 		"ado_hooks_id": schema.MapAttribute{
-			MarkdownDescription: "Map of Azure DevOps service hook subscription IDs created by StackGuardian, keyed by event type (e.g. `git.push`, `git.pullrequest.created`). Populated automatically on first apply. Read-only.",
+			MarkdownDescription: constants.VCSTriggersAdoHooksId,
 			Computed:            true,
 			ElementType:         types.StringType,
 			PlanModifiers: []planmodifier.Map{
@@ -695,27 +695,27 @@ func vcsTriggers() map[string]schema.Attribute {
 			},
 		},
 		"all_pull_requests": schema.MapNestedAttribute{
-			MarkdownDescription: "Actions to trigger on StackGuardian for all pull request events, regardless of target branch. Supported action key: `createWfRun`. When `createWfRun.enabled` is `true`, this overrides `pull_request_opened`, `pull_request_modified`, and `tracked_branch` — any PR event fires a workflow run without branch filtering. When absent or disabled, `pull_request_opened` and `pull_request_modified` are evaluated individually, each subject to `tracked_branch`.",
+			MarkdownDescription: constants.VCSTriggersAllPullRequests,
 			Optional:            true,
 			NestedObject:        vcsTriggerActionNestedObject(),
 		},
 		"pull_request_opened": schema.MapNestedAttribute{
-			MarkdownDescription: "Actions to trigger on StackGuardian when a pull request is opened. Supported action key: `createWfRun`. Only evaluated when `all_pull_requests.createWfRun.enabled` is `false` or absent. When `createWfRun.enabled` is `true`, a workflow run is created if the PR's target branch equals `tracked_branch`. The triggered run always executes `plan`, regardless of `plan_only` or `approval_pre_apply`.",
+			MarkdownDescription: constants.VCSTriggersPullRequestOpened,
 			Optional:            true,
 			NestedObject:        vcsTriggerActionNestedObject(),
 		},
 		"pull_request_modified": schema.MapNestedAttribute{
-			MarkdownDescription: "Actions to trigger on StackGuardian when new commits are pushed to an open pull request. Supported action key: `createWfRun`. Only evaluated when `all_pull_requests.createWfRun.enabled` is `false` or absent. When `createWfRun.enabled` is `true`, a workflow run is created if the PR's target branch equals `tracked_branch`. The triggered run always executes `plan`, regardless of `plan_only` or `approval_pre_apply`.",
+			MarkdownDescription: constants.VCSTriggersPullRequestModified,
 			Optional:            true,
 			NestedObject:        vcsTriggerActionNestedObject(),
 		},
 		"create_tag": schema.MapNestedAttribute{
-			MarkdownDescription: "Actions to trigger on StackGuardian when a git tag is created. Supported action key: `createWfRun`. When `createWfRun.enabled` is `true`, a workflow run is created with the tag set as the VCS ref. The Terraform action follows `plan_only` / `approval_pre_apply` — unlike pull request events, tag events are not hardcoded to `plan`.",
+			MarkdownDescription: constants.VCSTriggersCreateTagAction,
 			Optional:            true,
 			NestedObject:        vcsTriggerActionNestedObject(),
 		},
 		"push": schema.MapNestedAttribute{
-			MarkdownDescription: "Actions to trigger on StackGuardian on a push event. Supported action key: `createWfRun`. When `createWfRun.enabled` is `true`, a workflow run is created only when the pushed branch equals `tracked_branch`. The Terraform action is `plan` if `plan_only` is `true`, `apply` with a manual approval gate if `approval_pre_apply` is `true`, or `apply` by default.",
+			MarkdownDescription: constants.VCSTriggersPush,
 			Optional:            true,
 			NestedObject:        vcsTriggerActionNestedObject(),
 		},
