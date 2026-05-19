@@ -34,7 +34,7 @@ const (
 // Runtime Source attributes (shared)
 const (
 	RuntimeSource                       = "Runtime source configuration for the %s."
-	RuntimeSourceDestKind               = `VCS provider kind. Options: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_OAUTH_SSH</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS</span>`
+	RuntimeSourceDestKind               = `VCS provider kind. Options: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GIT_OTHER</span>, <span style="background-color: #eff0f0; color: #e53835;">BITBUCKET_ORG</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS_SP</span>`
 	RuntimeSourceConfig                 = "Configuration for the runtime environment."
 	RuntimeSourceConfigAuth             = "Connector id to access private git repository"
 	RuntimeSourceConfigGitCoreCRLF      = "Whether to automatically handle CRLF line endings."
@@ -49,7 +49,7 @@ const (
 // VCS Triggers attributes
 const (
 	VCSTriggers                         = "VCS trigger configuration for the workflow."
-	VCSTriggersType                     = `The VCS platform type. Determines which webhook integration is used. Supported values: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_OAUTH_SSH</span>, <span style="background-color: #eff0f0; color: #e53835;">BITBUCKET_ORG</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS_SP</span>.`
+	VCSTriggersType                     = `The VCS platform type. Determines which webhook integration is used. Supported values: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>,`
 	VCSTriggersCreateTag                = "Trigger configuration on tag creation in VCS"
 	VCSTriggersCreateTagRevision        = "Create new revision on tag creation"
 	VCSTriggersCreateTagRevisionEnabled = "Whether to create revision when tag is created."
@@ -149,25 +149,25 @@ const (
 
 // Terraform Config attributes
 const (
-	TerraformConfig                 = "Terraform configuration. Valid only for terraform type template"
-	TerraformVersion                = "Terraform version to use."
-	TerraformDriftCheck             = "Enable drift check."
-	TerraformDriftCron              = "Cron expression for drift check."
-	TerraformManagedState           = "Enable stackguardian managed terraform state."
-	TerraformApprovalPreApply       = "Require approval before apply."
-	TerraformPlanOptions            = "Additional options for terraform plan."
-	TerraformInitOptions            = "Additional options for terraform init."
-	TerraformBinPath                = "Mount points for terraform binary."
-	TerraformTimeout                = "Timeout for terraform operations in seconds."
-	TerraformPostApplyWfSteps       = "Workflow steps configuration to run after apply."
-	TerraformPreApplyWfSteps        = "Workflow steps configuration to run before apply."
-	TerraformPrePlanWfSteps         = "Workflow steps configuration to run before plan."
-	TerraformPostPlanWfSteps        = "Workflow steps configuration to run after plan."
-	TerraformPreInitHooks           = "Hooks to run before init."
-	TerraformPrePlanHooks           = "Hooks to run before plan."
-	TerraformPostPlanHooks          = "Hooks to run after plan."
-	TerraformPreApplyHooks          = "Hooks to run before apply."
-	TerraformPostApplyHooks         = "Hooks to run after apply."
+	TerraformConfig                  = "Terraform configuration. Valid only for terraform type template"
+	TerraformVersion                 = "Terraform version to use."
+	TerraformDriftCheck              = "Enable drift check."
+	TerraformDriftCron               = "Cron expression for drift check."
+	TerraformManagedState            = "Enable stackguardian managed terraform state."
+	TerraformApprovalPreApply        = "Require approval before apply."
+	TerraformPlanOptions             = "Additional options for terraform plan."
+	TerraformInitOptions             = "Additional options for terraform init."
+	TerraformBinPath                 = "Mount points for terraform binary."
+	TerraformTimeout                 = "Timeout for terraform operations in seconds."
+	TerraformPostApplyWfSteps        = "Workflow steps configuration to run after apply."
+	TerraformPreApplyWfSteps         = "Workflow steps configuration to run before apply."
+	TerraformPrePlanWfSteps          = "Workflow steps configuration to run before plan."
+	TerraformPostPlanWfSteps         = "Workflow steps configuration to run after plan."
+	TerraformPreInitHooks            = "Hooks to run before init."
+	TerraformPrePlanHooks            = "Hooks to run before plan."
+	TerraformPostPlanHooks           = "Hooks to run after plan."
+	TerraformPreApplyHooks           = "Hooks to run before apply."
+	TerraformPostApplyHooks          = "Hooks to run after apply."
 	TerraformRunPreInitHooksOnDrift  = "Run pre-init hooks on drift detection."
 	TerraformRunPrePlanHooksOnDrift  = "Run pre-plan hooks on drift detection."
 	TerraformRunPostPlanHooksOnDrift = "Run post-plan hooks on drift detection."
