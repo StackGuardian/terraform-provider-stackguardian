@@ -58,7 +58,7 @@ output "workflow_git_repo" {
 - `user_job_memory` (Number) Limits to set user job memory.
 - `user_schedules` (Attributes List) Configuration for scheduling runs for the workflows. (see [below for nested schema](#nestedatt--user_schedules))
 - `vcs_config` (Attributes) VCS configuration for the workflow. (see [below for nested schema](#nestedatt--vcs_config))
-- `vcs_triggers` (Attributes) VCS trigger configuration for the workflow. (see [below for nested schema](#nestedatt--vcs_triggers))
+- `vcs_triggers` (Attributes) VCS trigger configuration for the workflow. Only supported when `source_config_dest_kind` is <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, or <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>. **Requires** `vcs_config.iac_vcs_config.custom_source.config.is_private` to be `true` and `vcs_config.iac_vcs_config.custom_source.config.auth` to be set with a valid connector ID. (see [below for nested schema](#nestedatt--vcs_triggers))
 - `wf_steps_config` (Attributes List) Workflow steps configuration. Valid for custom workflow types. (see [below for nested schema](#nestedatt--wf_steps_config))
 - `wf_type` (String) Type of workflow. Options: <span style="background-color: #eff0f0; color: #e53835;">TERRAFORM</span>, <span style="background-color: #eff0f0; color: #e53835;">OPENTOFU</span>, <span style="background-color: #eff0f0; color: #e53835;">ANSIBLE_PLAYBOOK</span>, <span style="background-color: #eff0f0; color: #e53835;">HELM</span>, <span style="background-color: #eff0f0; color: #e53835;">KUBECTL</span>, <span style="background-color: #eff0f0; color: #e53835;">CLOUDFORMATION</span>, <span style="background-color: #eff0f0; color: #e53835;">CUSTOM</span>
 
@@ -572,7 +572,7 @@ Read-Only:
 
 Read-Only:
 
-- `auth` (String, Sensitive) Connector id to access private git repository
+- `auth` (String, Sensitive) Connector id to access private git repository. Example: `/integrations/<integration-id>`
 - `git_core_auto_crlf` (Boolean) Whether to automatically handle CRLF line endings.
 - `git_sparse_checkout_config` (String) Git sparse checkout command line git cli options.
 - `include_sub_module` (Boolean) Whether to include git submodules.
@@ -596,7 +596,7 @@ Read-Only:
 - `bb_hook_id` (String) The Bitbucket webhook ID created by StackGuardian when the VCS trigger is registered. Populated automatically on first apply. Read-only.
 - `create_tag` (Attributes Map) Actions to trigger on StackGuardian when a git tag is created. Supported action key: `createWfRun`. When `createWfRun.enabled` is `true`, a workflow run is created with the tag set as the VCS ref. The Terraform action follows `plan_only` / `approval_pre_apply` — unlike pull request events, tag events are not hardcoded to `plan`. (see [below for nested schema](#nestedatt--vcs_triggers--create_tag))
 - `file_trigger_patterns` (List of String) List of [fnmatch](https://docs.python.org/3/library/fnmatch.html) glob patterns matched against the files changed in the event (e.g. `["*.tf", "infra/**/*.json"]`). A workflow run is triggered only if at least one changed file matches at least one pattern. Only evaluated when `file_triggers_enabled` is `true`; has no effect otherwise.
-- `file_triggers_enabled` (Boolean) When `true`, activates file-based filtering using the patterns in `file_trigger_patterns`. A webhook event only triggers a workflow run if at least one changed file matches a pattern. Must be `true` for `file_trigger_patterns` to have any effect; setting patterns without enabling this flag is a no-op.
+- `file_triggers_enabled` (Boolean) When `true`, activates file-based filtering using the patterns in `file_trigger_patterns`. A webhook event only triggers a workflow run if at least one changed file matches a pattern. Must be `true` for `file_trigger_patterns` to have any effect; setting patterns without enabling this flag is a no-op. **Only valid when `source_config_dest_kind` is `GITLAB_COM`.**
 - `gh_webhook_url` (String) The StackGuardian webhook URL registered to receive GitHub events for this workflow. Populated automatically on first apply. Read-only.
 - `gl_hook_id` (String) The GitLab webhook ID created by StackGuardian when the VCS trigger is registered. Populated automatically on first apply. Read-only.
 - `plan_only` (Boolean) When `true`, all workflow runs triggered by push or tag events execute `plan` instead of `apply`. Takes precedence over `approval_pre_apply` — setting both to `true` results in `plan` only, with no apply or approval step. Has no effect on pull request events — those always run `plan` regardless.

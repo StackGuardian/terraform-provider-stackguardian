@@ -53,7 +53,7 @@ resource "stackguardian_workflow_template" "with_runtime" {
 - `runtime_source` (Attributes) Runtime source configuration for the template. (see [below for nested schema](#nestedatt--runtime_source))
 - `shared_orgs_list` (List of String) List of organizations the template is shared with.
 - `tags` (List of String) A list of tags associated with the Tags for workflow template. A maximum of 10 tags are allowed.
-- `vcs_triggers` (Attributes) VCS trigger configuration for the workflow. (see [below for nested schema](#nestedatt--vcs_triggers))
+- `vcs_triggers` (Attributes) VCS trigger configuration for the workflow. Only supported when `source_config_dest_kind` is <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, or <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>. **Requires** `vcs_config.iac_vcs_config.custom_source.config.is_private` to be `true` and `vcs_config.iac_vcs_config.custom_source.config.auth` to be set with a valid connector ID. (see [below for nested schema](#nestedatt--vcs_triggers))
 
 ### Read-Only
 
@@ -76,7 +76,7 @@ Required:
 
 Optional:
 
-- `auth` (String) Connector id to access private git repository
+- `auth` (String) Connector id to access private git repository. Example: `/integrations/<integration-id>`
 - `git_core_auto_crlf` (Boolean) Whether to automatically handle CRLF line endings.
 - `git_sparse_checkout_config` (String) Git sparse checkout command line git cli options.
 - `include_sub_module` (Boolean) Whether to include git submodules.

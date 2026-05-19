@@ -36,7 +36,7 @@ const (
 	RuntimeSource                       = "Runtime source configuration for the %s."
 	RuntimeSourceDestKind               = `VCS provider kind. Options: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GIT_OTHER</span>, <span style="background-color: #eff0f0; color: #e53835;">BITBUCKET_ORG</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS_SP</span>`
 	RuntimeSourceConfig                 = "Configuration for the runtime environment."
-	RuntimeSourceConfigAuth             = "Connector id to access private git repository"
+	RuntimeSourceConfigAuth             = "Connector id to access private git repository. Example: `/integrations/<integration-id>`"
 	RuntimeSourceConfigGitCoreCRLF      = "Whether to automatically handle CRLF line endings."
 	RuntimeSourceConfigGitSparse        = "Git sparse checkout command line git cli options."
 	RuntimeSourceConfigIncludeSubmodule = "Whether to include git submodules."
@@ -48,7 +48,7 @@ const (
 
 // VCS Triggers attributes
 const (
-	VCSTriggers                         = "VCS trigger configuration for the workflow."
+	VCSTriggers                         = `VCS trigger configuration for the workflow. Only supported when ` + "`source_config_dest_kind`" + ` is <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, or <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>. **Requires** ` + "`vcs_config.iac_vcs_config.custom_source.config.is_private`" + ` to be ` + "`true`" + ` and ` + "`vcs_config.iac_vcs_config.custom_source.config.auth`" + ` to be set with a valid connector ID.`
 	VCSTriggersType                     = `The VCS platform type. Determines which webhook integration is used. Supported values: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>,`
 	VCSTriggersCreateTag                = "Trigger configuration on tag creation in VCS"
 	VCSTriggersCreateTagRevision        = "Create new revision on tag creation"
@@ -57,7 +57,7 @@ const (
 	VCSTriggersTrackedBranch       = "The branch that push and pull request events must target to trigger a workflow run. For push events, the pushed-to branch must equal this value. For pull request events, the PR's base (target) branch must equal this value — unless `all_pull_requests.createWfRun.enabled` is `true`, which bypasses this check entirely. If omitted, falls back to the branch set in the workflow's VCS config, then to the repository's default branch."
 	VCSTriggersApprovalPreApply    = "When `true`, workflow runs triggered by push or tag events run `apply` but require manual approval before the apply executes. Has no effect on pull request events — those always run `plan` regardless. Ignored when `plan_only` is `true`; `plan_only` takes precedence."
 	VCSTriggersPlanOnly            = "When `true`, all workflow runs triggered by push or tag events execute `plan` instead of `apply`. Takes precedence over `approval_pre_apply` — setting both to `true` results in `plan` only, with no apply or approval step. Has no effect on pull request events — those always run `plan` regardless."
-	VCSTriggersFileTriggersEnabled = "When `true`, activates file-based filtering using the patterns in `file_trigger_patterns`. A webhook event only triggers a workflow run if at least one changed file matches a pattern. Must be `true` for `file_trigger_patterns` to have any effect; setting patterns without enabling this flag is a no-op."
+	VCSTriggersFileTriggersEnabled = "When `true`, activates file-based filtering using the patterns in `file_trigger_patterns`. A webhook event only triggers a workflow run if at least one changed file matches a pattern. Must be `true` for `file_trigger_patterns` to have any effect; setting patterns without enabling this flag is a no-op. **Only valid when `source_config_dest_kind` is `GITLAB_COM`.**"
 	VCSTriggersFileTriggerPatterns = "List of [fnmatch](https://docs.python.org/3/library/fnmatch.html) glob patterns matched against the files changed in the event (e.g. `[\"*.tf\", \"infra/**/*.json\"]`). A workflow run is triggered only if at least one changed file matches at least one pattern. Only evaluated when `file_triggers_enabled` is `true`; has no effect otherwise."
 	VCSTriggersGlHookId            = "The GitLab webhook ID created by StackGuardian when the VCS trigger is registered. Populated automatically on first apply. Read-only."
 	VCSTriggersBbHookId            = "The Bitbucket webhook ID created by StackGuardian when the VCS trigger is registered. Populated automatically on first apply. Read-only."
