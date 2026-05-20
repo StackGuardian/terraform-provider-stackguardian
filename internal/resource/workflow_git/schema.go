@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -662,36 +661,12 @@ func vcsTriggers() map[string]schema.Attribute {
 			Optional:            true,
 			ElementType:         types.StringType,
 		},
-		"gl_hook_id": schema.StringAttribute{
-			MarkdownDescription: constants.VCSTriggersGlHookId,
-			Computed:            true,
-			Validators:          nonEmptyString,
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.UseStateForUnknown(),
-			},
-		},
-		"bb_hook_id": schema.StringAttribute{
-			MarkdownDescription: constants.VCSTriggersBbHookId,
-			Computed:            true,
-			Validators:          nonEmptyString,
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.UseStateForUnknown(),
-			},
-		},
 		"gh_webhook_url": schema.StringAttribute{
 			MarkdownDescription: constants.VCSTriggersGhWebhookUrl,
 			Computed:            true,
 			Validators:          nonEmptyString,
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.UseStateForUnknown(),
-			},
-		},
-		"ado_hooks_id": schema.MapAttribute{
-			MarkdownDescription: constants.VCSTriggersAdoHooksId,
-			Computed:            true,
-			ElementType:         types.StringType,
-			PlanModifiers: []planmodifier.Map{
-				mapplanmodifier.UseStateForUnknown(),
 			},
 		},
 		"all_pull_requests": schema.MapNestedAttribute{

@@ -30,6 +30,13 @@ func Int64Ptr(in *int) basetypes.Int64Value {
 	return Int64(int64(*in))
 }
 
+func Int64PtrDefault(in *int) basetypes.Int64Value {
+	if in == nil {
+		return types.Int64Value(0)
+	}
+	return Int64(int64(*in))
+}
+
 func Int32(in int) basetypes.Int32Value {
 	//if in == 0 {
 	//	return types.Int32Null()

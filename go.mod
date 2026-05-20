@@ -3,7 +3,7 @@ module github.com/StackGuardian/terraform-provider-stackguardian
 go 1.21.4
 
 require (
-	github.com/StackGuardian/sg-sdk-go v1.5.1
+	github.com/StackGuardian/sg-sdk-go v1.5.2
 	github.com/hashicorp/terraform-plugin-framework v1.11.0
 	github.com/hashicorp/terraform-plugin-framework-validators v0.12.0
 	github.com/hashicorp/terraform-plugin-go v0.23.0

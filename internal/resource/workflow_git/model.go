@@ -489,10 +489,7 @@ type VcsTriggersModel struct {
 	PlanOnly                types.Bool   `tfsdk:"plan_only"`
 	FileTriggersEnabled     types.Bool   `tfsdk:"file_triggers_enabled"`
 	FileTriggerPatterns     types.List   `tfsdk:"file_trigger_patterns"`
-	GlHookId                types.String `tfsdk:"gl_hook_id"`
-	BbHookId                types.String `tfsdk:"bb_hook_id"`
 	GhWebhookUrl            types.String `tfsdk:"gh_webhook_url"`
-	AdoHooksId              types.Map    `tfsdk:"ado_hooks_id"`
 	AllPullRequests         types.Map    `tfsdk:"all_pull_requests"`
 	PullRequestOpened       types.Map    `tfsdk:"pull_request_opened"`
 	PullRequestModified     types.Map    `tfsdk:"pull_request_modified"`
@@ -507,10 +504,7 @@ func (VcsTriggersModel) AttributeTypes() map[string]attr.Type {
 		"plan_only":                  types.BoolType,
 		"file_triggers_enabled":      types.BoolType,
 		"file_trigger_patterns":      types.ListType{ElemType: types.StringType},
-		"gl_hook_id":                 types.StringType,
-		"bb_hook_id":                 types.StringType,
 		"gh_webhook_url":             types.StringType,
-		"ado_hooks_id":               types.MapType{ElemType: types.StringType},
 		"all_pull_requests":          types.MapType{ElemType: types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}},
 		"pull_request_opened":        types.MapType{ElemType: types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}},
 		"pull_request_modified":      types.MapType{ElemType: types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}},
@@ -541,13 +535,7 @@ func (m VcsTriggersModel) ToAPIModel(ctx context.Context) (*sgsdkgo.VcsTriggers,
 		}
 		result.FileTriggerPatterns = patterns
 	}
-	if !m.AdoHooksId.IsNull() && !m.AdoHooksId.IsUnknown() {
-		adoMap, diags := expanders.MapStringString(ctx, m.AdoHooksId)
-		if diags.HasError() {
-			return nil, diags
-		}
-		result.AdoHooksId = adoMap
-	}
+
 
 	for _, pair := range []struct {
 		src  types.Map
@@ -599,11 +587,6 @@ func convertVcsTriggersFromAPI(ctx context.Context, vt *sgsdkgo.VcsTriggers) (ty
 		return nullObj, diags
 	}
 
-	adoHooksId, diags := flatteners.MapStringStringOrEmpty(ctx, vt.AdoHooksId)
-	if diags.HasError() {
-		return nullObj, diags
-	}
-
 	flattenActionMap := func(v map[string]sgsdkgo.VcsTriggerActionConfig) (types.Map, diag.Diagnostics) {
 		elemType := types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}
 		if len(v) == 0 {
@@ -643,10 +626,7 @@ func convertVcsTriggersFromAPI(ctx context.Context, vt *sgsdkgo.VcsTriggers) (ty
 		PlanOnly:                flatteners.BoolPtr(vt.PlanOnly),
 		FileTriggersEnabled:     flatteners.BoolPtr(vt.FileTriggersEnabled),
 		FileTriggerPatterns:     fileTriggerPatterns,
-		GlHookId:                flatteners.StringPtrDefault(vt.GlHookId),
-		BbHookId:                flatteners.StringPtrDefault(vt.BbHookId),
 		GhWebhookUrl:            flatteners.StringPtrDefault(vt.GhWebhookUrl),
-		AdoHooksId:              adoHooksId,
 		AllPullRequests:         allPullRequests,
 		PullRequestOpened:       pullRequestOpened,
 		PullRequestModified:     pullRequestModified,
