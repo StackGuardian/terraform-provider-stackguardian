@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
@@ -30,9 +31,15 @@ func getClient() *sgclient.Client {
 
 func createWorkflowGroupFixture(wfGrpName string) error {
 	client := getClient()
-	resourceName := wfGrpName
+	parts := strings.Split(wfGrpName, "/")
+	leafName := parts[len(parts)-1]
 	payload := &sgsdkgo.WorkflowGroup{
-		ResourceName: &resourceName,
+		ResourceName: &leafName,
+	}
+	if len(parts) > 1 {
+		parent := strings.Join(parts[:len(parts)-1], "/")
+		_, err := client.WorkflowGroups.CreateChildWorkflowGroup(context.TODO(), org, parent, payload)
+		return err
 	}
 	_, err := client.WorkflowGroups.CreateWorkflowGroup(context.TODO(), org, payload)
 	return err
@@ -731,6 +738,122 @@ func TestAccWorkflowGit_WithVcsTriggers_CreateTag(t *testing.T) {
 	})
 }
 
+func TestAccWorkflowGit_InNestedWorkflowGroup(t *testing.T) {
+	parentWfGrpName := "tf-provider-wfgit-nested-parent"
+	childWfGrpName := parentWfGrpName + "/tf-provider-wfgit-nested-child"
+	id := "tf-provider-wfgit-nested"
+
+	if err := createWorkflowGroupFixture(parentWfGrpName); err != nil {
+		t.Errorf("failed to create parent workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(parentWfGrpName)
+
+	if err := createWorkflowGroupFixture(childWfGrpName); err != nil {
+		t.Errorf("failed to create child workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(childWfGrpName)
+	defer deleteWorkflowGitFixture(childWfGrpName, id)
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	config := `
+  vcs_config = {
+    iac_vcs_config = {
+      custom_source = {
+        config = {
+          is_private = false
+          repo       = "https://github.com/dummy/test-repo.git"
+        }
+        source_config_dest_kind = "GIT_OTHER"
+      }
+    }
+  }
+`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowGit(childWfGrpName, id, "CUSTOM", config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "workflow_group_id", childWfGrpName),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_config.iac_vcs_config.custom_source.config.repo", "https://github.com/dummy/test-repo.git"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccWorkflowGit_WithIacInputData(t *testing.T) {
+	wfGrpName := "tf-provider-workflow-git-iac-input-wfgrp"
+	id := "tf-provider-workflow-git-iac-input"
+
+	err := createWorkflowGroupFixture(wfGrpName)
+	if err != nil {
+		t.Errorf("failed to create workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(wfGrpName)
+	defer deleteWorkflowGitFixture(wfGrpName, id)
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	config := func(schemaType, dataExpr string) string {
+		return fmt.Sprintf(`
+  vcs_config = {
+    iac_vcs_config = {
+      custom_source = {
+        config = {
+          is_private = false
+          repo       = "https://github.com/dummy/test-repo.git"
+        }
+        source_config_dest_kind = "GIT_OTHER"
+      }
+    }
+    iac_input_data = {
+      schema_type = %q
+      data        = %s
+    }
+  }
+
+  terraform_config = {
+    terraform_version = "1.5.0"
+  }
+`, schemaType, dataExpr)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowGit(wfGrpName, id, "TERRAFORM", config("RAW_JSON", `jsonencode({"env" = "staging"})`)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_config.iac_input_data.schema_type", "RAW_JSON"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_config.iac_input_data.data", `{"env":"staging"}`),
+				),
+			},
+			{
+				Config: testAccWorkflowGit(wfGrpName, id, "TERRAFORM", config("RAW_JSON", `jsonencode({"env" = "production"})`)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_config.iac_input_data.data", `{"env":"production"}`),
+				),
+			},
+		},
+	})
+}
+
 func TestAccWorkflowGit_WithRunnerConstraints(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-git-runner-wfgrp"
 	id := "tf-provider-workflow-git-runner"
@@ -802,6 +925,73 @@ func TestAccWorkflowGit_WithRunnerConstraints(t *testing.T) {
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "runner_constraints.type", "private"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "runner_constraints.names.0", "runner-1"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccWorkflowGit_WithMiniSteps_WfChaining(t *testing.T) {
+	wfGrpName := "tf-provider-workflow-git-chaining-wfgrp"
+	id := "tf-provider-workflow-git-chaining"
+
+	err := createWorkflowGroupFixture(wfGrpName)
+	if err != nil {
+		t.Errorf("failed to create workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(wfGrpName)
+	defer deleteWorkflowGitFixture(wfGrpName, id)
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	config := func(payloadExpr string) string {
+		return fmt.Sprintf(`
+  vcs_config = {
+    iac_vcs_config = {
+      custom_source = {
+        config = {
+          is_private = false
+          repo       = "https://github.com/dummy/test-repo.git"
+        }
+        source_config_dest_kind = "GITHUB_COM"
+      }
+    }
+  }
+
+  mini_steps = {
+    wf_chaining = {
+      errored = [{
+        workflow_group_id    = "kk"
+        workflow_id          = "retest-of-bug-cewgh6dt-i7vp-0vo474rl"
+        workflow_run_payload = %s
+      }]
+    }
+  }
+`, payloadExpr)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config(`jsonencode({"test" = "value"})`)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "mini_steps.wf_chaining.errored.0.workflow_group_id", "kk"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "mini_steps.wf_chaining.errored.0.workflow_id", "retest-of-bug-cewgh6dt-i7vp-0vo474rl"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "mini_steps.wf_chaining.errored.0.workflow_run_payload", `{"test":"value"}`),
+				),
+			},
+			{
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config(`jsonencode({"test" = "updated"})`)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "mini_steps.wf_chaining.errored.0.workflow_run_payload", `{"test":"updated"}`),
 				),
 			},
 		},

@@ -201,7 +201,6 @@ func (r *workflowGitResource) Update(ctx context.Context, req resource.UpdateReq
 					"Error updating vcs_triggers for workflow_git",
 					"VCS trigger update failed: "+err.Error(),
 				)
-				return
 			}
 		}
 	}

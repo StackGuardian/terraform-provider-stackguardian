@@ -382,22 +382,9 @@ func (d *workflowGitDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 						Computed:            true,
 						ElementType:         types.StringType,
 					},
-					"gl_hook_id": schema.StringAttribute{
-						MarkdownDescription: constants.VCSTriggersGlHookId,
-						Computed:            true,
-					},
-					"bb_hook_id": schema.StringAttribute{
-						MarkdownDescription: constants.VCSTriggersBbHookId,
-						Computed:            true,
-					},
 					"gh_webhook_url": schema.StringAttribute{
 						MarkdownDescription: constants.VCSTriggersGhWebhookUrl,
 						Computed:            true,
-					},
-					"ado_hooks_id": schema.MapAttribute{
-						MarkdownDescription: constants.VCSTriggersAdoHooksId,
-						Computed:            true,
-						ElementType:         types.StringType,
 					},
 					"all_pull_requests": schema.MapNestedAttribute{
 						MarkdownDescription: constants.VCSTriggersAllPullRequests,
