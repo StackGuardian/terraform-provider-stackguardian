@@ -8,10 +8,6 @@ description: |-
 
 # stackguardian_workflow_git (Resource)
 
-<div style="background-color: orange; padding: 12px; border-radius: 6px; color: white; font-weight: bold;">
-⚠️ This feature is currently in BETA.
-</div>
-
 ## Example Usage
 
 ```terraform
@@ -747,10 +743,7 @@ Optional:
 
 Read-Only:
 
-- `ado_hooks_id` (Map of String) Map of Azure DevOps service hook subscription IDs created by StackGuardian, keyed by event type (e.g. `git.push`, `git.pullrequest.created`). Populated automatically on first apply. Read-only.
-- `bb_hook_id` (String) The Bitbucket webhook ID created by StackGuardian when the VCS trigger is registered. Populated automatically on first apply. Read-only.
 - `gh_webhook_url` (String) The StackGuardian webhook URL registered to receive GitHub events for this workflow. Populated automatically on first apply. Read-only.
-- `gl_hook_id` (String) The GitLab webhook ID created by StackGuardian when the VCS trigger is registered. Populated automatically on first apply. Read-only.
 
 <a id="nestedatt--vcs_triggers--all_pull_requests"></a>
 ### Nested Schema for `vcs_triggers.all_pull_requests`

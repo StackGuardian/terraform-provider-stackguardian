@@ -8,10 +8,6 @@ description: |-
 
 # stackguardian_workflow_git (Data Source)
 
-<div style="background-color: orange; padding: 12px; border-radius: 6px; color: white; font-weight: bold;">
-⚠️ This feature is currently in BETA.
-</div>
-
 ## Example Usage
 
 ```terraform
@@ -590,15 +586,12 @@ Read-Only:
 
 Read-Only:
 
-- `ado_hooks_id` (Map of String) Map of Azure DevOps service hook subscription IDs created by StackGuardian, keyed by event type (e.g. `git.push`, `git.pullrequest.created`). Populated automatically on first apply. Read-only.
 - `all_pull_requests` (Attributes Map) Actions to trigger on StackGuardian for all pull request events, regardless of target branch. Supported action key: `createWfRun`. When `createWfRun.enabled` is `true`, this overrides `pull_request_opened`, `pull_request_modified`, and `tracked_branch` — any PR event fires a workflow run without branch filtering. When absent or disabled, `pull_request_opened` and `pull_request_modified` are evaluated individually, each subject to `tracked_branch`. (see [below for nested schema](#nestedatt--vcs_triggers--all_pull_requests))
 - `approval_pre_apply` (Boolean) When `true`, workflow runs triggered by push or tag events run `apply` but require manual approval before the apply executes. Has no effect on pull request events — those always run `plan` regardless. Ignored when `plan_only` is `true`; `plan_only` takes precedence.
-- `bb_hook_id` (String) The Bitbucket webhook ID created by StackGuardian when the VCS trigger is registered. Populated automatically on first apply. Read-only.
 - `create_tag` (Attributes Map) Actions to trigger on StackGuardian when a git tag is created. Supported action key: `createWfRun`. When `createWfRun.enabled` is `true`, a workflow run is created with the tag set as the VCS ref. The Terraform action follows `plan_only` / `approval_pre_apply` — unlike pull request events, tag events are not hardcoded to `plan`. (see [below for nested schema](#nestedatt--vcs_triggers--create_tag))
 - `file_trigger_patterns` (List of String) List of [fnmatch](https://docs.python.org/3/library/fnmatch.html) glob patterns matched against the files changed in the event (e.g. `["*.tf", "infra/**/*.json"]`). A workflow run is triggered only if at least one changed file matches at least one pattern. Only evaluated when `file_triggers_enabled` is `true`; has no effect otherwise.
 - `file_triggers_enabled` (Boolean) When `true`, activates file-based filtering using the patterns in `file_trigger_patterns`. A webhook event only triggers a workflow run if at least one changed file matches a pattern. Must be `true` for `file_trigger_patterns` to have any effect; setting patterns without enabling this flag is a no-op. **Only valid when `source_config_dest_kind` is `GITLAB_COM`.**
 - `gh_webhook_url` (String) The StackGuardian webhook URL registered to receive GitHub events for this workflow. Populated automatically on first apply. Read-only.
-- `gl_hook_id` (String) The GitLab webhook ID created by StackGuardian when the VCS trigger is registered. Populated automatically on first apply. Read-only.
 - `plan_only` (Boolean) When `true`, all workflow runs triggered by push or tag events execute `plan` instead of `apply`. Takes precedence over `approval_pre_apply` — setting both to `true` results in `plan` only, with no apply or approval step. Has no effect on pull request events — those always run `plan` regardless.
 - `pull_request_modified` (Attributes Map) Actions to trigger on StackGuardian when new commits are pushed to an open pull request. Supported action key: `createWfRun`. Only evaluated when `all_pull_requests.createWfRun.enabled` is `false` or absent. When `createWfRun.enabled` is `true`, a workflow run is created if the PR's target branch equals `tracked_branch`. The triggered run always executes `plan`, regardless of `plan_only` or `approval_pre_apply`. (see [below for nested schema](#nestedatt--vcs_triggers--pull_request_modified))
 - `pull_request_opened` (Attributes Map) Actions to trigger on StackGuardian when a pull request is opened. Supported action key: `createWfRun`. Only evaluated when `all_pull_requests.createWfRun.enabled` is `false` or absent. When `createWfRun.enabled` is `true`, a workflow run is created if the PR's target branch equals `tracked_branch`. The triggered run always executes `plan`, regardless of `plan_only` or `approval_pre_apply`. (see [below for nested schema](#nestedatt--vcs_triggers--pull_request_opened))
