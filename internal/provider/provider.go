@@ -40,6 +40,7 @@ import (
 	workflowsteptemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_step_template_revision"
 	workflowtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
 	workflowtemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template_revision"
+	workflowusingtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_using_template"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -257,5 +258,6 @@ func (p *stackguardianProvider) Resources(_ context.Context) []func() resource.R
 		stacktemplate.NewResource,
 		stacktemplaterevision.NewResource,
 		workflowgit.NewResource,
+		workflowusingtemplate.NewResource,
 	}
 }
