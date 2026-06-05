@@ -1,16 +1,21 @@
-package workflowusingtemplate_test
+package workflowfromtemplate_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
+	"github.com/StackGuardian/sg-sdk-go/core"
 	sgoption "github.com/StackGuardian/sg-sdk-go/option"
+	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
+	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
@@ -54,14 +59,117 @@ func deleteWorkflowUsingTemplateFixture(wfGrpName, workflowName string) {
 	client.Workflows.DeleteWorkflow(context.TODO(), org, workflowName, wfGrpName)
 }
 
-// wfTemplateID returns the workflow template ID from the environment or skips the test.
-func wfTemplateID(t *testing.T) string {
+// setupWorkflowTemplate creates a workflow template + published revision and registers
+// cleanup that deprecates, deletes the revision, then deletes the template.
+// Returns the template ID to use as iac_template_id.
+func setupWorkflowTemplate(t *testing.T, templateID string) string {
 	t.Helper()
-	id := os.Getenv("STACKGUARDIAN_TEST_WF_TEMPLATE_ID")
-	if id == "" {
-		t.Skip("STACKGUARDIAN_TEST_WF_TEMPLATE_ID must be set for workflow_using_template acceptance tests")
+
+	client := getClient()
+	revisionID := fmt.Sprintf("%s:1", templateID)
+	sourceConfigKind := workflowtemplates.WorkflowTemplateSourceConfigKindTerraform
+
+	is409 := func(err error) bool {
+		var apiErr *core.APIError
+		return errors.As(err, &apiErr) && apiErr.StatusCode == 409
 	}
-	return id
+
+	// 1. Create template (ignore 409 — already exists)
+	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(
+		context.TODO(), org, false,
+		&workflowtemplates.CreateWorkflowTemplateRequest{
+			Id:               &templateID,
+			TemplateName:     templateID,
+			SourceConfigKind: &sourceConfigKind,
+			TemplateType:     sgsdkgo.TemplateTypeEnum("IAC"),
+			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+		},
+	)
+	if err != nil && !is409(err) {
+		t.Fatalf("setupWorkflowTemplate: create template %q: %s", templateID, err)
+	}
+
+	// 2. Create revision with a default env var and user schedule (ignore 409 — already exists)
+	alias := "v1"
+	scheduleName := "tmpl-schedule"
+	scheduleDesc := "Template default schedule"
+	envTextValue := "tmpl-value"
+	_, err = client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(
+		context.TODO(), org, templateID,
+		&workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
+			Alias:            alias,
+			SourceConfigKind: &sourceConfigKind,
+			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			EnvironmentVariables: []sgsdkgo.EnvVars{
+				{
+					Kind: sgsdkgo.EnvVarsKindEnumPlainText,
+					Config: &sgsdkgo.EnvVarConfig{
+						VarName:   "TMPL_VAR",
+						TextValue: &envTextValue,
+					},
+				},
+			},
+			UserSchedules: []workflowtemplaterevisions.UserSchedules{
+				{
+					Cron:  "0 8 ? * MON *",
+					State: workflowtemplaterevisions.UserSchedulesStateEnumEnabled,
+					Name:  &scheduleName,
+					Desc:  &scheduleDesc,
+				},
+			},
+		},
+	)
+	if err != nil && !is409(err) {
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		t.Fatalf("setupWorkflowTemplate: create revision for %q: %s", templateID, err)
+	}
+
+	// 3. Publish revision
+	_, err = client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
+		context.TODO(), org, revisionID,
+		&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
+			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
+		},
+	)
+	if err != nil {
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		t.Fatalf("setupWorkflowTemplate: publish revision %q: %s", revisionID, err)
+	}
+
+	// 4. Publish template
+	_, err = client.WorkflowTemplates.UpdateWorkflowTemplate(
+		context.TODO(), org, templateID,
+		&workflowtemplates.UpdateWorkflowTemplateRequest{
+			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
+		},
+	)
+	if err != nil {
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		t.Fatalf("setupWorkflowTemplate: publish template %q: %s", templateID, err)
+	}
+
+	// 5. Register cleanup: deprecate revision → delete revision → delete template
+	t.Cleanup(func() {
+		effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
+		message := "Test cleanup"
+		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
+			context.TODO(), org, revisionID,
+			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
+				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{
+					EffectiveDate: &effectiveDate,
+					Message:       &message,
+				}),
+			},
+		)
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+	})
+
+	return fmt.Sprintf("/%s/%s", org, templateID)
 }
 
 func customHeader() http.Header {
@@ -73,7 +181,7 @@ func customHeader() http.Header {
 // testAccWorkflowUsingTemplate builds a Terraform config for the resource.
 func testAccWorkflowUsingTemplate(wfGrpName, id, wfType, templateID, additionalConfig string) string {
 	return fmt.Sprintf(`
-resource "stackguardian_workflow_using_template" "test" {
+resource "stackguardian_workflow_from_template" "test" {
   workflow_group_id = %q
   id                = %q
   wf_type           = %q
@@ -90,7 +198,7 @@ resource "stackguardian_workflow_using_template" "test" {
 }
 
 func TestAccWorkflowUsingTemplate_Basic(t *testing.T) {
-	templateID := wfTemplateID(t)
+	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-basic") + ":1"
 	wfGrpName := "tf-provider-wf-template-basic-wfgrp"
 	id := "tf-provider-wf-template-basic"
 
@@ -100,10 +208,30 @@ func TestAccWorkflowUsingTemplate_Basic(t *testing.T) {
 	defer deleteWorkflowGroupFixture(wfGrpName)
 	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
 
-	config := fmt.Sprintf(`
+	// No overrides — template defaults should appear in resolved_schema.
+	configNoOverrides := fmt.Sprintf(`
   terraform_config = {
     terraform_version = %q
   }
+`, "1.5.0")
+
+	// Override the env var set on the revision.
+	// Note: user_schedules are a template-level concern in MANUAL upgrade mode
+	// and are not persisted as workflow-level overrides by the API.
+	configWithOverrides := fmt.Sprintf(`
+  terraform_config = {
+    terraform_version = %q
+  }
+
+  environment_variables = [
+    {
+      kind = "PLAIN_TEXT"
+      config = {
+        var_name   = "OVERRIDE_VAR"
+        text_value = "override-value"
+      }
+    }
+  ]
 `, "1.5.0")
 
 	resource.Test(t, resource.TestCase{
@@ -114,13 +242,26 @@ func TestAccWorkflowUsingTemplate_Basic(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config),
+				// Step 1: no overrides — resolved_schema should reflect template revision defaults.
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, configNoOverrides),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "workflow_group_id", wfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "wf_type", "TERRAFORM"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "vcs_config.iac_vcs_config.iac_template_id", templateID),
-					resource.TestCheckResourceAttrSet("stackguardian_workflow_using_template.test", "resolved_schema.resource_name"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "workflow_group_id", wfGrpName),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "wf_type", "TERRAFORM"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "vcs_config.iac_vcs_config.iac_template_id", templateID),
+					resource.TestCheckResourceAttrSet("stackguardian_workflow_from_template.test", "resolved_schema.resource_name"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.environment_variables.0.config.var_name", "TMPL_VAR"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.environment_variables.0.config.text_value", "tmpl-value"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.user_schedules.0.cron", "0 8 ? * MON *"),
+				),
+			},
+			{
+				// Step 2: override env var — resolved_schema should reflect the override.
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, configWithOverrides),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.environment_variables.0.config.var_name", "OVERRIDE_VAR"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.environment_variables.0.config.text_value", "override-value"),
 				),
 			},
 		},
@@ -128,7 +269,7 @@ func TestAccWorkflowUsingTemplate_Basic(t *testing.T) {
 }
 
 func TestAccWorkflowUsingTemplate_WithDescription(t *testing.T) {
-	templateID := wfTemplateID(t)
+	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-desc") + ":1"
 	wfGrpName := "tf-provider-wf-template-desc-wfgrp"
 	id := "tf-provider-wf-template-desc"
 
@@ -158,17 +299,15 @@ func TestAccWorkflowUsingTemplate_WithDescription(t *testing.T) {
 			{
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("initial description")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "description", "initial description"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "resolved_schema.description", "initial description"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.description", "initial description"),
 				),
 			},
 			{
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("updated description")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "description", "updated description"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "resolved_schema.description", "updated description"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.description", "updated description"),
 				),
 			},
 		},
@@ -176,7 +315,7 @@ func TestAccWorkflowUsingTemplate_WithDescription(t *testing.T) {
 }
 
 func TestAccWorkflowUsingTemplate_WithTerraformConfig(t *testing.T) {
-	templateID := wfTemplateID(t)
+	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-tfcfg") + ":1"
 	wfGrpName := "tf-provider-wf-template-tfcfg-wfgrp"
 	id := "tf-provider-wf-template-tfcfg"
 
@@ -204,17 +343,15 @@ func TestAccWorkflowUsingTemplate_WithTerraformConfig(t *testing.T) {
 			{
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("1.5.0")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "terraform_config.terraform_version", "1.5.0"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "resolved_schema.terraform_config.terraform_version", "1.5.0"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.terraform_config.terraform_version", "1.5.0"),
 				),
 			},
 			{
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("1.6.0")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "terraform_config.terraform_version", "1.6.0"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "resolved_schema.terraform_config.terraform_version", "1.6.0"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.terraform_config.terraform_version", "1.6.0"),
 				),
 			},
 		},
@@ -222,7 +359,7 @@ func TestAccWorkflowUsingTemplate_WithTerraformConfig(t *testing.T) {
 }
 
 func TestAccWorkflowUsingTemplate_WithEnvironmentVariables(t *testing.T) {
-	templateID := wfTemplateID(t)
+	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-envvars") + ":1"
 	wfGrpName := "tf-provider-wf-template-envvars-wfgrp"
 	id := "tf-provider-wf-template-envvars"
 
@@ -260,17 +397,17 @@ func TestAccWorkflowUsingTemplate_WithEnvironmentVariables(t *testing.T) {
 			{
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("initial-value")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "environment_variables.0.kind", "PLAIN_TEXT"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "environment_variables.0.config.var_name", "MY_VAR"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "environment_variables.0.config.text_value", "initial-value"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.environment_variables.0.kind", "PLAIN_TEXT"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.environment_variables.0.config.var_name", "MY_VAR"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.environment_variables.0.config.text_value", "initial-value"),
 				),
 			},
 			{
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("updated-value")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "environment_variables.0.config.text_value", "updated-value"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.environment_variables.0.config.text_value", "updated-value"),
 				),
 			},
 		},
@@ -278,7 +415,7 @@ func TestAccWorkflowUsingTemplate_WithEnvironmentVariables(t *testing.T) {
 }
 
 func TestAccWorkflowUsingTemplate_WithUserSchedules(t *testing.T) {
-	templateID := wfTemplateID(t)
+	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-schedules") + ":1"
 	wfGrpName := "tf-provider-wf-template-schedules-wfgrp"
 	id := "tf-provider-wf-template-schedules"
 
@@ -299,7 +436,6 @@ func TestAccWorkflowUsingTemplate_WithUserSchedules(t *testing.T) {
       cron  = %q
       state = "ENABLED"
       desc  = "Runs on schedule"
-	  name  = "schedule_1"
     }
   ]
 `, "1.5.0", cron)
@@ -315,16 +451,16 @@ func TestAccWorkflowUsingTemplate_WithUserSchedules(t *testing.T) {
 			{
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("0 8 ? * MON *")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "user_schedules.0.cron", "0 8 ? * MON *"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "user_schedules.0.state", "ENABLED"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.user_schedules.0.cron", "0 8 ? * MON *"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.user_schedules.0.state", "ENABLED"),
 				),
 			},
 			{
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("0 9 ? * MON *")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "user_schedules.0.cron", "0 9 ? * MON *"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.user_schedules.0.cron", "0 9 ? * MON *"),
 				),
 			},
 		},
@@ -332,7 +468,7 @@ func TestAccWorkflowUsingTemplate_WithUserSchedules(t *testing.T) {
 }
 
 func TestAccWorkflowUsingTemplate_WithTagsAndContextTags(t *testing.T) {
-	templateID := wfTemplateID(t)
+	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-tags") + ":1"
 	wfGrpName := "tf-provider-wf-template-tags-wfgrp"
 	id := "tf-provider-wf-template-tags"
 
@@ -366,17 +502,17 @@ func TestAccWorkflowUsingTemplate_WithTagsAndContextTags(t *testing.T) {
 			{
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("v1", "staging")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "tags.0", "v1"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "context_tags.env", "staging"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.tags.0", "v1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.context_tags.env", "staging"),
 				),
 			},
 			{
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("v2", "production")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "tags.0", "v2"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "context_tags.env", "production"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.tags.0", "v2"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.context_tags.env", "production"),
 				),
 			},
 		},
@@ -384,7 +520,7 @@ func TestAccWorkflowUsingTemplate_WithTagsAndContextTags(t *testing.T) {
 }
 
 func TestAccWorkflowUsingTemplate_WithApprovers(t *testing.T) {
-	templateID := wfTemplateID(t)
+	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-approvers") + ":1"
 	wfGrpName := "tf-provider-wf-template-approvers-wfgrp"
 	id := "tf-provider-wf-template-approvers"
 
@@ -415,16 +551,16 @@ func TestAccWorkflowUsingTemplate_WithApprovers(t *testing.T) {
 			{
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config(1)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "approvers.0", "approver@example.com"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "number_of_approvals_required", "1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.approvers.0", "approver@example.com"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.number_of_approvals_required", "1"),
 				),
 			},
 			{
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config(2)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "number_of_approvals_required", "2"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.number_of_approvals_required", "2"),
 				),
 			},
 		},
@@ -432,7 +568,7 @@ func TestAccWorkflowUsingTemplate_WithApprovers(t *testing.T) {
 }
 
 func TestAccWorkflowUsingTemplate_WithRunnerConstraints(t *testing.T) {
-	templateID := wfTemplateID(t)
+	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-runner") + ":1"
 	wfGrpName := "tf-provider-wf-template-runner-wfgrp"
 	id := "tf-provider-wf-template-runner"
 
@@ -473,16 +609,16 @@ func TestAccWorkflowUsingTemplate_WithRunnerConstraints(t *testing.T) {
 			{
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, configShared),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "runner_constraints.type", "shared"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.runner_constraints.type", "shared"),
 				),
 			},
 			{
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, configPrivate),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "runner_constraints.type", "private"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "runner_constraints.names.0", "runner-1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.runner_constraints.type", "private"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.runner_constraints.names.0", "runner-1"),
 				),
 			},
 		},
@@ -490,7 +626,7 @@ func TestAccWorkflowUsingTemplate_WithRunnerConstraints(t *testing.T) {
 }
 
 func TestAccWorkflowUsingTemplate_WithIacInputData(t *testing.T) {
-	templateID := wfTemplateID(t)
+	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-iac-input") + ":1"
 	wfGrpName := "tf-provider-wf-template-iac-input-wfgrp"
 	id := "tf-provider-wf-template-iac-input"
 
@@ -500,9 +636,9 @@ func TestAccWorkflowUsingTemplate_WithIacInputData(t *testing.T) {
 	defer deleteWorkflowGroupFixture(wfGrpName)
 	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
 
-	configWithIacInput := func(templateID, dataExpr string) string {
+	configWithIacInput := func(dataExpr string) string {
 		return fmt.Sprintf(`
-resource "stackguardian_workflow_using_template" "test" {
+resource "stackguardian_workflow_from_template" "test" {
   workflow_group_id = %q
   id                = %q
   wf_type           = "TERRAFORM"
@@ -532,18 +668,18 @@ resource "stackguardian_workflow_using_template" "test" {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: configWithIacInput(templateID, `jsonencode({"env" = "staging"})`),
+				Config: configWithIacInput(`jsonencode({"env" = "staging"})`),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "vcs_config.iac_input_data.schema_type", "RAW_JSON"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "vcs_config.iac_input_data.data", `{"env":"staging"}`),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "vcs_config.iac_input_data.schema_type", "RAW_JSON"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "vcs_config.iac_input_data.data", `{"env":"staging"}`),
 				),
 			},
 			{
-				Config: configWithIacInput(templateID, `jsonencode({"env" = "production"})`),
+				Config: configWithIacInput(`jsonencode({"env" = "production"})`),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "vcs_config.iac_input_data.data", `{"env":"production"}`),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "vcs_config.iac_input_data.data", `{"env":"production"}`),
 				),
 			},
 		},
@@ -551,7 +687,7 @@ resource "stackguardian_workflow_using_template" "test" {
 }
 
 func TestAccWorkflowUsingTemplate_InNestedWorkflowGroup(t *testing.T) {
-	templateID := wfTemplateID(t)
+	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-nested") + ":1"
 	parentWfGrpName := "tf-provider-wf-template-nested-parent"
 	childWfGrpName := parentWfGrpName + "/tf-provider-wf-template-nested-child"
 	id := "tf-provider-wf-template-nested"
@@ -583,9 +719,9 @@ func TestAccWorkflowUsingTemplate_InNestedWorkflowGroup(t *testing.T) {
 			{
 				Config: testAccWorkflowUsingTemplate(childWfGrpName, id, "TERRAFORM", templateID, config),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "workflow_group_id", childWfGrpName),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "vcs_config.iac_vcs_config.iac_template_id", templateID),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "workflow_group_id", childWfGrpName),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "vcs_config.iac_vcs_config.iac_template_id", templateID),
 				),
 			},
 		},
@@ -593,7 +729,7 @@ func TestAccWorkflowUsingTemplate_InNestedWorkflowGroup(t *testing.T) {
 }
 
 func TestAccWorkflowUsingTemplate_ResolvedSchemaPopulated(t *testing.T) {
-	templateID := wfTemplateID(t)
+	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-resolved") + ":1"
 	wfGrpName := "tf-provider-wf-template-resolved-wfgrp"
 	id := "tf-provider-wf-template-resolved"
 
@@ -631,13 +767,12 @@ func TestAccWorkflowUsingTemplate_ResolvedSchemaPopulated(t *testing.T) {
 			{
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "id", id),
-					// Verify resolved_schema reflects what the API returned
-					resource.TestCheckResourceAttrSet("stackguardian_workflow_using_template.test", "resolved_schema.resource_name"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "resolved_schema.description", "test resolved schema"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "resolved_schema.terraform_config.terraform_version", "1.5.0"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "resolved_schema.environment_variables.0.kind", "PLAIN_TEXT"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_using_template.test", "resolved_schema.environment_variables.0.config.var_name", "RESOLVED_VAR"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
+					resource.TestCheckResourceAttrSet("stackguardian_workflow_from_template.test", "resolved_schema.resource_name"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.description", "test resolved schema"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.terraform_config.terraform_version", "1.5.0"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.environment_variables.0.kind", "PLAIN_TEXT"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "resolved_schema.environment_variables.0.config.var_name", "RESOLVED_VAR"),
 				),
 			},
 		},

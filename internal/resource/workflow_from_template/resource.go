@@ -1,4 +1,4 @@
-package workflowusingtemplate
+package workflowfromtemplate
 
 import (
 	"context"
@@ -30,7 +30,7 @@ func NewResource() resource.Resource {
 }
 
 func (r *workflowUsingTemplateResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_workflow_using_template"
+	resp.TypeName = req.ProviderTypeName + "_workflow_from_template"
 }
 
 func (r *workflowUsingTemplateResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -93,27 +93,11 @@ func (r *workflowUsingTemplateResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	model, diags := ConvertWorkflowUsingTemplateFromAPI(ctx, readResp)
+	model, diags := ConvertWorkflowUsingTemplateFromAPI(ctx, readResp, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	model.WorkflowGroupId = plan.WorkflowGroupId
-	model.ResourceName = plan.ResourceName
-	model.Description = plan.Description
-	model.EnvironmentVariables = plan.EnvironmentVariables
-	model.MiniSteps = plan.MiniSteps
-	model.RunnerConstraints = plan.RunnerConstraints
-	model.Tags = plan.Tags
-	model.UserSchedules = plan.UserSchedules
-	model.ContextTags = plan.ContextTags
-	model.Approvers = plan.Approvers
-	model.NumberOfApprovalsRequired = plan.NumberOfApprovalsRequired
-	model.UserJobCpu = plan.UserJobCpu
-	model.UserJobMemory = plan.UserJobMemory
-	model.TerraformConfig = plan.TerraformConfig
-	model.DeploymentPlatformConfig = plan.DeploymentPlatformConfig
-	model.WfStepsConfig = plan.WfStepsConfig
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }
@@ -133,27 +117,11 @@ func (r *workflowUsingTemplateResource) Read(ctx context.Context, req resource.R
 		return
 	}
 
-	model, diags := ConvertWorkflowUsingTemplateFromAPI(ctx, readResp)
+	model, diags := ConvertWorkflowUsingTemplateFromAPI(ctx, readResp, state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	model.WorkflowGroupId = state.WorkflowGroupId
-	model.ResourceName = state.ResourceName
-	model.Description = state.Description
-	model.EnvironmentVariables = state.EnvironmentVariables
-	model.MiniSteps = state.MiniSteps
-	model.RunnerConstraints = state.RunnerConstraints
-	model.Tags = state.Tags
-	model.UserSchedules = state.UserSchedules
-	model.ContextTags = state.ContextTags
-	model.Approvers = state.Approvers
-	model.NumberOfApprovalsRequired = state.NumberOfApprovalsRequired
-	model.UserJobCpu = state.UserJobCpu
-	model.UserJobMemory = state.UserJobMemory
-	model.TerraformConfig = state.TerraformConfig
-	model.DeploymentPlatformConfig = state.DeploymentPlatformConfig
-	model.WfStepsConfig = state.WfStepsConfig
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }
@@ -206,7 +174,7 @@ func (r *workflowUsingTemplateResource) Update(ctx context.Context, req resource
 		return
 	}
 
-	_, err := r.client.Workflows.UpdateWorkflow(ctx, r.org_name, id, workflowGroupId, sgworkflows.UpgradeModeEnumPreserveSettings.Ptr(), payload)
+	_, err := r.client.Workflows.UpdateWorkflow(ctx, r.org_name, id, workflowGroupId, sgworkflows.UpgradeModeEnumManual.Ptr(), payload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error updating workflow_using_template", "Error in updating workflow_using_template API call: "+err.Error())
@@ -219,27 +187,12 @@ func (r *workflowUsingTemplateResource) Update(ctx context.Context, req resource
 		return
 	}
 
-	model, diags := ConvertWorkflowUsingTemplateFromAPI(ctx, readResp)
+	model, diags := ConvertWorkflowUsingTemplateFromAPI(ctx, readResp, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 	model.WorkflowGroupId = state.WorkflowGroupId
-	model.ResourceName = plan.ResourceName
-	model.Description = plan.Description
-	model.EnvironmentVariables = plan.EnvironmentVariables
-	model.MiniSteps = plan.MiniSteps
-	model.RunnerConstraints = plan.RunnerConstraints
-	model.Tags = plan.Tags
-	model.UserSchedules = plan.UserSchedules
-	model.ContextTags = plan.ContextTags
-	model.Approvers = plan.Approvers
-	model.NumberOfApprovalsRequired = plan.NumberOfApprovalsRequired
-	model.UserJobCpu = plan.UserJobCpu
-	model.UserJobMemory = plan.UserJobMemory
-	model.TerraformConfig = plan.TerraformConfig
-	model.DeploymentPlatformConfig = plan.DeploymentPlatformConfig
-	model.WfStepsConfig = plan.WfStepsConfig
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }

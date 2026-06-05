@@ -1,4 +1,4 @@
-package workflowusingtemplate
+package workflowfromtemplate
 
 import (
 	"context"
@@ -132,11 +132,6 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 						"desc": schema.StringAttribute{
 							MarkdownDescription: constants.UserScheduleDesc,
 							Optional:            true,
-							Validators:          nonEmptyString,
-						},
-						"name": schema.StringAttribute{
-							MarkdownDescription: constants.UserScheduleName,
-							Required:            true,
 							Validators:          nonEmptyString,
 						},
 					},

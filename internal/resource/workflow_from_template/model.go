@@ -1,4 +1,4 @@
-package workflowusingtemplate
+package workflowfromtemplate
 
 import (
 	"context"
@@ -67,7 +67,7 @@ func (ResolvedSchemaModel) AttributeTypes() map[string]attr.Type {
 		"mini_steps":                   types.ObjectType{AttrTypes: MinistepsModel{}.AttributeTypes()},
 		"runner_constraints":           types.ObjectType{AttrTypes: RunnerConstraintsModel{}.AttributeTypes()},
 		"tags":                         types.ListType{ElemType: types.StringType},
-		"user_schedules":               types.ListType{ElemType: types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()}},
+		"user_schedules":               types.ListType{ElemType: types.ObjectType{AttrTypes: ResolvedUserSchedulesModel{}.AttributeTypes()}},
 		"context_tags":                 types.MapType{ElemType: types.StringType},
 		"approvers":                    types.ListType{ElemType: types.StringType},
 		"number_of_approvals_required": types.Int64Type,
@@ -485,7 +485,6 @@ type UserSchedulesModel struct {
 	Cron  types.String `tfsdk:"cron"`
 	State types.String `tfsdk:"state"`
 	Desc  types.String `tfsdk:"desc"`
-	Name  types.String `tfsdk:"name"`
 }
 
 func (UserSchedulesModel) AttributeTypes() map[string]attr.Type {
@@ -493,7 +492,6 @@ func (UserSchedulesModel) AttributeTypes() map[string]attr.Type {
 		"cron":  types.StringType,
 		"state": types.StringType,
 		"desc":  types.StringType,
-		"name":  types.StringType,
 	}
 }
 
@@ -503,7 +501,22 @@ func (m UserSchedulesModel) ToAPIModel() sgsdkgo.UserSchedules {
 		Cron:  m.Cron.ValueStringPointer(),
 		State: &state,
 		Desc:  m.Desc.ValueStringPointer(),
-		Name:  m.Name.ValueStringPointer(),
+	}
+}
+
+type ResolvedUserSchedulesModel struct {
+	Cron  types.String `tfsdk:"cron"`
+	State types.String `tfsdk:"state"`
+	Desc  types.String `tfsdk:"desc"`
+	Name  types.String `tfsdk:"name"`
+}
+
+func (ResolvedUserSchedulesModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"cron":  types.StringType,
+		"state": types.StringType,
+		"desc":  types.StringType,
+		"name":  types.StringType,
 	}
 }
 
@@ -1122,9 +1135,14 @@ func (m WorkflowUsingTemplateResourceModel) ToUpdateAPIModel(ctx context.Context
 // ConvertWorkflowUsingTemplateFromAPI
 // ---------------------------------------------------------------------------
 
-func ConvertWorkflowUsingTemplateFromAPI(ctx context.Context, response *sgworkflows.WorkflowReadResponse) (WorkflowUsingTemplateResourceModel, diag.Diagnostics) {
+// ConvertWorkflowUsingTemplateFromAPI builds the final state model.
+// Root-level attributes are taken verbatim from source (plan on Create/Update, state on Read).
+// Only Id is read from the API response (the server assigns it on Create).
+// resolved_schema is populated from the full API response.
+func ConvertWorkflowUsingTemplateFromAPI(ctx context.Context, response *sgworkflows.WorkflowReadResponse, source WorkflowUsingTemplateResourceModel) (WorkflowUsingTemplateResourceModel, diag.Diagnostics) {
 	var allDiags diag.Diagnostics
-	model := WorkflowUsingTemplateResourceModel{}
+
+	model := source
 
 	wf := response.Msg
 	if wf == nil {
@@ -1132,29 +1150,46 @@ func ConvertWorkflowUsingTemplateFromAPI(ctx context.Context, response *sgworkfl
 	}
 
 	model.Id = flatteners.StringPtr(wf.Id)
-	model.ResourceName = flatteners.StringPtr(wf.ResourceName)
-	model.Description = flatteners.StringPtrDefaultNull(wf.Description)
-	model.NumberOfApprovalsRequired = flatteners.Int64Ptr(wf.NumberOfApprovalsRequired)
-	model.UserJobCpu = flatteners.Int64Ptr(wf.UserJobCpu)
-	model.UserJobMemory = flatteners.Int64Ptr(wf.UserJobMemory)
 
-	if wf.WfType != nil {
-		model.WfType = flatteners.String(string(*wf.WfType))
-	} else {
-		model.WfType = types.StringNull()
+	resolvedSchema, diags := buildResolvedSchemaFromAPI(ctx, wf)
+	allDiags.Append(diags...)
+	model.ResolvedSchema = resolvedSchema
+
+	return model, allDiags
+}
+
+func buildResolvedSchemaFromAPI(ctx context.Context, wf *sgworkflows.WorkflowRead) (types.Object, diag.Diagnostics) {
+	nullObj := types.ObjectNull(ResolvedSchemaModel{}.AttributeTypes())
+	var allDiags diag.Diagnostics
+
+	resolved := ResolvedSchemaModel{
+		ResourceName:              flatteners.StringPtr(wf.ResourceName),
+		Description:               flatteners.StringPtrDefaultNull(wf.Description),
+		NumberOfApprovalsRequired: flatteners.Int64Ptr(wf.NumberOfApprovalsRequired),
+		UserJobCpu:                flatteners.Int64Ptr(wf.UserJobCpu),
+		UserJobMemory:             flatteners.Int64Ptr(wf.UserJobMemory),
 	}
 
 	tags, diags := flatteners.ListOfStringToTerraformList(wf.Tags)
 	allDiags.Append(diags...)
-	model.Tags = tags
+	if allDiags.HasError() {
+		return nullObj, allDiags
+	}
+	resolved.Tags = tags
 
 	approvers, diags := flatteners.ListOfStringToTerraformList(wf.Approvers)
 	allDiags.Append(diags...)
-	model.Approvers = approvers
+	if allDiags.HasError() {
+		return nullObj, allDiags
+	}
+	resolved.Approvers = approvers
 
 	contextTags, diags := flatteners.MapStringString(ctx, wf.ContextTags)
 	allDiags.Append(diags...)
-	model.ContextTags = contextTags
+	if allDiags.HasError() {
+		return nullObj, allDiags
+	}
+	resolved.ContextTags = contextTags
 
 	envVars := make([]sgsdkgo.EnvVars, len(wf.EnvironmentVariables))
 	for i, ptr := range wf.EnvironmentVariables {
@@ -1164,15 +1199,24 @@ func ConvertWorkflowUsingTemplateFromAPI(ctx context.Context, response *sgworkfl
 	}
 	envVarsList, diags := convertEnvironmentVariablesFromAPI(ctx, envVars)
 	allDiags.Append(diags...)
-	model.EnvironmentVariables = envVarsList
+	if allDiags.HasError() {
+		return nullObj, allDiags
+	}
+	resolved.EnvironmentVariables = envVarsList
 
 	terraformConfig, diags := convertTerraformConfigFromAPI(ctx, wf.TerraformConfig)
 	allDiags.Append(diags...)
-	model.TerraformConfig = terraformConfig
+	if allDiags.HasError() {
+		return nullObj, allDiags
+	}
+	resolved.TerraformConfig = terraformConfig
 
 	runnerConstraints, diags := convertRunnerConstraintsFromAPI(ctx, wf.RunnerConstraints)
 	allDiags.Append(diags...)
-	model.RunnerConstraints = runnerConstraints
+	if allDiags.HasError() {
+		return nullObj, allDiags
+	}
+	resolved.RunnerConstraints = runnerConstraints
 
 	wfStepsConfig := make([]sgsdkgo.WfStepsConfig, len(wf.WfStepsConfig))
 	for i, ptr := range wf.WfStepsConfig {
@@ -1182,55 +1226,36 @@ func ConvertWorkflowUsingTemplateFromAPI(ctx context.Context, response *sgworkfl
 	}
 	wfStepsConfigList, diags := convertWfStepsConfigListFromAPI(ctx, wfStepsConfig)
 	allDiags.Append(diags...)
-	model.WfStepsConfig = wfStepsConfigList
+	if allDiags.HasError() {
+		return nullObj, allDiags
+	}
+	resolved.WfStepsConfig = wfStepsConfigList
 
 	miniSteps, diags := convertMinistepsFromAPI(ctx, wf.MiniSteps)
 	allDiags.Append(diags...)
-	model.MiniSteps = miniSteps
+	if allDiags.HasError() {
+		return nullObj, allDiags
+	}
+	resolved.MiniSteps = miniSteps
 
 	userSchedules, diags := convertUserSchedulesFromAPI(ctx, wf.UserSchedules)
 	allDiags.Append(diags...)
-	model.UserSchedules = userSchedules
+	if allDiags.HasError() {
+		return nullObj, allDiags
+	}
+	resolved.UserSchedules = userSchedules
 
 	deploymentPlatformConfig, diags := convertDeploymentPlatformConfigFromAPI(ctx, wf.DeploymentPlatformConfig)
 	allDiags.Append(diags...)
-	model.DeploymentPlatformConfig = deploymentPlatformConfig
-
-	vcsConfig, diags := convertVcsConfigFromAPI(ctx, wf.VcsConfig)
-	allDiags.Append(diags...)
-	model.VcsConfig = vcsConfig
-
-	resolvedSchema, diags := buildResolvedSchema(ctx, model)
-	allDiags.Append(diags...)
-	model.ResolvedSchema = resolvedSchema
-
-	return model, allDiags
-}
-
-func buildResolvedSchema(ctx context.Context, m WorkflowUsingTemplateResourceModel) (types.Object, diag.Diagnostics) {
-	nullObj := types.ObjectNull(ResolvedSchemaModel{}.AttributeTypes())
-
-	resolved := ResolvedSchemaModel{
-		ResourceName:              m.ResourceName,
-		Description:               m.Description,
-		EnvironmentVariables:      m.EnvironmentVariables,
-		MiniSteps:                 m.MiniSteps,
-		RunnerConstraints:         m.RunnerConstraints,
-		Tags:                      m.Tags,
-		UserSchedules:             m.UserSchedules,
-		ContextTags:               m.ContextTags,
-		Approvers:                 m.Approvers,
-		NumberOfApprovalsRequired: m.NumberOfApprovalsRequired,
-		UserJobCpu:                m.UserJobCpu,
-		UserJobMemory:             m.UserJobMemory,
-		TerraformConfig:           m.TerraformConfig,
-		DeploymentPlatformConfig:  m.DeploymentPlatformConfig,
-		WfStepsConfig:             m.WfStepsConfig,
+	if allDiags.HasError() {
+		return nullObj, allDiags
 	}
+	resolved.DeploymentPlatformConfig = deploymentPlatformConfig
 
 	obj, diags := types.ObjectValueFrom(ctx, ResolvedSchemaModel{}.AttributeTypes(), resolved)
-	if diags.HasError() {
-		return nullObj, diags
+	allDiags.Append(diags...)
+	if allDiags.HasError() {
+		return nullObj, allDiags
 	}
 	return obj, nil
 }
@@ -1493,17 +1518,17 @@ func convertRunnerConstraintsFromAPI(ctx context.Context, rc *sgsdkgo.RunnerCons
 }
 
 func convertUserSchedulesFromAPI(ctx context.Context, schedules []sgsdkgo.UserSchedules) (types.List, diag.Diagnostics) {
-	nullList := types.ListNull(types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()})
+	nullList := types.ListNull(types.ObjectType{AttrTypes: ResolvedUserSchedulesModel{}.AttributeTypes()})
 	if len(schedules) == 0 {
 		return nullList, nil
 	}
 
-	models := make([]UserSchedulesModel, 0, len(schedules))
+	models := make([]ResolvedUserSchedulesModel, 0, len(schedules))
 	for _, s := range schedules {
 		if flatteners.IsEmptyObject(s) {
 			continue
 		}
-		models = append(models, UserSchedulesModel{
+		models = append(models, ResolvedUserSchedulesModel{
 			Cron:  flatteners.StringPtr(s.Cron),
 			State: flatteners.StringPtr((*string)(s.State)),
 			Desc:  flatteners.StringPtr(s.Desc),
@@ -1515,7 +1540,7 @@ func convertUserSchedulesFromAPI(ctx context.Context, schedules []sgsdkgo.UserSc
 		return nullList, nil
 	}
 
-	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()}, models)
+	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: ResolvedUserSchedulesModel{}.AttributeTypes()}, models)
 	if diags.HasError() {
 		return nullList, diags
 	}
