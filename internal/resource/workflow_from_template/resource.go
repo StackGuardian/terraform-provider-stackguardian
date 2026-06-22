@@ -7,10 +7,11 @@ import (
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	sgworkflows "github.com/StackGuardian/sg-sdk-go/workflows"
+	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -64,6 +65,38 @@ func (r *workflowUsingTemplateResource) ImportState(ctx context.Context, req res
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), workflowId)...)
 }
 
+// fetchTemplateRevision reads the workflow template revision referenced by the
+// model's vcs_config.iac_vcs_config.iac_template_id. It returns nil (without an
+// error) when no template id is set, so merging is a no-op in that case.
+func (r *workflowUsingTemplateResource) fetchTemplateRevision(ctx context.Context, m WorkflowUsingTemplateResourceModel) (*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	templateId, d := m.IacTemplateId(ctx)
+	diags.Append(d...)
+	if diags.HasError() || templateId == "" {
+		return nil, diags
+	}
+
+	// iac_template_id is stored fully-qualified ("/<org>/<name>:<rev>"), but
+	// ReadWorkflowTemplateRevision builds its URL as
+	// /templatetypes/IAC/<org>/<revisionId>/ and supplies the org separately. Pass
+	// only the bare "<name>:<rev>" so the org is not duplicated in the path.
+	revisionId := strings.TrimPrefix(templateId, fmt.Sprintf("/%s/", r.org_name))
+
+	readResp, err := r.client.WorkflowTemplatesRevisions.ReadWorkflowTemplateRevision(ctx, r.org_name, revisionId)
+	if err != nil {
+		diags.AddError("Error reading workflow template revision",
+			fmt.Sprintf("Could not read template revision %q to resolve workflow defaults: %s", templateId, err.Error()))
+		return nil, diags
+	}
+	if readResp == nil {
+		diags.AddError("Error reading workflow template revision",
+			fmt.Sprintf("API returned an empty response for template revision %q", templateId))
+		return nil, diags
+	}
+	return &readResp.Msg, diags
+}
+
 func (r *workflowUsingTemplateResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan WorkflowUsingTemplateResourceModel
 
@@ -73,7 +106,13 @@ func (r *workflowUsingTemplateResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	payload, diags := plan.ToAPIModel(ctx)
+	tpl, diags := r.fetchTemplateRevision(ctx, plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	payload, diags := plan.ToAPIModel(ctx, tpl)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -145,36 +184,23 @@ func (r *workflowUsingTemplateResource) Update(ctx context.Context, req resource
 	id := state.Id.ValueString()
 	workflowGroupId := state.WorkflowGroupId.ValueString()
 
-	originalPlan := plan
-
-	if !state.ResolvedSchema.IsNull() && !state.ResolvedSchema.IsUnknown() {
-		var resolvedSchema ResolvedSchemaModel
-		diags = state.ResolvedSchema.As(ctx, &resolvedSchema, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		if plan.ResourceName.IsNull() || plan.ResourceName.IsUnknown() {
-			originalPlan.ResourceName = resolvedSchema.ResourceName
-		}
-		if plan.RunnerConstraints.IsNull() || plan.RunnerConstraints.IsUnknown() {
-			originalPlan.RunnerConstraints = resolvedSchema.RunnerConstraints
-		}
-		if plan.UserJobCpu.IsNull() || plan.UserJobCpu.IsUnknown() {
-			originalPlan.UserJobCpu = resolvedSchema.UserJobCpu
-		}
-		if plan.UserJobMemory.IsNull() || plan.UserJobMemory.IsUnknown() {
-			originalPlan.UserJobMemory = resolvedSchema.UserJobMemory
-		}
-	}
-
-	payload, diags := originalPlan.ToUpdateAPIModel(ctx)
+	// Provider-side resolution: fetch the template revision and let ToUpdateAPIModel
+	// fill any field the user did not declare with the template's value. This
+	// replaces the former resolved_schema back-fill, which re-sent stale state and
+	// masked drift.
+	tpl, diags := r.fetchTemplateRevision(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	_, err := r.client.Workflows.UpdateWorkflow(ctx, r.org_name, id, workflowGroupId, sgworkflows.UpgradeModeEnumManual.Ptr(), payload)
+	payload, diags := plan.ToUpdateAPIModel(ctx, tpl)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	_, err := r.client.Workflows.UpdateWorkflow(ctx, r.org_name, id, workflowGroupId, sgworkflows.UpgradeModeEnumPreserveSettings.Ptr(), payload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error updating workflow_using_template", "Error in updating workflow_using_template API call: "+err.Error())

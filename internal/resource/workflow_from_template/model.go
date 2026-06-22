@@ -2,6 +2,7 @@ package workflowfromtemplate
 
 import (
 	"context"
+	"strings"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgworkflows "github.com/StackGuardian/sg-sdk-go/workflows"
@@ -38,45 +39,6 @@ type WorkflowUsingTemplateResourceModel struct {
 	TerraformConfig           types.Object `tfsdk:"terraform_config"`
 	DeploymentPlatformConfig  types.List   `tfsdk:"deployment_platform_config"`
 	WfStepsConfig             types.List   `tfsdk:"wf_steps_config"`
-	ResolvedSchema            types.Object `tfsdk:"resolved_schema"`
-}
-
-type ResolvedSchemaModel struct {
-	ResourceName              types.String `tfsdk:"resource_name"`
-	Description               types.String `tfsdk:"description"`
-	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
-	MiniSteps                 types.Object `tfsdk:"mini_steps"`
-	RunnerConstraints         types.Object `tfsdk:"runner_constraints"`
-	Tags                      types.List   `tfsdk:"tags"`
-	UserSchedules             types.List   `tfsdk:"user_schedules"`
-	ContextTags               types.Map    `tfsdk:"context_tags"`
-	Approvers                 types.List   `tfsdk:"approvers"`
-	NumberOfApprovalsRequired types.Int64  `tfsdk:"number_of_approvals_required"`
-	UserJobCpu                types.Int64  `tfsdk:"user_job_cpu"`
-	UserJobMemory             types.Int64  `tfsdk:"user_job_memory"`
-	TerraformConfig           types.Object `tfsdk:"terraform_config"`
-	DeploymentPlatformConfig  types.List   `tfsdk:"deployment_platform_config"`
-	WfStepsConfig             types.List   `tfsdk:"wf_steps_config"`
-}
-
-func (ResolvedSchemaModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"resource_name":                types.StringType,
-		"description":                  types.StringType,
-		"environment_variables":        types.ListType{ElemType: types.ObjectType{AttrTypes: EnvironmentVariableModel{}.AttributeTypes()}},
-		"mini_steps":                   types.ObjectType{AttrTypes: MinistepsModel{}.AttributeTypes()},
-		"runner_constraints":           types.ObjectType{AttrTypes: RunnerConstraintsModel{}.AttributeTypes()},
-		"tags":                         types.ListType{ElemType: types.StringType},
-		"user_schedules":               types.ListType{ElemType: types.ObjectType{AttrTypes: ResolvedUserSchedulesModel{}.AttributeTypes()}},
-		"context_tags":                 types.MapType{ElemType: types.StringType},
-		"approvers":                    types.ListType{ElemType: types.StringType},
-		"number_of_approvals_required": types.Int64Type,
-		"user_job_cpu":                 types.Int64Type,
-		"user_job_memory":              types.Int64Type,
-		"terraform_config":             types.ObjectType{AttrTypes: TerraformConfigModel{}.AttributeTypes()},
-		"deployment_platform_config":   types.ListType{ElemType: types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()}},
-		"wf_steps_config":              types.ListType{ElemType: types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}},
-	}
 }
 
 func (m WorkflowUsingTemplateResourceModel) AttributeTypes(ctx context.Context) map[string]attr.Type {
@@ -100,7 +62,6 @@ func (m WorkflowUsingTemplateResourceModel) AttributeTypes(ctx context.Context) 
 		"terraform_config":             types.ObjectType{AttrTypes: TerraformConfigModel{}.AttributeTypes()},
 		"deployment_platform_config":   types.ListType{ElemType: types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()}},
 		"wf_steps_config":              types.ListType{ElemType: types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}},
-		"resolved_schema":              types.ObjectType{AttrTypes: ResolvedSchemaModel{}.AttributeTypes()},
 	}
 }
 
@@ -485,6 +446,7 @@ type UserSchedulesModel struct {
 	Cron  types.String `tfsdk:"cron"`
 	State types.String `tfsdk:"state"`
 	Desc  types.String `tfsdk:"desc"`
+	Name  types.String `tfsdk:"name"`
 }
 
 func (UserSchedulesModel) AttributeTypes() map[string]attr.Type {
@@ -492,6 +454,7 @@ func (UserSchedulesModel) AttributeTypes() map[string]attr.Type {
 		"cron":  types.StringType,
 		"state": types.StringType,
 		"desc":  types.StringType,
+		"name":  types.StringType,
 	}
 }
 
@@ -501,22 +464,7 @@ func (m UserSchedulesModel) ToAPIModel() sgsdkgo.UserSchedules {
 		Cron:  m.Cron.ValueStringPointer(),
 		State: &state,
 		Desc:  m.Desc.ValueStringPointer(),
-	}
-}
-
-type ResolvedUserSchedulesModel struct {
-	Cron  types.String `tfsdk:"cron"`
-	State types.String `tfsdk:"state"`
-	Desc  types.String `tfsdk:"desc"`
-	Name  types.String `tfsdk:"name"`
-}
-
-func (ResolvedUserSchedulesModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"cron":  types.StringType,
-		"state": types.StringType,
-		"desc":  types.StringType,
-		"name":  types.StringType,
+		Name:  m.Name.ValueStringPointer(),
 	}
 }
 
@@ -764,16 +712,47 @@ func (TerraformConfigModel) AttributeTypes() map[string]attr.Type {
 	}
 }
 
+// isSet reports whether a types.String holds a real (non-null, non-unknown) value.
+func isSet(s types.String) bool { return !s.IsNull() && !s.IsUnknown() }
+
+// isNonEmpty reports whether a types.String holds a real, non-empty value. Used for
+// allow_blank=False API fields where an empty string means "unset" and must be omitted.
+func isNonEmpty(s types.String) bool { return isSet(s) && s.ValueString() != "" }
+
+// isSetBool reports whether a types.Bool holds a real (non-null, non-unknown) value.
+func isSetBool(b types.Bool) bool { return !b.IsNull() && !b.IsUnknown() }
+
 func (m TerraformConfigModel) ToAPIModel(ctx context.Context) (*sgsdkgo.TerraformConfig, diag.Diagnostics) {
-	cfg := &sgsdkgo.TerraformConfig{
-		TerraformVersion:      m.TerraformVersion.ValueStringPointer(),
-		DriftCheck:            m.DriftCheck.ValueBoolPointer(),
-		DriftCron:             m.DriftCron.ValueStringPointer(),
-		ManagedTerraformState: m.ManagedTerraformState.ValueBoolPointer(),
-		ApprovalPreApply:      m.ApprovalPreApply.ValueBoolPointer(),
-		TerraformPlanOptions:  m.TerraformPlanOptions.ValueStringPointer(),
-		TerraformInitOptions:  m.TerraformInitOptions.ValueStringPointer(),
-		Timeout:               expanders.IntPtr(m.Timeout.ValueInt64Pointer()),
+	// Each field is Optional+Computed: an attribute the user omitted is null/unknown.
+	// Guard against both so the field stays nil (rather than &"" / &false from a bare
+	// ValueXxxPointer on an unknown value) — nil lets mergeTerraformConfig fill it from
+	// the template instead of sending a blank the API rejects (e.g. driftCron).
+	cfg := &sgsdkgo.TerraformConfig{}
+	if !m.Timeout.IsNull() && !m.Timeout.IsUnknown() {
+		cfg.Timeout = expanders.IntPtr(m.Timeout.ValueInt64Pointer())
+	}
+	// For allow_blank=False string fields, treat empty string as unset (omit) — a known
+	// "" stored for plan stability must not be sent as a blank the API rejects.
+	if isNonEmpty(m.TerraformVersion) {
+		cfg.TerraformVersion = m.TerraformVersion.ValueStringPointer()
+	}
+	if isSetBool(m.DriftCheck) {
+		cfg.DriftCheck = m.DriftCheck.ValueBoolPointer()
+	}
+	if isNonEmpty(m.DriftCron) {
+		cfg.DriftCron = m.DriftCron.ValueStringPointer()
+	}
+	if isSetBool(m.ManagedTerraformState) {
+		cfg.ManagedTerraformState = m.ManagedTerraformState.ValueBoolPointer()
+	}
+	if isSetBool(m.ApprovalPreApply) {
+		cfg.ApprovalPreApply = m.ApprovalPreApply.ValueBoolPointer()
+	}
+	if isNonEmpty(m.TerraformPlanOptions) {
+		cfg.TerraformPlanOptions = m.TerraformPlanOptions.ValueStringPointer()
+	}
+	if isNonEmpty(m.TerraformInitOptions) {
+		cfg.TerraformInitOptions = m.TerraformInitOptions.ValueStringPointer()
 	}
 	if !m.RunPreInitHooksOnDrift.IsNull() && !m.RunPreInitHooksOnDrift.IsUnknown() {
 		cfg.RunPreInitHooksOnDrift = m.RunPreInitHooksOnDrift.ValueBoolPointer()
@@ -895,7 +874,7 @@ func (m DeploymentPlatformConfigModel) ToAPIModel(ctx context.Context) (*workflo
 // ToAPIModel
 // ---------------------------------------------------------------------------
 
-func (m WorkflowUsingTemplateResourceModel) ToAPIModel(ctx context.Context) (*sgworkflows.Workflow, diag.Diagnostics) {
+func (m WorkflowUsingTemplateResourceModel) ToAPIModel(ctx context.Context, tpl *workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) (*sgworkflows.Workflow, diag.Diagnostics) {
 	tags, diags := expanders.StringList(ctx, m.Tags)
 	if diags.HasError() {
 		return nil, diags
@@ -988,7 +967,7 @@ func (m WorkflowUsingTemplateResourceModel) ToAPIModel(ctx context.Context) (*sg
 		resourceName = m.ResourceName.ValueStringPointer()
 	}
 
-	return &sgworkflows.Workflow{
+	wf := &sgworkflows.Workflow{
 		Id:                        m.Id.ValueStringPointer(),
 		ResourceName:              resourceName,
 		Description:               m.Description.ValueStringPointer(),
@@ -1007,15 +986,21 @@ func (m WorkflowUsingTemplateResourceModel) ToAPIModel(ctx context.Context) (*sg
 		UserSchedules:             userSchedules,
 		DeploymentPlatformConfig:  deploymentPlatformConfig,
 		VcsConfig:                 vcsConfig,
-	}, nil
+	}
+
+	// Provider-side resolution: fill any field the user did not set from the
+	// workflow template revision, so config/state/reality line up field-for-field.
+	mergeTemplateDefaults(wf, tpl)
+
+	return wf, nil
 }
 
 // ---------------------------------------------------------------------------
 // ToUpdateAPIModel
 // ---------------------------------------------------------------------------
 
-func (m WorkflowUsingTemplateResourceModel) ToUpdateAPIModel(ctx context.Context) (*sgworkflows.PatchedWorkflow, diag.Diagnostics) {
-	workflow, diags := m.ToAPIModel(ctx)
+func (m WorkflowUsingTemplateResourceModel) ToUpdateAPIModel(ctx context.Context, tpl *workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) (*sgworkflows.PatchedWorkflow, diag.Diagnostics) {
+	workflow, diags := m.ToAPIModel(ctx, tpl)
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -1135,61 +1120,60 @@ func (m WorkflowUsingTemplateResourceModel) ToUpdateAPIModel(ctx context.Context
 // ConvertWorkflowUsingTemplateFromAPI
 // ---------------------------------------------------------------------------
 
-// ConvertWorkflowUsingTemplateFromAPI builds the final state model.
-// Root-level attributes are taken verbatim from source (plan on Create/Update, state on Read).
-// Only Id is read from the API response (the server assigns it on Create).
-// resolved_schema is populated from the full API response.
+// ConvertWorkflowUsingTemplateFromAPI builds the final state model by mapping the
+// FULL API reality (the fully-merged workflow record) onto every attribute. Because
+// the provider sent a resolved payload (user config merged with template defaults),
+// state now mirrors reality field-for-field — which is what lets Terraform detect
+// drift. WorkflowGroupId is not part of the workflow record, so it is preserved from
+// source.
 func ConvertWorkflowUsingTemplateFromAPI(ctx context.Context, response *sgworkflows.WorkflowReadResponse, source WorkflowUsingTemplateResourceModel) (WorkflowUsingTemplateResourceModel, diag.Diagnostics) {
 	var allDiags diag.Diagnostics
 
-	model := source
+	model := WorkflowUsingTemplateResourceModel{
+		WorkflowGroupId: source.WorkflowGroupId,
+	}
 
 	wf := response.Msg
 	if wf == nil {
-		return model, allDiags
+		return source, allDiags
 	}
 
 	model.Id = flatteners.StringPtr(wf.Id)
+	model.ResourceName = flatteners.StringPtr(wf.ResourceName)
+	// Description is Optional+Computed; store a known value (empty string when the API
+	// returns none) so UseStateForUnknown holds it stable instead of re-planning as
+	// "known after apply".
+	model.Description = flatteners.StringPtrDefault(wf.Description)
+	model.NumberOfApprovalsRequired = flatteners.Int64Ptr(wf.NumberOfApprovalsRequired)
+	model.UserJobCpu = flatteners.Int64Ptr(wf.UserJobCpu)
+	model.UserJobMemory = flatteners.Int64Ptr(wf.UserJobMemory)
 
-	resolvedSchema, diags := buildResolvedSchemaFromAPI(ctx, wf)
-	allDiags.Append(diags...)
-	model.ResolvedSchema = resolvedSchema
-
-	return model, allDiags
-}
-
-func buildResolvedSchemaFromAPI(ctx context.Context, wf *sgworkflows.WorkflowRead) (types.Object, diag.Diagnostics) {
-	nullObj := types.ObjectNull(ResolvedSchemaModel{}.AttributeTypes())
-	var allDiags diag.Diagnostics
-
-	resolved := ResolvedSchemaModel{
-		ResourceName:              flatteners.StringPtr(wf.ResourceName),
-		Description:               flatteners.StringPtrDefaultNull(wf.Description),
-		NumberOfApprovalsRequired: flatteners.Int64Ptr(wf.NumberOfApprovalsRequired),
-		UserJobCpu:                flatteners.Int64Ptr(wf.UserJobCpu),
-		UserJobMemory:             flatteners.Int64Ptr(wf.UserJobMemory),
+	if wf.WfType != nil {
+		model.WfType = types.StringValue(string(*wf.WfType))
+	} else {
+		model.WfType = source.WfType
 	}
 
 	tags, diags := flatteners.ListOfStringToTerraformList(wf.Tags)
 	allDiags.Append(diags...)
 	if allDiags.HasError() {
-		return nullObj, allDiags
+		return source, allDiags
 	}
-	resolved.Tags = tags
+	model.Tags = knownEmptyListIfNull(tags, types.StringType)
 
 	approvers, diags := flatteners.ListOfStringToTerraformList(wf.Approvers)
 	allDiags.Append(diags...)
 	if allDiags.HasError() {
-		return nullObj, allDiags
+		return source, allDiags
 	}
-	resolved.Approvers = approvers
+	model.Approvers = knownEmptyListIfNull(approvers, types.StringType)
 
 	contextTags, diags := flatteners.MapStringString(ctx, wf.ContextTags)
 	allDiags.Append(diags...)
 	if allDiags.HasError() {
-		return nullObj, allDiags
+		return source, allDiags
 	}
-	resolved.ContextTags = contextTags
+	model.ContextTags = knownEmptyMapIfNull(contextTags)
 
 	envVars := make([]sgsdkgo.EnvVars, len(wf.EnvironmentVariables))
 	for i, ptr := range wf.EnvironmentVariables {
@@ -1200,23 +1184,23 @@ func buildResolvedSchemaFromAPI(ctx context.Context, wf *sgworkflows.WorkflowRea
 	envVarsList, diags := convertEnvironmentVariablesFromAPI(ctx, envVars)
 	allDiags.Append(diags...)
 	if allDiags.HasError() {
-		return nullObj, allDiags
+		return source, allDiags
 	}
-	resolved.EnvironmentVariables = envVarsList
+	model.EnvironmentVariables = knownEmptyListIfNull(envVarsList, types.ObjectType{AttrTypes: EnvironmentVariableModel{}.AttributeTypes()})
 
 	terraformConfig, diags := convertTerraformConfigFromAPI(ctx, wf.TerraformConfig)
 	allDiags.Append(diags...)
 	if allDiags.HasError() {
-		return nullObj, allDiags
+		return source, allDiags
 	}
-	resolved.TerraformConfig = terraformConfig
+	model.TerraformConfig = terraformConfig
 
 	runnerConstraints, diags := convertRunnerConstraintsFromAPI(ctx, wf.RunnerConstraints)
 	allDiags.Append(diags...)
 	if allDiags.HasError() {
-		return nullObj, allDiags
+		return source, allDiags
 	}
-	resolved.RunnerConstraints = runnerConstraints
+	model.RunnerConstraints = runnerConstraints
 
 	wfStepsConfig := make([]sgsdkgo.WfStepsConfig, len(wf.WfStepsConfig))
 	for i, ptr := range wf.WfStepsConfig {
@@ -1227,37 +1211,116 @@ func buildResolvedSchemaFromAPI(ctx context.Context, wf *sgworkflows.WorkflowRea
 	wfStepsConfigList, diags := convertWfStepsConfigListFromAPI(ctx, wfStepsConfig)
 	allDiags.Append(diags...)
 	if allDiags.HasError() {
-		return nullObj, allDiags
+		return source, allDiags
 	}
-	resolved.WfStepsConfig = wfStepsConfigList
+	model.WfStepsConfig = knownEmptyListIfNull(wfStepsConfigList, types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()})
 
 	miniSteps, diags := convertMinistepsFromAPI(ctx, wf.MiniSteps)
 	allDiags.Append(diags...)
 	if allDiags.HasError() {
-		return nullObj, allDiags
+		return source, allDiags
 	}
-	resolved.MiniSteps = miniSteps
+	model.MiniSteps = knownEmptyObjectIfNull(miniSteps, MinistepsModel{}.AttributeTypes())
 
 	userSchedules, diags := convertUserSchedulesFromAPI(ctx, wf.UserSchedules)
 	allDiags.Append(diags...)
 	if allDiags.HasError() {
-		return nullObj, allDiags
+		return source, allDiags
 	}
-	resolved.UserSchedules = userSchedules
+	model.UserSchedules = knownEmptyListIfNull(userSchedules, types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()})
 
 	deploymentPlatformConfig, diags := convertDeploymentPlatformConfigFromAPI(ctx, wf.DeploymentPlatformConfig)
 	allDiags.Append(diags...)
 	if allDiags.HasError() {
-		return nullObj, allDiags
+		return source, allDiags
 	}
-	resolved.DeploymentPlatformConfig = deploymentPlatformConfig
+	model.DeploymentPlatformConfig = knownEmptyListIfNull(deploymentPlatformConfig, types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()})
 
-	obj, diags := types.ObjectValueFrom(ctx, ResolvedSchemaModel{}.AttributeTypes(), resolved)
+	vcsConfig, diags := convertVcsConfigFromAPI(ctx, wf.VcsConfig)
 	allDiags.Append(diags...)
 	if allDiags.HasError() {
-		return nullObj, allDiags
+		return source, allDiags
 	}
-	return obj, nil
+	model.VcsConfig = vcsConfig
+
+	return model, allDiags
+}
+
+// knownEmptyListIfNull returns a known empty list (of elemType) when in is null,
+// otherwise returns in unchanged. Computed list attributes must hold a known value
+// in state so that UseStateForUnknown engages on subsequent plans — a null value is
+// skipped by that plan modifier and would otherwise re-plan as "known after apply",
+// producing a perpetual diff.
+func knownEmptyListIfNull(in types.List, elemType attr.Type) types.List {
+	if in.IsNull() {
+		return types.ListValueMust(elemType, []attr.Value{})
+	}
+	return in
+}
+
+// knownEmptyStringIfNull returns a known empty string when in is null, otherwise in.
+// Same rationale as knownEmptyListIfNull for Computed string attributes.
+func knownEmptyStringIfNull(in types.String) types.String {
+	if in.IsNull() {
+		return types.StringValue("")
+	}
+	return in
+}
+
+// knownFalseIfNull returns a known false when in is null, otherwise in. Same rationale
+// as knownEmptyListIfNull for Computed bool attributes the API returns empty.
+func knownFalseIfNull(in types.Bool) types.Bool {
+	if in.IsNull() {
+		return types.BoolValue(false)
+	}
+	return in
+}
+
+// knownEmptyMapIfNull is the map equivalent of knownEmptyListIfNull.
+func knownEmptyMapIfNull(in types.Map) types.Map {
+	if in.IsNull() {
+		return types.MapValueMust(types.StringType, map[string]attr.Value{})
+	}
+	return in
+}
+
+// knownEmptyObjectIfNull returns a known object with all-null attributes (of attrTypes)
+// when in is null, otherwise returns in unchanged. Same rationale as
+// knownEmptyListIfNull: a Computed object attribute must hold a known value in state for
+// UseStateForUnknown to prevent a perpetual "known after apply" diff.
+func knownEmptyObjectIfNull(in types.Object, attrTypes map[string]attr.Type) types.Object {
+	if in.IsNull() {
+		values := make(map[string]attr.Value, len(attrTypes))
+		for name, t := range attrTypes {
+			values[name] = newNullValue(t)
+		}
+		return types.ObjectValueMust(attrTypes, values)
+	}
+	return in
+}
+
+// newNullValue returns a typed null attr.Value for the given attr.Type.
+func newNullValue(t attr.Type) attr.Value {
+	switch tt := t.(type) {
+	case types.ObjectType:
+		return types.ObjectNull(tt.AttrTypes)
+	case types.ListType:
+		return types.ListNull(tt.ElemType)
+	case types.MapType:
+		return types.MapNull(tt.ElemType)
+	case types.SetType:
+		return types.SetNull(tt.ElemType)
+	case basetypes.BoolType:
+		return types.BoolNull()
+	case basetypes.Int64Type:
+		return types.Int64Null()
+	case basetypes.Float64Type:
+		return types.Float64Null()
+	case basetypes.NumberType:
+		return types.NumberNull()
+	default:
+		return types.StringNull()
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -1518,17 +1581,17 @@ func convertRunnerConstraintsFromAPI(ctx context.Context, rc *sgsdkgo.RunnerCons
 }
 
 func convertUserSchedulesFromAPI(ctx context.Context, schedules []sgsdkgo.UserSchedules) (types.List, diag.Diagnostics) {
-	nullList := types.ListNull(types.ObjectType{AttrTypes: ResolvedUserSchedulesModel{}.AttributeTypes()})
+	nullList := types.ListNull(types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()})
 	if len(schedules) == 0 {
 		return nullList, nil
 	}
 
-	models := make([]ResolvedUserSchedulesModel, 0, len(schedules))
+	models := make([]UserSchedulesModel, 0, len(schedules))
 	for _, s := range schedules {
 		if flatteners.IsEmptyObject(s) {
 			continue
 		}
-		models = append(models, ResolvedUserSchedulesModel{
+		models = append(models, UserSchedulesModel{
 			Cron:  flatteners.StringPtr(s.Cron),
 			State: flatteners.StringPtr((*string)(s.State)),
 			Desc:  flatteners.StringPtr(s.Desc),
@@ -1540,7 +1603,7 @@ func convertUserSchedulesFromAPI(ctx context.Context, schedules []sgsdkgo.UserSc
 		return nullList, nil
 	}
 
-	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: ResolvedUserSchedulesModel{}.AttributeTypes()}, models)
+	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()}, models)
 	if diags.HasError() {
 		return nullList, diags
 	}
@@ -1849,6 +1912,24 @@ func convertWfStepsConfigListFromAPI(ctx context.Context, steps []sgsdkgo.WfStep
 	return list, nil
 }
 
+// normalizeTerraformVersion strips the engine prefix the API prepends to the version
+// string ("TERRAFORM-1.5.0" / "OPENTOFU-1.6.0") so state stores the bare version the
+// user declares (e.g. "1.5.0"). Without this, config ("1.5.0") and the API-returned
+// value ("TERRAFORM-1.5.0") never match, producing a perpetual diff on terraform_version.
+func normalizeTerraformVersion(v *string) types.String {
+	if v == nil {
+		return types.StringNull()
+	}
+	s := *v
+	for _, prefix := range []string{"TERRAFORM-", "OPENTOFU-"} {
+		if strings.HasPrefix(strings.ToUpper(s), prefix) {
+			s = s[len(prefix):]
+			break
+		}
+	}
+	return flatteners.StringPtr(&s)
+}
+
 func convertTerraformConfigFromAPI(ctx context.Context, cfg *sgsdkgo.TerraformConfig) (types.Object, diag.Diagnostics) {
 	nullObj := types.ObjectNull(TerraformConfigModel{}.AttributeTypes())
 	if cfg == nil || flatteners.IsEmptyObject(cfg) {
@@ -1856,7 +1937,7 @@ func convertTerraformConfigFromAPI(ctx context.Context, cfg *sgsdkgo.TerraformCo
 	}
 
 	m := TerraformConfigModel{
-		TerraformVersion:        flatteners.StringPtr(cfg.TerraformVersion),
+		TerraformVersion:        normalizeTerraformVersion(cfg.TerraformVersion),
 		DriftCheck:              flatteners.BoolPtr(cfg.DriftCheck),
 		DriftCron:               flatteners.StringPtr(cfg.DriftCron),
 		ManagedTerraformState:   flatteners.BoolPtr(cfg.ManagedTerraformState),
@@ -1928,6 +2009,40 @@ func convertTerraformConfigFromAPI(ctx context.Context, cfg *sgsdkgo.TerraformCo
 		return nullObj, diags
 	}
 	m.PostApplyHooks = postApplyHooks
+
+	// These nested fields are Optional+Computed; the API may return them empty (→ null
+	// from the flatteners above). A null value on a Computed attribute is skipped by
+	// UseStateForUnknown and re-plans as "known after apply" forever, so coerce empties
+	// to known values to keep plans clean.
+	wfStepElem := types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}
+	mountElem := types.ObjectType{AttrTypes: MountPointModel{}.AttributeTypes()}
+	m.PreInitHooks = knownEmptyListIfNull(m.PreInitHooks, types.StringType)
+	m.PrePlanHooks = knownEmptyListIfNull(m.PrePlanHooks, types.StringType)
+	m.PostPlanHooks = knownEmptyListIfNull(m.PostPlanHooks, types.StringType)
+	m.PreApplyHooks = knownEmptyListIfNull(m.PreApplyHooks, types.StringType)
+	m.PostApplyHooks = knownEmptyListIfNull(m.PostApplyHooks, types.StringType)
+	m.TerraformBinPath = knownEmptyListIfNull(m.TerraformBinPath, mountElem)
+	m.PostApplyWfStepsConfig = knownEmptyListIfNull(m.PostApplyWfStepsConfig, wfStepElem)
+	m.PreApplyWfStepsConfig = knownEmptyListIfNull(m.PreApplyWfStepsConfig, wfStepElem)
+	m.PrePlanWfStepsConfig = knownEmptyListIfNull(m.PrePlanWfStepsConfig, wfStepElem)
+	m.PostPlanWfStepsConfig = knownEmptyListIfNull(m.PostPlanWfStepsConfig, wfStepElem)
+
+	// Scalars the API returns empty are coerced to known values for plan stability
+	// (UseStateForUnknown skips null state). ToAPIModel treats an empty string / false
+	// as "unset" and omits it, so a known-empty in state never produces a blank payload
+	// the API rejects (e.g. driftCron is allow_blank=False).
+	m.TerraformPlanOptions = knownEmptyStringIfNull(m.TerraformPlanOptions)
+	m.TerraformInitOptions = knownEmptyStringIfNull(m.TerraformInitOptions)
+	m.DriftCron = knownEmptyStringIfNull(m.DriftCron)
+	m.DriftCheck = knownFalseIfNull(m.DriftCheck)
+	m.ManagedTerraformState = knownFalseIfNull(m.ManagedTerraformState)
+	m.ApprovalPreApply = knownFalseIfNull(m.ApprovalPreApply)
+	m.RunPreInitHooksOnDrift = knownFalseIfNull(m.RunPreInitHooksOnDrift)
+	m.RunPrePlanHooksOnDrift = knownFalseIfNull(m.RunPrePlanHooksOnDrift)
+	m.RunPostPlanHooksOnDrift = knownFalseIfNull(m.RunPostPlanHooksOnDrift)
+	if m.Timeout.IsNull() {
+		m.Timeout = types.Int64Value(0)
+	}
 
 	obj, diags := types.ObjectValueFrom(ctx, TerraformConfigModel{}.AttributeTypes(), m)
 	if diags.HasError() {
@@ -2007,4 +2122,201 @@ func convertVcsConfigFromAPI(ctx context.Context, vcsConfig *sgsdkgo.VcsConfig) 
 		IacInputData: iacInputDataObj,
 	}
 	return types.ObjectValueFrom(ctx, VcsConfigModel{}.AttributeTypes(ctx), vcsModel)
+}
+
+// ---------------------------------------------------------------------------
+// Template merge (provider-side resolution)
+//
+// The platform persists a workflow as a fully-merged record (user input +
+// template + org + platform defaults). The user's Terraform config only carries
+// the fields they declared. To make Terraform's diff engine work, the provider
+// fetches the workflow template revision and merges it into the payload: any
+// field the user did NOT set is filled from the template. The resulting resolved
+// payload is what we send to the API and store in state, so config, state, and
+// reality line up field-for-field.
+//
+// Org defaults are already baked into the template at template-create time, so a
+// template revision carries org-resolved values — fetching the template is
+// sufficient; no separate org-settings call is needed.
+// ---------------------------------------------------------------------------
+
+// mergeTemplateDefaults fills fields the user left unset on wf with the values
+// from the template revision tpl. User-provided values always win.
+func mergeTemplateDefaults(wf *sgworkflows.Workflow, tpl *workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) {
+	if wf == nil || tpl == nil {
+		return
+	}
+
+	if wf.ResourceName == nil && tpl.Alias != "" {
+		alias := tpl.Alias
+		wf.ResourceName = &alias
+	}
+	if wf.Description == nil && tpl.LongDescription != nil {
+		wf.Description = tpl.LongDescription
+	}
+	if wf.NumberOfApprovalsRequired == nil && tpl.NumberOfApprovalsRequired != nil {
+		wf.NumberOfApprovalsRequired = tpl.NumberOfApprovalsRequired
+	}
+	if wf.UserJobCpu == nil && tpl.UserJobCPU != nil {
+		wf.UserJobCpu = tpl.UserJobCPU
+	}
+	if wf.UserJobMemory == nil && tpl.UserJobMemory != nil {
+		wf.UserJobMemory = tpl.UserJobMemory
+	}
+	// TerraformConfig is deep-merged field-by-field: a field the user set wins; any
+	// field the user left unset is filled from the template. (Whole-object replacement
+	// would send the user's partial block with blanks the API rejects, e.g. driftCron.)
+	wf.TerraformConfig = mergeTerraformConfig(wf.TerraformConfig, tpl.TerraformConfig)
+	if wf.RunnerConstraints == nil && tpl.RunnerConstraints != nil {
+		wf.RunnerConstraints = tpl.RunnerConstraints
+	}
+	if wf.MiniSteps == nil && tpl.Ministeps != nil {
+		wf.MiniSteps = tpl.Ministeps
+	}
+
+	if len(wf.Tags) == 0 && len(tpl.Tags) > 0 {
+		wf.Tags = tpl.Tags
+	}
+	if len(wf.Approvers) == 0 && len(tpl.Approvers) > 0 {
+		wf.Approvers = tpl.Approvers
+	}
+	if len(wf.ContextTags) == 0 && len(tpl.ContextTags) > 0 {
+		wf.ContextTags = tpl.ContextTags
+	}
+	if len(wf.UserSchedules) == 0 && len(tpl.UserSchedules) > 0 {
+		schedules := make([]sgsdkgo.UserSchedules, len(tpl.UserSchedules))
+		for i := range tpl.UserSchedules {
+			t := tpl.UserSchedules[i]
+			cron := t.Cron
+			state := sgsdkgo.StateEnum(t.State)
+			schedules[i] = sgsdkgo.UserSchedules{
+				Name:  t.Name,
+				Desc:  t.Desc,
+				Cron:  &cron,
+				State: &state,
+			}
+		}
+		wf.UserSchedules = schedules
+	}
+	if len(wf.DeploymentPlatformConfig) == 0 && len(tpl.DeploymentPlatformConfig) > 0 {
+		wf.DeploymentPlatformConfig = tpl.DeploymentPlatformConfig
+	}
+
+	// EnvironmentVariables: template stores value slice, workflow uses pointer slice.
+	if len(wf.EnvironmentVariables) == 0 && len(tpl.EnvironmentVariables) > 0 {
+		ptrs := make([]*sgsdkgo.EnvVars, len(tpl.EnvironmentVariables))
+		for i := range tpl.EnvironmentVariables {
+			ptrs[i] = &tpl.EnvironmentVariables[i]
+		}
+		wf.EnvironmentVariables = ptrs
+	}
+
+	// WfStepsConfig: template stores value slice, workflow uses pointer slice.
+	if len(wf.WfStepsConfig) == 0 && len(tpl.WfStepsConfig) > 0 {
+		ptrs := make([]*sgsdkgo.WfStepsConfig, len(tpl.WfStepsConfig))
+		for i := range tpl.WfStepsConfig {
+			ptrs[i] = &tpl.WfStepsConfig[i]
+		}
+		wf.WfStepsConfig = ptrs
+	}
+}
+
+// mergeTerraformConfig deep-merges a TerraformConfig field-by-field: the user's value
+// is kept when set, otherwise the template's value fills it. Returns the user config
+// unchanged if the template has none, and the template's config if the user has none.
+func mergeTerraformConfig(user, tpl *sgsdkgo.TerraformConfig) *sgsdkgo.TerraformConfig {
+	if tpl == nil {
+		return user
+	}
+	if user == nil {
+		return tpl
+	}
+
+	if user.TerraformVersion == nil {
+		user.TerraformVersion = tpl.TerraformVersion
+	}
+	if user.DriftCheck == nil {
+		user.DriftCheck = tpl.DriftCheck
+	}
+	if user.DriftCron == nil {
+		user.DriftCron = tpl.DriftCron
+	}
+	if user.ManagedTerraformState == nil {
+		user.ManagedTerraformState = tpl.ManagedTerraformState
+	}
+	if user.ApprovalPreApply == nil {
+		user.ApprovalPreApply = tpl.ApprovalPreApply
+	}
+	if user.TerraformPlanOptions == nil {
+		user.TerraformPlanOptions = tpl.TerraformPlanOptions
+	}
+	if user.TerraformInitOptions == nil {
+		user.TerraformInitOptions = tpl.TerraformInitOptions
+	}
+	if user.Timeout == nil {
+		user.Timeout = tpl.Timeout
+	}
+	if user.RunPreInitHooksOnDrift == nil {
+		user.RunPreInitHooksOnDrift = tpl.RunPreInitHooksOnDrift
+	}
+	if user.RunPrePlanHooksOnDrift == nil {
+		user.RunPrePlanHooksOnDrift = tpl.RunPrePlanHooksOnDrift
+	}
+	if user.RunPostPlanHooksOnDrift == nil {
+		user.RunPostPlanHooksOnDrift = tpl.RunPostPlanHooksOnDrift
+	}
+	if len(user.TerraformBinPath) == 0 {
+		user.TerraformBinPath = tpl.TerraformBinPath
+	}
+	if len(user.PostApplyWfStepsConfig) == 0 {
+		user.PostApplyWfStepsConfig = tpl.PostApplyWfStepsConfig
+	}
+	if len(user.PreApplyWfStepsConfig) == 0 {
+		user.PreApplyWfStepsConfig = tpl.PreApplyWfStepsConfig
+	}
+	if len(user.PrePlanWfStepsConfig) == 0 {
+		user.PrePlanWfStepsConfig = tpl.PrePlanWfStepsConfig
+	}
+	if len(user.PostPlanWfStepsConfig) == 0 {
+		user.PostPlanWfStepsConfig = tpl.PostPlanWfStepsConfig
+	}
+	if len(user.PreInitHooks) == 0 {
+		user.PreInitHooks = tpl.PreInitHooks
+	}
+	if len(user.PrePlanHooks) == 0 {
+		user.PrePlanHooks = tpl.PrePlanHooks
+	}
+	if len(user.PostPlanHooks) == 0 {
+		user.PostPlanHooks = tpl.PostPlanHooks
+	}
+	if len(user.PreApplyHooks) == 0 {
+		user.PreApplyHooks = tpl.PreApplyHooks
+	}
+	if len(user.PostApplyHooks) == 0 {
+		user.PostApplyHooks = tpl.PostApplyHooks
+	}
+
+	return user
+}
+
+// IacTemplateId extracts the workflow template revision id from the model's
+// vcs_config.iac_vcs_config.iac_template_id. Returns "" if not set.
+func (m WorkflowUsingTemplateResourceModel) IacTemplateId(ctx context.Context) (string, diag.Diagnostics) {
+	if m.VcsConfig.IsNull() || m.VcsConfig.IsUnknown() {
+		return "", nil
+	}
+	var vcs VcsConfigModel
+	diags := m.VcsConfig.As(ctx, &vcs, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return "", diags
+	}
+	if vcs.IacVcsConfig.IsNull() || vcs.IacVcsConfig.IsUnknown() {
+		return "", nil
+	}
+	var iac IacVcsConfigModel
+	diags = vcs.IacVcsConfig.As(ctx, &iac, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return "", diags
+	}
+	return iac.IacTemplateId.ValueString(), nil
 }

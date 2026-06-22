@@ -8,6 +8,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -30,6 +35,10 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 			"resource_name": schema.StringAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "workflow_using_template"),
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"workflow_group_id": schema.StringAttribute{
 				MarkdownDescription: constants.WorkflowWorkflowGroupId,
@@ -39,7 +48,10 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 			"description": schema.StringAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow_using_template"),
 				Optional:            true,
-				Validators:          nonEmptyString,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"wf_type": schema.StringAttribute{
 				MarkdownDescription: constants.WorkflowType,
@@ -49,11 +61,19 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 			"environment_variables": schema.ListNestedAttribute{
 				MarkdownDescription: constants.WfEnvironmentVariables,
 				Optional:            true,
+				Computed:            true,
 				NestedObject:        environmentVariable(),
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"mini_steps": schema.SingleNestedAttribute{
 				MarkdownDescription: constants.WfMiniSteps,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"notifications": schema.SingleNestedAttribute{
 						MarkdownDescription: constants.MiniStepsNotifications,
@@ -96,6 +116,10 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 			"runner_constraints": schema.SingleNestedAttribute{
 				MarkdownDescription: constants.WorkflowRunnerConstraints,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
 						MarkdownDescription: constants.RunnerConstraintsType,
@@ -113,10 +137,18 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 				MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow_using_template"),
 				ElementType:         types.StringType,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"user_schedules": schema.ListNestedAttribute{
 				MarkdownDescription: constants.WfUserSchedules,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"cron": schema.StringAttribute{
@@ -134,6 +166,13 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 							Optional:            true,
 							Validators:          nonEmptyString,
 						},
+						"name": schema.StringAttribute{
+							MarkdownDescription: constants.UserScheduleName,
+							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
+						},
 					},
 				},
 			},
@@ -141,24 +180,45 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 				MarkdownDescription: fmt.Sprintf(constants.ContextTags, "workflow_using_template"),
 				ElementType:         types.StringType,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"approvers": schema.ListAttribute{
 				MarkdownDescription: constants.WfApprovers,
 				ElementType:         types.StringType,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"number_of_approvals_required": schema.Int64Attribute{
 				MarkdownDescription: constants.WfNumberOfApprovals,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"user_job_cpu": schema.Int64Attribute{
 				MarkdownDescription: constants.WfUserJobCPU,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"user_job_memory": schema.Int64Attribute{
 				MarkdownDescription: constants.WfUserJobMemory,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
+
 			"vcs_config": schema.SingleNestedAttribute{
 				MarkdownDescription: constants.WorkflowVcsConfig,
 				Required:            true,
@@ -200,110 +260,198 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 			"terraform_config": schema.SingleNestedAttribute{
 				MarkdownDescription: constants.TerraformConfig,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"terraform_version": schema.StringAttribute{
 						MarkdownDescription: constants.TerraformVersion,
 						Optional:            true,
-						Validators:          nonEmptyString,
+						Computed:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"drift_check": schema.BoolAttribute{
 						MarkdownDescription: constants.TerraformDriftCheck,
 						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"drift_cron": schema.StringAttribute{
 						MarkdownDescription: constants.TerraformDriftCron,
 						Optional:            true,
-						Validators:          nonEmptyString,
+						Computed:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"managed_terraform_state": schema.BoolAttribute{
 						MarkdownDescription: constants.TerraformManagedState,
 						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"approval_pre_apply": schema.BoolAttribute{
 						MarkdownDescription: constants.TerraformApprovalPreApply,
 						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"terraform_plan_options": schema.StringAttribute{
 						MarkdownDescription: constants.TerraformPlanOptions,
 						Optional:            true,
-						Validators:          nonEmptyString,
+						Computed:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"terraform_init_options": schema.StringAttribute{
 						MarkdownDescription: constants.TerraformInitOptions,
 						Optional:            true,
-						Validators:          nonEmptyString,
+						Computed:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"terraform_bin_path": schema.ListNestedAttribute{
 						MarkdownDescription: constants.TerraformBinPath,
 						Optional:            true,
+						Computed:            true,
 						NestedObject:        mountPoint(),
+						PlanModifiers: []planmodifier.List{
+							listplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"timeout": schema.Int64Attribute{
 						MarkdownDescription: constants.TerraformTimeout,
 						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.UseStateForUnknown(),
+						},
 					},
 					"post_apply_wf_steps_config": schema.ListNestedAttribute{
 						MarkdownDescription: constants.TerraformPostApplyWfSteps,
 						Optional:            true,
+						Computed:            true,
 						NestedObject:        wfStepsConfig(),
+						PlanModifiers: []planmodifier.List{
+							listplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"pre_apply_wf_steps_config": schema.ListNestedAttribute{
 						MarkdownDescription: constants.TerraformPreApplyWfSteps,
 						Optional:            true,
+						Computed:            true,
 						NestedObject:        wfStepsConfig(),
+						PlanModifiers: []planmodifier.List{
+							listplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"pre_plan_wf_steps_config": schema.ListNestedAttribute{
 						MarkdownDescription: constants.TerraformPrePlanWfSteps,
 						Optional:            true,
+						Computed:            true,
 						NestedObject:        wfStepsConfig(),
+						PlanModifiers: []planmodifier.List{
+							listplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"post_plan_wf_steps_config": schema.ListNestedAttribute{
 						MarkdownDescription: constants.TerraformPostPlanWfSteps,
 						Optional:            true,
+						Computed:            true,
 						NestedObject:        wfStepsConfig(),
+						PlanModifiers: []planmodifier.List{
+							listplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"pre_init_hooks": schema.ListAttribute{
 						MarkdownDescription: constants.TerraformPreInitHooks,
 						Optional:            true,
+						Computed:            true,
 						ElementType:         types.StringType,
+						PlanModifiers: []planmodifier.List{
+							listplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"pre_plan_hooks": schema.ListAttribute{
 						MarkdownDescription: constants.TerraformPrePlanHooks,
 						Optional:            true,
+						Computed:            true,
 						ElementType:         types.StringType,
+						PlanModifiers: []planmodifier.List{
+							listplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"post_plan_hooks": schema.ListAttribute{
 						MarkdownDescription: constants.TerraformPostPlanHooks,
 						Optional:            true,
+						Computed:            true,
 						ElementType:         types.StringType,
+						PlanModifiers: []planmodifier.List{
+							listplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"pre_apply_hooks": schema.ListAttribute{
 						MarkdownDescription: constants.TerraformPreApplyHooks,
 						Optional:            true,
+						Computed:            true,
 						ElementType:         types.StringType,
+						PlanModifiers: []planmodifier.List{
+							listplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"post_apply_hooks": schema.ListAttribute{
 						MarkdownDescription: constants.TerraformPostApplyHooks,
 						Optional:            true,
+						Computed:            true,
 						ElementType:         types.StringType,
+						PlanModifiers: []planmodifier.List{
+							listplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"run_pre_init_hooks_on_drift": schema.BoolAttribute{
 						MarkdownDescription: constants.TerraformRunPreInitHooksOnDrift,
 						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"run_pre_plan_hooks_on_drift": schema.BoolAttribute{
 						MarkdownDescription: constants.TerraformRunPrePlanHooksOnDrift,
 						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"run_post_plan_hooks_on_drift": schema.BoolAttribute{
 						MarkdownDescription: constants.TerraformRunPostPlanHooksOnDrift,
 						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.UseStateForUnknown(),
+						},
 					},
 				},
 			},
 			"deployment_platform_config": schema.ListNestedAttribute{
 				MarkdownDescription: constants.WfDeploymentPlatformConfig,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"kind": schema.StringAttribute{
@@ -333,124 +481,10 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 			"wf_steps_config": schema.ListNestedAttribute{
 				MarkdownDescription: constants.WfStepsConfig,
 				Optional:            true,
-				NestedObject:        wfStepsConfig(),
-			},
-			"resolved_schema": schema.SingleNestedAttribute{
-				MarkdownDescription: "Read-only view of the workflow attributes as returned by the API.",
 				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"resource_name": schema.StringAttribute{Computed: true},
-					"description":   schema.StringAttribute{Computed: true},
-					"environment_variables": schema.ListNestedAttribute{
-						Computed:     true,
-						NestedObject: computedEnvironmentVariable(),
-					},
-					"mini_steps": schema.SingleNestedAttribute{
-						Computed: true,
-						Attributes: map[string]schema.Attribute{
-							"notifications": schema.SingleNestedAttribute{
-								Computed: true,
-								Attributes: map[string]schema.Attribute{
-									"email": schema.SingleNestedAttribute{
-										Computed: true,
-										Attributes: map[string]schema.Attribute{
-											"approval_required": schema.ListNestedAttribute{Computed: true, NestedObject: computedMiniStepsNotificationRecipients()},
-											"cancelled":         schema.ListNestedAttribute{Computed: true, NestedObject: computedMiniStepsNotificationRecipients()},
-											"completed":         schema.ListNestedAttribute{Computed: true, NestedObject: computedMiniStepsNotificationRecipients()},
-											"drift_detected":    schema.ListNestedAttribute{Computed: true, NestedObject: computedMiniStepsNotificationRecipients()},
-											"errored":           schema.ListNestedAttribute{Computed: true, NestedObject: computedMiniStepsNotificationRecipients()},
-										},
-									},
-								},
-							},
-							"webhooks": schema.SingleNestedAttribute{
-								Computed: true,
-								Attributes: map[string]schema.Attribute{
-									"approval_required": schema.ListNestedAttribute{Computed: true, NestedObject: computedMiniStepsWebhook()},
-									"cancelled":         schema.ListNestedAttribute{Computed: true, NestedObject: computedMiniStepsWebhook()},
-									"completed":         schema.ListNestedAttribute{Computed: true, NestedObject: computedMiniStepsWebhook()},
-									"drift_detected":    schema.ListNestedAttribute{Computed: true, NestedObject: computedMiniStepsWebhook()},
-									"errored":           schema.ListNestedAttribute{Computed: true, NestedObject: computedMiniStepsWebhook()},
-								},
-							},
-							"wf_chaining": schema.SingleNestedAttribute{
-								Computed: true,
-								Attributes: map[string]schema.Attribute{
-									"completed": schema.ListNestedAttribute{Computed: true, NestedObject: computedMiniStepsWfChaining()},
-									"errored":   schema.ListNestedAttribute{Computed: true, NestedObject: computedMiniStepsWfChaining()},
-								},
-							},
-						},
-					},
-					"runner_constraints": schema.SingleNestedAttribute{
-						Computed: true,
-						Attributes: map[string]schema.Attribute{
-							"type":  schema.StringAttribute{Computed: true},
-							"names": schema.ListAttribute{Computed: true, ElementType: types.StringType},
-						},
-					},
-					"tags":         schema.ListAttribute{Computed: true, ElementType: types.StringType},
-					"approvers":    schema.ListAttribute{Computed: true, ElementType: types.StringType},
-					"context_tags": schema.MapAttribute{Computed: true, ElementType: types.StringType},
-					"user_schedules": schema.ListNestedAttribute{
-						Computed: true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"cron":  schema.StringAttribute{Computed: true},
-								"state": schema.StringAttribute{Computed: true},
-								"desc":  schema.StringAttribute{Computed: true},
-								"name":  schema.StringAttribute{Computed: true},
-							},
-						},
-					},
-					"number_of_approvals_required": schema.Int64Attribute{Computed: true},
-					"user_job_cpu":                 schema.Int64Attribute{Computed: true},
-					"user_job_memory":              schema.Int64Attribute{Computed: true},
-					"terraform_config": schema.SingleNestedAttribute{
-						Computed: true,
-						Attributes: map[string]schema.Attribute{
-							"terraform_version":            schema.StringAttribute{Computed: true},
-							"drift_check":                  schema.BoolAttribute{Computed: true},
-							"drift_cron":                   schema.StringAttribute{Computed: true},
-							"managed_terraform_state":      schema.BoolAttribute{Computed: true},
-							"approval_pre_apply":           schema.BoolAttribute{Computed: true},
-							"terraform_plan_options":       schema.StringAttribute{Computed: true},
-							"terraform_init_options":       schema.StringAttribute{Computed: true},
-							"terraform_bin_path":           schema.ListNestedAttribute{Computed: true, NestedObject: computedMountPoint()},
-							"timeout":                      schema.Int64Attribute{Computed: true},
-							"post_apply_wf_steps_config":   schema.ListNestedAttribute{Computed: true, NestedObject: computedWfStepsConfig()},
-							"pre_apply_wf_steps_config":    schema.ListNestedAttribute{Computed: true, NestedObject: computedWfStepsConfig()},
-							"pre_plan_wf_steps_config":     schema.ListNestedAttribute{Computed: true, NestedObject: computedWfStepsConfig()},
-							"post_plan_wf_steps_config":    schema.ListNestedAttribute{Computed: true, NestedObject: computedWfStepsConfig()},
-							"pre_init_hooks":               schema.ListAttribute{Computed: true, ElementType: types.StringType},
-							"pre_plan_hooks":               schema.ListAttribute{Computed: true, ElementType: types.StringType},
-							"post_plan_hooks":              schema.ListAttribute{Computed: true, ElementType: types.StringType},
-							"pre_apply_hooks":              schema.ListAttribute{Computed: true, ElementType: types.StringType},
-							"post_apply_hooks":             schema.ListAttribute{Computed: true, ElementType: types.StringType},
-							"run_pre_init_hooks_on_drift":  schema.BoolAttribute{Computed: true},
-							"run_pre_plan_hooks_on_drift":  schema.BoolAttribute{Computed: true},
-							"run_post_plan_hooks_on_drift": schema.BoolAttribute{Computed: true},
-						},
-					},
-					"deployment_platform_config": schema.ListNestedAttribute{
-						Computed: true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"kind": schema.StringAttribute{Computed: true},
-								"config": schema.SingleNestedAttribute{
-									Computed: true,
-									Attributes: map[string]schema.Attribute{
-										"integration_id": schema.StringAttribute{Computed: true},
-										"profile_name":   schema.StringAttribute{Computed: true},
-									},
-								},
-							},
-						},
-					},
-					"wf_steps_config": schema.ListNestedAttribute{
-						Computed:     true,
-						NestedObject: computedWfStepsConfig(),
-					},
+				NestedObject:        wfStepsConfig(),
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
 				},
 			},
 		},
@@ -597,83 +631,6 @@ func miniStepsWebhook() schema.NestedAttributeObject {
 				Optional:            true,
 				Validators:          nonEmptyString,
 			},
-		},
-	}
-}
-
-func computedWfStepsConfig() schema.NestedAttributeObject {
-	return schema.NestedAttributeObject{
-		Attributes: map[string]schema.Attribute{
-			"name":                  schema.StringAttribute{Computed: true},
-			"environment_variables": schema.ListNestedAttribute{Computed: true, NestedObject: computedEnvironmentVariable()},
-			"approval":              schema.BoolAttribute{Computed: true},
-			"timeout":               schema.Int64Attribute{Computed: true},
-			"cmd_override":          schema.StringAttribute{Computed: true},
-			"mount_points":          schema.ListNestedAttribute{Computed: true, NestedObject: computedMountPoint()},
-			"wf_step_template_id":   schema.StringAttribute{Computed: true},
-			"wf_step_input_data": schema.SingleNestedAttribute{
-				Computed: true,
-				Attributes: map[string]schema.Attribute{
-					"schema_type": schema.StringAttribute{Computed: true},
-					"data":        schema.StringAttribute{Computed: true},
-				},
-			},
-		},
-	}
-}
-
-func computedEnvironmentVariable() schema.NestedAttributeObject {
-	return schema.NestedAttributeObject{
-		Attributes: map[string]schema.Attribute{
-			"config": schema.SingleNestedAttribute{
-				Computed: true,
-				Attributes: map[string]schema.Attribute{
-					"var_name":   schema.StringAttribute{Computed: true},
-					"secret_id":  schema.StringAttribute{Computed: true},
-					"text_value": schema.StringAttribute{Computed: true},
-				},
-			},
-			"kind": schema.StringAttribute{Computed: true},
-		},
-	}
-}
-
-func computedMountPoint() schema.NestedAttributeObject {
-	return schema.NestedAttributeObject{
-		Attributes: map[string]schema.Attribute{
-			"source":    schema.StringAttribute{Computed: true},
-			"target":    schema.StringAttribute{Computed: true},
-			"read_only": schema.BoolAttribute{Computed: true},
-		},
-	}
-}
-
-func computedMiniStepsNotificationRecipients() schema.NestedAttributeObject {
-	return schema.NestedAttributeObject{
-		Attributes: map[string]schema.Attribute{
-			"recipients": schema.ListAttribute{Computed: true, ElementType: types.StringType},
-		},
-	}
-}
-
-func computedMiniStepsWebhook() schema.NestedAttributeObject {
-	return schema.NestedAttributeObject{
-		Attributes: map[string]schema.Attribute{
-			"webhook_name":   schema.StringAttribute{Computed: true},
-			"webhook_url":    schema.StringAttribute{Computed: true},
-			"webhook_secret": schema.StringAttribute{Computed: true},
-		},
-	}
-}
-
-func computedMiniStepsWfChaining() schema.NestedAttributeObject {
-	return schema.NestedAttributeObject{
-		Attributes: map[string]schema.Attribute{
-			"workflow_group_id":    schema.StringAttribute{Computed: true},
-			"stack_id":             schema.StringAttribute{Computed: true},
-			"stack_run_payload":    schema.StringAttribute{Computed: true},
-			"workflow_id":          schema.StringAttribute{Computed: true},
-			"workflow_run_payload": schema.StringAttribute{Computed: true},
 		},
 	}
 }
