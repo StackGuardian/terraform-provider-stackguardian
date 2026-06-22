@@ -237,21 +237,34 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 					"iac_input_data": schema.SingleNestedAttribute{
 						MarkdownDescription: constants.WorkflowIacInputData,
 						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.Object{
+							objectplanmodifier.UseStateForUnknown(),
+						},
 						Attributes: map[string]schema.Attribute{
 							"schema_id": schema.StringAttribute{
 								MarkdownDescription: constants.WorkflowIacInputDataSchemaId,
 								Optional:            true,
-								Validators:          nonEmptyString,
+								Computed:            true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"schema_type": schema.StringAttribute{
 								MarkdownDescription: constants.WorkflowIacInputDataSchemaType,
 								Optional:            true,
-								Validators:          nonEmptyString,
+								Computed:            true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"data": schema.StringAttribute{
 								MarkdownDescription: constants.WorkflowIacInputDataData,
 								Optional:            true,
-								Validators:          nonEmptyString,
+								Computed:            true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 						},
 					},

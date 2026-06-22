@@ -2,6 +2,8 @@ package workflowfromtemplate
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"strings"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
@@ -487,11 +489,17 @@ func (IacInputDataModel) AttributeTypes() map[string]attr.Type {
 }
 
 func (m IacInputDataModel) ToAPIModel() *sgsdkgo.IacInputData {
-	return &sgsdkgo.IacInputData{
-		SchemaId:   m.SchemaId.ValueStringPointer(),
-		SchemaType: sgsdkgo.IacInputDataSchemaTypeEnum(m.SchemaType.ValueString()).Ptr(),
-		Data:       expanders.JSONStringToMap(m.Data.ValueString()),
+	out := &sgsdkgo.IacInputData{}
+	if isNonEmpty(m.SchemaId) {
+		out.SchemaId = m.SchemaId.ValueStringPointer()
 	}
+	if isNonEmpty(m.SchemaType) {
+		out.SchemaType = sgsdkgo.IacInputDataSchemaTypeEnum(m.SchemaType.ValueString()).Ptr()
+	}
+	if isNonEmpty(m.Data) {
+		out.Data = expanders.JSONStringToMap(m.Data.ValueString())
+	}
+	return out
 }
 
 type IacVcsConfigModel struct {
@@ -541,7 +549,12 @@ func (m VcsConfigModel) ToAPIModel(ctx context.Context) (*sgsdkgo.VcsConfig, dia
 		if diags.HasError() {
 			return nil, diags
 		}
-		result.IacInputData = iacInputDataModel.ToAPIModel()
+		// Only emit iacInputData if it carries content. A known-empty object (all-null
+		// fields, stored for plan stability when the template/API supplied none) must not
+		// be sent — the API requires schemaType+data when iacInputData is present.
+		if isNonEmpty(iacInputDataModel.SchemaType) || isNonEmpty(iacInputDataModel.Data) {
+			result.IacInputData = iacInputDataModel.ToAPIModel()
+		}
 	}
 
 	return result, nil
@@ -2103,10 +2116,16 @@ func convertVcsConfigFromAPI(ctx context.Context, vcsConfig *sgsdkgo.VcsConfig) 
 
 	var iacInputDataObj types.Object
 	if vcsConfig.IacInputData != nil {
+		var schemaType types.String
+		if vcsConfig.IacInputData.SchemaType != nil {
+			schemaType = types.StringValue(string(*vcsConfig.IacInputData.SchemaType))
+		} else {
+			schemaType = types.StringValue("")
+		}
 		iacInputDataModel := IacInputDataModel{
-			SchemaId:   flatteners.StringPtr(vcsConfig.IacInputData.SchemaId),
-			SchemaType: types.StringValue(string(*vcsConfig.IacInputData.SchemaType)),
-			Data:       flatteners.JSONInterfaceToString(vcsConfig.IacInputData.Data),
+			SchemaId:   knownEmptyStringIfNull(flatteners.StringPtr(vcsConfig.IacInputData.SchemaId)),
+			SchemaType: schemaType,
+			Data:       knownEmptyStringIfNull(flatteners.JSONInterfaceToString(vcsConfig.IacInputData.Data)),
 		}
 		var diags diag.Diagnostics
 		iacInputDataObj, diags = types.ObjectValueFrom(ctx, IacInputDataModel{}.AttributeTypes(), iacInputDataModel)
@@ -2114,7 +2133,10 @@ func convertVcsConfigFromAPI(ctx context.Context, vcsConfig *sgsdkgo.VcsConfig) 
 			return nullObj, diags
 		}
 	} else {
-		iacInputDataObj = types.ObjectNull(IacInputDataModel{}.AttributeTypes())
+		// iac_input_data is Optional+Computed; the API may return none. Store a known
+		// (all-null) object rather than null so UseStateForUnknown holds it and avoids a
+		// perpetual "known after apply" diff.
+		iacInputDataObj = knownEmptyObjectIfNull(types.ObjectNull(IacInputDataModel{}.AttributeTypes()), IacInputDataModel{}.AttributeTypes())
 	}
 
 	vcsModel := VcsConfigModel{
@@ -2167,6 +2189,11 @@ func mergeTemplateDefaults(wf *sgworkflows.Workflow, tpl *workflowtemplaterevisi
 	// field the user left unset is filled from the template. (Whole-object replacement
 	// would send the user's partial block with blanks the API rejects, e.g. driftCron.)
 	wf.TerraformConfig = mergeTerraformConfig(wf.TerraformConfig, tpl.TerraformConfig)
+
+	// iac_input_data: the template's default input data lives base64-encoded in the
+	// RAW_JSON InputSchema. Inherit it only when the user declared none (replace, not
+	// merge — the data is one opaque JSON string Terraform won't let us alter).
+	fillTemplateIacInputData(wf, tpl)
 	if wf.RunnerConstraints == nil && tpl.RunnerConstraints != nil {
 		wf.RunnerConstraints = tpl.RunnerConstraints
 	}
@@ -2297,6 +2324,50 @@ func mergeTerraformConfig(user, tpl *sgsdkgo.TerraformConfig) *sgsdkgo.Terraform
 	}
 
 	return user
+}
+
+// templateDefaultInputData decodes the template's default iac input data from its
+// RAW_JSON InputSchema (base64-encoded JSON object), or returns nil if absent.
+func templateDefaultInputData(tpl *workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) map[string]interface{} {
+	for _, s := range tpl.InputSchemas {
+		if s.Type != sgsdkgo.InputSchemasTypeEnumRawJson || s.EncodedData == nil {
+			continue
+		}
+		decoded, err := base64.StdEncoding.DecodeString(*s.EncodedData)
+		if err != nil {
+			return nil
+		}
+		var data map[string]interface{}
+		if err := json.Unmarshal(decoded, &data); err != nil {
+			return nil
+		}
+		return data
+	}
+	return nil
+}
+
+// fillTemplateIacInputData inherits the template's default input data (from its RAW_JSON
+// InputSchema) ONLY when the user declared none. If the user declared iac_input_data, it
+// is used as-is (replace, no merge) — Terraform forbids changing a config-set value, and
+// the data is one opaque JSON string so it cannot be merged key-by-key. This matches the
+// replace semantics used for environment_variables and other lists.
+func fillTemplateIacInputData(wf *sgworkflows.Workflow, tpl *workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) {
+	// User already supplied input data → leave it untouched.
+	if wf.VcsConfig != nil && wf.VcsConfig.IacInputData != nil && len(wf.VcsConfig.IacInputData.Data) > 0 {
+		return
+	}
+	tplData := templateDefaultInputData(tpl)
+	if len(tplData) == 0 {
+		return
+	}
+	if wf.VcsConfig == nil {
+		wf.VcsConfig = &sgsdkgo.VcsConfig{}
+	}
+	schemaType := sgsdkgo.IacInputDataSchemaTypeEnumRawJson
+	wf.VcsConfig.IacInputData = &sgsdkgo.IacInputData{
+		SchemaType: &schemaType,
+		Data:       tplData,
+	}
 }
 
 // IacTemplateId extracts the workflow template revision id from the model's
