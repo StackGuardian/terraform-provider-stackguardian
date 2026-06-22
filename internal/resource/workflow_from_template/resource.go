@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
-	sgworkflows "github.com/StackGuardian/sg-sdk-go/workflows"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -63,6 +62,43 @@ func (r *workflowUsingTemplateResource) ImportState(ctx context.Context, req res
 	workflowGroupId := strings.Join(parts[0:len(parts)-1], "/")
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("workflow_group_id"), workflowGroupId)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), workflowId)...)
+}
+
+// ModifyPlan handles a template revision change. When iac_template_id changes, the
+// Optional+Computed fields the user did NOT declare must be re-resolved against the new
+// revision. Without this, UseStateForUnknown carries the OLD revision's values forward
+// (they were never unknown), so the merge never runs for them. Setting those fields to
+// unknown here lets Create/Update's merge fill them from the new revision at apply.
+// Fields the user declared in config are left untouched (their value always wins).
+func (r *workflowUsingTemplateResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+		return // create or destroy — no revision transition to handle
+	}
+
+	var plan, state, config WorkflowUsingTemplateResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	planTpl, d := plan.IacTemplateId(ctx)
+	resp.Diagnostics.Append(d...)
+	stateTpl, d := state.IacTemplateId(ctx)
+	resp.Diagnostics.Append(d...)
+	if resp.Diagnostics.HasError() || planTpl == stateTpl || planTpl == "" {
+		return // no revision change
+	}
+
+	// Revision changed: for each template-resolved field the user left null in config,
+	// reset the planned value to unknown so it re-resolves against the new revision.
+	resp.Diagnostics.Append(resetUnsetComputedToUnknown(ctx, &plan, config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 }
 
 // fetchTemplateRevision reads the workflow template revision referenced by the
@@ -199,8 +235,12 @@ func (r *workflowUsingTemplateResource) Update(ctx context.Context, req resource
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	_, err := r.client.Workflows.UpdateWorkflow(ctx, r.org_name, id, workflowGroupId, sgworkflows.UpgradeModeEnumPreserveSettings.Ptr(), payload)
+	// No upgrade mode: the provider already resolved the full config (user + template
+	// merge, including re-resolution on revision change via ModifyPlan), so the payload
+	// is authoritative. Passing nil makes the API apply it directly instead of running
+	// its own preserve/reset logic, which would otherwise keep stale fields (e.g. old
+	// env vars) on a revision change.
+	_, err := r.client.Workflows.UpdateWorkflow(ctx, r.org_name, id, workflowGroupId, nil, payload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error updating workflow_using_template", "Error in updating workflow_using_template API call: "+err.Error())

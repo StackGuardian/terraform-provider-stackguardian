@@ -177,6 +177,77 @@ func setupWorkflowTemplate(t *testing.T, templateID string) string {
 	return fmt.Sprintf("/%s/%s", org, templateID)
 }
 
+// addSecondRevision creates and publishes revision :2 of an existing template, with a
+// different env var (REV2_VAR) and terraform version so an upgrade is observable. It
+// registers cleanup for the revision. templateID is the bare template name (no org).
+func addSecondRevision(t *testing.T, templateID string) string {
+	t.Helper()
+	client := getClient()
+	revisionID := fmt.Sprintf("%s:2", templateID)
+	sourceConfigKind := workflowtemplates.WorkflowTemplateSourceConfigKindTerraform
+
+	is409 := func(err error) bool {
+		var apiErr *core.APIError
+		return errors.As(err, &apiErr) && apiErr.StatusCode == 409
+	}
+
+	alias := "v2"
+	envTextValue := "rev2-value"
+	tmplTfVersion := "1.6.0"
+	_, err := client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(
+		context.TODO(), org, templateID,
+		&workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
+			Alias:            alias,
+			SourceConfigKind: &sourceConfigKind,
+			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			TerraformConfig: &sgsdkgo.TerraformConfig{
+				TerraformVersion: &tmplTfVersion,
+			},
+			EnvironmentVariables: []sgsdkgo.EnvVars{
+				{
+					Kind: sgsdkgo.EnvVarsKindEnumPlainText,
+					Config: &sgsdkgo.EnvVarConfig{
+						VarName:   "REV2_VAR",
+						TextValue: &envTextValue,
+					},
+				},
+			},
+		},
+	)
+	if err != nil && !is409(err) {
+		t.Fatalf("addSecondRevision: create revision for %q: %s", templateID, err)
+	}
+
+	_, err = client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
+		context.TODO(), org, revisionID,
+		&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
+			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
+		},
+	)
+	if err != nil {
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		t.Fatalf("addSecondRevision: publish revision %q: %s", revisionID, err)
+	}
+
+	t.Cleanup(func() {
+		effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
+		message := "Test cleanup"
+		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
+			context.TODO(), org, revisionID,
+			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
+				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{
+					EffectiveDate: &effectiveDate,
+					Message:       &message,
+				}),
+			},
+		)
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+	})
+
+	return fmt.Sprintf("/%s/%s:2", org, templateID)
+}
+
 func customHeader() http.Header {
 	h := http.Header{}
 	h.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -892,6 +963,63 @@ func TestAccWorkflowUsingTemplate_DriftDetection(t *testing.T) {
 				},
 				RefreshState:       true,
 				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
+
+// TestAccWorkflowUsingTemplate_RevisionUpgrade verifies that changing iac_template_id to a
+// new revision re-resolves the unset (Computed) fields against the NEW revision, while
+// fields the user declared in config are preserved. rev1 has env var TMPL_VAR; rev2 has
+// env var REV2_VAR. The user never declares environment_variables, so after the upgrade it
+// must reflect rev2's REV2_VAR (not rev1's TMPL_VAR). The user-declared description is
+// preserved across the upgrade.
+func TestAccWorkflowUsingTemplate_RevisionUpgrade(t *testing.T) {
+	base := "tf-provider-wf-tmpl-upgrade"
+	rev1 := setupWorkflowTemplate(t, base) + ":1"
+	rev2 := addSecondRevision(t, base)
+	wfGrpName := "tf-provider-wf-template-upgrade-wfgrp"
+	id := "tf-provider-wf-template-upgrade"
+
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
+		t.Errorf("failed to create workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(wfGrpName)
+	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
+
+	// User declares only description + terraform_version; env vars come from the template.
+	config := `
+  description = "user-owned description"
+
+  terraform_config = {
+    terraform_version = "1.5.0"
+  }
+`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				// Create on rev1 → env var resolves to TMPL_VAR.
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", rev1, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "vcs_config.iac_vcs_config.iac_template_id", rev1),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "environment_variables.0.config.var_name", "TMPL_VAR"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "description", "user-owned description"),
+				),
+			},
+			{
+				// Upgrade to rev2 → unset env var re-resolves to REV2_VAR; user description preserved.
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", rev2, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "vcs_config.iac_vcs_config.iac_template_id", rev2),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "environment_variables.0.config.var_name", "REV2_VAR"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "description", "user-owned description"),
+				),
 			},
 		},
 	})

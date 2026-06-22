@@ -1020,110 +1020,64 @@ func (m WorkflowUsingTemplateResourceModel) ToUpdateAPIModel(ctx context.Context
 
 	patched := &sgworkflows.PatchedWorkflow{}
 
+	// Set only fields that have a value; leave the rest unset (omitted) rather than sending
+	// an explicit null. Null means "delete the field" to the API and is rejected for
+	// required fields — omitting preserves them. This is what lets a revision upgrade send
+	// only the re-resolved fields and not blank out everything the merge left empty.
 	if workflow.ResourceName != nil {
 		patched.ResourceName = sgsdkgo.Optional(*workflow.ResourceName)
-	} else {
-		patched.ResourceName = sgsdkgo.Null[string]()
 	}
-
 	if workflow.Description != nil {
 		patched.Description = sgsdkgo.Optional(*workflow.Description)
-	} else {
-		patched.Description = sgsdkgo.Null[string]()
 	}
-
 	if workflow.WfType != nil {
 		patched.WfType = sgsdkgo.Optional(*workflow.WfType)
-	} else {
-		patched.WfType = sgsdkgo.Null[sgsdkgo.WfTypeEnum]()
 	}
-
 	if workflow.Tags != nil {
 		patched.Tags = sgsdkgo.Optional(workflow.Tags)
-	} else {
-		patched.Tags = sgsdkgo.Null[[]string]()
 	}
-
 	if workflow.Approvers != nil {
 		patched.Approvers = sgsdkgo.Optional(workflow.Approvers)
-	} else {
-		patched.Approvers = sgsdkgo.Null[[]string]()
 	}
-
 	if workflow.ContextTags != nil {
 		patched.ContextTags = sgsdkgo.Optional(workflow.ContextTags)
-	} else {
-		patched.ContextTags = sgsdkgo.Null[map[string]string]()
 	}
-
 	if workflow.NumberOfApprovalsRequired != nil {
 		patched.NumberOfApprovalsRequired = sgsdkgo.Optional(*workflow.NumberOfApprovalsRequired)
-	} else {
-		patched.NumberOfApprovalsRequired = sgsdkgo.Null[int]()
 	}
-
 	if workflow.UserJobCpu != nil {
 		patched.UserJobCpu = sgsdkgo.Optional(*workflow.UserJobCpu)
-	} else {
-		patched.UserJobCpu = sgsdkgo.Null[int]()
 	}
-
 	if workflow.UserJobMemory != nil {
 		patched.UserJobMemory = sgsdkgo.Optional(*workflow.UserJobMemory)
-	} else {
-		patched.UserJobMemory = sgsdkgo.Null[int]()
 	}
-
 	if workflow.EnvironmentVariables != nil {
 		patched.EnvironmentVariables = sgsdkgo.Optional(workflow.EnvironmentVariables)
-	} else {
-		patched.EnvironmentVariables = sgsdkgo.Null[[]*sgsdkgo.EnvVars]()
 	}
-
 	if workflow.WfStepsConfig != nil {
 		patched.WfStepsConfig = sgsdkgo.Optional(workflow.WfStepsConfig)
-	} else {
-		patched.WfStepsConfig = sgsdkgo.Null[[]*sgsdkgo.WfStepsConfig]()
 	}
-
 	if workflow.TerraformConfig != nil {
 		patched.TerraformConfig = sgsdkgo.Optional(*workflow.TerraformConfig)
-	} else {
-		patched.TerraformConfig = sgsdkgo.Null[sgsdkgo.TerraformConfig]()
 	}
-
 	if workflow.RunnerConstraints != nil {
 		patched.RunnerConstraints = sgsdkgo.Optional(*workflow.RunnerConstraints)
-	} else {
-		patched.RunnerConstraints = sgsdkgo.Null[sgsdkgo.RunnerConstraints]()
 	}
-
 	if workflow.VcsConfig != nil {
 		patched.VcsConfig = sgsdkgo.Optional(*workflow.VcsConfig)
-	} else {
-		patched.VcsConfig = sgsdkgo.Null[sgsdkgo.VcsConfig]()
 	}
-
 	if workflow.MiniSteps != nil {
 		patched.MiniSteps = sgsdkgo.Optional(*workflow.MiniSteps)
-	} else {
-		patched.MiniSteps = sgsdkgo.Null[workflowtemplaterevisions.Ministeps]()
 	}
-
 	if workflow.DeploymentPlatformConfig != nil {
 		patched.DeploymentPlatformConfig = sgsdkgo.Optional(workflow.DeploymentPlatformConfig)
-	} else {
-		patched.DeploymentPlatformConfig = sgsdkgo.Null[[]*workflowtemplaterevisions.DeploymentPlatformConfig]()
 	}
-
 	if workflow.UserSchedules != nil {
 		userSchedulesPtrs := make([]*sgsdkgo.UserSchedules, len(workflow.UserSchedules))
 		for i := range workflow.UserSchedules {
 			userSchedulesPtrs[i] = &workflow.UserSchedules[i]
 		}
 		patched.UserSchedules = sgsdkgo.Optional(userSchedulesPtrs)
-	} else {
-		patched.UserSchedules = sgsdkgo.Null[[]*sgsdkgo.UserSchedules]()
 	}
 
 	return patched, diags
@@ -2169,10 +2123,10 @@ func mergeTemplateDefaults(wf *sgworkflows.Workflow, tpl *workflowtemplaterevisi
 		return
 	}
 
-	if wf.ResourceName == nil && tpl.Alias != "" {
-		alias := tpl.Alias
-		wf.ResourceName = &alias
-	}
+	// NOTE: resource_name is intentionally NOT filled from the template. The template's
+	// Alias (e.g. "v1"/"v2") is a revision label, not a workflow name. When the user omits
+	// resource_name, the API assigns one (derived from the workflow id) and Read captures
+	// it; filling it from the alias here produces an invalid name and breaks upgrades.
 	if wf.Description == nil && tpl.LongDescription != nil {
 		wf.Description = tpl.LongDescription
 	}
@@ -2368,6 +2322,105 @@ func fillTemplateIacInputData(wf *sgworkflows.Workflow, tpl *workflowtemplaterev
 		SchemaType: &schemaType,
 		Data:       tplData,
 	}
+}
+
+// resetUnsetComputedToUnknown sets each template-resolved Optional+Computed field on the
+// plan to its typed-unknown value when the user left it null in config. Used by
+// ModifyPlan on a revision change so the merge re-resolves those fields against the new
+// revision (instead of UseStateForUnknown carrying the old revision's values forward).
+// Fields the user declared in config are left untouched.
+func resetUnsetComputedToUnknown(ctx context.Context, plan *WorkflowUsingTemplateResourceModel, config WorkflowUsingTemplateResourceModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	envElem := types.ObjectType{AttrTypes: EnvironmentVariableModel{}.AttributeTypes()}
+	schedElem := types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()}
+	deployElem := types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()}
+	wfStepElem := types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}
+
+	// resource_name is NOT template-resolved — it's the workflow's identity, assigned by
+	// the API at create and required (non-null) on update. Leave the planned value (state
+	// value via UseStateForUnknown) so it carries forward across a revision change.
+	if config.Description.IsNull() {
+		plan.Description = types.StringUnknown()
+	}
+	if config.NumberOfApprovalsRequired.IsNull() {
+		plan.NumberOfApprovalsRequired = types.Int64Unknown()
+	}
+	if config.UserJobCpu.IsNull() {
+		plan.UserJobCpu = types.Int64Unknown()
+	}
+	if config.UserJobMemory.IsNull() {
+		plan.UserJobMemory = types.Int64Unknown()
+	}
+	if config.EnvironmentVariables.IsNull() {
+		plan.EnvironmentVariables = types.ListUnknown(envElem)
+	}
+	if config.Tags.IsNull() {
+		plan.Tags = types.ListUnknown(types.StringType)
+	}
+	if config.Approvers.IsNull() {
+		plan.Approvers = types.ListUnknown(types.StringType)
+	}
+	if config.UserSchedules.IsNull() {
+		plan.UserSchedules = types.ListUnknown(schedElem)
+	}
+	if config.DeploymentPlatformConfig.IsNull() {
+		plan.DeploymentPlatformConfig = types.ListUnknown(deployElem)
+	}
+	if config.WfStepsConfig.IsNull() {
+		plan.WfStepsConfig = types.ListUnknown(wfStepElem)
+	}
+	if config.ContextTags.IsNull() {
+		plan.ContextTags = types.MapUnknown(types.StringType)
+	}
+	if config.MiniSteps.IsNull() {
+		plan.MiniSteps = types.ObjectUnknown(MinistepsModel{}.AttributeTypes())
+	}
+	if config.RunnerConstraints.IsNull() {
+		plan.RunnerConstraints = types.ObjectUnknown(RunnerConstraintsModel{}.AttributeTypes())
+	}
+	if config.TerraformConfig.IsNull() {
+		plan.TerraformConfig = types.ObjectUnknown(TerraformConfigModel{}.AttributeTypes())
+	}
+
+	// iac_input_data lives inside the Required vcs_config object; rebuild vcs_config with
+	// iac_input_data set to unknown when the user did not declare it.
+	configHasIacInput, d := configDeclaresIacInputData(ctx, config)
+	diags.Append(d...)
+	if diags.HasError() {
+		return diags
+	}
+	if !configHasIacInput && !plan.VcsConfig.IsNull() && !plan.VcsConfig.IsUnknown() {
+		var vcs VcsConfigModel
+		diags.Append(plan.VcsConfig.As(ctx, &vcs, basetypes.ObjectAsOptions{})...)
+		if diags.HasError() {
+			return diags
+		}
+		vcs.IacInputData = types.ObjectUnknown(IacInputDataModel{}.AttributeTypes())
+		obj, d := types.ObjectValueFrom(ctx, VcsConfigModel{}.AttributeTypes(ctx), vcs)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.VcsConfig = obj
+	}
+
+	return diags
+}
+
+// configDeclaresIacInputData reports whether the user declared vcs_config.iac_input_data
+// in config (non-null).
+func configDeclaresIacInputData(ctx context.Context, config WorkflowUsingTemplateResourceModel) (bool, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if config.VcsConfig.IsNull() || config.VcsConfig.IsUnknown() {
+		return false, diags
+	}
+	var vcs VcsConfigModel
+	diags.Append(config.VcsConfig.As(ctx, &vcs, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
+		return false, diags
+	}
+	return !vcs.IacInputData.IsNull() && !vcs.IacInputData.IsUnknown(), diags
 }
 
 // IacTemplateId extracts the workflow template revision id from the model's
