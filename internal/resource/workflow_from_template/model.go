@@ -2283,20 +2283,84 @@ func mergeTerraformConfig(user, tpl *sgsdkgo.TerraformConfig) *sgsdkgo.Terraform
 // templateDefaultInputData decodes the template's default iac input data from its
 // RAW_JSON InputSchema (base64-encoded JSON object), or returns nil if absent.
 func templateDefaultInputData(tpl *workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) map[string]interface{} {
+	// Defaults come from the FORM_JSONSCHEMA entry's properties[].default — this is the
+	// authoritative source the platform uses (the RAW_JSON entry can be stale and miss
+	// inputs added in later revisions). Mirrors core's
+	// extract_defaults_from_form_jsonschema so the result matches what the API stores.
 	for _, s := range tpl.InputSchemas {
-		if s.Type != sgsdkgo.InputSchemasTypeEnumRawJson || s.EncodedData == nil {
+		if s.Type != sgsdkgo.InputSchemasTypeEnumFormJsonschema || s.EncodedData == nil {
 			continue
 		}
 		decoded, err := base64.StdEncoding.DecodeString(*s.EncodedData)
 		if err != nil {
 			return nil
 		}
-		var data map[string]interface{}
-		if err := json.Unmarshal(decoded, &data); err != nil {
+		var schema map[string]interface{}
+		if err := json.Unmarshal(decoded, &schema); err != nil {
 			return nil
 		}
-		return data
+		defaults := extractFormJSONSchemaDefaults(schema)
+		if m, ok := defaults.(map[string]interface{}); ok {
+			return m
+		}
+		return nil
 	}
+	return nil
+}
+
+// extractFormJSONSchemaDefaults recursively extracts default values from a React JSON
+// Schema Form schema. Ported from core's extract_defaults_from_form_jsonschema:
+//   - object + properties → map of each property's extracted default (omit nil; nil if empty)
+//   - array + items       → schema's own "default" if present, else [recurse(items)]
+//   - leaf with "default" → that default value (may itself be a nested object/array)
+//   - otherwise           → nil
+//
+// Combinators (oneOf/anyOf/allOf) and dependencies are intentionally not traversed, matching
+// the platform.
+func extractFormJSONSchemaDefaults(schema map[string]interface{}) interface{} {
+	if schema == nil {
+		return nil
+	}
+
+	typ, _ := schema["type"].(string)
+
+	if typ == "object" {
+		if props, ok := schema["properties"].(map[string]interface{}); ok {
+			result := map[string]interface{}{}
+			for key, raw := range props {
+				propSchema, ok := raw.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				if v := extractFormJSONSchemaDefaults(propSchema); v != nil {
+					result[key] = v
+				}
+			}
+			if len(result) == 0 {
+				return nil
+			}
+			return result
+		}
+	}
+
+	if typ == "array" {
+		if _, hasItems := schema["items"]; hasItems {
+			if def, ok := schema["default"]; ok {
+				return def
+			}
+			if items, ok := schema["items"].(map[string]interface{}); ok {
+				if itemDefaults := extractFormJSONSchemaDefaults(items); itemDefaults != nil {
+					return []interface{}{itemDefaults}
+				}
+			}
+			return nil
+		}
+	}
+
+	if def, ok := schema["default"]; ok {
+		return def
+	}
+
 	return nil
 }
 
@@ -2317,7 +2381,7 @@ func fillTemplateIacInputData(wf *sgworkflows.Workflow, tpl *workflowtemplaterev
 	if wf.VcsConfig == nil {
 		wf.VcsConfig = &sgsdkgo.VcsConfig{}
 	}
-	schemaType := sgsdkgo.IacInputDataSchemaTypeEnumRawJson
+	schemaType := sgsdkgo.IacInputDataSchemaTypeEnumFormJsonschema
 	wf.VcsConfig.IacInputData = &sgsdkgo.IacInputData{
 		SchemaType: &schemaType,
 		Data:       tplData,
