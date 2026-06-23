@@ -822,6 +822,13 @@ func (m TerraformConfigModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Terrafor
 		}
 	}
 
+	// If nothing was actually set (e.g. a known-empty terraform_config stored for plan
+	// stability on a CUSTOM workflow that has no TF config), omit it entirely rather than
+	// send an empty object the API may reject.
+	if flatteners.IsEmptyObject(cfg) {
+		return nil, nil
+	}
+
 	return cfg, nil
 }
 
@@ -1160,7 +1167,9 @@ func ConvertWorkflowUsingTemplateFromAPI(ctx context.Context, response *sgworkfl
 	if allDiags.HasError() {
 		return source, allDiags
 	}
-	model.TerraformConfig = terraformConfig
+	// Known-empty (not null) when the API returns no terraform_config (e.g. CUSTOM
+	// workflows) so the Optional+Computed object holds stable via UseStateForUnknown.
+	model.TerraformConfig = knownEmptyObjectIfNull(terraformConfig, TerraformConfigModel{}.AttributeTypes())
 
 	runnerConstraints, diags := convertRunnerConstraintsFromAPI(ctx, wf.RunnerConstraints)
 	allDiags.Append(diags...)
