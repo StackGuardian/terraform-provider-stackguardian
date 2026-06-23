@@ -156,7 +156,7 @@ func (r *workflowUsingTemplateResource) Create(ctx context.Context, req resource
 
 	createResp, err := r.client.Workflows.CreateWorkflow(ctx, r.org_name, plan.WorkflowGroupId.ValueString(), payload)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating workflow_using_template", "Error in creating workflow_using_template API call: "+err.Error())
+		resp.Diagnostics.AddError("Error creating workflow_from_template", "Error in creating workflow_from_template API call: "+err.Error())
 		return
 	}
 
@@ -164,7 +164,7 @@ func (r *workflowUsingTemplateResource) Create(ctx context.Context, req resource
 
 	readResp, err := r.client.Workflows.ReadWorkflow(ctx, r.org_name, id, plan.WorkflowGroupId.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading created workflow_using_template", "Could not read the created workflow_using_template: "+err.Error())
+		resp.Diagnostics.AddError("Error reading created workflow_from_template", "Could not read the created workflow_from_template: "+err.Error())
 		return
 	}
 
@@ -188,7 +188,7 @@ func (r *workflowUsingTemplateResource) Read(ctx context.Context, req resource.R
 
 	readResp, err := r.client.Workflows.ReadWorkflow(ctx, r.org_name, state.Id.ValueString(), state.WorkflowGroupId.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading workflow_using_template", "Error in reading workflow_using_template API call: "+err.Error())
+		resp.Diagnostics.AddError("Error reading workflow_from_template", "Error in reading workflow_from_template API call: "+err.Error())
 		return
 	}
 
@@ -243,13 +243,13 @@ func (r *workflowUsingTemplateResource) Update(ctx context.Context, req resource
 	_, err := r.client.Workflows.UpdateWorkflow(ctx, r.org_name, id, workflowGroupId, nil, payload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
-		resp.Diagnostics.AddError("Error updating workflow_using_template", "Error in updating workflow_using_template API call: "+err.Error())
+		resp.Diagnostics.AddError("Error updating workflow_from_template", "Error in updating workflow_from_template API call: "+err.Error())
 		return
 	}
 
 	readResp, err := r.client.Workflows.ReadWorkflow(ctx, r.org_name, id, workflowGroupId)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading updated workflow_using_template", "Could not read the updated workflow_using_template: "+err.Error())
+		resp.Diagnostics.AddError("Error reading updated workflow_from_template", "Could not read the updated workflow_from_template: "+err.Error())
 		return
 	}
 
@@ -274,7 +274,7 @@ func (r *workflowUsingTemplateResource) Delete(ctx context.Context, req resource
 
 	_, err := r.client.Workflows.DeleteWorkflow(ctx, r.org_name, state.Id.ValueString(), state.WorkflowGroupId.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error deleting workflow_using_template", "Error in deleting workflow_using_template API call: "+err.Error())
+		resp.Diagnostics.AddError("Error deleting workflow_from_template", "Error in deleting workflow_from_template API call: "+err.Error())
 		return
 	}
 }

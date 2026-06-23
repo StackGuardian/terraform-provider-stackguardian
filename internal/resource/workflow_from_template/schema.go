@@ -33,7 +33,7 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 				},
 			},
 			"resource_name": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "workflow_using_template"),
+				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "workflow_from_template"),
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -46,7 +46,7 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 				Validators:          nonEmptyString,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow_using_template"),
+				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow_from_template"),
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -134,7 +134,7 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 				},
 			},
 			"tags": schema.ListAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow_using_template"),
+				MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow_from_template"),
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
@@ -177,7 +177,7 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 				},
 			},
 			"context_tags": schema.MapAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.ContextTags, "workflow_using_template"),
+				MarkdownDescription: fmt.Sprintf(constants.ContextTags, "workflow_from_template"),
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
