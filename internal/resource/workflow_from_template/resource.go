@@ -125,12 +125,14 @@ func (r *workflowUsingTemplateResource) fetchTemplateRevision(ctx context.Contex
 	}
 
 	// iac_template_id is stored fully-qualified ("/<org>/<name>:<rev>"), but
-	// ReadWorkflowTemplateRevision builds its URL as
-	// /templatetypes/IAC/<org>/<revisionId>/ and supplies the org separately. Pass
-	// only the bare "<name>:<rev>" so the org is not duplicated in the path.
-	revisionId := strings.TrimPrefix(templateId, fmt.Sprintf("/%s/", r.org_name))
+	// ReadWorkflowTemplateRevision builds its URL as /templatetypes/IAC/<org>/<name>:<rev>/
+	// (org also goes in the x-sg-orgid header). Parse the OWNING org out of the id prefix
+	// rather than assuming the caller's org — a shared template belongs to another org, so
+	// stripping only the caller's org would leave the foreign "/<owner>/" in the revisionId
+	// and target the wrong org. Falls back to the caller's org if the id has no prefix.
+	tplOrg, revisionId := splitTemplateOrg(templateId, r.org_name)
 
-	readResp, err := r.client.WorkflowTemplatesRevisions.ReadWorkflowTemplateRevision(ctx, r.org_name, revisionId)
+	readResp, err := r.client.WorkflowTemplatesRevisions.ReadWorkflowTemplateRevision(ctx, tplOrg, revisionId)
 	if err != nil {
 		diags.AddError("Error reading workflow template revision",
 			fmt.Sprintf("Could not read template revision %q to resolve workflow defaults: %s", templateId, err.Error()))
@@ -142,6 +144,19 @@ func (r *workflowUsingTemplateResource) fetchTemplateRevision(ctx context.Contex
 		return nil, diags
 	}
 	return &readResp.Msg, diags
+}
+
+// splitTemplateOrg parses a fully-qualified template id "/<org>/<name>:<rev>" into the
+// owning org and the bare "<name>:<rev>" revision id. The owning org may differ from the
+// caller's org when the template is shared from another org, so it must drive the read.
+// If id has no leading "/<org>/" prefix (already bare), the caller's org is used.
+func splitTemplateOrg(id, callerOrg string) (org, revisionId string) {
+	if rest, ok := strings.CutPrefix(id, "/"); ok {
+		if owner, revID, ok := strings.Cut(rest, "/"); ok {
+			return owner, revID
+		}
+	}
+	return callerOrg, id
 }
 
 func (r *workflowUsingTemplateResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
