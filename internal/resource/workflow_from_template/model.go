@@ -2009,8 +2009,14 @@ func convertTerraformConfigFromAPI(ctx context.Context, cfg *sgsdkgo.TerraformCo
 	// the API rejects (e.g. driftCron is allow_blank=False).
 	m.TerraformPlanOptions = knownEmptyStringIfNull(m.TerraformPlanOptions)
 	m.TerraformInitOptions = knownEmptyStringIfNull(m.TerraformInitOptions)
-	m.DriftCron = knownEmptyStringIfNull(m.DriftCron)
 	m.DriftCheck = knownFalseIfNull(m.DriftCheck)
+	// drift_cron is only meaningful when drift checking is on. If the API returns a cron
+	// alongside drift_check=false, drop it so state mirrors the resolved coupling (see
+	// coupleDriftFields) — otherwise a stale cron would persist in state forever.
+	if !m.DriftCheck.ValueBool() {
+		m.DriftCron = types.StringValue("")
+	}
+	m.DriftCron = knownEmptyStringIfNull(m.DriftCron)
 	m.ManagedTerraformState = knownFalseIfNull(m.ManagedTerraformState)
 	m.ApprovalPreApply = knownFalseIfNull(m.ApprovalPreApply)
 	m.RunPreInitHooksOnDrift = knownFalseIfNull(m.RunPreInitHooksOnDrift)
@@ -2220,15 +2226,31 @@ func mergeTemplateDefaults(m WorkflowUsingTemplateResourceModel, wf *sgworkflows
 	}
 }
 
+// coupleDriftFields enforces the drift_check/drift_cron coupling: a cron is only
+// meaningful when drift checking is enabled, so whenever the resolved drift_check is
+// absent or false the cron is cleared (regardless of whether it came from the user or
+// the template). Applied at every return point of mergeTerraformConfig so the resolved
+// config is consistent across create/update (ToAPIModel) and plan (planTerraformConfig).
+func coupleDriftFields(cfg *sgsdkgo.TerraformConfig) *sgsdkgo.TerraformConfig {
+	if cfg == nil {
+		return nil
+	}
+	if cfg.DriftCheck == nil || !*cfg.DriftCheck {
+		cfg.DriftCron = nil
+	}
+	return cfg
+}
+
 // mergeTerraformConfig deep-merges a TerraformConfig field-by-field: the user's value
 // is kept when set, otherwise the template's value fills it. Returns the user config
 // unchanged if the template has none, and the template's config if the user has none.
+// drift_cron is cleared whenever the resolved drift_check is false (see coupleDriftFields).
 func mergeTerraformConfig(user, tpl *sgsdkgo.TerraformConfig) *sgsdkgo.TerraformConfig {
 	if tpl == nil {
-		return user
+		return coupleDriftFields(user)
 	}
 	if user == nil {
-		return tpl
+		return coupleDriftFields(tpl)
 	}
 
 	if user.TerraformVersion == nil {
@@ -2295,7 +2317,7 @@ func mergeTerraformConfig(user, tpl *sgsdkgo.TerraformConfig) *sgsdkgo.Terraform
 		user.PostApplyHooks = tpl.PostApplyHooks
 	}
 
-	return user
+	return coupleDriftFields(user)
 }
 
 // templateDefaultInputData decodes the template's default iac input data from its

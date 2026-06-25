@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -81,6 +82,33 @@ func (r *workflowUsingTemplateResource) ModifyPlan(ctx context.Context, req reso
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	// Enforce the drift_check/drift_cron coupling in the plan so plan == apply. A cron is
+	// only meaningful when drift checking is on; the apply-time Read clears drift_cron to ""
+	// when drift_check is false (see convertTerraformConfigFromAPI). When the user flips
+	// drift_check to false but leaves drift_cron unset, UseStateForUnknown would otherwise
+	// carry the old cron forward in the plan, which then mismatches the cleared apply value
+	// ("inconsistent result after apply"). Predict the clear here by writing drift_cron = ""
+	// directly onto the response plan. Runs on every update, independent of revision change.
+	driftCheckPath := path.Root("terraform_config").AtName("drift_check")
+	driftCronPath := path.Root("terraform_config").AtName("drift_cron")
+	var plannedDriftCheck types.Bool
+	resp.Diagnostics.Append(resp.Plan.GetAttribute(ctx, driftCheckPath, &plannedDriftCheck)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	// Only predict when drift_check is known-false; unknown/true can't be cleared here.
+	if !plannedDriftCheck.IsNull() && !plannedDriftCheck.IsUnknown() && !plannedDriftCheck.ValueBool() {
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, driftCronPath, types.StringValue(""))...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		// Re-read the plan so the revision-change logic below sees the updated value.
+		resp.Diagnostics.Append(resp.Plan.Get(ctx, &plan)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	planTpl, d := plan.IacTemplateId(ctx)
