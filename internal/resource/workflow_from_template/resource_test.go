@@ -203,6 +203,8 @@ func addSecondRevision(t *testing.T, templateID string) string {
 			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
 			TerraformConfig: &sgsdkgo.TerraformConfig{
 				TerraformVersion: &tmplTfVersion,
+				DriftCheck:       sgsdkgo.Bool(false),
+				DriftCron:        sgsdkgo.String("* * * ? *"),
 			},
 			EnvironmentVariables: []sgsdkgo.EnvVars{
 				{
@@ -1014,11 +1016,15 @@ func TestAccWorkflowUsingTemplate_RevisionUpgrade(t *testing.T) {
 			},
 			{
 				// Upgrade to rev2 → unset env var re-resolves to REV2_VAR; user description preserved.
+				// rev2 also ADDS terraform_config.drift_cron (rev1 had none); it must re-resolve
+				// without an inconsistent-result error while the user's terraform_version is kept.
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", rev2, config),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "vcs_config.iac_vcs_config.iac_template_id", rev2),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "environment_variables.0.config.var_name", "REV2_VAR"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "description", "user-owned description"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.drift_cron", "* * * ? *"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_version", "1.5.0"),
 				),
 			},
 		},

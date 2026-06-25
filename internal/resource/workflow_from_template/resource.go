@@ -91,9 +91,20 @@ func (r *workflowUsingTemplateResource) ModifyPlan(ctx context.Context, req reso
 		return // no revision change
 	}
 
-	// Revision changed: for each template-resolved field the user left null in config,
-	// reset the planned value to unknown so it re-resolves against the new revision.
-	resp.Diagnostics.Append(resetUnsetComputedToUnknown(ctx, &plan, config)...)
+	// Revision changed. Fetch the NEW revision and re-resolve the template-derived fields
+	// the user did not declare, writing the concrete merged values into the plan. We must
+	// set known values (not unknown) for terraform_config's nested fields: marking the
+	// object unknown doesn't stop the nested UseStateForUnknown modifiers from carrying the
+	// OLD revision's value (incl. a stale known-empty "") forward, which then mismatches the
+	// new revision at apply ("inconsistent result"). Computing the value here makes
+	// plan == apply.
+	tpl, d := r.fetchTemplateRevision(ctx, plan)
+	resp.Diagnostics.Append(d...)
+	if resp.Diagnostics.HasError() || tpl == nil {
+		return
+	}
+
+	resp.Diagnostics.Append(reResolveOnRevisionChange(ctx, &plan, config, tpl)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

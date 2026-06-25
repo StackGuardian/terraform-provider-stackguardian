@@ -1010,7 +1010,7 @@ func (m WorkflowUsingTemplateResourceModel) ToAPIModel(ctx context.Context, tpl 
 
 	// Provider-side resolution: fill any field the user did not set from the
 	// workflow template revision, so config/state/reality line up field-for-field.
-	mergeTemplateDefaults(wf, tpl)
+	mergeTemplateDefaults(m, wf, tpl)
 
 	return wf, nil
 }
@@ -2127,25 +2127,34 @@ func convertVcsConfigFromAPI(ctx context.Context, vcsConfig *sgsdkgo.VcsConfig) 
 
 // mergeTemplateDefaults fills fields the user left unset on wf with the values
 // from the template revision tpl. User-provided values always win.
-func mergeTemplateDefaults(wf *sgworkflows.Workflow, tpl *workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) {
+// absent reports whether a Terraform attr value was not provided by the user (null or
+// unknown). A KNOWN-EMPTY value (e.g. `environment_variables = []`) is NOT absent — it is
+// an explicit override that must win over the template, so the merge must not re-fill it.
+func absent(v attr.Value) bool { return v.IsNull() || v.IsUnknown() }
+
+func mergeTemplateDefaults(m WorkflowUsingTemplateResourceModel, wf *sgworkflows.Workflow, tpl *workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) {
 	if wf == nil || tpl == nil {
 		return
 	}
+
+	// Inheritance rule: fill a field from the template ONLY when the user did not provide
+	// it (config value is null/unknown). A user-provided value — including an explicit
+	// empty list/map — always wins, so users can suppress a template default with `[]`.
 
 	// NOTE: resource_name is intentionally NOT filled from the template. The template's
 	// Alias (e.g. "v1"/"v2") is a revision label, not a workflow name. When the user omits
 	// resource_name, the API assigns one (derived from the workflow id) and Read captures
 	// it; filling it from the alias here produces an invalid name and breaks upgrades.
-	if wf.Description == nil && tpl.LongDescription != nil {
+	if absent(m.Description) && tpl.LongDescription != nil {
 		wf.Description = tpl.LongDescription
 	}
-	if wf.NumberOfApprovalsRequired == nil && tpl.NumberOfApprovalsRequired != nil {
+	if absent(m.NumberOfApprovalsRequired) && tpl.NumberOfApprovalsRequired != nil {
 		wf.NumberOfApprovalsRequired = tpl.NumberOfApprovalsRequired
 	}
-	if wf.UserJobCpu == nil && tpl.UserJobCPU != nil {
+	if absent(m.UserJobCpu) && tpl.UserJobCPU != nil {
 		wf.UserJobCpu = tpl.UserJobCPU
 	}
-	if wf.UserJobMemory == nil && tpl.UserJobMemory != nil {
+	if absent(m.UserJobMemory) && tpl.UserJobMemory != nil {
 		wf.UserJobMemory = tpl.UserJobMemory
 	}
 	// TerraformConfig is deep-merged field-by-field: a field the user set wins; any
@@ -2157,23 +2166,23 @@ func mergeTemplateDefaults(wf *sgworkflows.Workflow, tpl *workflowtemplaterevisi
 	// RAW_JSON InputSchema. Inherit it only when the user declared none (replace, not
 	// merge — the data is one opaque JSON string Terraform won't let us alter).
 	fillTemplateIacInputData(wf, tpl)
-	if wf.RunnerConstraints == nil && tpl.RunnerConstraints != nil {
+	if absent(m.RunnerConstraints) && tpl.RunnerConstraints != nil {
 		wf.RunnerConstraints = tpl.RunnerConstraints
 	}
-	if wf.MiniSteps == nil && tpl.Ministeps != nil {
+	if absent(m.MiniSteps) && tpl.Ministeps != nil {
 		wf.MiniSteps = tpl.Ministeps
 	}
 
-	if len(wf.Tags) == 0 && len(tpl.Tags) > 0 {
+	if absent(m.Tags) && len(tpl.Tags) > 0 {
 		wf.Tags = tpl.Tags
 	}
-	if len(wf.Approvers) == 0 && len(tpl.Approvers) > 0 {
+	if absent(m.Approvers) && len(tpl.Approvers) > 0 {
 		wf.Approvers = tpl.Approvers
 	}
-	if len(wf.ContextTags) == 0 && len(tpl.ContextTags) > 0 {
+	if absent(m.ContextTags) && len(tpl.ContextTags) > 0 {
 		wf.ContextTags = tpl.ContextTags
 	}
-	if len(wf.UserSchedules) == 0 && len(tpl.UserSchedules) > 0 {
+	if absent(m.UserSchedules) && len(tpl.UserSchedules) > 0 {
 		schedules := make([]sgsdkgo.UserSchedules, len(tpl.UserSchedules))
 		for i := range tpl.UserSchedules {
 			t := tpl.UserSchedules[i]
@@ -2188,12 +2197,12 @@ func mergeTemplateDefaults(wf *sgworkflows.Workflow, tpl *workflowtemplaterevisi
 		}
 		wf.UserSchedules = schedules
 	}
-	if len(wf.DeploymentPlatformConfig) == 0 && len(tpl.DeploymentPlatformConfig) > 0 {
+	if absent(m.DeploymentPlatformConfig) && len(tpl.DeploymentPlatformConfig) > 0 {
 		wf.DeploymentPlatformConfig = tpl.DeploymentPlatformConfig
 	}
 
 	// EnvironmentVariables: template stores value slice, workflow uses pointer slice.
-	if len(wf.EnvironmentVariables) == 0 && len(tpl.EnvironmentVariables) > 0 {
+	if absent(m.EnvironmentVariables) && len(tpl.EnvironmentVariables) > 0 {
 		ptrs := make([]*sgsdkgo.EnvVars, len(tpl.EnvironmentVariables))
 		for i := range tpl.EnvironmentVariables {
 			ptrs[i] = &tpl.EnvironmentVariables[i]
@@ -2202,7 +2211,7 @@ func mergeTemplateDefaults(wf *sgworkflows.Workflow, tpl *workflowtemplaterevisi
 	}
 
 	// WfStepsConfig: template stores value slice, workflow uses pointer slice.
-	if len(wf.WfStepsConfig) == 0 && len(tpl.WfStepsConfig) > 0 {
+	if absent(m.WfStepsConfig) && len(tpl.WfStepsConfig) > 0 {
 		ptrs := make([]*sgsdkgo.WfStepsConfig, len(tpl.WfStepsConfig))
 		for i := range tpl.WfStepsConfig {
 			ptrs[i] = &tpl.WfStepsConfig[i]
@@ -2397,12 +2406,34 @@ func fillTemplateIacInputData(wf *sgworkflows.Workflow, tpl *workflowtemplaterev
 	}
 }
 
-// resetUnsetComputedToUnknown sets each template-resolved Optional+Computed field on the
-// plan to its typed-unknown value when the user left it null in config. Used by
-// ModifyPlan on a revision change so the merge re-resolves those fields against the new
-// revision (instead of UseStateForUnknown carrying the old revision's values forward).
-// Fields the user declared in config are left untouched.
-func resetUnsetComputedToUnknown(ctx context.Context, plan *WorkflowUsingTemplateResourceModel, config WorkflowUsingTemplateResourceModel) diag.Diagnostics {
+// planTerraformConfig computes, for ModifyPlan on a revision change, the resolved
+// terraform_config as a known types.Object: the user's declared nested fields (if any)
+// deep-merged over the new revision's terraform_config (user wins). The result matches what
+// Create/Update's ToAPIModel+mergeTerraformConfig produce at apply, so plan == apply.
+func planTerraformConfig(ctx context.Context, userCfg types.Object, tplCfg *sgsdkgo.TerraformConfig) (types.Object, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	nullObj := types.ObjectNull(TerraformConfigModel{}.AttributeTypes())
+
+	userSdk, d := convertTerraformConfigToAPI(ctx, userCfg)
+	diags.Append(d...)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	merged := mergeTerraformConfig(userSdk, tplCfg)
+	obj, d := convertTerraformConfigFromAPI(ctx, merged)
+	diags.Append(d...)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	return knownEmptyObjectIfNull(obj, TerraformConfigModel{}.AttributeTypes()), diags
+}
+
+// reResolveOnRevisionChange re-resolves the template-derived fields the user left unset
+// against the NEW revision tpl, used by ModifyPlan on a revision change. Most fields are set
+// to typed-unknown (apply re-resolves them); terraform_config is set to its concrete merged
+// value (see planTerraformConfig) because its nested UseStateForUnknown modifiers would
+// otherwise carry the old revision's values forward. Fields the user declared are untouched.
+func reResolveOnRevisionChange(ctx context.Context, plan *WorkflowUsingTemplateResourceModel, config WorkflowUsingTemplateResourceModel, tpl *workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	envElem := types.ObjectType{AttrTypes: EnvironmentVariableModel{}.AttributeTypes()}
@@ -2413,6 +2444,12 @@ func resetUnsetComputedToUnknown(ctx context.Context, plan *WorkflowUsingTemplat
 	// resource_name is NOT template-resolved — it's the workflow's identity, assigned by
 	// the API at create and required (non-null) on update. Leave the planned value (state
 	// value via UseStateForUnknown) so it carries forward across a revision change.
+	//
+	// For most fields, setting the plan value to unknown is enough: apply re-resolves them
+	// against the new revision and there is no nested plan modifier to fight. terraform_config
+	// is the exception — its nested fields each carry UseStateForUnknown, which would override
+	// a parent-unknown with the OLD revision's value (incl. stale ""), so we set its concrete
+	// merged value from the new revision instead (see below).
 	if config.Description.IsNull() {
 		plan.Description = types.StringUnknown()
 	}
@@ -2452,8 +2489,18 @@ func resetUnsetComputedToUnknown(ctx context.Context, plan *WorkflowUsingTemplat
 	if config.RunnerConstraints.IsNull() {
 		plan.RunnerConstraints = types.ObjectUnknown(RunnerConstraintsModel{}.AttributeTypes())
 	}
-	if config.TerraformConfig.IsNull() {
-		plan.TerraformConfig = types.ObjectUnknown(TerraformConfigModel{}.AttributeTypes())
+	// terraform_config: compute the new revision's resolved value as a KNOWN object and set
+	// it in the plan, so it matches apply and bypasses the nested UseStateForUnknown
+	// modifiers (which would otherwise leak the OLD revision's nested values, incl. stale "").
+	// User-declared nested fields win (deep-merge: user over new template); fields the user
+	// did not declare come from the new revision.
+	{
+		merged, d := planTerraformConfig(ctx, config.TerraformConfig, tpl.TerraformConfig)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.TerraformConfig = merged
 	}
 
 	// iac_input_data lives inside the Required vcs_config object; rebuild vcs_config with
