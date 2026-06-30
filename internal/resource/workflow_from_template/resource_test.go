@@ -202,10 +202,14 @@ func addSecondRevision(t *testing.T, templateID string) string {
 			SourceConfigKind: &sourceConfigKind,
 			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
 			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			// Drift ENABLED with a valid 6-field cron (the API validates the cron when
+			// drift_check is true), so it is meaningful and kept by the coupling. rev1 has
+			// no terraform_config drift fields; the upgrade test asserts these re-resolve
+			// onto the workflow when moving rev1 -> rev2.
 			TerraformConfig: &sgsdkgo.TerraformConfig{
 				TerraformVersion: &tmplTfVersion,
-				DriftCheck:       sgsdkgo.Bool(false),
-				DriftCron:        sgsdkgo.String("* * * ? *"),
+				DriftCheck:       sgsdkgo.Bool(true),
+				DriftCron:        sgsdkgo.String("0 */6 * * ? *"),
 			},
 			EnvironmentVariables: []sgsdkgo.EnvVars{
 				{
@@ -1593,14 +1597,16 @@ func TestAccWorkflowUsingTemplate_RevisionUpgrade(t *testing.T) {
 			},
 			{
 				// Upgrade to rev2 → unset env var re-resolves to REV2_VAR; user description preserved.
-				// rev2 also ADDS terraform_config.drift_cron (rev1 had none); it must re-resolve
+				// rev2 ADDS terraform_config drift fields (rev1 had none); they must re-resolve
 				// without an inconsistent-result error while the user's terraform_version is kept.
+				// rev2 has drift_check=true with a cron, so the cron is meaningful and kept.
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", rev2, config),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "vcs_config.iac_vcs_config.iac_template_id", rev2),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "environment_variables.0.config.var_name", "REV2_VAR"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "description", "user-owned description"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.drift_cron", "* * * ? *"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.drift_check", "true"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.drift_cron", "0 */6 * * ? *"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_version", "1.5.0"),
 				),
 			},
