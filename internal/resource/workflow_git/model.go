@@ -4,6 +4,7 @@ import (
 	"context"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
+	"github.com/StackGuardian/sg-sdk-go/core"
 	sgworkflows "github.com/StackGuardian/sg-sdk-go/workflows"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/expanders"
@@ -484,32 +485,32 @@ func (VcsTriggerActionConfigModel) AttributeTypes() map[string]attr.Type {
 }
 
 type VcsTriggersModel struct {
-	TrackedBranch           types.String `tfsdk:"tracked_branch"`
-	ApprovalPreApply        types.Bool   `tfsdk:"approval_pre_apply"`
-	PlanOnly                types.Bool   `tfsdk:"plan_only"`
-	FileTriggersEnabled     types.Bool   `tfsdk:"file_triggers_enabled"`
-	FileTriggerPatterns     types.List   `tfsdk:"file_trigger_patterns"`
-	GhWebhookUrl            types.String `tfsdk:"gh_webhook_url"`
-	AllPullRequests         types.Map    `tfsdk:"all_pull_requests"`
-	PullRequestOpened       types.Map    `tfsdk:"pull_request_opened"`
-	PullRequestModified     types.Map    `tfsdk:"pull_request_modified"`
-	CreateTag               types.Map    `tfsdk:"create_tag"`
-	Push                    types.Map    `tfsdk:"push"`
+	TrackedBranch       types.String `tfsdk:"tracked_branch"`
+	ApprovalPreApply    types.Bool   `tfsdk:"approval_pre_apply"`
+	PlanOnly            types.Bool   `tfsdk:"plan_only"`
+	FileTriggersEnabled types.Bool   `tfsdk:"file_triggers_enabled"`
+	FileTriggerPatterns types.List   `tfsdk:"file_trigger_patterns"`
+	GhWebhookUrl        types.String `tfsdk:"gh_webhook_url"`
+	AllPullRequests     types.Map    `tfsdk:"all_pull_requests"`
+	PullRequestOpened   types.Map    `tfsdk:"pull_request_opened"`
+	PullRequestModified types.Map    `tfsdk:"pull_request_modified"`
+	CreateTag           types.Map    `tfsdk:"create_tag"`
+	Push                types.Map    `tfsdk:"push"`
 }
 
 func (VcsTriggersModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
-		"tracked_branch":             types.StringType,
-		"approval_pre_apply":         types.BoolType,
-		"plan_only":                  types.BoolType,
-		"file_triggers_enabled":      types.BoolType,
-		"file_trigger_patterns":      types.ListType{ElemType: types.StringType},
-		"gh_webhook_url":             types.StringType,
-		"all_pull_requests":          types.MapType{ElemType: types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}},
-		"pull_request_opened":        types.MapType{ElemType: types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}},
-		"pull_request_modified":      types.MapType{ElemType: types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}},
-		"create_tag":                 types.MapType{ElemType: types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}},
-		"push":                       types.MapType{ElemType: types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}},
+		"tracked_branch":        types.StringType,
+		"approval_pre_apply":    types.BoolType,
+		"plan_only":             types.BoolType,
+		"file_triggers_enabled": types.BoolType,
+		"file_trigger_patterns": types.ListType{ElemType: types.StringType},
+		"gh_webhook_url":        types.StringType,
+		"all_pull_requests":     types.MapType{ElemType: types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}},
+		"pull_request_opened":   types.MapType{ElemType: types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}},
+		"pull_request_modified": types.MapType{ElemType: types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}},
+		"create_tag":            types.MapType{ElemType: types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}},
+		"push":                  types.MapType{ElemType: types.ObjectType{AttrTypes: VcsTriggerActionConfigModel{}.AttributeTypes()}},
 	}
 }
 
@@ -535,7 +536,6 @@ func (m VcsTriggersModel) ToAPIModel(ctx context.Context) (*sgsdkgo.VcsTriggers,
 		}
 		result.FileTriggerPatterns = patterns
 	}
-
 
 	for _, pair := range []struct {
 		src  types.Map
@@ -621,17 +621,17 @@ func convertVcsTriggersFromAPI(ctx context.Context, vt *sgsdkgo.VcsTriggers) (ty
 	}
 
 	m := VcsTriggersModel{
-		TrackedBranch:           flatteners.StringPtr(vt.TrackedBranch),
-		ApprovalPreApply:        flatteners.BoolPtr(vt.ApprovalPreApply),
-		PlanOnly:                flatteners.BoolPtr(vt.PlanOnly),
-		FileTriggersEnabled:     flatteners.BoolPtr(vt.FileTriggersEnabled),
-		FileTriggerPatterns:     fileTriggerPatterns,
-		GhWebhookUrl:            flatteners.StringPtrDefault(vt.GhWebhookUrl),
-		AllPullRequests:         allPullRequests,
-		PullRequestOpened:       pullRequestOpened,
-		PullRequestModified:     pullRequestModified,
-		CreateTag:               createTag,
-		Push:                    push,
+		TrackedBranch:       flatteners.StringPtr(vt.TrackedBranch),
+		ApprovalPreApply:    flatteners.BoolPtr(vt.ApprovalPreApply),
+		PlanOnly:            flatteners.BoolPtr(vt.PlanOnly),
+		FileTriggersEnabled: flatteners.BoolPtr(vt.FileTriggersEnabled),
+		FileTriggerPatterns: fileTriggerPatterns,
+		GhWebhookUrl:        flatteners.StringPtrDefault(vt.GhWebhookUrl),
+		AllPullRequests:     allPullRequests,
+		PullRequestOpened:   pullRequestOpened,
+		PullRequestModified: pullRequestModified,
+		CreateTag:           createTag,
+		Push:                push,
 	}
 	obj, d := types.ObjectValueFrom(ctx, VcsTriggersModel{}.AttributeTypes(), m)
 	if d.HasError() {
@@ -1146,9 +1146,18 @@ func (m WorkflowGitResourceModel) ToAPIModel(ctx context.Context) (*sgworkflows.
 		return nil, diags
 	}
 
-	userSchedules, diags := convertUserSchedulesToAPI(ctx, m.UserSchedules)
+	userSchedulesVals, diags := convertUserSchedulesToAPI(ctx, m.UserSchedules)
 	if diags.HasError() {
 		return nil, diags
+	}
+	// Keep nil when the source is nil so the field is omitted (not sent as []), matching the
+	// prior behavior; only allocate a pointer slice when there are schedules to convert.
+	var userSchedules []*sgsdkgo.UserSchedules
+	if userSchedulesVals != nil {
+		userSchedules = make([]*sgsdkgo.UserSchedules, len(userSchedulesVals))
+		for i := range userSchedulesVals {
+			userSchedules[i] = &userSchedulesVals[i]
+		}
 	}
 
 	deploymentPlatformConfig, diags := convertDeploymentPlatformConfigToAPI(ctx, m.DeploymentPlatformConfig)
@@ -1206,22 +1215,42 @@ func (m WorkflowGitResourceModel) ToAPIModel(ctx context.Context) (*sgworkflows.
 		ResourceName:              resourceName,
 		Description:               m.Description.ValueStringPointer(),
 		WfType:                    wfType,
-		Tags:                      tags,
-		Approvers:                 approvers,
 		NumberOfApprovalsRequired: numberOfApprovalsRequired,
 		UserJobCpu:                userJobCpu,
 		UserJobMemory:             userJobMemory,
-		ContextTags:               contextTagsMap,
-		EnvironmentVariables:      envVarPtrs,
 		TerraformConfig:           terraformConfig,
 		RunnerConstraints:         runnerConstraints,
-		WfStepsConfig:             wfStepsConfigPtrs,
 		MiniSteps:                 miniSteps,
-		UserSchedules:             userSchedules,
-		DeploymentPlatformConfig:  deploymentPlatformConfig,
 		VcsConfig:                 vcsConfig,
 		VcsTriggers:               vcsTriggers,
+		// The SDK's list/map fields are *core.Optional; wrap when the source is non-nil
+		// (empty-but-allocated → [], nil → omitted), preserving the prior wire behavior.
+		Tags:                     optionalNonNil(tags),
+		Approvers:                optionalNonNil(approvers),
+		ContextTags:              optionalMapNonNil(contextTagsMap),
+		EnvironmentVariables:     optionalNonNil(envVarPtrs),
+		WfStepsConfig:            optionalNonNil(wfStepsConfigPtrs),
+		UserSchedules:            optionalNonNil(userSchedules),
+		DeploymentPlatformConfig: optionalNonNil(deploymentPlatformConfig),
 	}, nil
+}
+
+// optionalNonNil wraps a slice in a *core.Optional when it is non-nil (including an empty
+// but allocated slice), returning nil only for a nil slice. This preserves the SDK's prior
+// behavior: a nil slice is omitted, while an allocated (possibly empty) slice serializes as
+// [] — which the API requires for fields like WfStepsConfig/EnvironmentVariables.
+func optionalNonNil[T any, S ~[]T](value S) *core.Optional[S] {
+	if value == nil {
+		return nil
+	}
+	return sgsdkgo.Optional(value)
+}
+
+func optionalMapNonNil[K comparable, V any](value map[K]V) *core.Optional[map[K]V] {
+	if value == nil {
+		return nil
+	}
+	return sgsdkgo.Optional(value)
 }
 
 // ---------------------------------------------------------------------------
@@ -1254,20 +1283,24 @@ func (m WorkflowGitResourceModel) ToUpdateAPIModel(ctx context.Context) (*sgwork
 		patched.WfType = sgsdkgo.Null[sgsdkgo.WfTypeEnum]()
 	}
 
+	// These list/map fields are already *core.Optional on the create Workflow struct, and
+	// PatchedWorkflow uses the same type, so copy them through directly (re-wrapping would
+	// double-wrap). A nil Optional means the user omitted the field — send explicit Null to
+	// preserve the prior "clear on update" behavior.
 	if workflow.Tags != nil {
-		patched.Tags = sgsdkgo.Optional(workflow.Tags)
+		patched.Tags = workflow.Tags
 	} else {
 		patched.Tags = sgsdkgo.Null[[]string]()
 	}
 
 	if workflow.Approvers != nil {
-		patched.Approvers = sgsdkgo.Optional(workflow.Approvers)
+		patched.Approvers = workflow.Approvers
 	} else {
 		patched.Approvers = sgsdkgo.Null[[]string]()
 	}
 
 	if workflow.ContextTags != nil {
-		patched.ContextTags = sgsdkgo.Optional(workflow.ContextTags)
+		patched.ContextTags = workflow.ContextTags
 	} else {
 		patched.ContextTags = sgsdkgo.Null[map[string]string]()
 	}
@@ -1291,13 +1324,13 @@ func (m WorkflowGitResourceModel) ToUpdateAPIModel(ctx context.Context) (*sgwork
 	}
 
 	if workflow.EnvironmentVariables != nil {
-		patched.EnvironmentVariables = sgsdkgo.Optional(workflow.EnvironmentVariables)
+		patched.EnvironmentVariables = workflow.EnvironmentVariables
 	} else {
 		patched.EnvironmentVariables = sgsdkgo.Null[[]*sgsdkgo.EnvVars]()
 	}
 
 	if workflow.WfStepsConfig != nil {
-		patched.WfStepsConfig = sgsdkgo.Optional(workflow.WfStepsConfig)
+		patched.WfStepsConfig = workflow.WfStepsConfig
 	} else {
 		patched.WfStepsConfig = sgsdkgo.Null[[]*sgsdkgo.WfStepsConfig]()
 	}
@@ -1327,17 +1360,13 @@ func (m WorkflowGitResourceModel) ToUpdateAPIModel(ctx context.Context) (*sgwork
 	}
 
 	if workflow.DeploymentPlatformConfig != nil {
-		patched.DeploymentPlatformConfig = sgsdkgo.Optional(workflow.DeploymentPlatformConfig)
+		patched.DeploymentPlatformConfig = workflow.DeploymentPlatformConfig
 	} else {
 		patched.DeploymentPlatformConfig = sgsdkgo.Null[[]*workflowtemplaterevisions.DeploymentPlatformConfig]()
 	}
 
 	if workflow.UserSchedules != nil {
-		userSchedulesPtrs := make([]*sgsdkgo.UserSchedules, len(workflow.UserSchedules))
-		for i := range workflow.UserSchedules {
-			userSchedulesPtrs[i] = &workflow.UserSchedules[i]
-		}
-		patched.UserSchedules = sgsdkgo.Optional(userSchedulesPtrs)
+		patched.UserSchedules = workflow.UserSchedules
 	} else {
 		patched.UserSchedules = sgsdkgo.Null[[]*sgsdkgo.UserSchedules]()
 	}

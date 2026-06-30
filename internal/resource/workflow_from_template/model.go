@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
+	"github.com/StackGuardian/sg-sdk-go/core"
 	sgworkflows "github.com/StackGuardian/sg-sdk-go/workflows"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/expanders"
@@ -16,6 +17,19 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
+
+// optionalIfPresent wraps a converted SDK value in a *core.Optional when the user PROVIDED
+// the corresponding Terraform attribute (non-null/known, including an explicit empty),
+// returning nil when the attribute is absent. A nil result is omitted from the request JSON
+// (so mergeTemplateDefaults can inherit the template default); a wrapped empty serializes as
+// [] / {} so the user can suppress a template default. See the SDK Workflow struct, whose
+// list/map fields are *core.Optional to carry the omit-vs-explicit-empty distinction.
+func optionalIfPresent[T any](attr attr.Value, value T) *core.Optional[T] {
+	if absent(attr) {
+		return nil
+	}
+	return sgsdkgo.Optional(value)
+}
 
 // ---------------------------------------------------------------------------
 // Top-level model
@@ -943,9 +957,13 @@ func (m WorkflowUsingTemplateResourceModel) ToAPIModel(ctx context.Context, tpl 
 		return nil, diags
 	}
 
-	userSchedules, diags := convertUserSchedulesToAPI(ctx, m.UserSchedules)
+	userSchedulesVals, diags := convertUserSchedulesToAPI(ctx, m.UserSchedules)
 	if diags.HasError() {
 		return nil, diags
+	}
+	userSchedules := make([]*sgsdkgo.UserSchedules, len(userSchedulesVals))
+	for i := range userSchedulesVals {
+		userSchedules[i] = &userSchedulesVals[i]
 	}
 
 	deploymentPlatformConfig, diags := convertDeploymentPlatformConfigToAPI(ctx, m.DeploymentPlatformConfig)
@@ -992,20 +1010,25 @@ func (m WorkflowUsingTemplateResourceModel) ToAPIModel(ctx context.Context, tpl 
 		ResourceName:              resourceName,
 		Description:               m.Description.ValueStringPointer(),
 		WfType:                    wfType,
-		Tags:                      tags,
-		Approvers:                 approvers,
 		NumberOfApprovalsRequired: numberOfApprovalsRequired,
 		UserJobCpu:                userJobCpu,
 		UserJobMemory:             userJobMemory,
-		ContextTags:               contextTagsMap,
-		EnvironmentVariables:      envVarPtrs,
 		TerraformConfig:           terraformConfig,
 		RunnerConstraints:         runnerConstraints,
-		WfStepsConfig:             wfStepsConfigPtrs,
 		MiniSteps:                 miniSteps,
-		UserSchedules:             userSchedules,
-		DeploymentPlatformConfig:  deploymentPlatformConfig,
 		VcsConfig:                 vcsConfig,
+		// List/map fields the user can suppress with an explicit empty: wrap in
+		// core.Optional only when the user PROVIDED the value (incl. empty) so the
+		// empty reaches the wire; leave nil when absent so mergeTemplateDefaults can
+		// inherit the template's value. (See the SDK Workflow struct — these are
+		// *core.Optional to distinguish omit from explicit empty.)
+		Tags:                     optionalIfPresent(m.Tags, tags),
+		Approvers:                optionalIfPresent(m.Approvers, approvers),
+		ContextTags:              optionalIfPresent(m.ContextTags, contextTagsMap),
+		EnvironmentVariables:     optionalIfPresent(m.EnvironmentVariables, envVarPtrs),
+		WfStepsConfig:            optionalIfPresent(m.WfStepsConfig, wfStepsConfigPtrs),
+		UserSchedules:            optionalIfPresent(m.UserSchedules, userSchedules),
+		DeploymentPlatformConfig: optionalIfPresent(m.DeploymentPlatformConfig, deploymentPlatformConfig),
 	}
 
 	// Provider-side resolution: fill any field the user did not set from the
@@ -1040,14 +1063,17 @@ func (m WorkflowUsingTemplateResourceModel) ToUpdateAPIModel(ctx context.Context
 	if workflow.WfType != nil {
 		patched.WfType = sgsdkgo.Optional(*workflow.WfType)
 	}
+	// These fields are already *core.Optional on the create Workflow struct (carrying the
+	// user's omit-vs-explicit-empty intent from ToAPIModel/merge), and PatchedWorkflow uses
+	// the same type, so copy them through directly — do not re-wrap (that would double-wrap).
 	if workflow.Tags != nil {
-		patched.Tags = sgsdkgo.Optional(workflow.Tags)
+		patched.Tags = workflow.Tags
 	}
 	if workflow.Approvers != nil {
-		patched.Approvers = sgsdkgo.Optional(workflow.Approvers)
+		patched.Approvers = workflow.Approvers
 	}
 	if workflow.ContextTags != nil {
-		patched.ContextTags = sgsdkgo.Optional(workflow.ContextTags)
+		patched.ContextTags = workflow.ContextTags
 	}
 	if workflow.NumberOfApprovalsRequired != nil {
 		patched.NumberOfApprovalsRequired = sgsdkgo.Optional(*workflow.NumberOfApprovalsRequired)
@@ -1059,10 +1085,10 @@ func (m WorkflowUsingTemplateResourceModel) ToUpdateAPIModel(ctx context.Context
 		patched.UserJobMemory = sgsdkgo.Optional(*workflow.UserJobMemory)
 	}
 	if workflow.EnvironmentVariables != nil {
-		patched.EnvironmentVariables = sgsdkgo.Optional(workflow.EnvironmentVariables)
+		patched.EnvironmentVariables = workflow.EnvironmentVariables
 	}
 	if workflow.WfStepsConfig != nil {
-		patched.WfStepsConfig = sgsdkgo.Optional(workflow.WfStepsConfig)
+		patched.WfStepsConfig = workflow.WfStepsConfig
 	}
 	if workflow.TerraformConfig != nil {
 		patched.TerraformConfig = sgsdkgo.Optional(*workflow.TerraformConfig)
@@ -1077,14 +1103,10 @@ func (m WorkflowUsingTemplateResourceModel) ToUpdateAPIModel(ctx context.Context
 		patched.MiniSteps = sgsdkgo.Optional(*workflow.MiniSteps)
 	}
 	if workflow.DeploymentPlatformConfig != nil {
-		patched.DeploymentPlatformConfig = sgsdkgo.Optional(workflow.DeploymentPlatformConfig)
+		patched.DeploymentPlatformConfig = workflow.DeploymentPlatformConfig
 	}
 	if workflow.UserSchedules != nil {
-		userSchedulesPtrs := make([]*sgsdkgo.UserSchedules, len(workflow.UserSchedules))
-		for i := range workflow.UserSchedules {
-			userSchedulesPtrs[i] = &workflow.UserSchedules[i]
-		}
-		patched.UserSchedules = sgsdkgo.Optional(userSchedulesPtrs)
+		patched.UserSchedules = workflow.UserSchedules
 	}
 
 	return patched, diags
@@ -2179,32 +2201,35 @@ func mergeTemplateDefaults(m WorkflowUsingTemplateResourceModel, wf *sgworkflows
 		wf.MiniSteps = tpl.Ministeps
 	}
 
+	// Suppressible list/map fields are *core.Optional on the SDK struct. The merge only
+	// runs when the user is absent() (omitted), and the template value is always concrete,
+	// so wrap it with sgsdkgo.Optional(...) so it serializes to the request.
 	if absent(m.Tags) && len(tpl.Tags) > 0 {
-		wf.Tags = tpl.Tags
+		wf.Tags = sgsdkgo.Optional(tpl.Tags)
 	}
 	if absent(m.Approvers) && len(tpl.Approvers) > 0 {
-		wf.Approvers = tpl.Approvers
+		wf.Approvers = sgsdkgo.Optional(tpl.Approvers)
 	}
 	if absent(m.ContextTags) && len(tpl.ContextTags) > 0 {
-		wf.ContextTags = tpl.ContextTags
+		wf.ContextTags = sgsdkgo.Optional(tpl.ContextTags)
 	}
 	if absent(m.UserSchedules) && len(tpl.UserSchedules) > 0 {
-		schedules := make([]sgsdkgo.UserSchedules, len(tpl.UserSchedules))
+		schedules := make([]*sgsdkgo.UserSchedules, len(tpl.UserSchedules))
 		for i := range tpl.UserSchedules {
 			t := tpl.UserSchedules[i]
 			cron := t.Cron
 			state := sgsdkgo.StateEnum(t.State)
-			schedules[i] = sgsdkgo.UserSchedules{
+			schedules[i] = &sgsdkgo.UserSchedules{
 				Name:  t.Name,
 				Desc:  t.Desc,
 				Cron:  &cron,
 				State: &state,
 			}
 		}
-		wf.UserSchedules = schedules
+		wf.UserSchedules = sgsdkgo.Optional(schedules)
 	}
 	if absent(m.DeploymentPlatformConfig) && len(tpl.DeploymentPlatformConfig) > 0 {
-		wf.DeploymentPlatformConfig = tpl.DeploymentPlatformConfig
+		wf.DeploymentPlatformConfig = sgsdkgo.Optional(tpl.DeploymentPlatformConfig)
 	}
 
 	// EnvironmentVariables: template stores value slice, workflow uses pointer slice.
@@ -2213,7 +2238,7 @@ func mergeTemplateDefaults(m WorkflowUsingTemplateResourceModel, wf *sgworkflows
 		for i := range tpl.EnvironmentVariables {
 			ptrs[i] = &tpl.EnvironmentVariables[i]
 		}
-		wf.EnvironmentVariables = ptrs
+		wf.EnvironmentVariables = sgsdkgo.Optional(ptrs)
 	}
 
 	// WfStepsConfig: template stores value slice, workflow uses pointer slice.
@@ -2222,7 +2247,7 @@ func mergeTemplateDefaults(m WorkflowUsingTemplateResourceModel, wf *sgworkflows
 		for i := range tpl.WfStepsConfig {
 			ptrs[i] = &tpl.WfStepsConfig[i]
 		}
-		wf.WfStepsConfig = ptrs
+		wf.WfStepsConfig = sgsdkgo.Optional(ptrs)
 	}
 }
 
