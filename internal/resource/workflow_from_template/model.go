@@ -2576,6 +2576,25 @@ func reResolveOnRevisionChange(ctx context.Context, plan *WorkflowUsingTemplateR
 	if config.UserJobMemory.IsNull() {
 		plan.UserJobMemory = int64FromTemplateOrDefault(tpl.UserJobMemory, 1024)
 	}
+	// runner_constraints: tpl.RunnerConstraints and wf.RunnerConstraints are the same
+	// (*sgsdkgo.RunnerConstraints) and the merge is a direct assignment, so flattening the
+	// template value through the Read path's convertRunnerConstraintsFromAPI yields what
+	// apply+Read produces. When the template OMITS it, the workflow API injects a default
+	// ({type:"shared", names:null}) absent from the template read — mirror that so plan ==
+	// apply in both cases (verified: omitting it otherwise gives "was null, but now
+	// {type:shared}").
+	if config.RunnerConstraints.IsNull() {
+		rcSrc := tpl.RunnerConstraints
+		if rcSrc == nil {
+			rcSrc = &sgsdkgo.RunnerConstraints{Type: sgsdkgo.RunnerConstraintsTypeEnumShared.Ptr()}
+		}
+		rc, d := convertRunnerConstraintsFromAPI(ctx, rcSrc)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.RunnerConstraints = rc
+	}
 
 	// (2) Unknown — list/object fields the API may reorder/normalize/augment; predicting
 	// them at plan time could mismatch apply ("inconsistent result after apply"). Migrate
@@ -2591,9 +2610,6 @@ func reResolveOnRevisionChange(ctx context.Context, plan *WorkflowUsingTemplateR
 	}
 	if config.MiniSteps.IsNull() {
 		plan.MiniSteps = types.ObjectUnknown(MinistepsModel{}.AttributeTypes())
-	}
-	if config.RunnerConstraints.IsNull() {
-		plan.RunnerConstraints = types.ObjectUnknown(RunnerConstraintsModel{}.AttributeTypes())
 	}
 	// terraform_config: compute the new revision's resolved value as a KNOWN object and set
 	// it in the plan, so it matches apply and bypasses the nested UseStateForUnknown

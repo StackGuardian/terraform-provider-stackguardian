@@ -60,6 +60,9 @@ func setupTwoRevIdenticalDerivedFields(t *testing.T, name string) (rev1, rev2 st
 				UserJobCPU:                &c,
 				UserJobMemory:             &m,
 				TerraformConfig:           &sgsdkgo.TerraformConfig{TerraformVersion: &tfver},
+				RunnerConstraints: &sgsdkgo.RunnerConstraints{
+					Type: sgsdkgo.RunnerConstraintsTypeEnumShared.Ptr(),
+				},
 				EnvironmentVariables: []sgsdkgo.EnvVars{
 					{
 						Kind:   sgsdkgo.EnvVarsKindEnumPlainText,
@@ -140,9 +143,11 @@ resource "stackguardian_workflow_from_template" "test2" {
   }
   # References test1's COMPUTED, template-derived env vars (unchanged across rev1->rev2).
   environment_variables = stackguardian_workflow_from_template.test1.environment_variables
-  # Also reference a template-derived int field (user_job_cpu) the template carries, to prove
-  # int fields resolve concretely and keep dependents NoOp when unchanged.
-  user_job_cpu = stackguardian_workflow_from_template.test1.user_job_cpu
+  # Also reference a template-derived int field (user_job_cpu) and a nested object
+  # (runner_constraints) the template carries, to prove they resolve concretely and keep
+  # dependents NoOp when unchanged.
+  user_job_cpu       = stackguardian_workflow_from_template.test1.user_job_cpu
+  runner_constraints = stackguardian_workflow_from_template.test1.runner_constraints
   terraform_config = {
     terraform_version = "1.5.0"
   }
