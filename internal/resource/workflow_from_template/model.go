@@ -2612,14 +2612,29 @@ func reResolveOnRevisionChange(ctx context.Context, plan *WorkflowUsingTemplateR
 	// (2) Unknown — list/object fields the API may reorder/normalize/augment; predicting
 	// them at plan time could mismatch apply ("inconsistent result after apply"). Migrate
 	// to concrete values only with a per-field round-trip test.
+	//
+	// user_schedules stays unknown: the workflow does NOT necessarily persist the template's
+	// schedules — a template that carries a UserSchedule can resolve to a workflow with NONE
+	// (verified: predicting from tpl gives ".user_schedules: element 0 has vanished" at apply).
+	// The API decides whether/how schedules transfer, so it can't be predicted from tpl.
 	if config.UserSchedules.IsNull() {
 		plan.UserSchedules = types.ListUnknown(schedElem)
 	}
+	// wf_steps_config stays unknown: top-level steps are CUSTOM-only and the API may augment
+	// step fields (e.g. wf_step_input_data defaults). No acceptance test exercises a
+	// TEMPLATE-derived wf_steps_config (existing tests have the user DECLARE it, so the
+	// concrete-value branch never runs there), so the template-derived round-trip is
+	// unproven — leave unknown rather than risk "inconsistent result after apply".
 	if config.WfStepsConfig.IsNull() {
 		plan.WfStepsConfig = types.ListUnknown(wfStepElem)
 	}
 	if config.MiniSteps.IsNull() {
-		plan.MiniSteps = types.ObjectUnknown(MinistepsModel{}.AttributeTypes())
+		ms, d := convertMinistepsFromAPI(ctx, tpl.Ministeps)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.MiniSteps = knownEmptyObjectIfNull(ms, MinistepsModel{}.AttributeTypes())
 	}
 	// terraform_config: compute the new revision's resolved value as a KNOWN object and set
 	// it in the plan, so it matches apply and bypasses the nested UseStateForUnknown

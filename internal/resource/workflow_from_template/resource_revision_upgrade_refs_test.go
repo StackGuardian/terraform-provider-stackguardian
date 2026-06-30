@@ -63,6 +63,15 @@ func setupTwoRevIdenticalDerivedFields(t *testing.T, name string) (rev1, rev2 st
 				RunnerConstraints: &sgsdkgo.RunnerConstraints{
 					Type: sgsdkgo.RunnerConstraintsTypeEnumShared.Ptr(),
 				},
+				Ministeps: &workflowtemplaterevisions.Ministeps{
+					Notifications: &workflowtemplaterevisions.MinistepsNotifications{
+						Email: &workflowtemplaterevisions.MinistepsNotificationsEmail{
+							COMPLETED: []workflowtemplaterevisions.MinistepsNotificationRecepients{
+								{Recipients: []string{"akashsuresh0510@gmail.com"}},
+							},
+						},
+					},
+				},
 				EnvironmentVariables: []sgsdkgo.EnvVars{
 					{
 						Kind:   sgsdkgo.EnvVarsKindEnumPlainText,
@@ -149,6 +158,7 @@ resource "stackguardian_workflow_from_template" "test2" {
   user_job_cpu               = stackguardian_workflow_from_template.test1.user_job_cpu
   runner_constraints         = stackguardian_workflow_from_template.test1.runner_constraints
   deployment_platform_config = stackguardian_workflow_from_template.test1.deployment_platform_config
+  mini_steps                 = stackguardian_workflow_from_template.test1.mini_steps
   terraform_config = {
     terraform_version = "1.5.0"
   }
