@@ -908,6 +908,164 @@ func TestAccWorkflowUsingTemplate_TemplateDefaultsResolved(t *testing.T) {
 	})
 }
 
+// setupDriftEnabledTemplate creates and publishes a template whose revision :1 has drift
+// checking ENABLED (driftCheck=true) with a driftCron. Used to verify the
+// drift_check/drift_cron coupling: a workflow that sets drift_check=false must drop the
+// inherited cron. Mirrors setupWorkflowTemplate's create/publish/cleanup flow.
+func setupDriftEnabledTemplate(t *testing.T, templateID string) string {
+	t.Helper()
+	client := getClient()
+	revisionID := fmt.Sprintf("%s:1", templateID)
+	sourceConfigKind := workflowtemplates.WorkflowTemplateSourceConfigKindTerraform
+
+	is409 := func(err error) bool {
+		var apiErr *core.APIError
+		return errors.As(err, &apiErr) && apiErr.StatusCode == 409
+	}
+
+	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(
+		context.TODO(), org, false,
+		&workflowtemplates.CreateWorkflowTemplateRequest{
+			Id:               &templateID,
+			TemplateName:     templateID,
+			SourceConfigKind: &sourceConfigKind,
+			TemplateType:     sgsdkgo.TemplateTypeEnum("IAC"),
+			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+		},
+	)
+	if err != nil && !is409(err) {
+		t.Fatalf("setupDriftEnabledTemplate: create template %q: %s", templateID, err)
+	}
+
+	alias := "v1"
+	tmplTfVersion := "1.5.0"
+	_, err = client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(
+		context.TODO(), org, templateID,
+		&workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
+			Alias:            alias,
+			SourceConfigKind: &sourceConfigKind,
+			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			TerraformConfig: &sgsdkgo.TerraformConfig{
+				TerraformVersion: &tmplTfVersion,
+				DriftCheck:       sgsdkgo.Bool(true),
+				DriftCron:        sgsdkgo.String("0 */6 * * ? *"),
+			},
+		},
+	)
+	if err != nil && !is409(err) {
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		t.Fatalf("setupDriftEnabledTemplate: create revision for %q: %s", templateID, err)
+	}
+
+	_, err = client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
+		context.TODO(), org, revisionID,
+		&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
+			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
+		},
+	)
+	if err != nil {
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		t.Fatalf("setupDriftEnabledTemplate: publish revision %q: %s", revisionID, err)
+	}
+
+	_, err = client.WorkflowTemplates.UpdateWorkflowTemplate(
+		context.TODO(), org, templateID,
+		&workflowtemplates.UpdateWorkflowTemplateRequest{
+			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
+		},
+	)
+	if err != nil {
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		t.Fatalf("setupDriftEnabledTemplate: publish template %q: %s", templateID, err)
+	}
+
+	t.Cleanup(func() {
+		effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
+		message := "Test cleanup"
+		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
+			context.TODO(), org, revisionID,
+			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
+				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{
+					EffectiveDate: &effectiveDate,
+					Message:       &message,
+				}),
+			},
+		)
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+	})
+
+	return fmt.Sprintf("/%s/%s", org, templateID)
+}
+
+// TestAccWorkflowUsingTemplate_DriftCronDroppedWhenCheckFalse verifies the
+// drift_check/drift_cron coupling. The template revision has drift ENABLED with a cron;
+// the user sets drift_check=false and does not declare a cron. The resolved drift_cron
+// must be "" (the cron is meaningless when checking is off), and the plan must be stable
+// afterward (no "inconsistent result after apply", no perpetual diff).
+func TestAccWorkflowUsingTemplate_DriftCronDroppedWhenCheckFalse(t *testing.T) {
+	templateID := setupDriftEnabledTemplate(t, "tf-provider-wf-tmpl-driftcron") + ":1"
+	wfGrpName := "tf-provider-wf-template-driftcron-wfgrp"
+	id := "tf-provider-wf-template-driftcron"
+
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
+		t.Errorf("failed to create workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(wfGrpName)
+	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
+
+	// User disables drift_check and leaves drift_cron unset. The template would otherwise
+	// supply drift_cron="0 */6 * * ? *"; the coupling must drop it.
+	configCheckOff := `
+  terraform_config = {
+    terraform_version = "1.5.0"
+    drift_check       = false
+  }
+`
+	// Flip drift_check on with an explicit cron — the cron must now be kept.
+	configCheckOn := `
+  terraform_config = {
+    terraform_version = "1.5.0"
+    drift_check       = true
+    drift_cron        = "0 */6 * * ? *"
+  }
+`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, configCheckOff),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.drift_check", "false"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.drift_cron", ""),
+				),
+			},
+			{
+				// Re-apply the same config: must be a no-op (coupling is idempotent/stable).
+				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, configCheckOff),
+				PlanOnly: true,
+			},
+			{
+				// Enable drift with a cron — the cron is now meaningful and must be kept.
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, configCheckOn),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.drift_check", "true"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.drift_cron", "0 */6 * * ? *"),
+				),
+			},
+		},
+	})
+}
+
 // TestAccWorkflowUsingTemplate_DriftDetection verifies the core capability this design
 // enables: when the workflow is changed out-of-band (simulating a dev-portal edit), the
 // next plan detects the drift instead of reporting "no changes". The out-of-band change
