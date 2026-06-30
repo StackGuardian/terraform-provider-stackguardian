@@ -2476,10 +2476,12 @@ func planTerraformConfig(ctx context.Context, userCfg types.Object, tplCfg *sgsd
 }
 
 // reResolveOnRevisionChange re-resolves the template-derived fields the user left unset
-// against the NEW revision tpl, used by ModifyPlan on a revision change. Most fields are set
-// to typed-unknown (apply re-resolves them); terraform_config is set to its concrete merged
-// value (see planTerraformConfig) because its nested UseStateForUnknown modifiers would
-// otherwise carry the old revision's values forward. Fields the user declared are untouched.
+// against the NEW revision tpl, used by ModifyPlan on a revision change. Where safe, a field
+// is set to its CONCRETE resolved value (computed via the same convert*FromAPI flatteners the
+// Read path uses) so plan == apply and references to it do not get a spurious "known after
+// apply"/update when the value is unchanged; terraform_config uses this too (planTerraformConfig).
+// Fields the API may reorder/normalize are still set to typed-unknown (apply re-resolves them).
+// Fields the user declared are untouched.
 func reResolveOnRevisionChange(ctx context.Context, plan *WorkflowUsingTemplateResourceModel, config WorkflowUsingTemplateResourceModel, tpl *workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
@@ -2492,14 +2494,67 @@ func reResolveOnRevisionChange(ctx context.Context, plan *WorkflowUsingTemplateR
 	// the API at create and required (non-null) on update. Leave the planned value (state
 	// value via UseStateForUnknown) so it carries forward across a revision change.
 	//
-	// For most fields, setting the plan value to unknown is enough: apply re-resolves them
-	// against the new revision and there is no nested plan modifier to fight. terraform_config
-	// is the exception — its nested fields each carry UseStateForUnknown, which would override
-	// a parent-unknown with the OLD revision's value (incl. stale ""), so we set its concrete
-	// merged value from the new revision instead (see below).
+	// Two strategies, both producing plan == apply:
+	//
+	// (1) CONCRETE plan value (preferred): for fields whose resolved value passes through the
+	//     API unchanged, compute the value the new revision will resolve to and set it in the
+	//     plan. The value is computed by flattening the template's value through the SAME
+	//     convert*FromAPI flatteners + knownEmpty* wrappers the Read path uses, so it matches
+	//     apply byte-for-byte. This avoids the side effect where marking a field unknown forces
+	//     a SPURIOUS in-place update on every resource that references it — when the new
+	//     revision resolves to the same value, the plan now shows no change. (resolved value =
+	//     the template's value, because re-resolution only happens when the user is absent.)
+	//
+	// (2) UNKNOWN ("known after apply"): for fields the API may reorder/normalize/augment
+	//     (where a plan-time prediction could mismatch apply and cause "inconsistent result
+	//     after apply"), keep marking unknown — correct but may cause spurious dependent
+	//     updates on revision upgrade. These are migrated to (1) only with per-field
+	//     round-trip test coverage.
+
+	// (1) Concrete plan values — string/list/map fields that round-trip unchanged.
 	if config.Description.IsNull() {
-		plan.Description = types.StringUnknown()
+		// Read uses StringPtrDefault (null -> ""), so mirror that for plan stability.
+		plan.Description = flatteners.StringPtrDefault(tpl.LongDescription)
 	}
+	if config.Tags.IsNull() {
+		tags, d := flatteners.ListOfStringToTerraformList(tpl.Tags)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.Tags = knownEmptyListIfNull(tags, types.StringType)
+	}
+	if config.Approvers.IsNull() {
+		approvers, d := flatteners.ListOfStringToTerraformList(tpl.Approvers)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.Approvers = knownEmptyListIfNull(approvers, types.StringType)
+	}
+	if config.ContextTags.IsNull() {
+		contextTags, d := flatteners.MapStringString(ctx, tpl.ContextTags)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.ContextTags = knownEmptyMapIfNull(contextTags)
+	}
+	if config.EnvironmentVariables.IsNull() {
+		envVarsList, d := convertEnvironmentVariablesFromAPI(ctx, tpl.EnvironmentVariables)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.EnvironmentVariables = knownEmptyListIfNull(envVarsList, envElem)
+	}
+
+	// (2) Unknown — fields where a plan-time prediction would mismatch apply:
+	//   - The int fields default to API-supplied values the TEMPLATE does NOT carry
+	//     (number_of_approvals_required -> 0, user_job_cpu -> 512, user_job_memory -> 1024).
+	//     Predicting from tpl gives null, but apply/Read returns the default, causing
+	//     "inconsistent result after apply". Leave unknown so apply fills the real value.
+	//   - The list/object fields below may be reordered/normalized/augmented by the API.
 	if config.NumberOfApprovalsRequired.IsNull() {
 		plan.NumberOfApprovalsRequired = types.Int64Unknown()
 	}
@@ -2509,15 +2564,6 @@ func reResolveOnRevisionChange(ctx context.Context, plan *WorkflowUsingTemplateR
 	if config.UserJobMemory.IsNull() {
 		plan.UserJobMemory = types.Int64Unknown()
 	}
-	if config.EnvironmentVariables.IsNull() {
-		plan.EnvironmentVariables = types.ListUnknown(envElem)
-	}
-	if config.Tags.IsNull() {
-		plan.Tags = types.ListUnknown(types.StringType)
-	}
-	if config.Approvers.IsNull() {
-		plan.Approvers = types.ListUnknown(types.StringType)
-	}
 	if config.UserSchedules.IsNull() {
 		plan.UserSchedules = types.ListUnknown(schedElem)
 	}
@@ -2526,9 +2572,6 @@ func reResolveOnRevisionChange(ctx context.Context, plan *WorkflowUsingTemplateR
 	}
 	if config.WfStepsConfig.IsNull() {
 		plan.WfStepsConfig = types.ListUnknown(wfStepElem)
-	}
-	if config.ContextTags.IsNull() {
-		plan.ContextTags = types.MapUnknown(types.StringType)
 	}
 	if config.MiniSteps.IsNull() {
 		plan.MiniSteps = types.ObjectUnknown(MinistepsModel{}.AttributeTypes())
