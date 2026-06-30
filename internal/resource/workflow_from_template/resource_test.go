@@ -794,6 +794,15 @@ func TestAccWorkflowUsingTemplate_EmptyAllowBlankFalse(t *testing.T) {
 				PlanOnly: true,
 			},
 			{
+				// Drift-check (refresh from the API) on empty allow_blank=False values must
+				// produce a CLEAN plan: the API stores nothing for the omitted blanks, the
+				// read-back coerces null -> "" deterministically, so refreshed state matches
+				// config and there is no spurious drift. RefreshState refreshes the previous
+				// step's config; it cannot carry its own Config. ExpectNonEmptyPlan defaults
+				// to false, so a non-empty plan after refresh fails the step.
+				RefreshState: true,
+			},
+			{
 				// Transition empty -> real value, proving an allow_blank=False field can be
 				// set after being empty (a normal update on a previously-omitted field).
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, `
@@ -803,6 +812,16 @@ func TestAccWorkflowUsingTemplate_EmptyAllowBlankFalse(t *testing.T) {
   }
 `),
 				Check: resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_plan_options", "-input=false"),
+			},
+			{
+				// And the transitioned real value must itself round-trip cleanly.
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, `
+  terraform_config = {
+    terraform_version      = "1.5.0"
+    terraform_plan_options = "-input=false"
+  }
+`),
+				PlanOnly: true,
 			},
 		},
 	})
@@ -815,7 +834,9 @@ func TestAccWorkflowUsingTemplate_EmptyAllowBlankFalse(t *testing.T) {
 // than inherit it. Omitting the attribute entirely (control, step 2 of a separate run is
 // covered elsewhere) would instead inherit TMPL_VAR.
 func TestAccWorkflowUsingTemplate_ExplicitEmptySuppressesTemplateDefault(t *testing.T) {
-	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-emptysuppress") + ":1"
+	base := "tf-provider-wf-tmpl-emptysuppress"
+	rev1 := setupWorkflowTemplate(t, base) + ":1" // supplies TMPL_VAR
+	rev2 := addSecondRevision(t, base)            // supplies REV2_VAR
 	wfGrpName := "tf-provider-wf-template-emptysuppress-wfgrp"
 	id := "tf-provider-wf-template-emptysuppress"
 
@@ -825,7 +846,7 @@ func TestAccWorkflowUsingTemplate_ExplicitEmptySuppressesTemplateDefault(t *test
 	defer deleteWorkflowGroupFixture(wfGrpName)
 	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
 
-	// environment_variables = [] explicitly suppresses the template's TMPL_VAR default.
+	// environment_variables = [] explicitly suppresses the template's env var default.
 	suppressConfig := `
   terraform_config = {
     terraform_version = "1.5.0"
@@ -842,15 +863,34 @@ func TestAccWorkflowUsingTemplate_ExplicitEmptySuppressesTemplateDefault(t *test
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, suppressConfig),
+				// Create on rev1: explicit [] wins over rev1's TMPL_VAR default → zero env vars.
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", rev1, suppressConfig),
+				Check: resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "environment_variables.#", "0"),
+			},
+			{
+				// Explicit empty must round-trip stably (not re-inherit the template default).
+				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", rev1, suppressConfig),
+				PlanOnly: true,
+			},
+			{
+				// Drift-check (refresh from the API) must keep the suppression: refreshed
+				// state stays at zero env vars and the plan is clean — the template's
+				// TMPL_VAR is NOT re-inherited on refresh. RefreshState refreshes the
+				// previous step's config and cannot carry its own Config.
+				RefreshState: true,
+			},
+			{
+				// Upgrade rev1 -> rev2: the explicit [] suppression must STILL win — the
+				// upgrade must not re-inherit rev2's REV2_VAR. Env vars stay at zero.
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", rev2, suppressConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Explicit [] wins over the template default → zero env vars.
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "vcs_config.iac_vcs_config.iac_template_id", rev2),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "environment_variables.#", "0"),
 				),
 			},
 			{
-				// Explicit empty must round-trip stably (not re-inherit the template default).
-				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, suppressConfig),
+				// And the post-upgrade suppressed state must round-trip cleanly.
+				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", rev2, suppressConfig),
 				PlanOnly: true,
 			},
 		},
