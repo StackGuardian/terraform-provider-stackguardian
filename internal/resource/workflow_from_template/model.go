@@ -2596,14 +2596,24 @@ func reResolveOnRevisionChange(ctx context.Context, plan *WorkflowUsingTemplateR
 		plan.RunnerConstraints = rc
 	}
 
+	// deployment_platform_config: tpl.DeploymentPlatformConfig is exactly the type the Read
+	// flattener consumes ([]*workflowtemplaterevisions.DeploymentPlatformConfig) and the merge
+	// passes it through unchanged, so flattening it through convertDeploymentPlatformConfigFromAPI
+	// + knownEmptyListIfNull (matching Read) yields the concrete plan value.
+	if config.DeploymentPlatformConfig.IsNull() {
+		dpc, d := convertDeploymentPlatformConfigFromAPI(ctx, tpl.DeploymentPlatformConfig)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.DeploymentPlatformConfig = knownEmptyListIfNull(dpc, deployElem)
+	}
+
 	// (2) Unknown — list/object fields the API may reorder/normalize/augment; predicting
 	// them at plan time could mismatch apply ("inconsistent result after apply"). Migrate
 	// to concrete values only with a per-field round-trip test.
 	if config.UserSchedules.IsNull() {
 		plan.UserSchedules = types.ListUnknown(schedElem)
-	}
-	if config.DeploymentPlatformConfig.IsNull() {
-		plan.DeploymentPlatformConfig = types.ListUnknown(deployElem)
 	}
 	if config.WfStepsConfig.IsNull() {
 		plan.WfStepsConfig = types.ListUnknown(wfStepElem)
