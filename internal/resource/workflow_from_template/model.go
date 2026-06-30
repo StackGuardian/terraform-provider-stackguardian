@@ -1265,6 +1265,19 @@ func knownEmptyStringIfNull(in types.String) types.String {
 	return in
 }
 
+// int64FromTemplateOrDefault returns the template's int value when present, otherwise the
+// workflow API's fixed default for that field. Used to compute the resolved plan value for
+// number_of_approvals_required / user_job_cpu / user_job_memory on a revision change: the
+// template usually carries these, but when it omits one the workflow API fills a default
+// (0 / 512 / 1024) that the template read does not include — so the plan must mirror it to
+// match apply (plan == apply) and avoid a spurious "(known after apply)" on dependents.
+func int64FromTemplateOrDefault(tplVal *int, def int64) types.Int64 {
+	if tplVal != nil {
+		return types.Int64Value(int64(*tplVal))
+	}
+	return types.Int64Value(def)
+}
+
 // knownFalseIfNull returns a known false when in is null, otherwise in. Same rationale
 // as knownEmptyListIfNull for Computed bool attributes the API returns empty.
 func knownFalseIfNull(in types.Bool) types.Bool {
@@ -2548,22 +2561,25 @@ func reResolveOnRevisionChange(ctx context.Context, plan *WorkflowUsingTemplateR
 		}
 		plan.EnvironmentVariables = knownEmptyListIfNull(envVarsList, envElem)
 	}
-
-	// (2) Unknown — fields where a plan-time prediction would mismatch apply:
-	//   - The int fields default to API-supplied values the TEMPLATE does NOT carry
-	//     (number_of_approvals_required -> 0, user_job_cpu -> 512, user_job_memory -> 1024).
-	//     Predicting from tpl gives null, but apply/Read returns the default, causing
-	//     "inconsistent result after apply". Leave unknown so apply fills the real value.
-	//   - The list/object fields below may be reordered/normalized/augmented by the API.
+	// The int fields are normally carried on the template revision, in which case the
+	// resolved value is exactly that. When a template omits one, the WORKFLOW API fills a
+	// fixed default (number_of_approvals_required -> 0, user_job_cpu -> 512,
+	// user_job_memory -> 1024) that the template read does not include — so mirror that
+	// default here too, making plan == apply in both cases (template-carries and
+	// template-omits) and avoiding a spurious "(known after apply)" on dependents.
 	if config.NumberOfApprovalsRequired.IsNull() {
-		plan.NumberOfApprovalsRequired = types.Int64Unknown()
+		plan.NumberOfApprovalsRequired = int64FromTemplateOrDefault(tpl.NumberOfApprovalsRequired, 0)
 	}
 	if config.UserJobCpu.IsNull() {
-		plan.UserJobCpu = types.Int64Unknown()
+		plan.UserJobCpu = int64FromTemplateOrDefault(tpl.UserJobCPU, 512)
 	}
 	if config.UserJobMemory.IsNull() {
-		plan.UserJobMemory = types.Int64Unknown()
+		plan.UserJobMemory = int64FromTemplateOrDefault(tpl.UserJobMemory, 1024)
 	}
+
+	// (2) Unknown — list/object fields the API may reorder/normalize/augment; predicting
+	// them at plan time could mismatch apply ("inconsistent result after apply"). Migrate
+	// to concrete values only with a per-field round-trip test.
 	if config.UserSchedules.IsNull() {
 		plan.UserSchedules = types.ListUnknown(schedElem)
 	}

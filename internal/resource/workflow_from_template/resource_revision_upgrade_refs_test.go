@@ -140,6 +140,9 @@ resource "stackguardian_workflow_from_template" "test2" {
   }
   # References test1's COMPUTED, template-derived env vars (unchanged across rev1->rev2).
   environment_variables = stackguardian_workflow_from_template.test1.environment_variables
+  # Also reference a template-derived int field (user_job_cpu) the template carries, to prove
+  # int fields resolve concretely and keep dependents NoOp when unchanged.
+  user_job_cpu = stackguardian_workflow_from_template.test1.user_job_cpu
   terraform_config = {
     terraform_version = "1.5.0"
   }
