@@ -668,6 +668,191 @@ func TestAccWorkflowUsingTemplate_WithTerraformConfig(t *testing.T) {
 	})
 }
 
+// TestAccWorkflowUsingTemplate_NormalUpdate verifies ordinary in-place updates across a
+// mix of attribute kinds in one go: a top-level scalar (description), a nested
+// terraform_config scalar (terraform_version), a list (tags), and a map (context_tags).
+// Step 1 creates; step 2 mutates every one of them; step 3 re-applies step 2's config to
+// prove the update settled to a stable, no-diff state.
+func TestAccWorkflowUsingTemplate_NormalUpdate(t *testing.T) {
+	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-normalupd") + ":1"
+	wfGrpName := "tf-provider-wf-template-normalupd-wfgrp"
+	id := "tf-provider-wf-template-normalupd"
+
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
+		t.Errorf("failed to create workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(wfGrpName)
+	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
+
+	config := func(desc, tfVersion, tagVal, ctxVal string) string {
+		return fmt.Sprintf(`
+  description = %q
+
+  terraform_config = {
+    terraform_version = %q
+  }
+
+  tags = [%q]
+
+  context_tags = {
+    env = %q
+  }
+`, desc, tfVersion, tagVal, ctxVal)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("first", "1.5.0", "tag-a", "dev")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "description", "first"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_version", "1.5.0"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "tags.0", "tag-a"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "context_tags.env", "dev"),
+				),
+			},
+			{
+				// Update every attribute at once.
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("second", "1.6.0", "tag-b", "prod")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "description", "second"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_version", "1.6.0"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "tags.0", "tag-b"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "context_tags.env", "prod"),
+				),
+			},
+			{
+				// Re-apply identical config: must be a stable no-op.
+				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("second", "1.6.0", "tag-b", "prod")),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccWorkflowUsingTemplate_EmptyAllowBlankFalse verifies that supplying an empty
+// string ("") for attributes the API treats as allow_blank=False does NOT produce a
+// 400 from a blank payload: the provider omits empty allow_blank=False strings
+// (isNonEmpty guard in ToAPIModel). Covers terraform_config.{terraform_plan_options,
+// terraform_init_options} and a transition where drift_cron is "" while drift_check is
+// false. Also asserts the plan is stable afterward (empty round-trips consistently).
+func TestAccWorkflowUsingTemplate_EmptyAllowBlankFalse(t *testing.T) {
+	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-emptyblank") + ":1"
+	wfGrpName := "tf-provider-wf-template-emptyblank-wfgrp"
+	id := "tf-provider-wf-template-emptyblank"
+
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
+		t.Errorf("failed to create workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(wfGrpName)
+	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
+
+	// All allow_blank=False strings set to "". Without the omit-empty guard the API would
+	// reject the blank values; with it, they are dropped and creation succeeds.
+	emptyConfig := `
+  description = ""
+
+  terraform_config = {
+    terraform_version      = "1.5.0"
+    terraform_plan_options = ""
+    terraform_init_options = ""
+    drift_check            = false
+    drift_cron             = ""
+  }
+`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, emptyConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_version", "1.5.0"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_plan_options", ""),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_init_options", ""),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.drift_check", "false"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.drift_cron", ""),
+				),
+			},
+			{
+				// Empty values must round-trip with no diff (no "inconsistent result",
+				// no perpetual plan from "" vs omitted).
+				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, emptyConfig),
+				PlanOnly: true,
+			},
+			{
+				// Transition empty -> real value, proving an allow_blank=False field can be
+				// set after being empty (a normal update on a previously-omitted field).
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, `
+  terraform_config = {
+    terraform_version      = "1.5.0"
+    terraform_plan_options = "-input=false"
+  }
+`),
+				Check: resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_plan_options", "-input=false"),
+			},
+		},
+	})
+}
+
+// TestAccWorkflowUsingTemplate_ExplicitEmptySuppressesTemplateDefault verifies the other
+// side of empty handling: an explicit empty list ([]) is NOT omitted — it is sent to
+// suppress a template default (optionalIfPresent). The standard template supplies a
+// TMPL_VAR env var; declaring environment_variables = [] must override it to empty rather
+// than inherit it. Omitting the attribute entirely (control, step 2 of a separate run is
+// covered elsewhere) would instead inherit TMPL_VAR.
+func TestAccWorkflowUsingTemplate_ExplicitEmptySuppressesTemplateDefault(t *testing.T) {
+	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-emptysuppress") + ":1"
+	wfGrpName := "tf-provider-wf-template-emptysuppress-wfgrp"
+	id := "tf-provider-wf-template-emptysuppress"
+
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
+		t.Errorf("failed to create workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(wfGrpName)
+	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
+
+	// environment_variables = [] explicitly suppresses the template's TMPL_VAR default.
+	suppressConfig := `
+  terraform_config = {
+    terraform_version = "1.5.0"
+  }
+
+  environment_variables = []
+`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, suppressConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Explicit [] wins over the template default → zero env vars.
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "environment_variables.#", "0"),
+				),
+			},
+			{
+				// Explicit empty must round-trip stably (not re-inherit the template default).
+				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, suppressConfig),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
 func TestAccWorkflowUsingTemplate_WithEnvironmentVariables(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-envvars") + ":1"
 	wfGrpName := "tf-provider-wf-template-envvars-wfgrp"
