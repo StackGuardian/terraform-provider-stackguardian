@@ -456,6 +456,14 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 							boolplanmodifier.UseStateForUnknown(),
 						},
 					},
+					"wf_step_template_revision_id": schema.StringAttribute{
+						MarkdownDescription: constants.TerraformWfStepTemplateRevisionId,
+						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
+					},
 				},
 			},
 			"deployment_platform_config": schema.ListNestedAttribute{

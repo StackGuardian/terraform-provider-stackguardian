@@ -628,6 +628,161 @@ func TestAccWorkflowUsingTemplate_WithDescription(t *testing.T) {
 	})
 }
 
+// setupTemplateWithWfStepRevision creates a template whose revision :1 carries
+// TerraformConfig.wfStepTemplateRevisionId (pointing at stepRev), so a workflow built from it
+// inherits the value when the user does not declare it. Registers cleanup.
+func setupTemplateWithWfStepRevision(t *testing.T, name, stepRev string) string {
+	t.Helper()
+	client := getClient()
+	revisionID := fmt.Sprintf("%s:1", name)
+	sck := workflowtemplates.WorkflowTemplateSourceConfigKindTerraform
+	is409 := func(err error) bool {
+		var apiErr *core.APIError
+		return errors.As(err, &apiErr) && apiErr.StatusCode == 409
+	}
+	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(context.TODO(), org, false,
+		&workflowtemplates.CreateWorkflowTemplateRequest{
+			Id: &name, TemplateName: name, SourceConfigKind: &sck,
+			TemplateType: sgsdkgo.TemplateTypeEnum("IAC"), IsPublic: sgsdkgo.IsPublicEnumZero.Ptr(),
+			OwnerOrg: fmt.Sprintf("/orgs/%s", org),
+		})
+	if err != nil && !is409(err) {
+		t.Fatalf("create tpl: %s", err)
+	}
+	tfVer := "1.5.0"
+	_, err = client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(context.TODO(), org, name,
+		&workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
+			Alias: "v1", SourceConfigKind: &sck, IsPublic: sgsdkgo.IsPublicEnumZero.Ptr(),
+			OwnerOrg: fmt.Sprintf("/orgs/%s", org),
+			TerraformConfig: &sgsdkgo.TerraformConfig{
+				TerraformVersion:         &tfVer,
+				WfStepTemplateRevisionId: &stepRev,
+			},
+		})
+	if err != nil && !is409(err) {
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
+		t.Fatalf("create rev: %s", err)
+	}
+	if _, err := client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, revisionID,
+		&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne)}); err != nil {
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
+		t.Fatalf("publish rev: %s", err)
+	}
+	if _, err := client.WorkflowTemplates.UpdateWorkflowTemplate(context.TODO(), org, name,
+		&workflowtemplates.UpdateWorkflowTemplateRequest{IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne)}); err != nil {
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
+		t.Fatalf("publish tpl: %s", err)
+	}
+	t.Cleanup(func() {
+		eff := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
+		msg := "cleanup"
+		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, revisionID,
+			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
+				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{EffectiveDate: &eff, Message: &msg})})
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
+	})
+	return fmt.Sprintf("/%s/%s:1", org, name)
+}
+
+// TestAccWorkflowUsingTemplate_WfStepRevisionInheritedFromTemplate verifies the
+// Optional+Computed behavior: when the TEMPLATE carries wfStepTemplateRevisionId and the user
+// does NOT declare it, the workflow INHERITS it (proving the Computed + merge path), and the
+// value round-trips with no diff.
+func TestAccWorkflowUsingTemplate_WfStepRevisionInheritedFromTemplate(t *testing.T) {
+	stepRev := setupWorkflowStepTemplate(t, "tf-provider-wf-steprev-inh") // "/<org>/<name>:1"
+	templateID := setupTemplateWithWfStepRevision(t, "tf-provider-wf-tmpl-steprev-inh", stepRev)
+	wfGrpName := "tf-provider-wf-template-steprev-inh-wfgrp"
+	id := "tf-provider-wf-template-steprev-inh"
+
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
+		t.Errorf("failed to create workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(wfGrpName)
+	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
+
+	// User declares only terraform_version; wf_step_template_revision_id is inherited.
+	config := `
+  terraform_config = {
+    terraform_version = "1.5.0"
+  }
+`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config),
+				Check: resource.TestCheckResourceAttr(
+					"stackguardian_workflow_from_template.test", "terraform_config.wf_step_template_revision_id", stepRev),
+			},
+			{
+				// Inherited value round-trips with no diff.
+				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccWorkflowUsingTemplate_WithWfStepTemplateRevisionId verifies the user-settable
+// terraform_config.wf_step_template_revision_id round-trips: set it, confirm it's stored and
+// read back unchanged (PlanOnly no-op), then update it to a different revision.
+func TestAccWorkflowUsingTemplate_WithWfStepTemplateRevisionId(t *testing.T) {
+	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-wfsteprev") + ":1"
+	step1 := setupWorkflowStepTemplate(t, "tf-provider-wf-steprev-1") // "/<org>/<name>:1"
+	step2 := setupWorkflowStepTemplate(t, "tf-provider-wf-steprev-2")
+	wfGrpName := "tf-provider-wf-template-wfsteprev-wfgrp"
+	id := "tf-provider-wf-template-wfsteprev"
+
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
+		t.Errorf("failed to create workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(wfGrpName)
+	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
+
+	config := func(stepRev string) string {
+		return fmt.Sprintf(`
+  terraform_config = {
+    terraform_version            = "1.5.0"
+    wf_step_template_revision_id = %q
+  }
+`, stepRev)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config(step1)),
+				Check: resource.TestCheckResourceAttr(
+					"stackguardian_workflow_from_template.test", "terraform_config.wf_step_template_revision_id", step1),
+			},
+			{
+				// Round-trips with no diff.
+				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config(step1)),
+				PlanOnly: true,
+			},
+			{
+				// Update to a different step template revision.
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config(step2)),
+				Check: resource.TestCheckResourceAttr(
+					"stackguardian_workflow_from_template.test", "terraform_config.wf_step_template_revision_id", step2),
+			},
+		},
+	})
+}
+
 func TestAccWorkflowUsingTemplate_WithTerraformConfig(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-tfcfg") + ":1"
 	wfGrpName := "tf-provider-wf-template-tfcfg-wfgrp"

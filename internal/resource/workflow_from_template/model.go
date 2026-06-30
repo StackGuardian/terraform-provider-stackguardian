@@ -708,9 +708,10 @@ type TerraformConfigModel struct {
 	PostPlanHooks           types.List   `tfsdk:"post_plan_hooks"`
 	PreApplyHooks           types.List   `tfsdk:"pre_apply_hooks"`
 	PostApplyHooks          types.List   `tfsdk:"post_apply_hooks"`
-	RunPreInitHooksOnDrift  types.Bool   `tfsdk:"run_pre_init_hooks_on_drift"`
-	RunPrePlanHooksOnDrift  types.Bool   `tfsdk:"run_pre_plan_hooks_on_drift"`
-	RunPostPlanHooksOnDrift types.Bool   `tfsdk:"run_post_plan_hooks_on_drift"`
+	RunPreInitHooksOnDrift   types.Bool   `tfsdk:"run_pre_init_hooks_on_drift"`
+	RunPrePlanHooksOnDrift   types.Bool   `tfsdk:"run_pre_plan_hooks_on_drift"`
+	RunPostPlanHooksOnDrift  types.Bool   `tfsdk:"run_post_plan_hooks_on_drift"`
+	WfStepTemplateRevisionId types.String `tfsdk:"wf_step_template_revision_id"`
 }
 
 func (TerraformConfigModel) AttributeTypes() map[string]attr.Type {
@@ -733,9 +734,10 @@ func (TerraformConfigModel) AttributeTypes() map[string]attr.Type {
 		"post_plan_hooks":              types.ListType{ElemType: types.StringType},
 		"pre_apply_hooks":              types.ListType{ElemType: types.StringType},
 		"post_apply_hooks":             types.ListType{ElemType: types.StringType},
-		"run_pre_init_hooks_on_drift":  types.BoolType,
-		"run_pre_plan_hooks_on_drift":  types.BoolType,
-		"run_post_plan_hooks_on_drift": types.BoolType,
+		"run_pre_init_hooks_on_drift":    types.BoolType,
+		"run_pre_plan_hooks_on_drift":    types.BoolType,
+		"run_post_plan_hooks_on_drift":   types.BoolType,
+		"wf_step_template_revision_id":   types.StringType,
 	}
 }
 
@@ -780,6 +782,9 @@ func (m TerraformConfigModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Terrafor
 	}
 	if isNonEmpty(m.TerraformInitOptions) {
 		cfg.TerraformInitOptions = m.TerraformInitOptions.ValueStringPointer()
+	}
+	if isNonEmpty(m.WfStepTemplateRevisionId) {
+		cfg.WfStepTemplateRevisionId = m.WfStepTemplateRevisionId.ValueStringPointer()
 	}
 	if !m.RunPreInitHooksOnDrift.IsNull() && !m.RunPreInitHooksOnDrift.IsUnknown() {
 		cfg.RunPreInitHooksOnDrift = m.RunPreInitHooksOnDrift.ValueBoolPointer()
@@ -1956,9 +1961,10 @@ func convertTerraformConfigFromAPI(ctx context.Context, cfg *sgsdkgo.TerraformCo
 		TerraformPlanOptions:    flatteners.StringPtr(cfg.TerraformPlanOptions),
 		TerraformInitOptions:    flatteners.StringPtr(cfg.TerraformInitOptions),
 		Timeout:                 flatteners.Int64Ptr(cfg.Timeout),
-		RunPreInitHooksOnDrift:  flatteners.BoolPtr(cfg.RunPreInitHooksOnDrift),
-		RunPrePlanHooksOnDrift:  flatteners.BoolPtr(cfg.RunPrePlanHooksOnDrift),
-		RunPostPlanHooksOnDrift: flatteners.BoolPtr(cfg.RunPostPlanHooksOnDrift),
+		RunPreInitHooksOnDrift:   flatteners.BoolPtr(cfg.RunPreInitHooksOnDrift),
+		RunPrePlanHooksOnDrift:   flatteners.BoolPtr(cfg.RunPrePlanHooksOnDrift),
+		RunPostPlanHooksOnDrift:  flatteners.BoolPtr(cfg.RunPostPlanHooksOnDrift),
+		WfStepTemplateRevisionId: flatteners.StringPtr(cfg.WfStepTemplateRevisionId),
 	}
 
 	terraformBinPath, diags := convertMountPointsFromAPI(ctx, cfg.TerraformBinPath)
@@ -2044,6 +2050,7 @@ func convertTerraformConfigFromAPI(ctx context.Context, cfg *sgsdkgo.TerraformCo
 	// the API rejects (e.g. driftCron is allow_blank=False).
 	m.TerraformPlanOptions = knownEmptyStringIfNull(m.TerraformPlanOptions)
 	m.TerraformInitOptions = knownEmptyStringIfNull(m.TerraformInitOptions)
+	m.WfStepTemplateRevisionId = knownEmptyStringIfNull(m.WfStepTemplateRevisionId)
 	m.DriftCheck = knownFalseIfNull(m.DriftCheck)
 	// drift_cron is only meaningful when drift checking is on. If the API returns a cron
 	// alongside drift_check=false, drop it so state mirrors the resolved coupling (see
@@ -2311,6 +2318,9 @@ func mergeTerraformConfig(user, tpl *sgsdkgo.TerraformConfig) *sgsdkgo.Terraform
 	}
 	if user.TerraformInitOptions == nil {
 		user.TerraformInitOptions = tpl.TerraformInitOptions
+	}
+	if user.WfStepTemplateRevisionId == nil {
+		user.WfStepTemplateRevisionId = tpl.WfStepTemplateRevisionId
 	}
 	if user.Timeout == nil {
 		user.Timeout = tpl.Timeout
