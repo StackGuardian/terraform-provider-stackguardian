@@ -783,7 +783,13 @@ func (m TerraformConfigModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Terrafor
 	if isNonEmpty(m.TerraformInitOptions) {
 		cfg.TerraformInitOptions = m.TerraformInitOptions.ValueStringPointer()
 	}
-	if isNonEmpty(m.WfStepTemplateRevisionId) {
+	// Use isSet (not isNonEmpty): an explicit empty string is a meaningful value here —
+	// the API accepts "" (allow_blank=True) and normalizes it to None, falling back to the
+	// platform-default revision. Sending "" lets a user SUPPRESS an inherited template value
+	// and use the default; because the value is then non-nil on the wf, mergeTerraformConfig
+	// won't re-inherit it from the template. (Omitting the attribute entirely -> nil ->
+	// merge inherits the template value, which is the desired behavior when unset.)
+	if isSet(m.WfStepTemplateRevisionId) {
 		cfg.WfStepTemplateRevisionId = m.WfStepTemplateRevisionId.ValueStringPointer()
 	}
 	if !m.RunPreInitHooksOnDrift.IsNull() && !m.RunPreInitHooksOnDrift.IsUnknown() {

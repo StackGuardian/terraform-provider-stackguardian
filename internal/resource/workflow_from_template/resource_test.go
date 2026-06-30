@@ -709,6 +709,13 @@ func TestAccWorkflowUsingTemplate_WfStepRevisionInheritedFromTemplate(t *testing
     terraform_version = "1.5.0"
   }
 `
+	// Suppress the inherited value with an explicit "" -> API maps "" to None -> default.
+	suppressConfig := `
+  terraform_config = {
+    terraform_version            = "1.5.0"
+    wf_step_template_revision_id = ""
+  }
+`
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -718,6 +725,7 @@ func TestAccWorkflowUsingTemplate_WfStepRevisionInheritedFromTemplate(t *testing
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
+				// Case 2: present in template, user omits -> inherited.
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config),
 				Check: resource.TestCheckResourceAttr(
 					"stackguardian_workflow_from_template.test", "terraform_config.wf_step_template_revision_id", stepRev),
@@ -725,6 +733,18 @@ func TestAccWorkflowUsingTemplate_WfStepRevisionInheritedFromTemplate(t *testing
 			{
 				// Inherited value round-trips with no diff.
 				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config),
+				PlanOnly: true,
+			},
+			{
+				// Case 4: present in template but user sets "" to suppress -> API maps to
+				// None -> default; state holds "" (not the inherited template value).
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, suppressConfig),
+				Check: resource.TestCheckResourceAttr(
+					"stackguardian_workflow_from_template.test", "terraform_config.wf_step_template_revision_id", ""),
+			},
+			{
+				// Suppressed ("") round-trips with no diff.
+				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, suppressConfig),
 				PlanOnly: true,
 			},
 		},
