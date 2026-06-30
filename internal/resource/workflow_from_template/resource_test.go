@@ -14,6 +14,7 @@ import (
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	"github.com/StackGuardian/sg-sdk-go/core"
 	sgoption "github.com/StackGuardian/sg-sdk-go/option"
+	"github.com/StackGuardian/sg-sdk-go/workflowsteptemplate"
 	sgworkflows "github.com/StackGuardian/sg-sdk-go/workflows"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
@@ -273,6 +274,239 @@ resource "stackguardian_workflow_from_template" "test" {
   %s
 }
 `, wfGrpName, id, wfType, templateID, additionalConfig)
+}
+
+// setupWorkflowStepTemplate creates and publishes a WORKFLOW_STEP template (with a
+// DOCKER_IMAGE runtime source) and returns its fully-qualified revision id
+// ("/<org>/<name>:1") for use as wf_step_template_id. Registers cleanup.
+func setupWorkflowStepTemplate(t *testing.T, name string) string {
+	t.Helper()
+	client := getClient()
+
+	is409 := func(err error) bool {
+		var apiErr *core.APIError
+		return errors.As(err, &apiErr) && apiErr.StatusCode == 409
+	}
+
+	sourceKind := workflowsteptemplate.WorkflowStepTemplateSourceConfigKindDockerImageEnum
+	isPublic := workflowsteptemplate.IsPublicEnumOne
+	isPrivate := false
+	// createFirstRevision=true so :1 exists and is referenceable immediately.
+	_, err := client.WorkflowStepTemplate.CreateWorkflowStepTemplate(
+		context.TODO(), org, true,
+		&workflowsteptemplate.CreateWorkflowStepTemplate{
+			TemplateName:     name,
+			TemplateType:     workflowsteptemplate.TemplateTypeWorkflowStepEnum,
+			SourceConfigKind: sourceKind,
+			IsPublic:         &isPublic,
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			RuntimeSource: &workflowsteptemplate.WorkflowStepRuntimeSource{
+				SourceConfigDestKind: workflowsteptemplate.SourceConfigDestKindContainerRegistryEnum,
+				Config: &workflowsteptemplate.WorkflowStepRuntimeSourceConfig{
+					DockerImage: "ubuntu:latest",
+					IsPrivate:   &isPrivate,
+				},
+			},
+		},
+	)
+	if err != nil && !is409(err) {
+		t.Fatalf("setupWorkflowStepTemplate: create %q: %s", name, err)
+	}
+
+	t.Cleanup(func() {
+		client.WorkflowStepTemplate.DeleteWorkflowStepTemplate(context.TODO(), org, name)
+	})
+
+	return fmt.Sprintf("/%s/%s:1", org, name)
+}
+
+// setupCustomWorkflowTemplate creates and publishes a CUSTOM-source workflow template
+// (revision :1). Top-level wf_steps_config is only allowed for CUSTOM workflow types
+// (the API rejects it for TERRAFORM/OPENTOFU — see constants.WfStepsConfig), so this
+// fixture backs the top-level wf_steps_config test. Registers cleanup.
+func setupCustomWorkflowTemplate(t *testing.T, templateID string) string {
+	t.Helper()
+	client := getClient()
+	revisionID := fmt.Sprintf("%s:1", templateID)
+	sourceConfigKind := workflowtemplates.WorkflowTemplateSourceConfigKindCustom
+
+	is409 := func(err error) bool {
+		var apiErr *core.APIError
+		return errors.As(err, &apiErr) && apiErr.StatusCode == 409
+	}
+
+	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(
+		context.TODO(), org, false,
+		&workflowtemplates.CreateWorkflowTemplateRequest{
+			Id:               &templateID,
+			TemplateName:     templateID,
+			SourceConfigKind: &sourceConfigKind,
+			TemplateType:     sgsdkgo.TemplateTypeEnum("IAC"),
+			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+		},
+	)
+	if err != nil && !is409(err) {
+		t.Fatalf("setupCustomWorkflowTemplate: create template %q: %s", templateID, err)
+	}
+
+	alias := "v1"
+	_, err = client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(
+		context.TODO(), org, templateID,
+		&workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
+			Alias:            alias,
+			SourceConfigKind: &sourceConfigKind,
+			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+		},
+	)
+	if err != nil && !is409(err) {
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		t.Fatalf("setupCustomWorkflowTemplate: create revision for %q: %s", templateID, err)
+	}
+
+	_, err = client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
+		context.TODO(), org, revisionID,
+		&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
+			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
+		},
+	)
+	if err != nil {
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		t.Fatalf("setupCustomWorkflowTemplate: publish revision %q: %s", revisionID, err)
+	}
+
+	_, err = client.WorkflowTemplates.UpdateWorkflowTemplate(
+		context.TODO(), org, templateID,
+		&workflowtemplates.UpdateWorkflowTemplateRequest{
+			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
+		},
+	)
+	if err != nil {
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		t.Fatalf("setupCustomWorkflowTemplate: publish template %q: %s", templateID, err)
+	}
+
+	t.Cleanup(func() {
+		effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
+		message := "Test cleanup"
+		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
+			context.TODO(), org, revisionID,
+			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
+				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{
+					EffectiveDate: &effectiveDate,
+					Message:       &message,
+				}),
+			},
+		)
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+	})
+
+	return fmt.Sprintf("/%s/%s", org, templateID)
+}
+
+// TestAccWorkflowUsingTemplate_WithWfStepsConfig verifies a user-declared top-level
+// wf_steps_config (with the Required wf_step_template_id) on a CUSTOM workflow is created
+// and round-trips stably — the second PlanOnly step asserts no perpetual diff (gotcha #7)
+// and that wf_step_template_id is preserved. Top-level wf_steps_config is CUSTOM-only.
+func TestAccWorkflowUsingTemplate_WithWfStepsConfig(t *testing.T) {
+	templateID := setupCustomWorkflowTemplate(t, "tf-provider-wf-tmpl-wfsteps") + ":1"
+	stepTemplateID := setupWorkflowStepTemplate(t, "tf-provider-wf-step-tmpl")
+	wfGrpName := "tf-provider-wf-template-wfsteps-wfgrp"
+	id := "tf-provider-wf-template-wfsteps"
+
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
+		t.Errorf("failed to create workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(wfGrpName)
+	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
+
+	config := fmt.Sprintf(`
+  wf_steps_config = [
+    {
+      name                = "step-one"
+      wf_step_template_id = %q
+      approval            = true
+    }
+  ]
+`, stepTemplateID)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "CUSTOM", templateID, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "wf_steps_config.0.name", "step-one"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "wf_steps_config.0.wf_step_template_id", stepTemplateID),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "wf_steps_config.0.approval", "true"),
+				),
+			},
+			{
+				// Re-plan the same config: must be a no-op (no perpetual diff on the
+				// nested Optional fields / wf_step_template_id).
+				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "CUSTOM", templateID, config),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccWorkflowUsingTemplate_LifecycleWfStepsConfig verifies a user-declared lifecycle
+// hook list inside terraform_config (post_apply_wf_steps_config), which reuses the same
+// wfStepsConfig() nested object in a Computed context. Asserts create + round-trip
+// stability (PlanOnly no-op) for the Required wf_step_template_id in that context.
+func TestAccWorkflowUsingTemplate_LifecycleWfStepsConfig(t *testing.T) {
+	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-lifecyclesteps") + ":1"
+	stepTemplateID := setupWorkflowStepTemplate(t, "tf-provider-wf-lifecycle-step-tmpl")
+	wfGrpName := "tf-provider-wf-template-lifecyclesteps-wfgrp"
+	id := "tf-provider-wf-template-lifecyclesteps"
+
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
+		t.Errorf("failed to create workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(wfGrpName)
+	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
+
+	config := fmt.Sprintf(`
+  terraform_config = {
+    terraform_version = "1.5.0"
+    post_apply_wf_steps_config = [
+      {
+        name                = "post-apply-step"
+        wf_step_template_id = %q
+      }
+    ]
+  }
+`, stepTemplateID)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.post_apply_wf_steps_config.0.name", "post-apply-step"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.post_apply_wf_steps_config.0.wf_step_template_id", stepTemplateID),
+				),
+			},
+			{
+				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config),
+				PlanOnly: true,
+			},
+		},
+	})
 }
 
 func TestAccWorkflowUsingTemplate_Basic(t *testing.T) {
