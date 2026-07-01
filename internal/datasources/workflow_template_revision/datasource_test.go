@@ -157,13 +157,15 @@ func setupStepTemplate(t *testing.T, name string) string {
 	return fmt.Sprintf("/%s/%s:1", org, name)
 }
 
-// TestAccWorkflowTemplateRevisionDataSource verifies the data source Matthias asked for — a
-// data element to fetch a template revision's default values (for override/merge logic in
-// Terraform on upgrade). It reads a revision populated with the tricky fields and asserts they
-// flatten correctly. The deployment_platform_config assertions are the regression guard: that
-// attribute was declared as a single nested object while the model is a list, which errored at
-// runtime for any revision carrying a populated deployment_platform_config.
-func TestAccWorkflowTemplateRevisionDataSource(t *testing.T) {
+// TestAccWorkflowTemplateRevisionDataSource_Custom verifies the data source Matthias asked
+// for — a data element to fetch a template revision's default values (for override/merge logic
+// in Terraform on upgrade). It reads a CUSTOM-source revision populated with the tricky fields
+// (incl. top-level wf_steps_config, which is CUSTOM-only) and asserts they flatten correctly.
+// The deployment_platform_config assertions are the regression guard: that attribute was
+// declared as a single nested object while the model is a list, which errored at runtime for
+// any revision carrying a populated deployment_platform_config. The TERRAFORM-source path
+// (populated terraform_config) is covered by _Terraform below.
+func TestAccWorkflowTemplateRevisionDataSource_Custom(t *testing.T) {
 	stepTemplateID := setupStepTemplate(t, "tf-ds-wtr-step")
 	revisionID := setupPopulatedRevision(t, "tf-ds-wtr-tpl", stepTemplateID)
 
@@ -193,6 +195,127 @@ data "stackguardian_workflow_template_revision" "test" {
 					resource.TestCheckResourceAttr("data.stackguardian_workflow_template_revision.test", "deployment_platform_config.0.config.integration_id", "/integrations/akash-azure-oidc"),
 					resource.TestCheckResourceAttr("data.stackguardian_workflow_template_revision.test", "wf_steps_config.0.name", "step-one"),
 					resource.TestCheckResourceAttr("data.stackguardian_workflow_template_revision.test", "wf_steps_config.0.wf_step_template_id", stepTemplateID),
+				),
+			},
+		},
+	})
+}
+
+// setupTerraformRevision creates and publishes a TERRAFORM-source template revision with a
+// populated terraform_config (version + drift + managed state) and a git RuntimeSource — the
+// fields a TERRAFORM template carries but a CUSTOM one does not. Exercises the terraform_config
+// + runtime_source flatten path (the largest nested object) that the CUSTOM test never hits.
+// Returns the bare "<name>:1" revision id. Registers cleanup.
+func setupTerraformRevision(t *testing.T, name string) string {
+	t.Helper()
+	client := acctest.SGClient()
+	sck := workflowtemplates.WorkflowTemplateSourceConfigKindTerraform
+	is409 := func(err error) bool {
+		var apiErr *core.APIError
+		return errors.As(err, &apiErr) && apiErr.StatusCode == 409
+	}
+
+	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(context.TODO(), org, false,
+		&workflowtemplates.CreateWorkflowTemplateRequest{
+			Id: &name, TemplateName: name, SourceConfigKind: &sck,
+			TemplateType: sgsdkgo.TemplateTypeEnum("IAC"), IsPublic: sgsdkgo.IsPublicEnumZero.Ptr(),
+			OwnerOrg: fmt.Sprintf("/orgs/%s", org),
+		})
+	if err != nil && !is409(err) {
+		t.Fatalf("create tpl: %s", err)
+	}
+
+	tfVer := "TERRAFORM-1.5.7"
+	driftCron := "0 */6 * * ? *"
+	driftCheck := true
+	managed := true
+	envText := "var1"
+	_, err = client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(context.TODO(), org, name,
+		&workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
+			Alias: "v1", SourceConfigKind: &sck, IsPublic: sgsdkgo.IsPublicEnumZero.Ptr(),
+			OwnerOrg: fmt.Sprintf("/orgs/%s", org),
+			RunnerConstraints: &sgsdkgo.RunnerConstraints{
+				Type: sgsdkgo.RunnerConstraintsTypeEnumShared.Ptr(),
+			},
+			RuntimeSource: &workflowtemplates.RuntimeSource{
+				SourceConfigDestKind: workflowtemplates.SourceConfigDestKindEnumGitOther.Ptr(),
+				Config: &workflowtemplates.RuntimeSourceConfig{
+					Repo: "https://github.com/AkashS0510/terraform-null-cat",
+				},
+			},
+			TerraformConfig: &sgsdkgo.TerraformConfig{
+				TerraformVersion:      &tfVer,
+				DriftCheck:            &driftCheck,
+				DriftCron:             &driftCron,
+				ManagedTerraformState: &managed,
+			},
+			EnvironmentVariables: []sgsdkgo.EnvVars{
+				{
+					Kind:   sgsdkgo.EnvVarsKindEnumPlainText,
+					Config: &sgsdkgo.EnvVarConfig{VarName: "test1", TextValue: &envText},
+				},
+			},
+		})
+	if err != nil && !is409(err) {
+		t.Fatalf("create rev: %s", err)
+	}
+
+	revisionID := name + ":1"
+	if _, err := client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, revisionID,
+		&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne)}); err != nil {
+		t.Fatalf("publish rev: %s", err)
+	}
+	if _, err := client.WorkflowTemplates.UpdateWorkflowTemplate(context.TODO(), org, name,
+		&workflowtemplates.UpdateWorkflowTemplateRequest{IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne)}); err != nil {
+		t.Fatalf("publish tpl: %s", err)
+	}
+
+	t.Cleanup(func() {
+		eff := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
+		msg := "cleanup"
+		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, revisionID,
+			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
+				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{EffectiveDate: &eff, Message: &msg})})
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
+	})
+
+	return revisionID
+}
+
+// TestAccWorkflowTemplateRevisionDataSource_Terraform reads a TERRAFORM-source revision through
+// the data source and asserts the terraform_config + runtime_source fields flatten with no type
+// mismatch. This is the other half of the two-kind coverage: CUSTOM templates carry top-level
+// wf_steps_config, TERRAFORM templates carry a populated terraform_config (the largest nested
+// object). NOTE: terraform_version comes back engine-prefixed ("TERRAFORM-1.5.7") — the data
+// source and its underlying resource do NOT strip the prefix (only workflow_from_template does),
+// so a user referencing this into a workflow_from_template must account for that.
+func TestAccWorkflowTemplateRevisionDataSource_Terraform(t *testing.T) {
+	revisionID := setupTerraformRevision(t, "tf-ds-wtr-tftpl")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+data "stackguardian_workflow_template_revision" "tf" {
+  id = %q
+}
+`, revisionID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackguardian_workflow_template_revision.tf", "source_config_kind", "TERRAFORM"),
+					// terraform_config (the largest nested object) flattens fully.
+					resource.TestCheckResourceAttr("data.stackguardian_workflow_template_revision.tf", "terraform_config.terraform_version", "TERRAFORM-1.5.7"),
+					resource.TestCheckResourceAttr("data.stackguardian_workflow_template_revision.tf", "terraform_config.drift_check", "true"),
+					resource.TestCheckResourceAttr("data.stackguardian_workflow_template_revision.tf", "terraform_config.drift_cron", "0 */6 * * ? *"),
+					resource.TestCheckResourceAttr("data.stackguardian_workflow_template_revision.tf", "terraform_config.managed_terraform_state", "true"),
+					resource.TestCheckResourceAttr("data.stackguardian_workflow_template_revision.tf", "environment_variables.0.config.var_name", "test1"),
+					resource.TestCheckResourceAttr("data.stackguardian_workflow_template_revision.tf", "runner_constraints.type", "shared"),
+					resource.TestCheckResourceAttr("data.stackguardian_workflow_template_revision.tf", "runtime_source.source_config_dest_kind", "GIT_OTHER"),
 				),
 			},
 		},
