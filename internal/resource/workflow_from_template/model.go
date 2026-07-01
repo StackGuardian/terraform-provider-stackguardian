@@ -1182,10 +1182,12 @@ func ConvertWorkflowUsingTemplateFromAPI(ctx context.Context, response *sgworkfl
 	}
 	model.ContextTags = knownEmptyMapIfNull(contextTags)
 
-	envVars := make([]sgsdkgo.EnvVars, len(wf.EnvironmentVariables))
-	for i, ptr := range wf.EnvironmentVariables {
+	// Skip nil pointers (rather than preserve slice length with zero-value entries): a
+	// zero-value EnvVars has Config == nil, which the flattener dereferences -> panic.
+	envVars := make([]sgsdkgo.EnvVars, 0, len(wf.EnvironmentVariables))
+	for _, ptr := range wf.EnvironmentVariables {
 		if ptr != nil {
-			envVars[i] = *ptr
+			envVars = append(envVars, *ptr)
 		}
 	}
 	envVarsList, diags := convertEnvironmentVariablesFromAPI(ctx, envVars)
@@ -1211,10 +1213,12 @@ func ConvertWorkflowUsingTemplateFromAPI(ctx context.Context, response *sgworkfl
 	}
 	model.RunnerConstraints = runnerConstraints
 
-	wfStepsConfig := make([]sgsdkgo.WfStepsConfig, len(wf.WfStepsConfig))
-	for i, ptr := range wf.WfStepsConfig {
+	// Skip nil pointers (rather than preserve slice length with zero-value entries): a
+	// zero-value WfStepsConfig would flatten into a spurious empty step in state.
+	wfStepsConfig := make([]sgsdkgo.WfStepsConfig, 0, len(wf.WfStepsConfig))
+	for _, ptr := range wf.WfStepsConfig {
 		if ptr != nil {
-			wfStepsConfig[i] = *ptr
+			wfStepsConfig = append(wfStepsConfig, *ptr)
 		}
 	}
 	wfStepsConfigList, diags := convertWfStepsConfigListFromAPI(ctx, wfStepsConfig)
@@ -1559,10 +1563,14 @@ func convertEnvironmentVariablesFromAPI(ctx context.Context, envVars []sgsdkgo.E
 
 	models := make([]EnvironmentVariableModel, len(envVars))
 	for i, envVar := range envVars {
-		configModel := EnvironmentVariableConfigModel{
-			VarName:   flatteners.String(envVar.Config.VarName),
-			SecretId:  flatteners.StringPtr(envVar.Config.SecretId),
-			TextValue: flatteners.StringPtr(envVar.Config.TextValue),
+		// Guard against a nil Config (pointer field) — dereferencing it would panic.
+		var configModel EnvironmentVariableConfigModel
+		if envVar.Config != nil {
+			configModel = EnvironmentVariableConfigModel{
+				VarName:   flatteners.String(envVar.Config.VarName),
+				SecretId:  flatteners.StringPtr(envVar.Config.SecretId),
+				TextValue: flatteners.StringPtr(envVar.Config.TextValue),
+			}
 		}
 		configObj, diags := types.ObjectValueFrom(ctx, EnvironmentVariableConfigModel{}.AttributeTypes(), configModel)
 		if diags.HasError() {
