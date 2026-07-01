@@ -19,9 +19,10 @@ import (
 
 // setupTwoRevIdenticalDerivedFields builds a template whose rev1 and rev2 are IDENTICAL in every
 // template-derived scalar/simple field we now compute concretely at plan time (description,
-// tags, approvers, context_tags, env vars, approvals, cpu/mem), differing ONLY in
-// terraform_version (so the upgrade is a real revision change). Used to verify that a
-// dependent referencing those unchanged fields is NOT spuriously updated on upgrade.
+// tags, approvers, context_tags, env vars, approvals, cpu/mem, runner_constraints, mini_steps,
+// and a POPULATED deployment_platform_config), differing ONLY in terraform_version (so the
+// upgrade is a real revision change). Used to verify that a dependent referencing those
+// unchanged fields is NOT spuriously updated on upgrade.
 func setupTwoRevIdenticalDerivedFields(t *testing.T, name string) (rev1, rev2 string) {
 	t.Helper()
 	client := getClient()
@@ -42,6 +43,8 @@ func setupTwoRevIdenticalDerivedFields(t *testing.T, name string) (rev1, rev2 st
 
 	desc := "stable-desc"
 	envText := "stable-var-value"
+	// Pre-existing integration in the QA org (no cloud-connector fixture needed).
+	dpcIntegration := "akash-azure-oidc"
 	napprovals := 1
 	cpu := 512
 	mem := 1024
@@ -62,6 +65,19 @@ func setupTwoRevIdenticalDerivedFields(t *testing.T, name string) (rev1, rev2 st
 				TerraformConfig:           &sgsdkgo.TerraformConfig{TerraformVersion: &tfver},
 				RunnerConstraints: &sgsdkgo.RunnerConstraints{
 					Type: sgsdkgo.RunnerConstraintsTypeEnumShared.Ptr(),
+				},
+				// Populated deployment_platform_config exercises the concrete-flatten path
+				// (kind + config.integration_id + config.profile_name). Uses a pre-existing
+				// QA integration so no cloud-connector fixture is needed. Proves the populated
+				// DPC round-trips (plan == apply) and keeps a dependent NoOp on upgrade.
+				DeploymentPlatformConfig: []*workflowtemplaterevisions.DeploymentPlatformConfig{
+					{
+						Kind: workflowtemplaterevisions.DeploymentPlatformConfigKindEnumAzureOidc,
+						Config: workflowtemplaterevisions.DeploymentPlatformConfigConfig{
+							IntegrationId: fmt.Sprintf("/integrations/%s", dpcIntegration),
+							ProfileName:   &dpcIntegration,
+						},
+					},
 				},
 				Ministeps: &workflowtemplaterevisions.Ministeps{
 					Notifications: &workflowtemplaterevisions.MinistepsNotifications{
@@ -177,6 +193,11 @@ resource "stackguardian_workflow_from_template" "test2" {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test1", "environment_variables.0.config.var_name", "STABLE_VAR"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test2", "environment_variables.0.config.var_name", "STABLE_VAR"),
+					// Populated deployment_platform_config round-trips on both the inheriting
+					// workflow (test1) and the dependent that references it (test2).
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test1", "deployment_platform_config.0.kind", "AZURE_OIDC"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test1", "deployment_platform_config.0.config.integration_id", "/integrations/akash-azure-oidc"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test2", "deployment_platform_config.0.kind", "AZURE_OIDC"),
 				),
 			},
 			{
