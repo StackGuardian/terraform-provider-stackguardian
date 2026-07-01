@@ -2625,9 +2625,9 @@ func reResolveOnRevisionChange(ctx context.Context, plan *WorkflowUsingTemplateR
 		plan.DeploymentPlatformConfig = knownEmptyListIfNull(dpc, deployElem)
 	}
 
-	// (2) Unknown — list/object fields the API may reorder/normalize/augment; predicting
-	// them at plan time could mismatch apply ("inconsistent result after apply"). Migrate
-	// to concrete values only with a per-field round-trip test.
+	// (2) Unknown — the ONE remaining field the API augments in a way that can't be predicted
+	// from tpl; predicting it at plan time mismatches apply ("inconsistent result after
+	// apply"). Migrate to a concrete value only with a per-field round-trip test.
 	//
 	// user_schedules stays unknown: the workflow does NOT necessarily persist the template's
 	// schedules — a template that carries a UserSchedule can resolve to a workflow with NONE
@@ -2636,13 +2636,20 @@ func reResolveOnRevisionChange(ctx context.Context, plan *WorkflowUsingTemplateR
 	if config.UserSchedules.IsNull() {
 		plan.UserSchedules = types.ListUnknown(schedElem)
 	}
-	// wf_steps_config stays unknown: top-level steps are CUSTOM-only and the API may augment
-	// step fields (e.g. wf_step_input_data defaults). No acceptance test exercises a
-	// TEMPLATE-derived wf_steps_config (existing tests have the user DECLARE it, so the
-	// concrete-value branch never runs there), so the template-derived round-trip is
-	// unproven — leave unknown rather than risk "inconsistent result after apply".
+	// wf_steps_config: tpl.WfStepsConfig is []sgsdkgo.WfStepsConfig — exactly the type the Read
+	// flattener consumes. The merge assigns tpl.WfStepsConfig into wf.WfStepsConfig verbatim
+	// (only the API reorders JSON keys inside wf_step_input_data.data, which is order-independent
+	// after unmarshal), then Read flattens it through convertWfStepsConfigListFromAPI +
+	// knownEmptyListIfNull — so flattening tpl.WfStepsConfig through the same pair yields the
+	// concrete plan value, matching apply byte-for-byte. Verified with a live round-trip test on
+	// a CUSTOM template carrying steps (WfStepsConfigRevisionUpgradeNoSpuriousDependentUpdate).
 	if config.WfStepsConfig.IsNull() {
-		plan.WfStepsConfig = types.ListUnknown(wfStepElem)
+		wfSteps, d := convertWfStepsConfigListFromAPI(ctx, tpl.WfStepsConfig)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.WfStepsConfig = knownEmptyListIfNull(wfSteps, wfStepElem)
 	}
 	if config.MiniSteps.IsNull() {
 		ms, d := convertMinistepsFromAPI(ctx, tpl.Ministeps)
