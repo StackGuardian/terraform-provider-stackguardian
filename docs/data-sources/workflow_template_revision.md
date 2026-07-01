@@ -12,6 +12,19 @@ description: |-
 ⚠️ This feature is currently in BETA.
 </div>
 
+Use this data source to read a workflow template revision — for example to fetch a revision's
+default values and reference them into a `stackguardian_workflow_from_template` resource
+(override/merge logic when upgrading to a new revision).
+
+## Notes
+
+- `id` must be the bare `<template-name>:<revision>` form (e.g. `my-template:1`), **not** the
+  full `/<org>/<template-name>:<revision>` path. The full path returns an `Unauthorized` error.
+- `terraform_config.terraform_version` is returned in the bare form (e.g. `1.5.7`). The engine
+  prefix the API stores (`TERRAFORM-` / `OPENTOFU-`) is stripped so the value can be referenced
+  directly into a `stackguardian_workflow_from_template` resource without producing a perpetual
+  diff.
+
 ## Example Usage
 
 ```terraform
@@ -40,7 +53,7 @@ output "workflow_template_revision_output" {
 - `alias` (String)
 - `approvers` (List of String)
 - `context_tags` (Map of String) Context tags for the revision.
-- `deployment_platform_config` (Attributes) (see [below for nested schema](#nestedatt--deployment_platform_config))
+- `deployment_platform_config` (Attributes List) (see [below for nested schema](#nestedatt--deployment_platform_config))
 - `deprecation` (Attributes) (see [below for nested schema](#nestedatt--deprecation))
 - `description` (String) A brief description of the workflow template revision. Must be less than 256 characters.
 - `environment_variables` (Attributes List) (see [below for nested schema](#nestedatt--environment_variables))
@@ -111,6 +124,7 @@ Read-Only:
 Read-Only:
 
 - `encoded_data` (String)
+- `name` (String)
 - `type` (String)
 - `ui_schema_data` (String)
 
@@ -143,7 +157,7 @@ Read-Only:
 - `errored` (Attributes List) (see [below for nested schema](#nestedatt--mini_steps--notifications--email--errored))
 
 <a id="nestedatt--mini_steps--notifications--email--approval_required"></a>
-### Nested Schema for `mini_steps.notifications.email.approval_required`
+### Nested Schema for `mini_steps.notifications.email.errored`
 
 Read-Only:
 
@@ -151,7 +165,7 @@ Read-Only:
 
 
 <a id="nestedatt--mini_steps--notifications--email--cancelled"></a>
-### Nested Schema for `mini_steps.notifications.email.cancelled`
+### Nested Schema for `mini_steps.notifications.email.errored`
 
 Read-Only:
 
@@ -159,7 +173,7 @@ Read-Only:
 
 
 <a id="nestedatt--mini_steps--notifications--email--completed"></a>
-### Nested Schema for `mini_steps.notifications.email.completed`
+### Nested Schema for `mini_steps.notifications.email.errored`
 
 Read-Only:
 
@@ -167,7 +181,7 @@ Read-Only:
 
 
 <a id="nestedatt--mini_steps--notifications--email--drift_detected"></a>
-### Nested Schema for `mini_steps.notifications.email.drift_detected`
+### Nested Schema for `mini_steps.notifications.email.errored`
 
 Read-Only:
 
@@ -361,7 +375,7 @@ Read-Only:
 - `kind` (String)
 
 <a id="nestedatt--terraform_config--post_apply_wf_steps_config--environment_variables--config"></a>
-### Nested Schema for `terraform_config.post_apply_wf_steps_config.environment_variables.config`
+### Nested Schema for `terraform_config.post_apply_wf_steps_config.environment_variables.kind`
 
 Read-Only:
 
@@ -414,7 +428,7 @@ Read-Only:
 - `kind` (String)
 
 <a id="nestedatt--terraform_config--post_plan_wf_steps_config--environment_variables--config"></a>
-### Nested Schema for `terraform_config.post_plan_wf_steps_config.environment_variables.config`
+### Nested Schema for `terraform_config.post_plan_wf_steps_config.environment_variables.kind`
 
 Read-Only:
 
@@ -467,7 +481,7 @@ Read-Only:
 - `kind` (String)
 
 <a id="nestedatt--terraform_config--pre_apply_wf_steps_config--environment_variables--config"></a>
-### Nested Schema for `terraform_config.pre_apply_wf_steps_config.environment_variables.config`
+### Nested Schema for `terraform_config.pre_apply_wf_steps_config.environment_variables.kind`
 
 Read-Only:
 
@@ -520,7 +534,7 @@ Read-Only:
 - `kind` (String)
 
 <a id="nestedatt--terraform_config--pre_plan_wf_steps_config--environment_variables--config"></a>
-### Nested Schema for `terraform_config.pre_plan_wf_steps_config.environment_variables.config`
+### Nested Schema for `terraform_config.pre_plan_wf_steps_config.environment_variables.kind`
 
 Read-Only:
 

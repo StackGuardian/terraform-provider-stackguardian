@@ -12,6 +12,19 @@ description: |-
 ⚠️ This feature is currently in BETA.
 </div>
 
+Use this data source to read a workflow template revision — for example to fetch a revision's
+default values and reference them into a `stackguardian_workflow_from_template` resource
+(override/merge logic when upgrading to a new revision).
+
+## Notes
+
+- `id` must be the bare `<template-name>:<revision>` form (e.g. `my-template:1`), **not** the
+  full `/<org>/<template-name>:<revision>` path. The full path returns an `Unauthorized` error.
+- `terraform_config.terraform_version` is returned in the bare form (e.g. `1.5.7`). The engine
+  prefix the API stores (`TERRAFORM-` / `OPENTOFU-`) is stripped so the value can be referenced
+  directly into a `stackguardian_workflow_from_template` resource without producing a perpetual
+  diff.
+
 ## Example Usage
 
 {{tffile "docs-examples/datasources/workflow_template_revision/datasource.tf"}}

@@ -3,11 +3,15 @@ package workflowtemplaterevision
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	workflowtemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template_revision"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
 
 var (
@@ -85,5 +89,55 @@ func (d *workflowTemplateRevisionDataSource) Read(ctx context.Context, req datas
 		model.TemplateId = config.TemplateId
 	}
 
+	// Strip the engine prefix the API prepends to terraform_config.terraform_version
+	// ("TERRAFORM-1.5.7" -> "1.5.7") so this data source's output matches the bare form the
+	// stackguardian_workflow_from_template resource uses. Without this, referencing
+	// data.<...>.terraform_config.terraform_version into a workflow_from_template produces a
+	// perpetual diff. Data-source-only (read-only) — the workflow_template_revision resource
+	// intentionally keeps the prefixed value it round-trips against.
+	resp.Diagnostics.Append(normalizeTerraformVersion(ctx, model)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+}
+
+// normalizeTerraformVersion strips the engine prefix ("TERRAFORM-"/"OPENTOFU-") the API
+// prepends to terraform_config.terraform_version, rewriting the nested terraform_config object
+// on the model in place. No-op when terraform_config or the version is null/unknown/unprefixed.
+func normalizeTerraformVersion(ctx context.Context, model *workflowtemplaterevision.WorkflowTemplateRevisionResourceModel) diag.Diagnostics {
+	if model.TerraformConfig.IsNull() || model.TerraformConfig.IsUnknown() {
+		return nil
+	}
+
+	var tfc workflowtemplaterevision.TerraformConfigModel
+	diags := model.TerraformConfig.As(ctx, &tfc, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return diags
+	}
+
+	if tfc.TerraformVersion.IsNull() || tfc.TerraformVersion.IsUnknown() {
+		return nil
+	}
+
+	s := tfc.TerraformVersion.ValueString()
+	stripped := s
+	for _, prefix := range []string{"TERRAFORM-", "OPENTOFU-"} {
+		if strings.HasPrefix(strings.ToUpper(s), prefix) {
+			stripped = s[len(prefix):]
+			break
+		}
+	}
+	if stripped == s {
+		return nil // nothing to strip
+	}
+	tfc.TerraformVersion = types.StringValue(stripped)
+
+	obj, diags := types.ObjectValueFrom(ctx, workflowtemplaterevision.TerraformConfigModel{}.AttributeTypes(), tfc)
+	if diags.HasError() {
+		return diags
+	}
+	model.TerraformConfig = obj
+	return nil
 }

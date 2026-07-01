@@ -287,9 +287,9 @@ func setupTerraformRevision(t *testing.T, name string) string {
 // the data source and asserts the terraform_config + runtime_source fields flatten with no type
 // mismatch. This is the other half of the two-kind coverage: CUSTOM templates carry top-level
 // wf_steps_config, TERRAFORM templates carry a populated terraform_config (the largest nested
-// object). NOTE: terraform_version comes back engine-prefixed ("TERRAFORM-1.5.7") — the data
-// source and its underlying resource do NOT strip the prefix (only workflow_from_template does),
-// so a user referencing this into a workflow_from_template must account for that.
+// object). terraform_version is normalized to the BARE form ("1.5.7", not "TERRAFORM-1.5.7")
+// by the data source Read so it feeds workflow_from_template without a perpetual diff — this
+// assertion is the guard for that normalization.
 func TestAccWorkflowTemplateRevisionDataSource_Terraform(t *testing.T) {
 	revisionID := setupTerraformRevision(t, "tf-ds-wtr-tftpl")
 
@@ -308,8 +308,9 @@ data "stackguardian_workflow_template_revision" "tf" {
 `, revisionID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackguardian_workflow_template_revision.tf", "source_config_kind", "TERRAFORM"),
-					// terraform_config (the largest nested object) flattens fully.
-					resource.TestCheckResourceAttr("data.stackguardian_workflow_template_revision.tf", "terraform_config.terraform_version", "TERRAFORM-1.5.7"),
+					// terraform_config (the largest nested object) flattens fully. terraform_version
+					// is normalized to the bare form (prefix stripped) by the data source Read.
+					resource.TestCheckResourceAttr("data.stackguardian_workflow_template_revision.tf", "terraform_config.terraform_version", "1.5.7"),
 					resource.TestCheckResourceAttr("data.stackguardian_workflow_template_revision.tf", "terraform_config.drift_check", "true"),
 					resource.TestCheckResourceAttr("data.stackguardian_workflow_template_revision.tf", "terraform_config.drift_cron", "0 */6 * * ? *"),
 					resource.TestCheckResourceAttr("data.stackguardian_workflow_template_revision.tf", "terraform_config.managed_terraform_state", "true"),
