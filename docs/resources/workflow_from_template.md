@@ -26,24 +26,12 @@ Resolution is **declarative and per-attribute**:
 - **Declare an attribute** → **your value is used** and the template default for that attribute
   is ignored.
 
-For lists (e.g. `environment_variables`, `wf_steps_config`) this is a **replace**, not a
-merge-by-element: if you declare the list, the template's list is not appended — you own the
-whole list. Declare nothing to take the template's list verbatim.
-
-To pull specific default values out of a revision (e.g. to reference or partially reuse them),
-use the [`stackguardian_workflow_template_revision`](../data-sources/workflow_template_revision.md)
-data source and reference the attributes you want.
-
 ## Upgrading a template revision
 
 To upgrade, change the revision in `iac_vcs_config.iac_template_id` (e.g. `:1` → `:2`):
 
 - Attributes you **declared** are **preserved** (your values still win over the new revision).
 - Attributes you **left unset** adopt the **new revision's** defaults.
-
-Because unset attributes are recomputed from the new revision at plan time, the plan shows the
-concrete new values (not `(known after apply)`), so resources that *reference* this workflow are
-not spuriously updated when the resolved value is unchanged.
 
 ## Limitations
 
@@ -52,12 +40,6 @@ not spuriously updated when the resolved value is unchanged.
   **exclude** a value that the template sets (rather than inherit it), declare an **empty value**
   of the right type: `""` for a string, `[]` for a list, `{}` for a map/object. Setting the
   attribute to `null` inherits the template default instead of clearing it.
-- **`workflow_group_id` is immutable.** The platform has no move operation, so changing it forces
-  the workflow to be **recreated** (destroy + create).
-- **List attributes replace, they do not merge.** See *Inheriting values* above.
-- **New template/workflow attributes require provider support.** The merge/resolution logic lives
-  in the provider, so a newly introduced template or workflow attribute is not inherited or
-  resolved until the provider is updated to handle it.
 
 ## Example Usage
 
@@ -90,7 +72,7 @@ resource "stackguardian_workflow_from_template" "example" {
 - `id` (String) ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>
 - `vcs_config` (Attributes) VCS configuration for the workflow. (see [below for nested schema](#nestedatt--vcs_config))
 - `wf_type` (String) Type of workflow. Options: <span style="background-color: #eff0f0; color: #e53835;">TERRAFORM</span>, <span style="background-color: #eff0f0; color: #e53835;">OPENTOFU</span>, <span style="background-color: #eff0f0; color: #e53835;">ANSIBLE_PLAYBOOK</span>, <span style="background-color: #eff0f0; color: #e53835;">HELM</span>, <span style="background-color: #eff0f0; color: #e53835;">KUBECTL</span>, <span style="background-color: #eff0f0; color: #e53835;">CLOUDFORMATION</span>, <span style="background-color: #eff0f0; color: #e53835;">CUSTOM</span>
-- `workflow_group_id` (String) ID of the parent workflow group.
+- `workflow_group_id` (String) ID of the parent workflow group. Immutable — changing this forces the workflow to be recreated (destroy and create), as the platform has no operation to move a workflow between groups.
 
 ### Optional
 

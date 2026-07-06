@@ -13,17 +13,7 @@ description: |-
 </div>
 
 Use this data source to read a workflow template revision — for example to fetch a revision's
-default values and reference them into a `stackguardian_workflow_from_template` resource
-(override/merge logic when upgrading to a new revision).
-
-## Notes
-
-- `id` must be the bare `<template-name>:<revision>` form (e.g. `my-template:1`), **not** the
-  full `/<org>/<template-name>:<revision>` path. The full path returns an `Unauthorized` error.
-- `terraform_config.terraform_version` is returned in the bare form (e.g. `1.5.7`). The engine
-  prefix the API stores (`TERRAFORM-` / `OPENTOFU-`) is stripped so the value can be referenced
-  directly into a `stackguardian_workflow_from_template` resource without producing a perpetual
-  diff.
+default values and reference them into a `stackguardian_workflow_from_template` resource.
 
 ## Example Usage
 
@@ -42,7 +32,7 @@ output "workflow_template_revision_output" {
 
 ### Required
 
-- `id` (String) ID of the resource. Should be used to import the resource.
+- `id` (String) Revision ID in the bare `<template-name>:<revision>` form (e.g. `my-template:1`). Do not use the full `/<org>/<template-name>:<revision>` path — it returns an `Unauthorized` error.
 
 ### Optional
 
@@ -349,7 +339,7 @@ Read-Only:
 - `terraform_bin_path` (Attributes List) (see [below for nested schema](#nestedatt--terraform_config--terraform_bin_path))
 - `terraform_init_options` (String)
 - `terraform_plan_options` (String)
-- `terraform_version` (String)
+- `terraform_version` (String) Terraform/OpenTofu version, returned in the bare form (e.g. `1.5.7`). The engine prefix the API stores (`TERRAFORM-` / `OPENTOFU-`) is stripped so the value can be referenced directly into a `stackguardian_workflow_from_template` resource without producing a perpetual diff.
 - `timeout` (Number)
 
 <a id="nestedatt--terraform_config--post_apply_wf_steps_config"></a>

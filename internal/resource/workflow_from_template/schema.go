@@ -41,7 +41,7 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 				},
 			},
 			"workflow_group_id": schema.StringAttribute{
-				MarkdownDescription: constants.WorkflowWorkflowGroupId,
+				MarkdownDescription: constants.WorkflowFromTemplateWorkflowGroupId,
 				Required:            true,
 				Validators:          nonEmptyString,
 				// A workflow lives inside a workflow group; the platform has no move
