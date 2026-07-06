@@ -2,10 +2,12 @@ package workflowfromtemplate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
+	"github.com/StackGuardian/sg-sdk-go/core"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -63,6 +65,21 @@ func (r *workflowUsingTemplateResource) ImportState(ctx context.Context, req res
 	workflowGroupId := strings.Join(parts[0:len(parts)-1], "/")
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("workflow_group_id"), workflowGroupId)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), workflowId)...)
+}
+
+// isWorkflowNotFound reports whether err from ReadWorkflow indicates the workflow no longer
+// exists (deleted out-of-band). The API returns either a 404, or a 400 whose body is
+// {"msg":"Workflow does not exist"}; for the 400 case the message is required so a genuine
+// bad request is not mistaken for a missing resource.
+func isWorkflowNotFound(err error) bool {
+	var apiErr *core.APIError
+	if !errors.As(err, &apiErr) {
+		return false
+	}
+	if apiErr.StatusCode == 404 {
+		return true
+	}
+	return apiErr.StatusCode == 400 && strings.Contains(err.Error(), "does not exist")
 }
 
 // ModifyPlan handles a template revision change. When iac_template_id changes, the
@@ -242,6 +259,16 @@ func (r *workflowUsingTemplateResource) Read(ctx context.Context, req resource.R
 
 	readResp, err := r.client.Workflows.ReadWorkflow(ctx, r.org_name, state.Id.ValueString(), state.WorkflowGroupId.ValueString())
 	if err != nil {
+		// If the workflow was deleted out-of-band (e.g. from the platform UI), drop it
+		// from state so Terraform plans a recreate instead of erroring forever. The API
+		// signals a missing workflow with a 404, or a 400 whose body is
+		// {"msg":"Workflow does not exist"} — match both, but for 400 require the message
+		// so a genuine bad request is not silently swallowed.
+		if isWorkflowNotFound(err) {
+			tflog.Warn(ctx, "workflow_from_template not found; removing from state")
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError("Error reading workflow_from_template", "Error in reading workflow_from_template API call: "+err.Error())
 		return
 	}
@@ -328,6 +355,12 @@ func (r *workflowUsingTemplateResource) Delete(ctx context.Context, req resource
 
 	_, err := r.client.Workflows.DeleteWorkflow(ctx, r.org_name, state.Id.ValueString(), state.WorkflowGroupId.ValueString())
 	if err != nil {
+		// Already gone (deleted out-of-band) — treat as a successful delete so the resource
+		// is removed from state instead of erroring.
+		if isWorkflowNotFound(err) {
+			tflog.Warn(ctx, "workflow_from_template already deleted; treating delete as success")
+			return
+		}
 		resp.Diagnostics.AddError("Error deleting workflow_from_template", "Error in deleting workflow_from_template API call: "+err.Error())
 		return
 	}

@@ -44,6 +44,11 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 				MarkdownDescription: constants.WorkflowWorkflowGroupId,
 				Required:            true,
 				Validators:          nonEmptyString,
+				// A workflow lives inside a workflow group; the platform has no move
+				// operation, so changing the group must recreate the workflow.
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow_from_template"),
