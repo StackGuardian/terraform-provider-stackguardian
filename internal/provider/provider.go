@@ -34,6 +34,7 @@ import (
 	runnergroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/runner_group"
 	stacktemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/stack_template"
 	stacktemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/stack_template_revision"
+	workflowfromtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_from_template"
 	workflowgit "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_git"
 	workflowgroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_group"
 	workflowsteptemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_step_template"
@@ -257,5 +258,6 @@ func (p *stackguardianProvider) Resources(_ context.Context) []func() resource.R
 		stacktemplate.NewResource,
 		stacktemplaterevision.NewResource,
 		workflowgit.NewResource,
+		workflowfromtemplate.NewResource,
 	}
 }

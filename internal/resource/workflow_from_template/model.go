@@ -1,0 +1,2744 @@
+package workflowfromtemplate
+
+import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"strings"
+
+	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
+	"github.com/StackGuardian/sg-sdk-go/core"
+	sgworkflows "github.com/StackGuardian/sg-sdk-go/workflows"
+	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/expanders"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/flatteners"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+)
+
+// optionalIfPresent wraps a converted SDK value in a *core.Optional when the user PROVIDED
+// the corresponding Terraform attribute (non-null/known, including an explicit empty),
+// returning nil when the attribute is absent. A nil result is omitted from the request JSON
+// (so mergeTemplateDefaults can inherit the template default); a wrapped empty serializes as
+// [] / {} so the user can suppress a template default. See the SDK Workflow struct, whose
+// list/map fields are *core.Optional to carry the omit-vs-explicit-empty distinction.
+func optionalIfPresent[T any](attr attr.Value, value T) *core.Optional[T] {
+	if absent(attr) {
+		return nil
+	}
+	return sgsdkgo.Optional(value)
+}
+
+// ---------------------------------------------------------------------------
+// Top-level model
+// ---------------------------------------------------------------------------
+
+type WorkflowUsingTemplateResourceModel struct {
+	Id                        types.String `tfsdk:"id"`
+	WorkflowGroupId           types.String `tfsdk:"workflow_group_id"`
+	ResourceName              types.String `tfsdk:"resource_name"`
+	Description               types.String `tfsdk:"description"`
+	WfType                    types.String `tfsdk:"wf_type"`
+	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
+	MiniSteps                 types.Object `tfsdk:"mini_steps"`
+	RunnerConstraints         types.Object `tfsdk:"runner_constraints"`
+	Tags                      types.List   `tfsdk:"tags"`
+	UserSchedules             types.List   `tfsdk:"user_schedules"`
+	ContextTags               types.Map    `tfsdk:"context_tags"`
+	Approvers                 types.List   `tfsdk:"approvers"`
+	NumberOfApprovalsRequired types.Int64  `tfsdk:"number_of_approvals_required"`
+	UserJobCpu                types.Int64  `tfsdk:"user_job_cpu"`
+	UserJobMemory             types.Int64  `tfsdk:"user_job_memory"`
+	VcsConfig                 types.Object `tfsdk:"vcs_config"`
+	TerraformConfig           types.Object `tfsdk:"terraform_config"`
+	DeploymentPlatformConfig  types.List   `tfsdk:"deployment_platform_config"`
+	WfStepsConfig             types.List   `tfsdk:"wf_steps_config"`
+}
+
+func (m WorkflowUsingTemplateResourceModel) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"id":                           types.StringType,
+		"workflow_group_id":            types.StringType,
+		"resource_name":                types.StringType,
+		"description":                  types.StringType,
+		"wf_type":                      types.StringType,
+		"environment_variables":        types.ListType{ElemType: types.ObjectType{AttrTypes: EnvironmentVariableModel{}.AttributeTypes()}},
+		"mini_steps":                   types.ObjectType{AttrTypes: MinistepsModel{}.AttributeTypes()},
+		"runner_constraints":           types.ObjectType{AttrTypes: RunnerConstraintsModel{}.AttributeTypes()},
+		"tags":                         types.ListType{ElemType: types.StringType},
+		"user_schedules":               types.ListType{ElemType: types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()}},
+		"context_tags":                 types.MapType{ElemType: types.StringType},
+		"approvers":                    types.ListType{ElemType: types.StringType},
+		"number_of_approvals_required": types.Int64Type,
+		"user_job_cpu":                 types.Int64Type,
+		"user_job_memory":              types.Int64Type,
+		"vcs_config":                   types.ObjectType{AttrTypes: VcsConfigModel{}.AttributeTypes(ctx)},
+		"terraform_config":             types.ObjectType{AttrTypes: TerraformConfigModel{}.AttributeTypes()},
+		"deployment_platform_config":   types.ListType{ElemType: types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()}},
+		"wf_steps_config":              types.ListType{ElemType: types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}},
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Environment variables
+// ---------------------------------------------------------------------------
+
+type EnvironmentVariableConfigModel struct {
+	VarName   types.String `tfsdk:"var_name"`
+	SecretId  types.String `tfsdk:"secret_id"`
+	TextValue types.String `tfsdk:"text_value"`
+}
+
+func (EnvironmentVariableConfigModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"var_name":   types.StringType,
+		"secret_id":  types.StringType,
+		"text_value": types.StringType,
+	}
+}
+
+func (m EnvironmentVariableConfigModel) ToAPIModel() *sgsdkgo.EnvVarConfig {
+	return &sgsdkgo.EnvVarConfig{
+		VarName:   m.VarName.ValueString(),
+		SecretId:  m.SecretId.ValueStringPointer(),
+		TextValue: m.TextValue.ValueStringPointer(),
+	}
+}
+
+type EnvironmentVariableModel struct {
+	Config types.Object `tfsdk:"config"`
+	Kind   types.String `tfsdk:"kind"`
+}
+
+func (EnvironmentVariableModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"config": types.ObjectType{AttrTypes: EnvironmentVariableConfigModel{}.AttributeTypes()},
+		"kind":   types.StringType,
+	}
+}
+
+func (m EnvironmentVariableModel) ToAPIModel(ctx context.Context) (sgsdkgo.EnvVars, diag.Diagnostics) {
+	var configModel EnvironmentVariableConfigModel
+	diags := m.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
+		UnhandledNullAsEmpty:    true,
+		UnhandledUnknownAsEmpty: true,
+	})
+	if diags.HasError() {
+		return sgsdkgo.EnvVars{}, diags
+	}
+	return sgsdkgo.EnvVars{
+		Kind:   sgsdkgo.EnvVarsKindEnum(m.Kind.ValueString()),
+		Config: configModel.ToAPIModel(),
+	}, nil
+}
+
+// ---------------------------------------------------------------------------
+// MiniSteps
+// ---------------------------------------------------------------------------
+
+type MinistepsNotificationRecipientsModel struct {
+	Recipients types.List `tfsdk:"recipients"`
+}
+
+func (MinistepsNotificationRecipientsModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"recipients": types.ListType{ElemType: types.StringType},
+	}
+}
+
+func (m MinistepsNotificationRecipientsModel) ToAPIModel(ctx context.Context) (workflowtemplaterevisions.MinistepsNotificationRecepients, diag.Diagnostics) {
+	recipients, diags := expanders.StringList(ctx, m.Recipients)
+	if diags.HasError() {
+		return workflowtemplaterevisions.MinistepsNotificationRecepients{}, diags
+	}
+	return workflowtemplaterevisions.MinistepsNotificationRecepients{Recipients: recipients}, nil
+}
+
+type MinistepsWebhooksModel struct {
+	WebhookName   types.String `tfsdk:"webhook_name"`
+	WebhookUrl    types.String `tfsdk:"webhook_url"`
+	WebhookSecret types.String `tfsdk:"webhook_secret"`
+}
+
+func (MinistepsWebhooksModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"webhook_name":   types.StringType,
+		"webhook_url":    types.StringType,
+		"webhook_secret": types.StringType,
+	}
+}
+
+func (m MinistepsWebhooksModel) ToAPIModel() workflowtemplaterevisions.MinistepsWebhooksSchema {
+	return workflowtemplaterevisions.MinistepsWebhooksSchema{
+		WebhookName:   m.WebhookName.ValueString(),
+		WebhookUrl:    m.WebhookUrl.ValueString(),
+		WebhookSecret: m.WebhookSecret.ValueStringPointer(),
+	}
+}
+
+type MinistepsWorkflowChainingModel struct {
+	WorkflowGroupId    types.String `tfsdk:"workflow_group_id"`
+	StackId            types.String `tfsdk:"stack_id"`
+	StackRunPayload    types.String `tfsdk:"stack_run_payload"`
+	WorkflowId         types.String `tfsdk:"workflow_id"`
+	WorkflowRunPayload types.String `tfsdk:"workflow_run_payload"`
+}
+
+func (MinistepsWorkflowChainingModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"workflow_group_id":    types.StringType,
+		"stack_id":             types.StringType,
+		"stack_run_payload":    types.StringType,
+		"workflow_id":          types.StringType,
+		"workflow_run_payload": types.StringType,
+	}
+}
+
+func (m MinistepsWorkflowChainingModel) ToAPIModel() workflowtemplaterevisions.MinistepsWfChainingSchema {
+	entry := workflowtemplaterevisions.MinistepsWfChainingSchema{
+		WorkflowGroupId: m.WorkflowGroupId.ValueString(),
+		StackId:         m.StackId.ValueStringPointer(),
+		WorkflowId:      m.WorkflowId.ValueStringPointer(),
+	}
+	if s := m.WorkflowRunPayload.ValueString(); s != "" {
+		entry.WorkflowRunPayload = expanders.JSONStringToInterface(s)
+	}
+	if s := m.StackRunPayload.ValueString(); s != "" {
+		entry.StackRunPayload = expanders.JSONStringToInterface(s)
+	}
+	return entry
+}
+
+type MinistepsEmailModel struct {
+	ApprovalRequired types.List `tfsdk:"approval_required"`
+	Cancelled        types.List `tfsdk:"cancelled"`
+	Completed        types.List `tfsdk:"completed"`
+	DriftDetected    types.List `tfsdk:"drift_detected"`
+	Errored          types.List `tfsdk:"errored"`
+}
+
+func (MinistepsEmailModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"approval_required": types.ListType{ElemType: types.ObjectType{AttrTypes: MinistepsNotificationRecipientsModel{}.AttributeTypes()}},
+		"cancelled":         types.ListType{ElemType: types.ObjectType{AttrTypes: MinistepsNotificationRecipientsModel{}.AttributeTypes()}},
+		"completed":         types.ListType{ElemType: types.ObjectType{AttrTypes: MinistepsNotificationRecipientsModel{}.AttributeTypes()}},
+		"drift_detected":    types.ListType{ElemType: types.ObjectType{AttrTypes: MinistepsNotificationRecipientsModel{}.AttributeTypes()}},
+		"errored":           types.ListType{ElemType: types.ObjectType{AttrTypes: MinistepsNotificationRecipientsModel{}.AttributeTypes()}},
+	}
+}
+
+func (m MinistepsEmailModel) ToAPIModel(ctx context.Context) (*workflowtemplaterevisions.MinistepsNotificationsEmail, diag.Diagnostics) {
+	email := &workflowtemplaterevisions.MinistepsNotificationsEmail{}
+	var diags diag.Diagnostics
+
+	email.APPROVAL_REQUIRED, diags = convertNotificationRecipientsToAPI(ctx, m.ApprovalRequired)
+	if diags.HasError() {
+		return nil, diags
+	}
+	email.CANCELLED, diags = convertNotificationRecipientsToAPI(ctx, m.Cancelled)
+	if diags.HasError() {
+		return nil, diags
+	}
+	email.COMPLETED, diags = convertNotificationRecipientsToAPI(ctx, m.Completed)
+	if diags.HasError() {
+		return nil, diags
+	}
+	email.DRIFT_DETECTED, diags = convertNotificationRecipientsToAPI(ctx, m.DriftDetected)
+	if diags.HasError() {
+		return nil, diags
+	}
+	email.ERRORED, diags = convertNotificationRecipientsToAPI(ctx, m.Errored)
+	if diags.HasError() {
+		return nil, diags
+	}
+	return email, nil
+}
+
+type MinistepsNotificationsModel struct {
+	Email types.Object `tfsdk:"email"`
+}
+
+func (MinistepsNotificationsModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"email": types.ObjectType{AttrTypes: MinistepsEmailModel{}.AttributeTypes()},
+	}
+}
+
+func (m MinistepsNotificationsModel) ToAPIModel(ctx context.Context) (*workflowtemplaterevisions.MinistepsNotifications, diag.Diagnostics) {
+	notif := &workflowtemplaterevisions.MinistepsNotifications{}
+	if m.Email.IsNull() || m.Email.IsUnknown() {
+		return notif, nil
+	}
+	var emailModel MinistepsEmailModel
+	diags := m.Email.As(ctx, &emailModel, basetypes.ObjectAsOptions{
+		UnhandledNullAsEmpty:    true,
+		UnhandledUnknownAsEmpty: true,
+	})
+	if diags.HasError() {
+		return nil, diags
+	}
+	email, diags := emailModel.ToAPIModel(ctx)
+	if diags.HasError() {
+		return nil, diags
+	}
+	notif.Email = email
+	return notif, nil
+}
+
+type MinistepsWebhooksContainerModel struct {
+	ApprovalRequired types.List `tfsdk:"approval_required"`
+	Cancelled        types.List `tfsdk:"cancelled"`
+	Completed        types.List `tfsdk:"completed"`
+	DriftDetected    types.List `tfsdk:"drift_detected"`
+	Errored          types.List `tfsdk:"errored"`
+}
+
+func (MinistepsWebhooksContainerModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"approval_required": types.ListType{ElemType: types.ObjectType{AttrTypes: MinistepsWebhooksModel{}.AttributeTypes()}},
+		"cancelled":         types.ListType{ElemType: types.ObjectType{AttrTypes: MinistepsWebhooksModel{}.AttributeTypes()}},
+		"completed":         types.ListType{ElemType: types.ObjectType{AttrTypes: MinistepsWebhooksModel{}.AttributeTypes()}},
+		"drift_detected":    types.ListType{ElemType: types.ObjectType{AttrTypes: MinistepsWebhooksModel{}.AttributeTypes()}},
+		"errored":           types.ListType{ElemType: types.ObjectType{AttrTypes: MinistepsWebhooksModel{}.AttributeTypes()}},
+	}
+}
+
+func (m MinistepsWebhooksContainerModel) ToAPIModel(ctx context.Context) (*workflowtemplaterevisions.MinistepsWebhooks, diag.Diagnostics) {
+	webhooks := &workflowtemplaterevisions.MinistepsWebhooks{}
+	var diags diag.Diagnostics
+
+	webhooks.APPROVAL_REQUIRED, diags = convertWebhookToAPI(ctx, m.ApprovalRequired)
+	if diags.HasError() {
+		return nil, diags
+	}
+	webhooks.CANCELLED, diags = convertWebhookToAPI(ctx, m.Cancelled)
+	if diags.HasError() {
+		return nil, diags
+	}
+	webhooks.COMPLETED, diags = convertWebhookToAPI(ctx, m.Completed)
+	if diags.HasError() {
+		return nil, diags
+	}
+	webhooks.DRIFT_DETECTED, diags = convertWebhookToAPI(ctx, m.DriftDetected)
+	if diags.HasError() {
+		return nil, diags
+	}
+	webhooks.ERRORED, diags = convertWebhookToAPI(ctx, m.Errored)
+	if diags.HasError() {
+		return nil, diags
+	}
+	return webhooks, nil
+}
+
+type MinistepsWfChainingContainerModel struct {
+	Completed types.List `tfsdk:"completed"`
+	Errored   types.List `tfsdk:"errored"`
+}
+
+func (MinistepsWfChainingContainerModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"completed": types.ListType{ElemType: types.ObjectType{AttrTypes: MinistepsWorkflowChainingModel{}.AttributeTypes()}},
+		"errored":   types.ListType{ElemType: types.ObjectType{AttrTypes: MinistepsWorkflowChainingModel{}.AttributeTypes()}},
+	}
+}
+
+func (m MinistepsWfChainingContainerModel) ToAPIModel(ctx context.Context) (*workflowtemplaterevisions.MinistepsWorkflowChaining, diag.Diagnostics) {
+	chaining := &workflowtemplaterevisions.MinistepsWorkflowChaining{}
+	var diags diag.Diagnostics
+
+	chaining.COMPLETED, diags = convertWorkflowChainingToAPI(ctx, m.Completed)
+	if diags.HasError() {
+		return nil, diags
+	}
+	chaining.ERRORED, diags = convertWorkflowChainingToAPI(ctx, m.Errored)
+	if diags.HasError() {
+		return nil, diags
+	}
+	return chaining, nil
+}
+
+type MinistepsModel struct {
+	Notifications types.Object `tfsdk:"notifications"`
+	Webhooks      types.Object `tfsdk:"webhooks"`
+	WfChaining    types.Object `tfsdk:"wf_chaining"`
+}
+
+func (MinistepsModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"notifications": types.ObjectType{AttrTypes: MinistepsNotificationsModel{}.AttributeTypes()},
+		"webhooks":      types.ObjectType{AttrTypes: MinistepsWebhooksContainerModel{}.AttributeTypes()},
+		"wf_chaining":   types.ObjectType{AttrTypes: MinistepsWfChainingContainerModel{}.AttributeTypes()},
+	}
+}
+
+func (m MinistepsModel) ToAPIModel(ctx context.Context) (*workflowtemplaterevisions.Ministeps, diag.Diagnostics) {
+	miniSteps := &workflowtemplaterevisions.Ministeps{}
+
+	if !m.Notifications.IsNull() && !m.Notifications.IsUnknown() {
+		var notifModel MinistepsNotificationsModel
+		diags := m.Notifications.As(ctx, &notifModel, basetypes.ObjectAsOptions{
+			UnhandledNullAsEmpty:    true,
+			UnhandledUnknownAsEmpty: true,
+		})
+		if diags.HasError() {
+			return nil, diags
+		}
+		notif, diags := notifModel.ToAPIModel(ctx)
+		if diags.HasError() {
+			return nil, diags
+		}
+		miniSteps.Notifications = notif
+	}
+
+	if !m.Webhooks.IsNull() && !m.Webhooks.IsUnknown() {
+		var webhooksModel MinistepsWebhooksContainerModel
+		diags := m.Webhooks.As(ctx, &webhooksModel, basetypes.ObjectAsOptions{
+			UnhandledNullAsEmpty:    true,
+			UnhandledUnknownAsEmpty: true,
+		})
+		if diags.HasError() {
+			return nil, diags
+		}
+		webhooks, diags := webhooksModel.ToAPIModel(ctx)
+		if diags.HasError() {
+			return nil, diags
+		}
+		miniSteps.Webhooks = webhooks
+	}
+
+	if !m.WfChaining.IsNull() && !m.WfChaining.IsUnknown() {
+		var chainingModel MinistepsWfChainingContainerModel
+		diags := m.WfChaining.As(ctx, &chainingModel, basetypes.ObjectAsOptions{
+			UnhandledNullAsEmpty:    true,
+			UnhandledUnknownAsEmpty: true,
+		})
+		if diags.HasError() {
+			return nil, diags
+		}
+		chaining, diags := chainingModel.ToAPIModel(ctx)
+		if diags.HasError() {
+			return nil, diags
+		}
+		miniSteps.WfChaining = chaining
+	}
+
+	return miniSteps, nil
+}
+
+// ---------------------------------------------------------------------------
+// RunnerConstraints
+// ---------------------------------------------------------------------------
+
+type RunnerConstraintsModel struct {
+	Type  types.String `tfsdk:"type"`
+	Names types.List   `tfsdk:"names"`
+}
+
+func (RunnerConstraintsModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"type":  types.StringType,
+		"names": types.ListType{ElemType: types.StringType},
+	}
+}
+
+func (m RunnerConstraintsModel) ToAPIModel(ctx context.Context) (*sgsdkgo.RunnerConstraints, diag.Diagnostics) {
+	names, diags := expanders.StringList(ctx, m.Names)
+	if diags.HasError() {
+		return nil, diags
+	}
+	return &sgsdkgo.RunnerConstraints{
+		Type:  (*sgsdkgo.RunnerConstraintsTypeEnum)(m.Type.ValueStringPointer()),
+		Names: names,
+	}, nil
+}
+
+// ---------------------------------------------------------------------------
+// UserSchedules
+// ---------------------------------------------------------------------------
+
+type UserSchedulesModel struct {
+	Cron  types.String `tfsdk:"cron"`
+	State types.String `tfsdk:"state"`
+	Desc  types.String `tfsdk:"desc"`
+	Name  types.String `tfsdk:"name"`
+}
+
+func (UserSchedulesModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"cron":  types.StringType,
+		"state": types.StringType,
+		"desc":  types.StringType,
+		"name":  types.StringType,
+	}
+}
+
+func (m UserSchedulesModel) ToAPIModel() sgsdkgo.UserSchedules {
+	state := sgsdkgo.StateEnum(m.State.ValueString())
+	return sgsdkgo.UserSchedules{
+		Cron:  m.Cron.ValueStringPointer(),
+		State: &state,
+		Desc:  m.Desc.ValueStringPointer(),
+		Name:  m.Name.ValueStringPointer(),
+	}
+}
+
+// ---------------------------------------------------------------------------
+// VcsConfig — key difference: IacVcsConfigModel uses IacTemplateId, not CustomSource
+// ---------------------------------------------------------------------------
+
+type IacInputDataModel struct {
+	SchemaId   types.String `tfsdk:"schema_id"`
+	SchemaType types.String `tfsdk:"schema_type"`
+	Data       types.String `tfsdk:"data"`
+}
+
+func (IacInputDataModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"schema_id":   types.StringType,
+		"schema_type": types.StringType,
+		"data":        types.StringType,
+	}
+}
+
+func (m IacInputDataModel) ToAPIModel() *sgsdkgo.IacInputData {
+	out := &sgsdkgo.IacInputData{}
+	if isNonEmpty(m.SchemaId) {
+		out.SchemaId = m.SchemaId.ValueStringPointer()
+	}
+	if isNonEmpty(m.SchemaType) {
+		out.SchemaType = sgsdkgo.IacInputDataSchemaTypeEnum(m.SchemaType.ValueString()).Ptr()
+	}
+	if isNonEmpty(m.Data) {
+		out.Data = expanders.JSONStringToMap(m.Data.ValueString())
+	}
+	return out
+}
+
+type IacVcsConfigModel struct {
+	IacTemplateId types.String `tfsdk:"iac_template_id"`
+}
+
+func (IacVcsConfigModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"iac_template_id": types.StringType,
+	}
+}
+
+func (m IacVcsConfigModel) ToAPIModel() *sgsdkgo.IacvcsConfig {
+	return &sgsdkgo.IacvcsConfig{
+		UseMarketplaceTemplate: expanders.BoolPtr(true),
+		IacTemplateId:          m.IacTemplateId.ValueStringPointer(),
+	}
+}
+
+type VcsConfigModel struct {
+	IacVcsConfig types.Object `tfsdk:"iac_vcs_config"`
+	IacInputData types.Object `tfsdk:"iac_input_data"`
+}
+
+func (m VcsConfigModel) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"iac_vcs_config": types.ObjectType{AttrTypes: IacVcsConfigModel{}.AttributeTypes()},
+		"iac_input_data": types.ObjectType{AttrTypes: IacInputDataModel{}.AttributeTypes()},
+	}
+}
+
+func (m VcsConfigModel) ToAPIModel(ctx context.Context) (*sgsdkgo.VcsConfig, diag.Diagnostics) {
+	result := &sgsdkgo.VcsConfig{}
+
+	if !m.IacVcsConfig.IsNull() && !m.IacVcsConfig.IsUnknown() {
+		var iacVcsModel IacVcsConfigModel
+		diags := m.IacVcsConfig.As(ctx, &iacVcsModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, diags
+		}
+		result.IacVcsConfig = iacVcsModel.ToAPIModel()
+	}
+
+	if !m.IacInputData.IsNull() && !m.IacInputData.IsUnknown() {
+		var iacInputDataModel IacInputDataModel
+		diags := m.IacInputData.As(ctx, &iacInputDataModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, diags
+		}
+		// Only emit iacInputData if it carries content. A known-empty object (all-null
+		// fields, stored for plan stability when the template/API supplied none) must not
+		// be sent — the API requires schemaType+data when iacInputData is present.
+		if isNonEmpty(iacInputDataModel.SchemaType) || isNonEmpty(iacInputDataModel.Data) {
+			result.IacInputData = iacInputDataModel.ToAPIModel()
+		}
+	}
+
+	return result, nil
+}
+
+// ---------------------------------------------------------------------------
+// TerraformConfig
+// ---------------------------------------------------------------------------
+
+type MountPointModel struct {
+	Source   types.String `tfsdk:"source"`
+	Target   types.String `tfsdk:"target"`
+	ReadOnly types.Bool   `tfsdk:"read_only"`
+}
+
+func (MountPointModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"source":    types.StringType,
+		"target":    types.StringType,
+		"read_only": types.BoolType,
+	}
+}
+
+func (m MountPointModel) ToAPIModel() sgsdkgo.MountPoint {
+	return sgsdkgo.MountPoint{
+		Source:   m.Source.ValueString(),
+		Target:   m.Target.ValueString(),
+		ReadOnly: m.ReadOnly.ValueBoolPointer(),
+	}
+}
+
+type WfStepInputDataModel struct {
+	SchemaType types.String `tfsdk:"schema_type"`
+	Data       types.String `tfsdk:"data"`
+}
+
+func (WfStepInputDataModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"schema_type": types.StringType,
+		"data":        types.StringType,
+	}
+}
+
+func (m WfStepInputDataModel) ToAPIModel() (*sgsdkgo.WfStepInputData, diag.Diagnostics) {
+	schemaType, err := sgsdkgo.NewWfStepInputDataSchemaTypeEnumFromString(m.SchemaType.ValueString())
+	if err != nil {
+		return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid schema type", "The provided schema type is invalid: "+err.Error())}
+	}
+	return &sgsdkgo.WfStepInputData{
+		SchemaType: schemaType.Ptr(),
+		Data:       expanders.JSONStringToMap(m.Data.ValueString()),
+	}, nil
+}
+
+type WfStepsConfigModel struct {
+	Name                 types.String `tfsdk:"name"`
+	EnvironmentVariables types.List   `tfsdk:"environment_variables"`
+	Approval             types.Bool   `tfsdk:"approval"`
+	Timeout              types.Int64  `tfsdk:"timeout"`
+	CmdOverride          types.String `tfsdk:"cmd_override"`
+	MountPoints          types.List   `tfsdk:"mount_points"`
+	WfStepTemplateId     types.String `tfsdk:"wf_step_template_id"`
+	WfStepInputData      types.Object `tfsdk:"wf_step_input_data"`
+}
+
+func (WfStepsConfigModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"name":                  types.StringType,
+		"environment_variables": types.ListType{ElemType: types.ObjectType{AttrTypes: EnvironmentVariableModel{}.AttributeTypes()}},
+		"approval":              types.BoolType,
+		"timeout":               types.Int64Type,
+		"cmd_override":          types.StringType,
+		"mount_points":          types.ListType{ElemType: types.ObjectType{AttrTypes: MountPointModel{}.AttributeTypes()}},
+		"wf_step_template_id":   types.StringType,
+		"wf_step_input_data":    types.ObjectType{AttrTypes: WfStepInputDataModel{}.AttributeTypes()},
+	}
+}
+
+func (m WfStepsConfigModel) ToAPIModel(ctx context.Context) (*sgsdkgo.WfStepsConfig, diag.Diagnostics) {
+	result := sgsdkgo.WfStepsConfig{
+		Name:             m.Name.ValueStringPointer(),
+		Approval:         m.Approval.ValueBoolPointer(),
+		Timeout:          expanders.IntPtr(m.Timeout.ValueInt64Pointer()),
+		WfStepTemplateId: m.WfStepTemplateId.ValueStringPointer(),
+		CmdOverride:      m.CmdOverride.ValueStringPointer(),
+	}
+
+	envVars, diags := convertEnvironmentVariablesToAPI(ctx, m.EnvironmentVariables)
+	if diags.HasError() {
+		return nil, diags
+	}
+	result.EnvironmentVariables = envVars
+
+	if !m.MountPoints.IsNull() && !m.MountPoints.IsUnknown() {
+		mountPoints, diags := convertMountPointsToAPI(ctx, m.MountPoints)
+		if diags.HasError() {
+			return nil, diags
+		}
+		result.MountPoints = mountPoints
+	}
+
+	if !m.WfStepInputData.IsNull() && !m.WfStepInputData.IsUnknown() {
+		var inputDataModel WfStepInputDataModel
+		diags := m.WfStepInputData.As(ctx, &inputDataModel, basetypes.ObjectAsOptions{
+			UnhandledNullAsEmpty:    true,
+			UnhandledUnknownAsEmpty: true,
+		})
+		if diags.HasError() {
+			return nil, diags
+		}
+		wfStepInputData, diags := inputDataModel.ToAPIModel()
+		if diags.HasError() {
+			return nil, diags
+		}
+		result.WfStepInputData = wfStepInputData
+	}
+
+	return &result, nil
+}
+
+type TerraformConfigModel struct {
+	TerraformVersion        types.String `tfsdk:"terraform_version"`
+	DriftCheck              types.Bool   `tfsdk:"drift_check"`
+	DriftCron               types.String `tfsdk:"drift_cron"`
+	ManagedTerraformState   types.Bool   `tfsdk:"managed_terraform_state"`
+	ApprovalPreApply        types.Bool   `tfsdk:"approval_pre_apply"`
+	TerraformPlanOptions    types.String `tfsdk:"terraform_plan_options"`
+	TerraformInitOptions    types.String `tfsdk:"terraform_init_options"`
+	TerraformBinPath        types.List   `tfsdk:"terraform_bin_path"`
+	Timeout                 types.Int64  `tfsdk:"timeout"`
+	PostApplyWfStepsConfig  types.List   `tfsdk:"post_apply_wf_steps_config"`
+	PreApplyWfStepsConfig   types.List   `tfsdk:"pre_apply_wf_steps_config"`
+	PrePlanWfStepsConfig    types.List   `tfsdk:"pre_plan_wf_steps_config"`
+	PostPlanWfStepsConfig   types.List   `tfsdk:"post_plan_wf_steps_config"`
+	PreInitHooks            types.List   `tfsdk:"pre_init_hooks"`
+	PrePlanHooks            types.List   `tfsdk:"pre_plan_hooks"`
+	PostPlanHooks           types.List   `tfsdk:"post_plan_hooks"`
+	PreApplyHooks           types.List   `tfsdk:"pre_apply_hooks"`
+	PostApplyHooks          types.List   `tfsdk:"post_apply_hooks"`
+	RunPreInitHooksOnDrift   types.Bool   `tfsdk:"run_pre_init_hooks_on_drift"`
+	RunPrePlanHooksOnDrift   types.Bool   `tfsdk:"run_pre_plan_hooks_on_drift"`
+	RunPostPlanHooksOnDrift  types.Bool   `tfsdk:"run_post_plan_hooks_on_drift"`
+	WfStepTemplateRevisionId types.String `tfsdk:"wf_step_template_revision_id"`
+}
+
+func (TerraformConfigModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"terraform_version":            types.StringType,
+		"drift_check":                  types.BoolType,
+		"drift_cron":                   types.StringType,
+		"managed_terraform_state":      types.BoolType,
+		"approval_pre_apply":           types.BoolType,
+		"terraform_plan_options":       types.StringType,
+		"terraform_init_options":       types.StringType,
+		"terraform_bin_path":           types.ListType{ElemType: types.ObjectType{AttrTypes: MountPointModel{}.AttributeTypes()}},
+		"timeout":                      types.Int64Type,
+		"post_apply_wf_steps_config":   types.ListType{ElemType: types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}},
+		"pre_apply_wf_steps_config":    types.ListType{ElemType: types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}},
+		"pre_plan_wf_steps_config":     types.ListType{ElemType: types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}},
+		"post_plan_wf_steps_config":    types.ListType{ElemType: types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}},
+		"pre_init_hooks":               types.ListType{ElemType: types.StringType},
+		"pre_plan_hooks":               types.ListType{ElemType: types.StringType},
+		"post_plan_hooks":              types.ListType{ElemType: types.StringType},
+		"pre_apply_hooks":              types.ListType{ElemType: types.StringType},
+		"post_apply_hooks":             types.ListType{ElemType: types.StringType},
+		"run_pre_init_hooks_on_drift":    types.BoolType,
+		"run_pre_plan_hooks_on_drift":    types.BoolType,
+		"run_post_plan_hooks_on_drift":   types.BoolType,
+		"wf_step_template_revision_id":   types.StringType,
+	}
+}
+
+// isSet reports whether a types.String holds a real (non-null, non-unknown) value.
+func isSet(s types.String) bool { return !s.IsNull() && !s.IsUnknown() }
+
+// isNonEmpty reports whether a types.String holds a real, non-empty value. Used for
+// allow_blank=False API fields where an empty string means "unset" and must be omitted.
+func isNonEmpty(s types.String) bool { return isSet(s) && s.ValueString() != "" }
+
+// isSetBool reports whether a types.Bool holds a real (non-null, non-unknown) value.
+func isSetBool(b types.Bool) bool { return !b.IsNull() && !b.IsUnknown() }
+
+func (m TerraformConfigModel) ToAPIModel(ctx context.Context) (*sgsdkgo.TerraformConfig, diag.Diagnostics) {
+	// Each field is Optional+Computed: an attribute the user omitted is null/unknown.
+	// Guard against both so the field stays nil (rather than &"" / &false from a bare
+	// ValueXxxPointer on an unknown value) — nil lets mergeTerraformConfig fill it from
+	// the template instead of sending a blank the API rejects (e.g. driftCron).
+	cfg := &sgsdkgo.TerraformConfig{}
+	if !m.Timeout.IsNull() && !m.Timeout.IsUnknown() {
+		cfg.Timeout = expanders.IntPtr(m.Timeout.ValueInt64Pointer())
+	}
+	// For allow_blank=False string fields, treat empty string as unset (omit) — a known
+	// "" stored for plan stability must not be sent as a blank the API rejects.
+	if isNonEmpty(m.TerraformVersion) {
+		cfg.TerraformVersion = m.TerraformVersion.ValueStringPointer()
+	}
+	if isSetBool(m.DriftCheck) {
+		cfg.DriftCheck = m.DriftCheck.ValueBoolPointer()
+	}
+	if isNonEmpty(m.DriftCron) {
+		cfg.DriftCron = m.DriftCron.ValueStringPointer()
+	}
+	if isSetBool(m.ManagedTerraformState) {
+		cfg.ManagedTerraformState = m.ManagedTerraformState.ValueBoolPointer()
+	}
+	if isSetBool(m.ApprovalPreApply) {
+		cfg.ApprovalPreApply = m.ApprovalPreApply.ValueBoolPointer()
+	}
+	if isNonEmpty(m.TerraformPlanOptions) {
+		cfg.TerraformPlanOptions = m.TerraformPlanOptions.ValueStringPointer()
+	}
+	if isNonEmpty(m.TerraformInitOptions) {
+		cfg.TerraformInitOptions = m.TerraformInitOptions.ValueStringPointer()
+	}
+	// Use isSet (not isNonEmpty): an explicit empty string is a meaningful value here —
+	// the API accepts "" (allow_blank=True) and normalizes it to None, falling back to the
+	// platform-default revision. Sending "" lets a user SUPPRESS an inherited template value
+	// and use the default; because the value is then non-nil on the wf, mergeTerraformConfig
+	// won't re-inherit it from the template. (Omitting the attribute entirely -> nil ->
+	// merge inherits the template value, which is the desired behavior when unset.)
+	if isSet(m.WfStepTemplateRevisionId) {
+		cfg.WfStepTemplateRevisionId = m.WfStepTemplateRevisionId.ValueStringPointer()
+	}
+	if !m.RunPreInitHooksOnDrift.IsNull() && !m.RunPreInitHooksOnDrift.IsUnknown() {
+		cfg.RunPreInitHooksOnDrift = m.RunPreInitHooksOnDrift.ValueBoolPointer()
+	}
+	if !m.RunPrePlanHooksOnDrift.IsNull() && !m.RunPrePlanHooksOnDrift.IsUnknown() {
+		cfg.RunPrePlanHooksOnDrift = m.RunPrePlanHooksOnDrift.ValueBoolPointer()
+	}
+	if !m.RunPostPlanHooksOnDrift.IsNull() && !m.RunPostPlanHooksOnDrift.IsUnknown() {
+		cfg.RunPostPlanHooksOnDrift = m.RunPostPlanHooksOnDrift.ValueBoolPointer()
+	}
+
+	if !m.TerraformBinPath.IsNull() && !m.TerraformBinPath.IsUnknown() {
+		mountPoints, diags := convertMountPointsToAPI(ctx, m.TerraformBinPath)
+		if diags.HasError() {
+			return nil, diags
+		}
+		cfg.TerraformBinPath = mountPoints
+	}
+
+	for _, pair := range []struct {
+		src  types.List
+		dest *[]sgsdkgo.WfStepsConfig
+	}{
+		{m.PostApplyWfStepsConfig, &cfg.PostApplyWfStepsConfig},
+		{m.PreApplyWfStepsConfig, &cfg.PreApplyWfStepsConfig},
+		{m.PrePlanWfStepsConfig, &cfg.PrePlanWfStepsConfig},
+		{m.PostPlanWfStepsConfig, &cfg.PostPlanWfStepsConfig},
+	} {
+		if !pair.src.IsNull() && !pair.src.IsUnknown() {
+			steps, diags := convertWfStepsConfigListToAPI(ctx, pair.src)
+			if diags.HasError() {
+				return nil, diags
+			}
+			*pair.dest = steps
+		}
+	}
+
+	for _, pair := range []struct {
+		src  types.List
+		dest *[]string
+	}{
+		{m.PreInitHooks, &cfg.PreInitHooks},
+		{m.PrePlanHooks, &cfg.PrePlanHooks},
+		{m.PostPlanHooks, &cfg.PostPlanHooks},
+		{m.PreApplyHooks, &cfg.PreApplyHooks},
+		{m.PostApplyHooks, &cfg.PostApplyHooks},
+	} {
+		if !pair.src.IsNull() && !pair.src.IsUnknown() {
+			hooks, diags := expanders.StringList(ctx, pair.src)
+			if diags.HasError() {
+				return nil, diags
+			}
+			*pair.dest = hooks
+		}
+	}
+
+	// If nothing was actually set (e.g. a known-empty terraform_config stored for plan
+	// stability on a CUSTOM workflow that has no TF config), omit it entirely rather than
+	// send an empty object the API may reject.
+	if flatteners.IsEmptyObject(cfg) {
+		return nil, nil
+	}
+
+	return cfg, nil
+}
+
+// ---------------------------------------------------------------------------
+// DeploymentPlatformConfig
+// ---------------------------------------------------------------------------
+
+type DeploymentPlatformConfigConfigModel struct {
+	IntegrationId types.String `tfsdk:"integration_id"`
+	ProfileName   types.String `tfsdk:"profile_name"`
+}
+
+func (DeploymentPlatformConfigConfigModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"integration_id": types.StringType,
+		"profile_name":   types.StringType,
+	}
+}
+
+func (m DeploymentPlatformConfigConfigModel) ToAPIModel() workflowtemplaterevisions.DeploymentPlatformConfigConfig {
+	cfg := workflowtemplaterevisions.DeploymentPlatformConfigConfig{}
+	if !m.IntegrationId.IsNull() {
+		cfg.IntegrationId = m.IntegrationId.ValueString()
+	}
+	if !m.ProfileName.IsNull() {
+		cfg.ProfileName = m.ProfileName.ValueStringPointer()
+	}
+	return cfg
+}
+
+type DeploymentPlatformConfigModel struct {
+	Kind   types.String `tfsdk:"kind"`
+	Config types.Object `tfsdk:"config"`
+}
+
+func (DeploymentPlatformConfigModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"kind":   types.StringType,
+		"config": types.ObjectType{AttrTypes: DeploymentPlatformConfigConfigModel{}.AttributeTypes()},
+	}
+}
+
+func (m DeploymentPlatformConfigModel) ToAPIModel(ctx context.Context) (*workflowtemplaterevisions.DeploymentPlatformConfig, diag.Diagnostics) {
+	cfg := &workflowtemplaterevisions.DeploymentPlatformConfig{}
+	if !m.Kind.IsNull() {
+		cfg.Kind = workflowtemplaterevisions.DeploymentPlatformConfigKindEnum(m.Kind.ValueString())
+	}
+	if !m.Config.IsNull() && !m.Config.IsUnknown() {
+		var configModel DeploymentPlatformConfigConfigModel
+		diags := m.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
+			UnhandledNullAsEmpty:    true,
+			UnhandledUnknownAsEmpty: true,
+		})
+		if diags.HasError() {
+			return nil, diags
+		}
+		cfg.Config = configModel.ToAPIModel()
+	}
+	return cfg, nil
+}
+
+// ---------------------------------------------------------------------------
+// ToAPIModel
+// ---------------------------------------------------------------------------
+
+func (m WorkflowUsingTemplateResourceModel) ToAPIModel(ctx context.Context, tpl *workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) (*sgworkflows.Workflow, diag.Diagnostics) {
+	tags, diags := expanders.StringList(ctx, m.Tags)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	approvers, diags := expanders.StringList(ctx, m.Approvers)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	contextTagsMap, diags := expanders.MapStringString(ctx, m.ContextTags)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	envVars, diags := convertEnvironmentVariablesToAPI(ctx, m.EnvironmentVariables)
+	if diags.HasError() {
+		return nil, diags
+	}
+	envVarPtrs := make([]*sgsdkgo.EnvVars, len(envVars))
+	for i := range envVars {
+		envVarPtrs[i] = &envVars[i]
+	}
+
+	terraformConfig, diags := convertTerraformConfigToAPI(ctx, m.TerraformConfig)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	runnerConstraints, diags := convertRunnerConstraintsToAPI(ctx, m.RunnerConstraints)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	wfStepsConfig, diags := convertWfStepsConfigListToAPI(ctx, m.WfStepsConfig)
+	if diags.HasError() {
+		return nil, diags
+	}
+	wfStepsConfigPtrs := make([]*sgsdkgo.WfStepsConfig, len(wfStepsConfig))
+	for i := range wfStepsConfig {
+		wfStepsConfigPtrs[i] = &wfStepsConfig[i]
+	}
+
+	miniSteps, diags := convertMinistepsToAPI(ctx, m.MiniSteps)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	userSchedulesVals, diags := convertUserSchedulesToAPI(ctx, m.UserSchedules)
+	if diags.HasError() {
+		return nil, diags
+	}
+	userSchedules := make([]*sgsdkgo.UserSchedules, len(userSchedulesVals))
+	for i := range userSchedulesVals {
+		userSchedules[i] = &userSchedulesVals[i]
+	}
+
+	deploymentPlatformConfig, diags := convertDeploymentPlatformConfigToAPI(ctx, m.DeploymentPlatformConfig)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	vcsConfig, diags := convertVcsConfigToAPI(ctx, m.VcsConfig)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	var wfType *sgsdkgo.WfTypeEnum
+	if !m.WfType.IsNull() && !m.WfType.IsUnknown() {
+		t := sgsdkgo.WfTypeEnum(m.WfType.ValueString())
+		wfType = &t
+	}
+
+	var numberOfApprovalsRequired *int
+	if !m.NumberOfApprovalsRequired.IsNull() && !m.NumberOfApprovalsRequired.IsUnknown() {
+		v := int(m.NumberOfApprovalsRequired.ValueInt64())
+		numberOfApprovalsRequired = &v
+	}
+
+	var userJobCpu *int
+	if !m.UserJobCpu.IsNull() && !m.UserJobCpu.IsUnknown() {
+		v := int(m.UserJobCpu.ValueInt64())
+		userJobCpu = &v
+	}
+
+	var userJobMemory *int
+	if !m.UserJobMemory.IsNull() && !m.UserJobMemory.IsUnknown() {
+		v := int(m.UserJobMemory.ValueInt64())
+		userJobMemory = &v
+	}
+
+	var resourceName *string
+	if !m.ResourceName.IsNull() && !m.ResourceName.IsUnknown() {
+		resourceName = m.ResourceName.ValueStringPointer()
+	}
+
+	wf := &sgworkflows.Workflow{
+		Id:                        m.Id.ValueStringPointer(),
+		ResourceName:              resourceName,
+		Description:               m.Description.ValueStringPointer(),
+		WfType:                    wfType,
+		NumberOfApprovalsRequired: numberOfApprovalsRequired,
+		UserJobCpu:                userJobCpu,
+		UserJobMemory:             userJobMemory,
+		TerraformConfig:           terraformConfig,
+		RunnerConstraints:         runnerConstraints,
+		MiniSteps:                 miniSteps,
+		VcsConfig:                 vcsConfig,
+		// List/map fields the user can suppress with an explicit empty: wrap in
+		// core.Optional only when the user PROVIDED the value (incl. empty) so the
+		// empty reaches the wire; leave nil when absent so mergeTemplateDefaults can
+		// inherit the template's value. (See the SDK Workflow struct — these are
+		// *core.Optional to distinguish omit from explicit empty.)
+		Tags:                     optionalIfPresent(m.Tags, tags),
+		Approvers:                optionalIfPresent(m.Approvers, approvers),
+		ContextTags:              optionalIfPresent(m.ContextTags, contextTagsMap),
+		EnvironmentVariables:     optionalIfPresent(m.EnvironmentVariables, envVarPtrs),
+		WfStepsConfig:            optionalIfPresent(m.WfStepsConfig, wfStepsConfigPtrs),
+		UserSchedules:            optionalIfPresent(m.UserSchedules, userSchedules),
+		DeploymentPlatformConfig: optionalIfPresent(m.DeploymentPlatformConfig, deploymentPlatformConfig),
+	}
+
+	// Provider-side resolution: fill any field the user did not set from the
+	// workflow template revision, so config/state/reality line up field-for-field.
+	mergeTemplateDefaults(m, wf, tpl)
+
+	return wf, nil
+}
+
+// ---------------------------------------------------------------------------
+// ToUpdateAPIModel
+// ---------------------------------------------------------------------------
+
+func (m WorkflowUsingTemplateResourceModel) ToUpdateAPIModel(ctx context.Context, tpl *workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) (*sgworkflows.PatchedWorkflow, diag.Diagnostics) {
+	workflow, diags := m.ToAPIModel(ctx, tpl)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	patched := &sgworkflows.PatchedWorkflow{}
+
+	// Set only fields that have a value; leave the rest unset (omitted) rather than sending
+	// an explicit null. Null means "delete the field" to the API and is rejected for
+	// required fields — omitting preserves them. This is what lets a revision upgrade send
+	// only the re-resolved fields and not blank out everything the merge left empty.
+	if workflow.ResourceName != nil {
+		patched.ResourceName = sgsdkgo.Optional(*workflow.ResourceName)
+	}
+	if workflow.Description != nil {
+		patched.Description = sgsdkgo.Optional(*workflow.Description)
+	}
+	if workflow.WfType != nil {
+		patched.WfType = sgsdkgo.Optional(*workflow.WfType)
+	}
+	// These fields are already *core.Optional on the create Workflow struct (carrying the
+	// user's omit-vs-explicit-empty intent from ToAPIModel/merge), and PatchedWorkflow uses
+	// the same type, so copy them through directly — do not re-wrap (that would double-wrap).
+	if workflow.Tags != nil {
+		patched.Tags = workflow.Tags
+	}
+	if workflow.Approvers != nil {
+		patched.Approvers = workflow.Approvers
+	}
+	if workflow.ContextTags != nil {
+		patched.ContextTags = workflow.ContextTags
+	}
+	if workflow.NumberOfApprovalsRequired != nil {
+		patched.NumberOfApprovalsRequired = sgsdkgo.Optional(*workflow.NumberOfApprovalsRequired)
+	}
+	if workflow.UserJobCpu != nil {
+		patched.UserJobCpu = sgsdkgo.Optional(*workflow.UserJobCpu)
+	}
+	if workflow.UserJobMemory != nil {
+		patched.UserJobMemory = sgsdkgo.Optional(*workflow.UserJobMemory)
+	}
+	if workflow.EnvironmentVariables != nil {
+		patched.EnvironmentVariables = workflow.EnvironmentVariables
+	}
+	if workflow.WfStepsConfig != nil {
+		patched.WfStepsConfig = workflow.WfStepsConfig
+	}
+	if workflow.TerraformConfig != nil {
+		patched.TerraformConfig = sgsdkgo.Optional(*workflow.TerraformConfig)
+	}
+	if workflow.RunnerConstraints != nil {
+		patched.RunnerConstraints = sgsdkgo.Optional(*workflow.RunnerConstraints)
+	}
+	if workflow.VcsConfig != nil {
+		patched.VcsConfig = sgsdkgo.Optional(*workflow.VcsConfig)
+	}
+	if workflow.MiniSteps != nil {
+		patched.MiniSteps = sgsdkgo.Optional(*workflow.MiniSteps)
+	}
+	if workflow.DeploymentPlatformConfig != nil {
+		patched.DeploymentPlatformConfig = workflow.DeploymentPlatformConfig
+	}
+	if workflow.UserSchedules != nil {
+		patched.UserSchedules = workflow.UserSchedules
+	}
+
+	return patched, diags
+}
+
+// ---------------------------------------------------------------------------
+// ConvertWorkflowUsingTemplateFromAPI
+// ---------------------------------------------------------------------------
+
+// ConvertWorkflowUsingTemplateFromAPI builds the final state model by mapping the
+// FULL API reality (the fully-merged workflow record) onto every attribute. Because
+// the provider sent a resolved payload (user config merged with template defaults),
+// state now mirrors reality field-for-field — which is what lets Terraform detect
+// drift. WorkflowGroupId is not part of the workflow record, so it is preserved from
+// source.
+func ConvertWorkflowUsingTemplateFromAPI(ctx context.Context, response *sgworkflows.WorkflowReadResponse, source WorkflowUsingTemplateResourceModel) (WorkflowUsingTemplateResourceModel, diag.Diagnostics) {
+	var allDiags diag.Diagnostics
+
+	model := WorkflowUsingTemplateResourceModel{
+		WorkflowGroupId: source.WorkflowGroupId,
+	}
+
+	wf := response.Msg
+	if wf == nil {
+		return source, allDiags
+	}
+
+	model.Id = flatteners.StringPtr(wf.Id)
+	model.ResourceName = flatteners.StringPtr(wf.ResourceName)
+	// Description is Optional+Computed; store a known value (empty string when the API
+	// returns none) so UseStateForUnknown holds it stable instead of re-planning as
+	// "known after apply".
+	model.Description = flatteners.StringPtrDefault(wf.Description)
+	model.NumberOfApprovalsRequired = flatteners.Int64Ptr(wf.NumberOfApprovalsRequired)
+	model.UserJobCpu = flatteners.Int64Ptr(wf.UserJobCpu)
+	model.UserJobMemory = flatteners.Int64Ptr(wf.UserJobMemory)
+
+	if wf.WfType != nil {
+		model.WfType = types.StringValue(string(*wf.WfType))
+	} else {
+		model.WfType = source.WfType
+	}
+
+	tags, diags := flatteners.ListOfStringToTerraformList(wf.Tags)
+	allDiags.Append(diags...)
+	if allDiags.HasError() {
+		return source, allDiags
+	}
+	model.Tags = knownEmptyListIfNull(tags, types.StringType)
+
+	approvers, diags := flatteners.ListOfStringToTerraformList(wf.Approvers)
+	allDiags.Append(diags...)
+	if allDiags.HasError() {
+		return source, allDiags
+	}
+	model.Approvers = knownEmptyListIfNull(approvers, types.StringType)
+
+	contextTags, diags := flatteners.MapStringString(ctx, wf.ContextTags)
+	allDiags.Append(diags...)
+	if allDiags.HasError() {
+		return source, allDiags
+	}
+	model.ContextTags = knownEmptyMapIfNull(contextTags)
+
+	// Skip nil pointers (rather than preserve slice length with zero-value entries): a
+	// zero-value EnvVars has Config == nil, which the flattener dereferences -> panic.
+	envVars := make([]sgsdkgo.EnvVars, 0, len(wf.EnvironmentVariables))
+	for _, ptr := range wf.EnvironmentVariables {
+		if ptr != nil {
+			envVars = append(envVars, *ptr)
+		}
+	}
+	envVarsList, diags := convertEnvironmentVariablesFromAPI(ctx, envVars)
+	allDiags.Append(diags...)
+	if allDiags.HasError() {
+		return source, allDiags
+	}
+	model.EnvironmentVariables = knownEmptyListIfNull(envVarsList, types.ObjectType{AttrTypes: EnvironmentVariableModel{}.AttributeTypes()})
+
+	terraformConfig, diags := convertTerraformConfigFromAPI(ctx, wf.TerraformConfig)
+	allDiags.Append(diags...)
+	if allDiags.HasError() {
+		return source, allDiags
+	}
+	// Known-empty (not null) when the API returns no terraform_config (e.g. CUSTOM
+	// workflows) so the Optional+Computed object holds stable via UseStateForUnknown.
+	model.TerraformConfig = knownEmptyObjectIfNull(terraformConfig, TerraformConfigModel{}.AttributeTypes())
+
+	runnerConstraints, diags := convertRunnerConstraintsFromAPI(ctx, wf.RunnerConstraints)
+	allDiags.Append(diags...)
+	if allDiags.HasError() {
+		return source, allDiags
+	}
+	model.RunnerConstraints = runnerConstraints
+
+	// Skip nil pointers (rather than preserve slice length with zero-value entries): a
+	// zero-value WfStepsConfig would flatten into a spurious empty step in state.
+	wfStepsConfig := make([]sgsdkgo.WfStepsConfig, 0, len(wf.WfStepsConfig))
+	for _, ptr := range wf.WfStepsConfig {
+		if ptr != nil {
+			wfStepsConfig = append(wfStepsConfig, *ptr)
+		}
+	}
+	wfStepsConfigList, diags := convertWfStepsConfigListFromAPI(ctx, wfStepsConfig)
+	allDiags.Append(diags...)
+	if allDiags.HasError() {
+		return source, allDiags
+	}
+	model.WfStepsConfig = knownEmptyListIfNull(wfStepsConfigList, types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()})
+
+	miniSteps, diags := convertMinistepsFromAPI(ctx, wf.MiniSteps)
+	allDiags.Append(diags...)
+	if allDiags.HasError() {
+		return source, allDiags
+	}
+	model.MiniSteps = knownEmptyObjectIfNull(miniSteps, MinistepsModel{}.AttributeTypes())
+
+	userSchedules, diags := convertUserSchedulesFromAPI(ctx, wf.UserSchedules)
+	allDiags.Append(diags...)
+	if allDiags.HasError() {
+		return source, allDiags
+	}
+	model.UserSchedules = knownEmptyListIfNull(userSchedules, types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()})
+
+	deploymentPlatformConfig, diags := convertDeploymentPlatformConfigFromAPI(ctx, wf.DeploymentPlatformConfig)
+	allDiags.Append(diags...)
+	if allDiags.HasError() {
+		return source, allDiags
+	}
+	model.DeploymentPlatformConfig = knownEmptyListIfNull(deploymentPlatformConfig, types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()})
+
+	vcsConfig, diags := convertVcsConfigFromAPI(ctx, wf.VcsConfig)
+	allDiags.Append(diags...)
+	if allDiags.HasError() {
+		return source, allDiags
+	}
+	model.VcsConfig = vcsConfig
+
+	return model, allDiags
+}
+
+// knownEmptyListIfNull returns a known empty list (of elemType) when in is null,
+// otherwise returns in unchanged. Computed list attributes must hold a known value
+// in state so that UseStateForUnknown engages on subsequent plans — a null value is
+// skipped by that plan modifier and would otherwise re-plan as "known after apply",
+// producing a perpetual diff.
+func knownEmptyListIfNull(in types.List, elemType attr.Type) types.List {
+	if in.IsNull() {
+		return types.ListValueMust(elemType, []attr.Value{})
+	}
+	return in
+}
+
+// knownEmptyStringIfNull returns a known empty string when in is null, otherwise in.
+// Same rationale as knownEmptyListIfNull for Computed string attributes.
+func knownEmptyStringIfNull(in types.String) types.String {
+	if in.IsNull() {
+		return types.StringValue("")
+	}
+	return in
+}
+
+// int64FromTemplateOrDefault returns the template's int value when present, otherwise the
+// workflow API's fixed default for that field. Used to compute the resolved plan value for
+// number_of_approvals_required / user_job_cpu / user_job_memory on a revision change: the
+// template usually carries these, but when it omits one the workflow API fills a default
+// (0 / 512 / 1024) that the template read does not include — so the plan must mirror it to
+// match apply (plan == apply) and avoid a spurious "(known after apply)" on dependents.
+func int64FromTemplateOrDefault(tplVal *int, def int64) types.Int64 {
+	if tplVal != nil {
+		return types.Int64Value(int64(*tplVal))
+	}
+	return types.Int64Value(def)
+}
+
+// knownFalseIfNull returns a known false when in is null, otherwise in. Same rationale
+// as knownEmptyListIfNull for Computed bool attributes the API returns empty.
+func knownFalseIfNull(in types.Bool) types.Bool {
+	if in.IsNull() {
+		return types.BoolValue(false)
+	}
+	return in
+}
+
+// knownEmptyMapIfNull is the map equivalent of knownEmptyListIfNull.
+func knownEmptyMapIfNull(in types.Map) types.Map {
+	if in.IsNull() {
+		return types.MapValueMust(types.StringType, map[string]attr.Value{})
+	}
+	return in
+}
+
+// knownEmptyObjectIfNull returns a known object with all-null attributes (of attrTypes)
+// when in is null, otherwise returns in unchanged. Same rationale as
+// knownEmptyListIfNull: a Computed object attribute must hold a known value in state for
+// UseStateForUnknown to prevent a perpetual "known after apply" diff.
+func knownEmptyObjectIfNull(in types.Object, attrTypes map[string]attr.Type) types.Object {
+	if in.IsNull() {
+		values := make(map[string]attr.Value, len(attrTypes))
+		for name, t := range attrTypes {
+			values[name] = newNullValue(t)
+		}
+		return types.ObjectValueMust(attrTypes, values)
+	}
+	return in
+}
+
+// newNullValue returns a typed null attr.Value for the given attr.Type.
+func newNullValue(t attr.Type) attr.Value {
+	switch tt := t.(type) {
+	case types.ObjectType:
+		return types.ObjectNull(tt.AttrTypes)
+	case types.ListType:
+		return types.ListNull(tt.ElemType)
+	case types.MapType:
+		return types.MapNull(tt.ElemType)
+	case types.SetType:
+		return types.SetNull(tt.ElemType)
+	case basetypes.BoolType:
+		return types.BoolNull()
+	case basetypes.Int64Type:
+		return types.Int64Null()
+	case basetypes.Float64Type:
+		return types.Float64Null()
+	case basetypes.NumberType:
+		return types.NumberNull()
+	default:
+		return types.StringNull()
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ToAPI helpers
+// ---------------------------------------------------------------------------
+
+func convertEnvironmentVariablesToAPI(ctx context.Context, list types.List) ([]sgsdkgo.EnvVars, diag.Diagnostics) {
+	if list.IsNull() || list.IsUnknown() {
+		return nil, nil
+	}
+	var models []EnvironmentVariableModel
+	diags := list.ElementsAs(ctx, &models, false)
+	if diags.HasError() {
+		return nil, diags
+	}
+	result := make([]sgsdkgo.EnvVars, len(models))
+	for i, m := range models {
+		r, d := m.ToAPIModel(ctx)
+		if d.HasError() {
+			return nil, d
+		}
+		result[i] = r
+	}
+	return result, nil
+}
+
+func convertRunnerConstraintsToAPI(ctx context.Context, obj types.Object) (*sgsdkgo.RunnerConstraints, diag.Diagnostics) {
+	if obj.IsNull() || obj.IsUnknown() {
+		return nil, nil
+	}
+	var m RunnerConstraintsModel
+	diags := obj.As(ctx, &m, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, diags
+	}
+	return m.ToAPIModel(ctx)
+}
+
+func convertUserSchedulesToAPI(ctx context.Context, list types.List) ([]sgsdkgo.UserSchedules, diag.Diagnostics) {
+	if list.IsNull() || list.IsUnknown() {
+		return nil, nil
+	}
+	var models []UserSchedulesModel
+	diags := list.ElementsAs(ctx, &models, false)
+	if diags.HasError() {
+		return nil, diags
+	}
+	result := make([]sgsdkgo.UserSchedules, len(models))
+	for i, m := range models {
+		result[i] = m.ToAPIModel()
+	}
+	return result, nil
+}
+
+func convertNotificationRecipientsToAPI(ctx context.Context, list types.List) ([]workflowtemplaterevisions.MinistepsNotificationRecepients, diag.Diagnostics) {
+	if list.IsNull() || list.IsUnknown() {
+		return nil, nil
+	}
+	var models []MinistepsNotificationRecipientsModel
+	diags := list.ElementsAs(ctx, &models, true)
+	if diags.HasError() {
+		return nil, diags
+	}
+	result := make([]workflowtemplaterevisions.MinistepsNotificationRecepients, len(models))
+	for i, m := range models {
+		r, d := m.ToAPIModel(ctx)
+		if d.HasError() {
+			return nil, d
+		}
+		result[i] = r
+	}
+	return result, nil
+}
+
+func convertWebhookToAPI(ctx context.Context, list types.List) ([]workflowtemplaterevisions.MinistepsWebhooksSchema, diag.Diagnostics) {
+	if list.IsNull() || list.IsUnknown() {
+		return nil, nil
+	}
+	var models []MinistepsWebhooksModel
+	diags := list.ElementsAs(ctx, &models, true)
+	if diags.HasError() {
+		return nil, diags
+	}
+	result := make([]workflowtemplaterevisions.MinistepsWebhooksSchema, len(models))
+	for i, m := range models {
+		result[i] = m.ToAPIModel()
+	}
+	return result, nil
+}
+
+func convertWorkflowChainingToAPI(ctx context.Context, list types.List) ([]workflowtemplaterevisions.MinistepsWfChainingSchema, diag.Diagnostics) {
+	if list.IsNull() || list.IsUnknown() {
+		return nil, nil
+	}
+	var models []MinistepsWorkflowChainingModel
+	diags := list.ElementsAs(ctx, &models, true)
+	if diags.HasError() {
+		return nil, diags
+	}
+	result := make([]workflowtemplaterevisions.MinistepsWfChainingSchema, len(models))
+	for i, m := range models {
+		result[i] = m.ToAPIModel()
+	}
+	return result, nil
+}
+
+func convertMinistepsToAPI(ctx context.Context, obj types.Object) (*workflowtemplaterevisions.Ministeps, diag.Diagnostics) {
+	if obj.IsNull() || obj.IsUnknown() {
+		return nil, nil
+	}
+	var m MinistepsModel
+	diags := obj.As(ctx, &m, basetypes.ObjectAsOptions{
+		UnhandledNullAsEmpty:    true,
+		UnhandledUnknownAsEmpty: true,
+	})
+	if diags.HasError() {
+		return nil, diags
+	}
+	return m.ToAPIModel(ctx)
+}
+
+func convertMountPointsToAPI(ctx context.Context, list types.List) ([]sgsdkgo.MountPoint, diag.Diagnostics) {
+	if list.IsNull() || list.IsUnknown() {
+		return nil, nil
+	}
+	var models []MountPointModel
+	diags := list.ElementsAs(ctx, &models, false)
+	if diags.HasError() {
+		return nil, diags
+	}
+	result := make([]sgsdkgo.MountPoint, len(models))
+	for i, m := range models {
+		result[i] = m.ToAPIModel()
+	}
+	return result, nil
+}
+
+func convertWfStepsConfigListToAPI(ctx context.Context, list types.List) ([]sgsdkgo.WfStepsConfig, diag.Diagnostics) {
+	if list.IsNull() || list.IsUnknown() {
+		return nil, nil
+	}
+	var models []WfStepsConfigModel
+	diags := list.ElementsAs(ctx, &models, false)
+	if diags.HasError() {
+		return nil, diags
+	}
+	result := make([]sgsdkgo.WfStepsConfig, len(models))
+	for i, m := range models {
+		r, d := m.ToAPIModel(ctx)
+		if d.HasError() {
+			return nil, d
+		}
+		result[i] = *r
+	}
+	return result, nil
+}
+
+func convertTerraformConfigToAPI(ctx context.Context, obj types.Object) (*sgsdkgo.TerraformConfig, diag.Diagnostics) {
+	if obj.IsNull() || obj.IsUnknown() {
+		return nil, nil
+	}
+	var m TerraformConfigModel
+	diags := obj.As(ctx, &m, basetypes.ObjectAsOptions{
+		UnhandledNullAsEmpty:    true,
+		UnhandledUnknownAsEmpty: true,
+	})
+	if diags.HasError() {
+		return nil, diags
+	}
+	return m.ToAPIModel(ctx)
+}
+
+func convertDeploymentPlatformConfigToAPI(ctx context.Context, list types.List) ([]*workflowtemplaterevisions.DeploymentPlatformConfig, diag.Diagnostics) {
+	if list.IsNull() || list.IsUnknown() {
+		return nil, nil
+	}
+	var models []DeploymentPlatformConfigModel
+	diags := list.ElementsAs(ctx, &models, false)
+	if diags.HasError() {
+		return nil, diags
+	}
+	result := make([]*workflowtemplaterevisions.DeploymentPlatformConfig, len(models))
+	for i, m := range models {
+		r, d := m.ToAPIModel(ctx)
+		if d.HasError() {
+			return nil, d
+		}
+		result[i] = r
+	}
+	return result, nil
+}
+
+func convertVcsConfigToAPI(ctx context.Context, obj types.Object) (*sgsdkgo.VcsConfig, diag.Diagnostics) {
+	if obj.IsNull() || obj.IsUnknown() {
+		return nil, nil
+	}
+	var m VcsConfigModel
+	diags := obj.As(ctx, &m, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, diags
+	}
+	return m.ToAPIModel(ctx)
+}
+
+// ---------------------------------------------------------------------------
+// FromAPI converters
+// ---------------------------------------------------------------------------
+
+func convertEnvironmentVariablesFromAPI(ctx context.Context, envVars []sgsdkgo.EnvVars) (types.List, diag.Diagnostics) {
+	nullList := types.ListNull(types.ObjectType{AttrTypes: EnvironmentVariableModel{}.AttributeTypes()})
+	if len(envVars) == 0 {
+		return nullList, nil
+	}
+
+	models := make([]EnvironmentVariableModel, len(envVars))
+	for i, envVar := range envVars {
+		// Guard against a nil Config (pointer field) — dereferencing it would panic.
+		var configModel EnvironmentVariableConfigModel
+		if envVar.Config != nil {
+			configModel = EnvironmentVariableConfigModel{
+				VarName:   flatteners.String(envVar.Config.VarName),
+				SecretId:  flatteners.StringPtr(envVar.Config.SecretId),
+				TextValue: flatteners.StringPtr(envVar.Config.TextValue),
+			}
+		}
+		configObj, diags := types.ObjectValueFrom(ctx, EnvironmentVariableConfigModel{}.AttributeTypes(), configModel)
+		if diags.HasError() {
+			return nullList, diags
+		}
+		models[i] = EnvironmentVariableModel{
+			Config: configObj,
+			Kind:   flatteners.String(string(envVar.Kind)),
+		}
+	}
+
+	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: EnvironmentVariableModel{}.AttributeTypes()}, models)
+	if diags.HasError() {
+		return nullList, diags
+	}
+	return list, nil
+}
+
+func convertRunnerConstraintsFromAPI(ctx context.Context, rc *sgsdkgo.RunnerConstraints) (types.Object, diag.Diagnostics) {
+	nullObj := types.ObjectNull(RunnerConstraintsModel{}.AttributeTypes())
+	if rc == nil {
+		return nullObj, nil
+	}
+
+	namesList, diags := flatteners.ListOfStringToTerraformList(rc.Names)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+
+	obj, diags := types.ObjectValueFrom(ctx, RunnerConstraintsModel{}.AttributeTypes(), RunnerConstraintsModel{
+		Type:  flatteners.StringPtr((*string)(rc.Type)),
+		Names: namesList,
+	})
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	return obj, nil
+}
+
+func convertUserSchedulesFromAPI(ctx context.Context, schedules []sgsdkgo.UserSchedules) (types.List, diag.Diagnostics) {
+	nullList := types.ListNull(types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()})
+	if len(schedules) == 0 {
+		return nullList, nil
+	}
+
+	models := make([]UserSchedulesModel, 0, len(schedules))
+	for _, s := range schedules {
+		if flatteners.IsEmptyObject(s) {
+			continue
+		}
+		models = append(models, UserSchedulesModel{
+			Cron:  flatteners.StringPtr(s.Cron),
+			State: flatteners.StringPtr((*string)(s.State)),
+			Desc:  flatteners.StringPtr(s.Desc),
+			Name:  flatteners.StringPtr(s.Name),
+		})
+	}
+
+	if len(models) == 0 {
+		return nullList, nil
+	}
+
+	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()}, models)
+	if diags.HasError() {
+		return nullList, diags
+	}
+	return list, nil
+}
+
+func convertNotificationRecipientsFromAPI(ctx context.Context, recipients []workflowtemplaterevisions.MinistepsNotificationRecepients) (types.List, diag.Diagnostics) {
+	nullList := types.ListNull(types.ObjectType{AttrTypes: MinistepsNotificationRecipientsModel{}.AttributeTypes()})
+	if len(recipients) == 0 {
+		return nullList, nil
+	}
+
+	models := []MinistepsNotificationRecipientsModel{}
+	for _, r := range recipients {
+		if flatteners.IsEmptyObject(r) {
+			continue
+		}
+		recipientsList, diags := types.ListValueFrom(ctx, types.StringType, r.Recipients)
+		if diags.HasError() {
+			return nullList, diags
+		}
+		models = append(models, MinistepsNotificationRecipientsModel{Recipients: recipientsList})
+	}
+	if len(models) == 0 {
+		return nullList, nil
+	}
+
+	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: MinistepsNotificationRecipientsModel{}.AttributeTypes()}, models)
+	if diags.HasError() {
+		return nullList, diags
+	}
+	return list, nil
+}
+
+func convertWebhookFromAPI(ctx context.Context, webhooks []workflowtemplaterevisions.MinistepsWebhooksSchema) (types.List, diag.Diagnostics) {
+	nullList := types.ListNull(types.ObjectType{AttrTypes: MinistepsWebhooksModel{}.AttributeTypes()})
+	if len(webhooks) == 0 {
+		return nullList, nil
+	}
+
+	models := []MinistepsWebhooksModel{}
+	for _, w := range webhooks {
+		if flatteners.IsEmptyObject(w) {
+			continue
+		}
+		models = append(models, MinistepsWebhooksModel{
+			WebhookName:   flatteners.String(w.WebhookName),
+			WebhookUrl:    flatteners.String(w.WebhookUrl),
+			WebhookSecret: flatteners.StringPtr(w.WebhookSecret),
+		})
+	}
+	if len(models) == 0 {
+		return nullList, nil
+	}
+
+	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: MinistepsWebhooksModel{}.AttributeTypes()}, models)
+	if diags.HasError() {
+		return nullList, diags
+	}
+	return list, nil
+}
+
+func convertWorkflowChainingFromAPI(ctx context.Context, chainingList []workflowtemplaterevisions.MinistepsWfChainingSchema) (types.List, diag.Diagnostics) {
+	nullList := types.ListNull(types.ObjectType{AttrTypes: MinistepsWorkflowChainingModel{}.AttributeTypes()})
+	if len(chainingList) == 0 {
+		return nullList, nil
+	}
+
+	models := []MinistepsWorkflowChainingModel{}
+	for _, c := range chainingList {
+		if flatteners.IsEmptyObject(c) {
+			continue
+		}
+		models = append(models, MinistepsWorkflowChainingModel{
+			WorkflowGroupId:    flatteners.String(c.WorkflowGroupId),
+			StackId:            flatteners.StringPtr(c.StackId),
+			WorkflowId:         flatteners.StringPtr(c.WorkflowId),
+			WorkflowRunPayload: flatteners.JSONInterfaceToString(c.WorkflowRunPayload),
+			StackRunPayload:    flatteners.JSONInterfaceToString(c.StackRunPayload),
+		})
+	}
+	if len(models) == 0 {
+		return nullList, nil
+	}
+
+	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: MinistepsWorkflowChainingModel{}.AttributeTypes()}, models)
+	if diags.HasError() {
+		return nullList, diags
+	}
+	return list, nil
+}
+
+func convertMinistepsFromAPI(ctx context.Context, ministeps *workflowtemplaterevisions.Ministeps) (types.Object, diag.Diagnostics) {
+	nullObj := types.ObjectNull(MinistepsModel{}.AttributeTypes())
+	if ministeps == nil || flatteners.IsEmptyObject(ministeps) {
+		return nullObj, nil
+	}
+
+	model := MinistepsModel{}
+
+	if ministeps.Notifications != nil {
+		notifModel := MinistepsNotificationsModel{}
+
+		if ministeps.Notifications.Email != nil {
+			emailModel := MinistepsEmailModel{}
+			var diags diag.Diagnostics
+
+			emailModel.ApprovalRequired, diags = convertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.APPROVAL_REQUIRED)
+			if diags.HasError() {
+				return nullObj, diags
+			}
+			emailModel.Cancelled, diags = convertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.CANCELLED)
+			if diags.HasError() {
+				return nullObj, diags
+			}
+			emailModel.Completed, diags = convertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.COMPLETED)
+			if diags.HasError() {
+				return nullObj, diags
+			}
+			emailModel.DriftDetected, diags = convertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.DRIFT_DETECTED)
+			if diags.HasError() {
+				return nullObj, diags
+			}
+			emailModel.Errored, diags = convertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.ERRORED)
+			if diags.HasError() {
+				return nullObj, diags
+			}
+
+			emailObj, diags := types.ObjectValueFrom(ctx, MinistepsEmailModel{}.AttributeTypes(), emailModel)
+			if diags.HasError() {
+				return nullObj, diags
+			}
+			notifModel.Email = emailObj
+		} else {
+			notifModel.Email = types.ObjectNull(MinistepsEmailModel{}.AttributeTypes())
+		}
+
+		notifObj, diags := types.ObjectValueFrom(ctx, MinistepsNotificationsModel{}.AttributeTypes(), notifModel)
+		if diags.HasError() {
+			return nullObj, diags
+		}
+		model.Notifications = notifObj
+	} else {
+		model.Notifications = types.ObjectNull(MinistepsNotificationsModel{}.AttributeTypes())
+	}
+
+	if ministeps.Webhooks != nil {
+		webhooksModel := MinistepsWebhooksContainerModel{}
+		var diags diag.Diagnostics
+
+		webhooksModel.ApprovalRequired, diags = convertWebhookFromAPI(ctx, ministeps.Webhooks.APPROVAL_REQUIRED)
+		if diags.HasError() {
+			return nullObj, diags
+		}
+		webhooksModel.Cancelled, diags = convertWebhookFromAPI(ctx, ministeps.Webhooks.CANCELLED)
+		if diags.HasError() {
+			return nullObj, diags
+		}
+		webhooksModel.Completed, diags = convertWebhookFromAPI(ctx, ministeps.Webhooks.COMPLETED)
+		if diags.HasError() {
+			return nullObj, diags
+		}
+		webhooksModel.DriftDetected, diags = convertWebhookFromAPI(ctx, ministeps.Webhooks.DRIFT_DETECTED)
+		if diags.HasError() {
+			return nullObj, diags
+		}
+		webhooksModel.Errored, diags = convertWebhookFromAPI(ctx, ministeps.Webhooks.ERRORED)
+		if diags.HasError() {
+			return nullObj, diags
+		}
+
+		webhooksObj, diags := types.ObjectValueFrom(ctx, MinistepsWebhooksContainerModel{}.AttributeTypes(), webhooksModel)
+		if diags.HasError() {
+			return nullObj, diags
+		}
+		model.Webhooks = webhooksObj
+	} else {
+		model.Webhooks = types.ObjectNull(MinistepsWebhooksContainerModel{}.AttributeTypes())
+	}
+
+	if ministeps.WfChaining != nil {
+		chainingModel := MinistepsWfChainingContainerModel{}
+		var diags diag.Diagnostics
+
+		chainingModel.Completed, diags = convertWorkflowChainingFromAPI(ctx, ministeps.WfChaining.COMPLETED)
+		if diags.HasError() {
+			return nullObj, diags
+		}
+		chainingModel.Errored, diags = convertWorkflowChainingFromAPI(ctx, ministeps.WfChaining.ERRORED)
+		if diags.HasError() {
+			return nullObj, diags
+		}
+
+		chainingObj, diags := types.ObjectValueFrom(ctx, MinistepsWfChainingContainerModel{}.AttributeTypes(), chainingModel)
+		if diags.HasError() {
+			return nullObj, diags
+		}
+		model.WfChaining = chainingObj
+	} else {
+		model.WfChaining = types.ObjectNull(MinistepsWfChainingContainerModel{}.AttributeTypes())
+	}
+
+	obj, diags := types.ObjectValueFrom(ctx, MinistepsModel{}.AttributeTypes(), model)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	return obj, nil
+}
+
+func convertMountPointsFromAPI(ctx context.Context, mountPoints []sgsdkgo.MountPoint) (types.List, diag.Diagnostics) {
+	nullList := types.ListNull(types.ObjectType{AttrTypes: MountPointModel{}.AttributeTypes()})
+	if len(mountPoints) == 0 {
+		return nullList, nil
+	}
+
+	models := make([]MountPointModel, len(mountPoints))
+	for i, mp := range mountPoints {
+		models[i] = MountPointModel{
+			Source:   flatteners.String(mp.Source),
+			Target:   flatteners.String(mp.Target),
+			ReadOnly: flatteners.BoolPtr(mp.ReadOnly),
+		}
+	}
+
+	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: MountPointModel{}.AttributeTypes()}, models)
+	if diags.HasError() {
+		return nullList, diags
+	}
+	return list, nil
+}
+
+func convertWfStepFromAPI(ctx context.Context, step *sgsdkgo.WfStepsConfig) (types.Object, diag.Diagnostics) {
+	nullObj := types.ObjectNull(WfStepsConfigModel{}.AttributeTypes())
+	if step == nil {
+		return nullObj, nil
+	}
+
+	m := WfStepsConfigModel{
+		Name:             flatteners.StringPtr(step.Name),
+		Approval:         flatteners.BoolPtr(step.Approval),
+		Timeout:          flatteners.Int64Ptr(step.Timeout),
+		WfStepTemplateId: flatteners.StringPtr(step.WfStepTemplateId),
+		CmdOverride:      flatteners.StringPtr(step.CmdOverride),
+	}
+
+	envVarsList, diags := convertEnvironmentVariablesFromAPI(ctx, step.EnvironmentVariables)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	m.EnvironmentVariables = envVarsList
+
+	mountPoints, diags := convertMountPointsFromAPI(ctx, step.MountPoints)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	m.MountPoints = mountPoints
+
+	if step.WfStepInputData != nil {
+		inputDataModel := WfStepInputDataModel{
+			SchemaType: flatteners.String(string(*step.WfStepInputData.SchemaType)),
+			Data:       flatteners.JSONInterfaceToString(step.WfStepInputData.Data),
+		}
+		inputDataObj, diags := types.ObjectValueFrom(ctx, WfStepInputDataModel{}.AttributeTypes(), inputDataModel)
+		if diags.HasError() {
+			return nullObj, diags
+		}
+		m.WfStepInputData = inputDataObj
+	} else {
+		m.WfStepInputData = types.ObjectNull(WfStepInputDataModel{}.AttributeTypes())
+	}
+
+	obj, diags := types.ObjectValueFrom(ctx, WfStepsConfigModel{}.AttributeTypes(), m)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	return obj, nil
+}
+
+func convertWfStepsConfigListFromAPI(ctx context.Context, steps []sgsdkgo.WfStepsConfig) (types.List, diag.Diagnostics) {
+	nullList := types.ListNull(types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()})
+	if len(steps) == 0 {
+		return nullList, nil
+	}
+
+	models := make([]WfStepsConfigModel, len(steps))
+	for i, step := range steps {
+		obj, diags := convertWfStepFromAPI(ctx, &step)
+		if diags.HasError() {
+			return nullList, diags
+		}
+		var m WfStepsConfigModel
+		diags = obj.As(ctx, &m, basetypes.ObjectAsOptions{
+			UnhandledNullAsEmpty:    true,
+			UnhandledUnknownAsEmpty: true,
+		})
+		if diags.HasError() {
+			return nullList, diags
+		}
+		models[i] = m
+	}
+
+	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}, models)
+	if diags.HasError() {
+		return nullList, diags
+	}
+	return list, nil
+}
+
+// normalizeTerraformVersion strips the engine prefix the API prepends to the version
+// string ("TERRAFORM-1.5.0" / "OPENTOFU-1.6.0") so state stores the bare version the
+// user declares (e.g. "1.5.0"). Without this, config ("1.5.0") and the API-returned
+// value ("TERRAFORM-1.5.0") never match, producing a perpetual diff on terraform_version.
+func normalizeTerraformVersion(v *string) types.String {
+	if v == nil {
+		return types.StringNull()
+	}
+	s := *v
+	for _, prefix := range []string{"TERRAFORM-", "OPENTOFU-"} {
+		if strings.HasPrefix(strings.ToUpper(s), prefix) {
+			s = s[len(prefix):]
+			break
+		}
+	}
+	return flatteners.StringPtr(&s)
+}
+
+func convertTerraformConfigFromAPI(ctx context.Context, cfg *sgsdkgo.TerraformConfig) (types.Object, diag.Diagnostics) {
+	nullObj := types.ObjectNull(TerraformConfigModel{}.AttributeTypes())
+	if cfg == nil || flatteners.IsEmptyObject(cfg) {
+		return nullObj, nil
+	}
+
+	m := TerraformConfigModel{
+		TerraformVersion:        normalizeTerraformVersion(cfg.TerraformVersion),
+		DriftCheck:              flatteners.BoolPtr(cfg.DriftCheck),
+		DriftCron:               flatteners.StringPtr(cfg.DriftCron),
+		ManagedTerraformState:   flatteners.BoolPtr(cfg.ManagedTerraformState),
+		ApprovalPreApply:        flatteners.BoolPtr(cfg.ApprovalPreApply),
+		TerraformPlanOptions:    flatteners.StringPtr(cfg.TerraformPlanOptions),
+		TerraformInitOptions:    flatteners.StringPtr(cfg.TerraformInitOptions),
+		Timeout:                 flatteners.Int64Ptr(cfg.Timeout),
+		RunPreInitHooksOnDrift:   flatteners.BoolPtr(cfg.RunPreInitHooksOnDrift),
+		RunPrePlanHooksOnDrift:   flatteners.BoolPtr(cfg.RunPrePlanHooksOnDrift),
+		RunPostPlanHooksOnDrift:  flatteners.BoolPtr(cfg.RunPostPlanHooksOnDrift),
+		WfStepTemplateRevisionId: flatteners.StringPtr(cfg.WfStepTemplateRevisionId),
+	}
+
+	terraformBinPath, diags := convertMountPointsFromAPI(ctx, cfg.TerraformBinPath)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	m.TerraformBinPath = terraformBinPath
+
+	postApply, diags := convertWfStepsConfigListFromAPI(ctx, cfg.PostApplyWfStepsConfig)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	m.PostApplyWfStepsConfig = postApply
+
+	preApply, diags := convertWfStepsConfigListFromAPI(ctx, cfg.PreApplyWfStepsConfig)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	m.PreApplyWfStepsConfig = preApply
+
+	prePlan, diags := convertWfStepsConfigListFromAPI(ctx, cfg.PrePlanWfStepsConfig)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	m.PrePlanWfStepsConfig = prePlan
+
+	postPlan, diags := convertWfStepsConfigListFromAPI(ctx, cfg.PostPlanWfStepsConfig)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	m.PostPlanWfStepsConfig = postPlan
+
+	preInitHooks, diags := flatteners.ListOfStringToTerraformList(cfg.PreInitHooks)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	m.PreInitHooks = preInitHooks
+
+	prePlanHooks, diags := flatteners.ListOfStringToTerraformList(cfg.PrePlanHooks)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	m.PrePlanHooks = prePlanHooks
+
+	postPlanHooks, diags := flatteners.ListOfStringToTerraformList(cfg.PostPlanHooks)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	m.PostPlanHooks = postPlanHooks
+
+	preApplyHooks, diags := flatteners.ListOfStringToTerraformList(cfg.PreApplyHooks)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	m.PreApplyHooks = preApplyHooks
+
+	postApplyHooks, diags := flatteners.ListOfStringToTerraformList(cfg.PostApplyHooks)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	m.PostApplyHooks = postApplyHooks
+
+	// These nested fields are Optional+Computed; the API may return them empty (→ null
+	// from the flatteners above). A null value on a Computed attribute is skipped by
+	// UseStateForUnknown and re-plans as "known after apply" forever, so coerce empties
+	// to known values to keep plans clean.
+	wfStepElem := types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}
+	mountElem := types.ObjectType{AttrTypes: MountPointModel{}.AttributeTypes()}
+	m.PreInitHooks = knownEmptyListIfNull(m.PreInitHooks, types.StringType)
+	m.PrePlanHooks = knownEmptyListIfNull(m.PrePlanHooks, types.StringType)
+	m.PostPlanHooks = knownEmptyListIfNull(m.PostPlanHooks, types.StringType)
+	m.PreApplyHooks = knownEmptyListIfNull(m.PreApplyHooks, types.StringType)
+	m.PostApplyHooks = knownEmptyListIfNull(m.PostApplyHooks, types.StringType)
+	m.TerraformBinPath = knownEmptyListIfNull(m.TerraformBinPath, mountElem)
+	m.PostApplyWfStepsConfig = knownEmptyListIfNull(m.PostApplyWfStepsConfig, wfStepElem)
+	m.PreApplyWfStepsConfig = knownEmptyListIfNull(m.PreApplyWfStepsConfig, wfStepElem)
+	m.PrePlanWfStepsConfig = knownEmptyListIfNull(m.PrePlanWfStepsConfig, wfStepElem)
+	m.PostPlanWfStepsConfig = knownEmptyListIfNull(m.PostPlanWfStepsConfig, wfStepElem)
+
+	// Scalars the API returns empty are coerced to known values for plan stability
+	// (UseStateForUnknown skips null state). ToAPIModel treats an empty string / false
+	// as "unset" and omits it, so a known-empty in state never produces a blank payload
+	// the API rejects (e.g. driftCron is allow_blank=False).
+	m.TerraformPlanOptions = knownEmptyStringIfNull(m.TerraformPlanOptions)
+	m.TerraformInitOptions = knownEmptyStringIfNull(m.TerraformInitOptions)
+	m.WfStepTemplateRevisionId = knownEmptyStringIfNull(m.WfStepTemplateRevisionId)
+	m.DriftCheck = knownFalseIfNull(m.DriftCheck)
+	// drift_cron is only meaningful when drift checking is on. If the API returns a cron
+	// alongside drift_check=false, drop it so state mirrors the resolved coupling (see
+	// coupleDriftFields) — otherwise a stale cron would persist in state forever.
+	if !m.DriftCheck.ValueBool() {
+		m.DriftCron = types.StringValue("")
+	}
+	m.DriftCron = knownEmptyStringIfNull(m.DriftCron)
+	m.ManagedTerraformState = knownFalseIfNull(m.ManagedTerraformState)
+	m.ApprovalPreApply = knownFalseIfNull(m.ApprovalPreApply)
+	m.RunPreInitHooksOnDrift = knownFalseIfNull(m.RunPreInitHooksOnDrift)
+	m.RunPrePlanHooksOnDrift = knownFalseIfNull(m.RunPrePlanHooksOnDrift)
+	m.RunPostPlanHooksOnDrift = knownFalseIfNull(m.RunPostPlanHooksOnDrift)
+	if m.Timeout.IsNull() {
+		m.Timeout = types.Int64Value(0)
+	}
+
+	obj, diags := types.ObjectValueFrom(ctx, TerraformConfigModel{}.AttributeTypes(), m)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	return obj, nil
+}
+
+func convertDeploymentPlatformConfigFromAPI(ctx context.Context, configs []*workflowtemplaterevisions.DeploymentPlatformConfig) (types.List, diag.Diagnostics) {
+	elemType := types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()}
+	nullList := types.ListNull(elemType)
+	if len(configs) == 0 {
+		return nullList, nil
+	}
+
+	models := make([]DeploymentPlatformConfigModel, 0, len(configs))
+	for _, cfg := range configs {
+		configModel := DeploymentPlatformConfigConfigModel{
+			IntegrationId: flatteners.String(cfg.Config.IntegrationId),
+			ProfileName:   flatteners.StringPtr(cfg.Config.ProfileName),
+		}
+		configObj, diags := types.ObjectValueFrom(ctx, DeploymentPlatformConfigConfigModel{}.AttributeTypes(), configModel)
+		if diags.HasError() {
+			return nullList, diags
+		}
+		models = append(models, DeploymentPlatformConfigModel{
+			Kind:   flatteners.String(string(cfg.Kind)),
+			Config: configObj,
+		})
+	}
+
+	list, diags := types.ListValueFrom(ctx, elemType, models)
+	if diags.HasError() {
+		return nullList, diags
+	}
+	return list, nil
+}
+
+func convertVcsConfigFromAPI(ctx context.Context, vcsConfig *sgsdkgo.VcsConfig) (types.Object, diag.Diagnostics) {
+	nullObj := types.ObjectNull(VcsConfigModel{}.AttributeTypes(ctx))
+	if vcsConfig == nil || flatteners.IsEmptyObject(vcsConfig) {
+		return nullObj, nil
+	}
+
+	var iacVcsConfigObj types.Object
+	if vcsConfig.IacVcsConfig != nil {
+		iacVcsModel := IacVcsConfigModel{
+			IacTemplateId: flatteners.StringPtr(vcsConfig.IacVcsConfig.IacTemplateId),
+		}
+		var diags diag.Diagnostics
+		iacVcsConfigObj, diags = types.ObjectValueFrom(ctx, IacVcsConfigModel{}.AttributeTypes(), iacVcsModel)
+		if diags.HasError() {
+			return nullObj, diags
+		}
+	} else {
+		iacVcsConfigObj = types.ObjectNull(IacVcsConfigModel{}.AttributeTypes())
+	}
+
+	var iacInputDataObj types.Object
+	if vcsConfig.IacInputData != nil {
+		var schemaType types.String
+		if vcsConfig.IacInputData.SchemaType != nil {
+			schemaType = types.StringValue(string(*vcsConfig.IacInputData.SchemaType))
+		} else {
+			schemaType = types.StringValue("")
+		}
+		iacInputDataModel := IacInputDataModel{
+			SchemaId:   knownEmptyStringIfNull(flatteners.StringPtr(vcsConfig.IacInputData.SchemaId)),
+			SchemaType: schemaType,
+			Data:       knownEmptyStringIfNull(flatteners.JSONInterfaceToString(vcsConfig.IacInputData.Data)),
+		}
+		var diags diag.Diagnostics
+		iacInputDataObj, diags = types.ObjectValueFrom(ctx, IacInputDataModel{}.AttributeTypes(), iacInputDataModel)
+		if diags.HasError() {
+			return nullObj, diags
+		}
+	} else {
+		// iac_input_data is Optional+Computed; the API may return none. Store a known
+		// (all-null) object rather than null so UseStateForUnknown holds it and avoids a
+		// perpetual "known after apply" diff.
+		iacInputDataObj = knownEmptyObjectIfNull(types.ObjectNull(IacInputDataModel{}.AttributeTypes()), IacInputDataModel{}.AttributeTypes())
+	}
+
+	vcsModel := VcsConfigModel{
+		IacVcsConfig: iacVcsConfigObj,
+		IacInputData: iacInputDataObj,
+	}
+	return types.ObjectValueFrom(ctx, VcsConfigModel{}.AttributeTypes(ctx), vcsModel)
+}
+
+// ---------------------------------------------------------------------------
+// Template merge (provider-side resolution)
+//
+// The platform persists a workflow as a fully-merged record (user input +
+// template + org + platform defaults). The user's Terraform config only carries
+// the fields they declared. To make Terraform's diff engine work, the provider
+// fetches the workflow template revision and merges it into the payload: any
+// field the user did NOT set is filled from the template. The resulting resolved
+// payload is what we send to the API and store in state, so config, state, and
+// reality line up field-for-field.
+//
+// Org defaults are already baked into the template at template-create time, so a
+// template revision carries org-resolved values — fetching the template is
+// sufficient; no separate org-settings call is needed.
+// ---------------------------------------------------------------------------
+
+// mergeTemplateDefaults fills fields the user left unset on wf with the values
+// from the template revision tpl. User-provided values always win.
+// absent reports whether a Terraform attr value was not provided by the user (null or
+// unknown). A KNOWN-EMPTY value (e.g. `environment_variables = []`) is NOT absent — it is
+// an explicit override that must win over the template, so the merge must not re-fill it.
+func absent(v attr.Value) bool { return v.IsNull() || v.IsUnknown() }
+
+func mergeTemplateDefaults(m WorkflowUsingTemplateResourceModel, wf *sgworkflows.Workflow, tpl *workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) {
+	if wf == nil || tpl == nil {
+		return
+	}
+
+	// Inheritance rule: fill a field from the template ONLY when the user did not provide
+	// it (config value is null/unknown). A user-provided value — including an explicit
+	// empty list/map — always wins, so users can suppress a template default with `[]`.
+
+	// NOTE: resource_name is intentionally NOT filled from the template. The template's
+	// Alias (e.g. "v1"/"v2") is a revision label, not a workflow name. When the user omits
+	// resource_name, the API assigns one (derived from the workflow id) and Read captures
+	// it; filling it from the alias here produces an invalid name and breaks upgrades.
+	if absent(m.Description) && tpl.LongDescription != nil {
+		wf.Description = tpl.LongDescription
+	}
+	if absent(m.NumberOfApprovalsRequired) && tpl.NumberOfApprovalsRequired != nil {
+		wf.NumberOfApprovalsRequired = tpl.NumberOfApprovalsRequired
+	}
+	if absent(m.UserJobCpu) && tpl.UserJobCPU != nil {
+		wf.UserJobCpu = tpl.UserJobCPU
+	}
+	if absent(m.UserJobMemory) && tpl.UserJobMemory != nil {
+		wf.UserJobMemory = tpl.UserJobMemory
+	}
+	// TerraformConfig is deep-merged field-by-field: a field the user set wins; any
+	// field the user left unset is filled from the template. (Whole-object replacement
+	// would send the user's partial block with blanks the API rejects, e.g. driftCron.)
+	wf.TerraformConfig = mergeTerraformConfig(wf.TerraformConfig, tpl.TerraformConfig)
+
+	// iac_input_data: the template's default input data lives base64-encoded in the
+	// RAW_JSON InputSchema. Inherit it only when the user declared none (replace, not
+	// merge — the data is one opaque JSON string Terraform won't let us alter).
+	fillTemplateIacInputData(wf, tpl)
+	if absent(m.RunnerConstraints) && tpl.RunnerConstraints != nil {
+		wf.RunnerConstraints = tpl.RunnerConstraints
+	}
+	if absent(m.MiniSteps) && tpl.Ministeps != nil {
+		wf.MiniSteps = tpl.Ministeps
+	}
+
+	// Suppressible list/map fields are *core.Optional on the SDK struct. The merge only
+	// runs when the user is absent() (omitted), and the template value is always concrete,
+	// so wrap it with sgsdkgo.Optional(...) so it serializes to the request.
+	if absent(m.Tags) && len(tpl.Tags) > 0 {
+		wf.Tags = sgsdkgo.Optional(tpl.Tags)
+	}
+	if absent(m.Approvers) && len(tpl.Approvers) > 0 {
+		wf.Approvers = sgsdkgo.Optional(tpl.Approvers)
+	}
+	if absent(m.ContextTags) && len(tpl.ContextTags) > 0 {
+		wf.ContextTags = sgsdkgo.Optional(tpl.ContextTags)
+	}
+	if absent(m.UserSchedules) && len(tpl.UserSchedules) > 0 {
+		schedules := make([]*sgsdkgo.UserSchedules, len(tpl.UserSchedules))
+		for i := range tpl.UserSchedules {
+			t := tpl.UserSchedules[i]
+			cron := t.Cron
+			state := sgsdkgo.StateEnum(t.State)
+			schedules[i] = &sgsdkgo.UserSchedules{
+				Name:  t.Name,
+				Desc:  t.Desc,
+				Cron:  &cron,
+				State: &state,
+			}
+		}
+		wf.UserSchedules = sgsdkgo.Optional(schedules)
+	}
+	if absent(m.DeploymentPlatformConfig) && len(tpl.DeploymentPlatformConfig) > 0 {
+		wf.DeploymentPlatformConfig = sgsdkgo.Optional(tpl.DeploymentPlatformConfig)
+	}
+
+	// EnvironmentVariables: template stores value slice, workflow uses pointer slice.
+	if absent(m.EnvironmentVariables) && len(tpl.EnvironmentVariables) > 0 {
+		ptrs := make([]*sgsdkgo.EnvVars, len(tpl.EnvironmentVariables))
+		for i := range tpl.EnvironmentVariables {
+			ptrs[i] = &tpl.EnvironmentVariables[i]
+		}
+		wf.EnvironmentVariables = sgsdkgo.Optional(ptrs)
+	}
+
+	// WfStepsConfig: template stores value slice, workflow uses pointer slice.
+	if absent(m.WfStepsConfig) && len(tpl.WfStepsConfig) > 0 {
+		ptrs := make([]*sgsdkgo.WfStepsConfig, len(tpl.WfStepsConfig))
+		for i := range tpl.WfStepsConfig {
+			ptrs[i] = &tpl.WfStepsConfig[i]
+		}
+		wf.WfStepsConfig = sgsdkgo.Optional(ptrs)
+	}
+}
+
+// coupleDriftFields enforces the drift_check/drift_cron coupling: a cron is only
+// meaningful when drift checking is enabled, so whenever the resolved drift_check is
+// absent or false the cron is cleared (regardless of whether it came from the user or
+// the template). Applied at every return point of mergeTerraformConfig so the resolved
+// config is consistent across create/update (ToAPIModel) and plan (planTerraformConfig).
+func coupleDriftFields(cfg *sgsdkgo.TerraformConfig) *sgsdkgo.TerraformConfig {
+	if cfg == nil {
+		return nil
+	}
+	if cfg.DriftCheck == nil || !*cfg.DriftCheck {
+		cfg.DriftCron = nil
+	}
+	return cfg
+}
+
+// mergeTerraformConfig deep-merges a TerraformConfig field-by-field: the user's value
+// is kept when set, otherwise the template's value fills it. Returns the user config
+// unchanged if the template has none, and the template's config if the user has none.
+// drift_cron is cleared whenever the resolved drift_check is false (see coupleDriftFields).
+func mergeTerraformConfig(user, tpl *sgsdkgo.TerraformConfig) *sgsdkgo.TerraformConfig {
+	if tpl == nil {
+		return coupleDriftFields(user)
+	}
+	if user == nil {
+		return coupleDriftFields(tpl)
+	}
+
+	if user.TerraformVersion == nil {
+		user.TerraformVersion = tpl.TerraformVersion
+	}
+	if user.DriftCheck == nil {
+		user.DriftCheck = tpl.DriftCheck
+	}
+	if user.DriftCron == nil {
+		user.DriftCron = tpl.DriftCron
+	}
+	if user.ManagedTerraformState == nil {
+		user.ManagedTerraformState = tpl.ManagedTerraformState
+	}
+	if user.ApprovalPreApply == nil {
+		user.ApprovalPreApply = tpl.ApprovalPreApply
+	}
+	if user.TerraformPlanOptions == nil {
+		user.TerraformPlanOptions = tpl.TerraformPlanOptions
+	}
+	if user.TerraformInitOptions == nil {
+		user.TerraformInitOptions = tpl.TerraformInitOptions
+	}
+	if user.WfStepTemplateRevisionId == nil {
+		user.WfStepTemplateRevisionId = tpl.WfStepTemplateRevisionId
+	}
+	if user.Timeout == nil {
+		user.Timeout = tpl.Timeout
+	}
+	if user.RunPreInitHooksOnDrift == nil {
+		user.RunPreInitHooksOnDrift = tpl.RunPreInitHooksOnDrift
+	}
+	if user.RunPrePlanHooksOnDrift == nil {
+		user.RunPrePlanHooksOnDrift = tpl.RunPrePlanHooksOnDrift
+	}
+	if user.RunPostPlanHooksOnDrift == nil {
+		user.RunPostPlanHooksOnDrift = tpl.RunPostPlanHooksOnDrift
+	}
+	if len(user.TerraformBinPath) == 0 {
+		user.TerraformBinPath = tpl.TerraformBinPath
+	}
+	if len(user.PostApplyWfStepsConfig) == 0 {
+		user.PostApplyWfStepsConfig = tpl.PostApplyWfStepsConfig
+	}
+	if len(user.PreApplyWfStepsConfig) == 0 {
+		user.PreApplyWfStepsConfig = tpl.PreApplyWfStepsConfig
+	}
+	if len(user.PrePlanWfStepsConfig) == 0 {
+		user.PrePlanWfStepsConfig = tpl.PrePlanWfStepsConfig
+	}
+	if len(user.PostPlanWfStepsConfig) == 0 {
+		user.PostPlanWfStepsConfig = tpl.PostPlanWfStepsConfig
+	}
+	if len(user.PreInitHooks) == 0 {
+		user.PreInitHooks = tpl.PreInitHooks
+	}
+	if len(user.PrePlanHooks) == 0 {
+		user.PrePlanHooks = tpl.PrePlanHooks
+	}
+	if len(user.PostPlanHooks) == 0 {
+		user.PostPlanHooks = tpl.PostPlanHooks
+	}
+	if len(user.PreApplyHooks) == 0 {
+		user.PreApplyHooks = tpl.PreApplyHooks
+	}
+	if len(user.PostApplyHooks) == 0 {
+		user.PostApplyHooks = tpl.PostApplyHooks
+	}
+
+	return coupleDriftFields(user)
+}
+
+// templateDefaultInputData decodes the template's default iac input data from its
+// RAW_JSON InputSchema (base64-encoded JSON object), or returns nil if absent.
+func templateDefaultInputData(tpl *workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) map[string]interface{} {
+	// Defaults come from the FORM_JSONSCHEMA entry's properties[].default — this is the
+	// authoritative source the platform uses (the RAW_JSON entry can be stale and miss
+	// inputs added in later revisions). Mirrors core's
+	// extract_defaults_from_form_jsonschema so the result matches what the API stores.
+	for _, s := range tpl.InputSchemas {
+		if s.Type != sgsdkgo.InputSchemasTypeEnumFormJsonschema || s.EncodedData == nil {
+			continue
+		}
+		decoded, err := base64.StdEncoding.DecodeString(*s.EncodedData)
+		if err != nil {
+			return nil
+		}
+		var schema map[string]interface{}
+		if err := json.Unmarshal(decoded, &schema); err != nil {
+			return nil
+		}
+		defaults := extractFormJSONSchemaDefaults(schema)
+		if m, ok := defaults.(map[string]interface{}); ok {
+			return m
+		}
+		return nil
+	}
+	return nil
+}
+
+// extractFormJSONSchemaDefaults recursively extracts default values from a React JSON
+// Schema Form schema. Ported from core's extract_defaults_from_form_jsonschema:
+//   - object + properties → map of each property's extracted default (omit nil; nil if empty)
+//   - array + items       → schema's own "default" if present, else [recurse(items)]
+//   - leaf with "default" → that default value (may itself be a nested object/array)
+//   - otherwise           → nil
+//
+// Combinators (oneOf/anyOf/allOf) and dependencies are intentionally not traversed, matching
+// the platform.
+func extractFormJSONSchemaDefaults(schema map[string]interface{}) interface{} {
+	if schema == nil {
+		return nil
+	}
+
+	typ, _ := schema["type"].(string)
+
+	if typ == "object" {
+		if props, ok := schema["properties"].(map[string]interface{}); ok {
+			result := map[string]interface{}{}
+			for key, raw := range props {
+				propSchema, ok := raw.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				if v := extractFormJSONSchemaDefaults(propSchema); v != nil {
+					result[key] = v
+				}
+			}
+			if len(result) == 0 {
+				return nil
+			}
+			return result
+		}
+	}
+
+	if typ == "array" {
+		if _, hasItems := schema["items"]; hasItems {
+			if def, ok := schema["default"]; ok {
+				return def
+			}
+			if items, ok := schema["items"].(map[string]interface{}); ok {
+				if itemDefaults := extractFormJSONSchemaDefaults(items); itemDefaults != nil {
+					return []interface{}{itemDefaults}
+				}
+			}
+			return nil
+		}
+	}
+
+	if def, ok := schema["default"]; ok {
+		return def
+	}
+
+	return nil
+}
+
+// fillTemplateIacInputData inherits the template's default input data (from its RAW_JSON
+// InputSchema) ONLY when the user declared none. If the user declared iac_input_data, it
+// is used as-is (replace, no merge) — Terraform forbids changing a config-set value, and
+// the data is one opaque JSON string so it cannot be merged key-by-key. This matches the
+// replace semantics used for environment_variables and other lists.
+func fillTemplateIacInputData(wf *sgworkflows.Workflow, tpl *workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) {
+	// User already supplied input data → leave it untouched.
+	if wf.VcsConfig != nil && wf.VcsConfig.IacInputData != nil && len(wf.VcsConfig.IacInputData.Data) > 0 {
+		return
+	}
+	tplData := templateDefaultInputData(tpl)
+	if len(tplData) == 0 {
+		return
+	}
+	if wf.VcsConfig == nil {
+		wf.VcsConfig = &sgsdkgo.VcsConfig{}
+	}
+	schemaType := sgsdkgo.IacInputDataSchemaTypeEnumFormJsonschema
+	wf.VcsConfig.IacInputData = &sgsdkgo.IacInputData{
+		SchemaType: &schemaType,
+		Data:       tplData,
+	}
+}
+
+// planTerraformConfig computes, for ModifyPlan on a revision change, the resolved
+// terraform_config as a known types.Object: the user's declared nested fields (if any)
+// deep-merged over the new revision's terraform_config (user wins). The result matches what
+// Create/Update's ToAPIModel+mergeTerraformConfig produce at apply, so plan == apply.
+func planTerraformConfig(ctx context.Context, userCfg types.Object, tplCfg *sgsdkgo.TerraformConfig) (types.Object, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	nullObj := types.ObjectNull(TerraformConfigModel{}.AttributeTypes())
+
+	userSdk, d := convertTerraformConfigToAPI(ctx, userCfg)
+	diags.Append(d...)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	merged := mergeTerraformConfig(userSdk, tplCfg)
+	obj, d := convertTerraformConfigFromAPI(ctx, merged)
+	diags.Append(d...)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	return knownEmptyObjectIfNull(obj, TerraformConfigModel{}.AttributeTypes()), diags
+}
+
+// reResolveOnRevisionChange re-resolves the template-derived fields the user left unset
+// against the NEW revision tpl, used by ModifyPlan on a revision change. Where safe, a field
+// is set to its CONCRETE resolved value (computed via the same convert*FromAPI flatteners the
+// Read path uses) so plan == apply and references to it do not get a spurious "known after
+// apply"/update when the value is unchanged; terraform_config uses this too (planTerraformConfig).
+// Fields the API may reorder/normalize are still set to typed-unknown (apply re-resolves them).
+// Fields the user declared are untouched.
+func reResolveOnRevisionChange(ctx context.Context, plan *WorkflowUsingTemplateResourceModel, config WorkflowUsingTemplateResourceModel, tpl *workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	envElem := types.ObjectType{AttrTypes: EnvironmentVariableModel{}.AttributeTypes()}
+	schedElem := types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()}
+	deployElem := types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()}
+	wfStepElem := types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}
+
+	// resource_name is NOT template-resolved — it's the workflow's identity, assigned by
+	// the API at create and required (non-null) on update. Leave the planned value (state
+	// value via UseStateForUnknown) so it carries forward across a revision change.
+	//
+	// Two strategies, both producing plan == apply:
+	//
+	// (1) CONCRETE plan value (preferred): for fields whose resolved value passes through the
+	//     API unchanged, compute the value the new revision will resolve to and set it in the
+	//     plan. The value is computed by flattening the template's value through the SAME
+	//     convert*FromAPI flatteners + knownEmpty* wrappers the Read path uses, so it matches
+	//     apply byte-for-byte. This avoids the side effect where marking a field unknown forces
+	//     a SPURIOUS in-place update on every resource that references it — when the new
+	//     revision resolves to the same value, the plan now shows no change. (resolved value =
+	//     the template's value, because re-resolution only happens when the user is absent.)
+	//
+	// (2) UNKNOWN ("known after apply"): for fields the API may reorder/normalize/augment
+	//     (where a plan-time prediction could mismatch apply and cause "inconsistent result
+	//     after apply"), keep marking unknown — correct but may cause spurious dependent
+	//     updates on revision upgrade. These are migrated to (1) only with per-field
+	//     round-trip test coverage.
+
+	// (1) Concrete plan values — string/list/map fields that round-trip unchanged.
+	if config.Description.IsNull() {
+		// Read uses StringPtrDefault (null -> ""), so mirror that for plan stability.
+		plan.Description = flatteners.StringPtrDefault(tpl.LongDescription)
+	}
+	if config.Tags.IsNull() {
+		tags, d := flatteners.ListOfStringToTerraformList(tpl.Tags)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.Tags = knownEmptyListIfNull(tags, types.StringType)
+	}
+	if config.Approvers.IsNull() {
+		approvers, d := flatteners.ListOfStringToTerraformList(tpl.Approvers)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.Approvers = knownEmptyListIfNull(approvers, types.StringType)
+	}
+	if config.ContextTags.IsNull() {
+		contextTags, d := flatteners.MapStringString(ctx, tpl.ContextTags)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.ContextTags = knownEmptyMapIfNull(contextTags)
+	}
+	if config.EnvironmentVariables.IsNull() {
+		envVarsList, d := convertEnvironmentVariablesFromAPI(ctx, tpl.EnvironmentVariables)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.EnvironmentVariables = knownEmptyListIfNull(envVarsList, envElem)
+	}
+	// The int fields are normally carried on the template revision, in which case the
+	// resolved value is exactly that. When a template omits one, the WORKFLOW API fills a
+	// fixed default (number_of_approvals_required -> 0, user_job_cpu -> 512,
+	// user_job_memory -> 1024) that the template read does not include — so mirror that
+	// default here too, making plan == apply in both cases (template-carries and
+	// template-omits) and avoiding a spurious "(known after apply)" on dependents.
+	if config.NumberOfApprovalsRequired.IsNull() {
+		plan.NumberOfApprovalsRequired = int64FromTemplateOrDefault(tpl.NumberOfApprovalsRequired, 0)
+	}
+	if config.UserJobCpu.IsNull() {
+		plan.UserJobCpu = int64FromTemplateOrDefault(tpl.UserJobCPU, 512)
+	}
+	if config.UserJobMemory.IsNull() {
+		plan.UserJobMemory = int64FromTemplateOrDefault(tpl.UserJobMemory, 1024)
+	}
+	// runner_constraints: tpl.RunnerConstraints and wf.RunnerConstraints are the same
+	// (*sgsdkgo.RunnerConstraints) and the merge is a direct assignment, so flattening the
+	// template value through the Read path's convertRunnerConstraintsFromAPI yields what
+	// apply+Read produces. When the template OMITS it, the workflow API injects a default
+	// ({type:"shared", names:null}) absent from the template read — mirror that so plan ==
+	// apply in both cases (verified: omitting it otherwise gives "was null, but now
+	// {type:shared}").
+	if config.RunnerConstraints.IsNull() {
+		rcSrc := tpl.RunnerConstraints
+		if rcSrc == nil {
+			rcSrc = &sgsdkgo.RunnerConstraints{Type: sgsdkgo.RunnerConstraintsTypeEnumShared.Ptr()}
+		}
+		rc, d := convertRunnerConstraintsFromAPI(ctx, rcSrc)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.RunnerConstraints = rc
+	}
+
+	// deployment_platform_config: tpl.DeploymentPlatformConfig is exactly the type the Read
+	// flattener consumes ([]*workflowtemplaterevisions.DeploymentPlatformConfig) and the merge
+	// passes it through unchanged, so flattening it through convertDeploymentPlatformConfigFromAPI
+	// + knownEmptyListIfNull (matching Read) yields the concrete plan value.
+	if config.DeploymentPlatformConfig.IsNull() {
+		dpc, d := convertDeploymentPlatformConfigFromAPI(ctx, tpl.DeploymentPlatformConfig)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.DeploymentPlatformConfig = knownEmptyListIfNull(dpc, deployElem)
+	}
+
+	// (2) Unknown — the ONE remaining field the API augments in a way that can't be predicted
+	// from tpl; predicting it at plan time mismatches apply ("inconsistent result after
+	// apply"). Migrate to a concrete value only with a per-field round-trip test.
+	//
+	// user_schedules stays unknown: the workflow does NOT necessarily persist the template's
+	// schedules — a template that carries a UserSchedule can resolve to a workflow with NONE
+	// (verified: predicting from tpl gives ".user_schedules: element 0 has vanished" at apply).
+	// The API decides whether/how schedules transfer, so it can't be predicted from tpl.
+	if config.UserSchedules.IsNull() {
+		plan.UserSchedules = types.ListUnknown(schedElem)
+	}
+	// wf_steps_config: tpl.WfStepsConfig is []sgsdkgo.WfStepsConfig — exactly the type the Read
+	// flattener consumes. The merge assigns tpl.WfStepsConfig into wf.WfStepsConfig verbatim
+	// (only the API reorders JSON keys inside wf_step_input_data.data, which is order-independent
+	// after unmarshal), then Read flattens it through convertWfStepsConfigListFromAPI +
+	// knownEmptyListIfNull — so flattening tpl.WfStepsConfig through the same pair yields the
+	// concrete plan value, matching apply byte-for-byte. Verified with a live round-trip test on
+	// a CUSTOM template carrying steps (WfStepsConfigRevisionUpgradeNoSpuriousDependentUpdate).
+	if config.WfStepsConfig.IsNull() {
+		wfSteps, d := convertWfStepsConfigListFromAPI(ctx, tpl.WfStepsConfig)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.WfStepsConfig = knownEmptyListIfNull(wfSteps, wfStepElem)
+	}
+	if config.MiniSteps.IsNull() {
+		ms, d := convertMinistepsFromAPI(ctx, tpl.Ministeps)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.MiniSteps = knownEmptyObjectIfNull(ms, MinistepsModel{}.AttributeTypes())
+	}
+	// terraform_config: compute the new revision's resolved value as a KNOWN object and set
+	// it in the plan, so it matches apply and bypasses the nested UseStateForUnknown
+	// modifiers (which would otherwise leak the OLD revision's nested values, incl. stale "").
+	// User-declared nested fields win (deep-merge: user over new template); fields the user
+	// did not declare come from the new revision.
+	{
+		merged, d := planTerraformConfig(ctx, config.TerraformConfig, tpl.TerraformConfig)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.TerraformConfig = merged
+	}
+
+	// iac_input_data lives inside the Required vcs_config object; rebuild vcs_config with
+	// iac_input_data set to unknown when the user did not declare it.
+	configHasIacInput, d := configDeclaresIacInputData(ctx, config)
+	diags.Append(d...)
+	if diags.HasError() {
+		return diags
+	}
+	if !configHasIacInput && !plan.VcsConfig.IsNull() && !plan.VcsConfig.IsUnknown() {
+		var vcs VcsConfigModel
+		diags.Append(plan.VcsConfig.As(ctx, &vcs, basetypes.ObjectAsOptions{})...)
+		if diags.HasError() {
+			return diags
+		}
+		vcs.IacInputData = types.ObjectUnknown(IacInputDataModel{}.AttributeTypes())
+		obj, d := types.ObjectValueFrom(ctx, VcsConfigModel{}.AttributeTypes(ctx), vcs)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.VcsConfig = obj
+	}
+
+	return diags
+}
+
+// configDeclaresIacInputData reports whether the user declared vcs_config.iac_input_data
+// in config (non-null).
+func configDeclaresIacInputData(ctx context.Context, config WorkflowUsingTemplateResourceModel) (bool, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if config.VcsConfig.IsNull() || config.VcsConfig.IsUnknown() {
+		return false, diags
+	}
+	var vcs VcsConfigModel
+	diags.Append(config.VcsConfig.As(ctx, &vcs, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
+		return false, diags
+	}
+	return !vcs.IacInputData.IsNull() && !vcs.IacInputData.IsUnknown(), diags
+}
+
+// IacTemplateId extracts the workflow template revision id from the model's
+// vcs_config.iac_vcs_config.iac_template_id. Returns "" if not set.
+func (m WorkflowUsingTemplateResourceModel) IacTemplateId(ctx context.Context) (string, diag.Diagnostics) {
+	if m.VcsConfig.IsNull() || m.VcsConfig.IsUnknown() {
+		return "", nil
+	}
+	var vcs VcsConfigModel
+	diags := m.VcsConfig.As(ctx, &vcs, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return "", diags
+	}
+	if vcs.IacVcsConfig.IsNull() || vcs.IacVcsConfig.IsUnknown() {
+		return "", nil
+	}
+	var iac IacVcsConfigModel
+	diags = vcs.IacVcsConfig.As(ctx, &iac, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return "", diags
+	}
+	return iac.IacTemplateId.ValueString(), nil
+}

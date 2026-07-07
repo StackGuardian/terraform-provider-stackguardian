@@ -179,7 +179,8 @@ var terraformConfigSchema = schema.SingleNestedAttribute{
 	Computed: true,
 	Attributes: map[string]schema.Attribute{
 		"terraform_version": schema.StringAttribute{
-			Computed: true,
+			MarkdownDescription: "Terraform/OpenTofu version, returned in the bare form (e.g. `1.5.7`). The engine prefix the API stores (`TERRAFORM-` / `OPENTOFU-`) is stripped so the value can be referenced directly into a `stackguardian_workflow_from_template` resource without producing a perpetual diff.",
+			Computed:            true,
 		},
 		"terraform_plan_options": schema.StringAttribute{
 			Computed: true,
@@ -303,7 +304,7 @@ func (d *workflowTemplateRevisionDataSource) Schema(_ context.Context, _ datasou
 		MarkdownDescription: "Use this data source to read a workflow template revision.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: constants.DatasourceId,
+				MarkdownDescription: "Revision ID in the bare `<template-name>:<revision>` form (e.g. `my-template:1`). Do not use the full `/<org>/<template-name>:<revision>` path — it returns an `Unauthorized` error.",
 				Required:            true,
 			},
 			"template_id": schema.StringAttribute{
@@ -343,6 +344,11 @@ func (d *workflowTemplateRevisionDataSource) Schema(_ context.Context, _ datasou
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
+						// name is present on the shared InputSchemaModel (and the resource
+						// schema); omitting it here caused a schema/model type mismatch.
+						"name": schema.StringAttribute{
+							Computed: true,
+						},
 						"type": schema.StringAttribute{
 							Computed: true,
 						},
@@ -412,20 +418,26 @@ func (d *workflowTemplateRevisionDataSource) Schema(_ context.Context, _ datasou
 			},
 			"runtime_source":  runtimeSourceSchema,
 			"terraform_config": terraformConfigSchema,
-			"deployment_platform_config": schema.SingleNestedAttribute{
+			// deployment_platform_config is a LIST in the API (and in the shared revision
+			// model, which is types.List). Declaring it as a single nested object here caused
+			// a schema/model type mismatch that errored at runtime whenever a revision carried
+			// a populated deployment_platform_config.
+			"deployment_platform_config": schema.ListNestedAttribute{
 				Computed: true,
-				Attributes: map[string]schema.Attribute{
-					"kind": schema.StringAttribute{
-						Computed: true,
-					},
-					"config": schema.SingleNestedAttribute{
-						Computed: true,
-						Attributes: map[string]schema.Attribute{
-							"integration_id": schema.StringAttribute{
-								Computed: true,
-							},
-							"profile_name": schema.StringAttribute{
-								Computed: true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"kind": schema.StringAttribute{
+							Computed: true,
+						},
+						"config": schema.SingleNestedAttribute{
+							Computed: true,
+							Attributes: map[string]schema.Attribute{
+								"integration_id": schema.StringAttribute{
+									Computed: true,
+								},
+								"profile_name": schema.StringAttribute{
+									Computed: true,
+								},
 							},
 						},
 					},

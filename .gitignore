@@ -42,6 +42,13 @@ examples/**.dot
 # Terraform provider build files
 terraform-provider-stackguardian
 
+# Delve debug binaries
+__debug_bin*
+
+# Local debug / manual-test sandboxes (test .tf configs, state, secrets, design notes)
+local-debug/
+testing/
+
 ### Go ###
 dist
 

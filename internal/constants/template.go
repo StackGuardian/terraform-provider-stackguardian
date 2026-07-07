@@ -142,6 +142,7 @@ const (
 	WfStepCmdOverride         = "Override command for the step."
 	WfStepMountPoints         = "Mount points for the step."
 	WfStepTemplateId          = "Workflow step template ID."
+	TerraformWfStepTemplateRevisionId = "Fully-qualified workflow step template revision id pinned for this terraform config (e.g. \"/<org>/<name>:<rev>\")."
 	WfStepInputData           = "Workflow step input data (JSON string)"
 	WfStepInputDataSchemaType = `Schema type for the input data. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>`
 	WfStepInputDataData       = "Input data (JSON)."
