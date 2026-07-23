@@ -659,11 +659,17 @@ func (IacInputDataModel) AttributeTypes() map[string]attr.Type {
 }
 
 func (m IacInputDataModel) ToAPIModel() *sgsdkgo.IacInputData {
-	return &sgsdkgo.IacInputData{
+	out := &sgsdkgo.IacInputData{
 		SchemaId:   m.SchemaId.ValueStringPointer(),
 		SchemaType: sgsdkgo.IacInputDataSchemaTypeEnum(m.SchemaType.ValueString()).Ptr(),
-		Data:       expanders.JSONStringToMap(m.Data.ValueString()),
 	}
+	// Data is *map: JSONStringToMap returns a nil map for "" (leave pointer nil -> key
+	// omitted, matching prior omitempty behavior) and a non-nil map otherwise (incl. the
+	// empty {} for "{}", which now reaches the wire as an explicit empty).
+	if dataMap := expanders.JSONStringToMap(m.Data.ValueString()); dataMap != nil {
+		out.Data = &dataMap
+	}
+	return out
 }
 
 type CustomSourceConfigModel struct {
@@ -2234,10 +2240,16 @@ func convertVcsConfigFromAPI(ctx context.Context, vcsConfig *sgsdkgo.VcsConfig) 
 
 	var iacInputDataObj types.Object
 	if vcsConfig.IacInputData != nil {
+		// Data is *map: guard the nil pointer — a typed nil inside interface{} would slip
+		// past JSONInterfaceToString's nil check and marshal to the string "null".
+		dataStr := types.StringNull()
+		if vcsConfig.IacInputData.Data != nil {
+			dataStr = flatteners.JSONInterfaceToString(*vcsConfig.IacInputData.Data)
+		}
 		iacInputDataModel := IacInputDataModel{
 			SchemaId:   flatteners.StringPtr(vcsConfig.IacInputData.SchemaId),
 			SchemaType: types.StringValue(string(*vcsConfig.IacInputData.SchemaType)),
-			Data:       flatteners.JSONInterfaceToString(vcsConfig.IacInputData.Data),
+			Data:       dataStr,
 		}
 		var diags diag.Diagnostics
 		iacInputDataObj, diags = types.ObjectValueFrom(ctx, IacInputDataModel{}.AttributeTypes(), iacInputDataModel)
