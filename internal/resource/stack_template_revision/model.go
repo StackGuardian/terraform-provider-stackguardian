@@ -956,7 +956,11 @@ func convertVcsConfigToAPI(ctx context.Context, obj types.Object, orgName string
 		vcsConfig.IacInputData = &sgsdkgo.IacInputData{
 			SchemaId:   idModel.SchemaId.ValueStringPointer(),
 			SchemaType: &schemaType,
-			Data:       parseJSONToMap(idModel.Data.ValueString()),
+		}
+		// Data is *map: nil map (empty/invalid string) leaves the pointer nil -> key
+		// omitted, matching prior omitempty behavior; a non-nil map (incl. {}) is sent.
+		if dataMap := parseJSONToMap(idModel.Data.ValueString()); dataMap != nil {
+			vcsConfig.IacInputData.Data = &dataMap
 		}
 	}
 
@@ -1862,10 +1866,16 @@ func vcsConfigFromAPI(vc *sgsdkgo.VcsConfig) (types.Object, diag.Diagnostics) {
 
 	iacInputNull := types.ObjectNull(IacInputDataModel{}.AttributeTypes())
 	if vc.IacInputData != nil {
+		// Data is *map: guard the nil pointer — a typed nil inside interface{} would slip
+		// past marshalToJSONString's nil check and marshal to the string "null".
+		dataStr := types.StringNull()
+		if vc.IacInputData.Data != nil {
+			dataStr = marshalToJSONString(*vc.IacInputData.Data)
+		}
 		idM := IacInputDataModel{
 			SchemaId:   flatteners.StringPtr(vc.IacInputData.SchemaId),
 			SchemaType: flatteners.String(string(*vc.IacInputData.SchemaType)),
-			Data:       marshalToJSONString(vc.IacInputData.Data),
+			Data:       dataStr,
 		}
 		var diags diag.Diagnostics
 		iacInputNull, diags = types.ObjectValueFrom(context.Background(), IacInputDataModel{}.AttributeTypes(), idM)
@@ -1917,6 +1927,8 @@ func workflowsConfigFromAPI(wc *stacktemplaterevisions.StackTemplateRevisionWork
 		// IacInputData (TemplatesIacInputData)
 		iacInputDataObj := types.ObjectNull(WfStepInputDataModel{}.AttributeTypes())
 		if wf.IacInputData != nil {
+			// wf.IacInputData is TemplatesIacInputData (Data is a plain map, not the
+			// pointer-typed sgsdkgo.IacInputData) — no deref needed.
 			idm := WfStepInputDataModel{
 				SchemaType: flatteners.String(string(*wf.IacInputData.SchemaType)),
 				Data:       marshalToJSONString(wf.IacInputData.Data),
