@@ -511,7 +511,12 @@ func (m IacInputDataModel) ToAPIModel() *sgsdkgo.IacInputData {
 		out.SchemaType = sgsdkgo.IacInputDataSchemaTypeEnum(m.SchemaType.ValueString()).Ptr()
 	}
 	if isNonEmpty(m.Data) {
-		out.Data = expanders.JSONStringToMap(m.Data.ValueString())
+		// Data is a pointer so an EXPLICIT empty object reaches the wire: data = "{}"
+		// parses to an empty (non-nil) map and serializes as "data": {}, which the API
+		// accepts and which suppresses template inheritance (see fillTemplateIacInputData).
+		// A null/"" data leaves the pointer nil -> key omitted -> inherit.
+		dataMap := expanders.JSONStringToMap(m.Data.ValueString())
+		out.Data = &dataMap
 	}
 	return out
 }
@@ -2147,10 +2152,16 @@ func convertVcsConfigFromAPI(ctx context.Context, vcsConfig *sgsdkgo.VcsConfig) 
 		} else {
 			schemaType = types.StringValue("")
 		}
+		// Data is *map: guard the nil pointer explicitly — a typed nil inside interface{}
+		// would slip past JSONInterfaceToString's nil check and marshal to the string "null".
+		dataStr := types.StringNull()
+		if vcsConfig.IacInputData.Data != nil {
+			dataStr = flatteners.JSONInterfaceToString(*vcsConfig.IacInputData.Data)
+		}
 		iacInputDataModel := IacInputDataModel{
 			SchemaId:   knownEmptyStringIfNull(flatteners.StringPtr(vcsConfig.IacInputData.SchemaId)),
 			SchemaType: schemaType,
-			Data:       knownEmptyStringIfNull(flatteners.JSONInterfaceToString(vcsConfig.IacInputData.Data)),
+			Data:       knownEmptyStringIfNull(dataStr),
 		}
 		var diags diag.Diagnostics
 		iacInputDataObj, diags = types.ObjectValueFrom(ctx, IacInputDataModel{}.AttributeTypes(), iacInputDataModel)
@@ -2472,8 +2483,10 @@ func extractFormJSONSchemaDefaults(schema map[string]interface{}) interface{} {
 // the data is one opaque JSON string so it cannot be merged key-by-key. This matches the
 // replace semantics used for environment_variables and other lists.
 func fillTemplateIacInputData(wf *sgworkflows.Workflow, tpl *workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) {
-	// User already supplied input data → leave it untouched.
-	if wf.VcsConfig != nil && wf.VcsConfig.IacInputData != nil && len(wf.VcsConfig.IacInputData.Data) > 0 {
+	// User already supplied input data → leave it untouched. Data is a pointer: a non-nil
+	// pointer means the user DECLARED data — including an EXPLICIT empty {} (data = "{}"),
+	// which must suppress template inheritance, not fall through to it.
+	if wf.VcsConfig != nil && wf.VcsConfig.IacInputData != nil && wf.VcsConfig.IacInputData.Data != nil {
 		return
 	}
 	tplData := templateDefaultInputData(tpl)
@@ -2486,7 +2499,7 @@ func fillTemplateIacInputData(wf *sgworkflows.Workflow, tpl *workflowtemplaterev
 	schemaType := sgsdkgo.IacInputDataSchemaTypeEnumFormJsonschema
 	wf.VcsConfig.IacInputData = &sgsdkgo.IacInputData{
 		SchemaType: &schemaType,
-		Data:       tplData,
+		Data:       &tplData,
 	}
 }
 
