@@ -8,10 +8,6 @@ description: |-
 
 # stackguardian_workflow_from_template (Resource)
 
-<div style="background-color: orange; padding: 12px; border-radius: 6px; color: white; font-weight: bold;">
-⚠️ This feature is currently in BETA.
-</div>
-
 Creates and manages a StackGuardian workflow from a **workflow template revision**. The
 provider fetches the template revision referenced by
 `vcs_config.iac_vcs_config.iac_template_id`, merges it with the config you declare, and stores
@@ -193,7 +189,7 @@ Optional:
 - `errored` (Attributes List) (see [below for nested schema](#nestedatt--mini_steps--notifications--email--errored))
 
 <a id="nestedatt--mini_steps--notifications--email--approval_required"></a>
-### Nested Schema for `mini_steps.notifications.email.errored`
+### Nested Schema for `mini_steps.notifications.email.approval_required`
 
 Optional:
 
@@ -201,7 +197,7 @@ Optional:
 
 
 <a id="nestedatt--mini_steps--notifications--email--cancelled"></a>
-### Nested Schema for `mini_steps.notifications.email.errored`
+### Nested Schema for `mini_steps.notifications.email.cancelled`
 
 Optional:
 
@@ -209,7 +205,7 @@ Optional:
 
 
 <a id="nestedatt--mini_steps--notifications--email--completed"></a>
-### Nested Schema for `mini_steps.notifications.email.errored`
+### Nested Schema for `mini_steps.notifications.email.completed`
 
 Optional:
 
@@ -217,7 +213,7 @@ Optional:
 
 
 <a id="nestedatt--mini_steps--notifications--email--drift_detected"></a>
-### Nested Schema for `mini_steps.notifications.email.errored`
+### Nested Schema for `mini_steps.notifications.email.drift_detected`
 
 Optional:
 
@@ -417,7 +413,7 @@ Required:
 - `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
 
 <a id="nestedatt--terraform_config--post_apply_wf_steps_config--environment_variables--config"></a>
-### Nested Schema for `terraform_config.post_apply_wf_steps_config.environment_variables.kind`
+### Nested Schema for `terraform_config.post_apply_wf_steps_config.environment_variables.config`
 
 Required:
 
@@ -479,7 +475,7 @@ Required:
 - `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
 
 <a id="nestedatt--terraform_config--post_plan_wf_steps_config--environment_variables--config"></a>
-### Nested Schema for `terraform_config.post_plan_wf_steps_config.environment_variables.kind`
+### Nested Schema for `terraform_config.post_plan_wf_steps_config.environment_variables.config`
 
 Required:
 
@@ -541,7 +537,7 @@ Required:
 - `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
 
 <a id="nestedatt--terraform_config--pre_apply_wf_steps_config--environment_variables--config"></a>
-### Nested Schema for `terraform_config.pre_apply_wf_steps_config.environment_variables.kind`
+### Nested Schema for `terraform_config.pre_apply_wf_steps_config.environment_variables.config`
 
 Required:
 
@@ -603,7 +599,7 @@ Required:
 - `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
 
 <a id="nestedatt--terraform_config--pre_plan_wf_steps_config--environment_variables--config"></a>
-### Nested Schema for `terraform_config.pre_plan_wf_steps_config.environment_variables.kind`
+### Nested Schema for `terraform_config.pre_plan_wf_steps_config.environment_variables.config`
 
 Required:
 
