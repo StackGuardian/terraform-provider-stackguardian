@@ -1,0 +1,139 @@
+{
+  "Actions": {
+    "apply": {
+      "name": "Create",
+      "description": "use this action to create resources in the stack",
+      "default": true,
+      "order": {
+        "/wfs/taher-null-resource-90gu": {
+          "dependencies": [],
+          "parameters": {
+            "TerraformAction": {
+              "action": "apply"
+            }
+          }
+        },
+        "/wfs/taher-null-resource-gav34abz-0": {
+          "dependencies": [
+            {
+              "id": "/wfs/taher-null-resource-90gu",
+              "condition": {
+                "LatestStatus": "COMPLETED"
+              }
+            }
+          ],
+          "parameters": {
+            "TerraformAction": {
+              "action": "apply"
+            }
+          }
+        },
+        "/wfs/taher-null-resource-gav34abz-2": {
+          "dependencies": [
+            {
+              "id": "/wfs/taher-null-resource-gav34abz-0",
+              "condition": {
+                "LatestStatus": "COMPLETED"
+              }
+            }
+          ],
+          "parameters": {
+            "TerraformAction": {
+              "action": "apply"
+            }
+          }
+        }
+      }
+    },
+    "plan": {
+      "name": "Plan",
+      "description": "use this action to plan resources in the stack",
+      "default": true,
+      "order": {
+        "/wfs/taher-null-resource-90gu": {
+          "dependencies": [],
+          "parameters": {
+            "TerraformAction": {
+              "action": "plan"
+            }
+          }
+        },
+        "/wfs/taher-null-resource-gav34abz-0": {
+          "dependencies": [
+            {
+              "id": "/wfs/taher-null-resource-90gu",
+              "condition": {
+                "LatestStatus": "COMPLETED"
+              }
+            }
+          ],
+          "parameters": {
+            "TerraformAction": {
+              "action": "plan"
+            }
+          }
+        },
+        "/wfs/taher-null-resource-gav34abz-2": {
+          "dependencies": [
+            {
+              "id": "/wfs/taher-null-resource-gav34abz-0",
+              "condition": {
+                "LatestStatus": "COMPLETED"
+              }
+            }
+          ],
+          "parameters": {
+            "TerraformAction": {
+              "action": "plan"
+            }
+          }
+        }
+      }
+    },
+    "destroy": {
+      "name": "Destroy",
+      "description": "use this action to destroy resources in the stack",
+      "default": true,
+      "order": {
+        "/wfs/taher-null-resource-gav34abz-2": {
+          "dependencies": [],
+          "parameters": {
+            "TerraformAction": {
+              "action": "destroy"
+            }
+          }
+        },
+        "/wfs/taher-null-resource-gav34abz-0": {
+          "dependencies": [
+            {
+              "id": "/wfs/taher-null-resource-gav34abz-2",
+              "condition": {
+                "LatestStatus": "COMPLETED"
+              }
+            }
+          ],
+          "parameters": {
+            "TerraformAction": {
+              "action": "destroy"
+            }
+          }
+        },
+        "/wfs/taher-null-resource-90gu": {
+          "dependencies": [
+            {
+              "id": "/wfs/taher-null-resource-gav34abz-0",
+              "condition": {
+                "LatestStatus": "COMPLETED"
+              }
+            }
+          ],
+          "parameters": {
+            "TerraformAction": {
+              "action": "destroy"
+            }
+          }
+        }
+      }
+    }
+  }
+}

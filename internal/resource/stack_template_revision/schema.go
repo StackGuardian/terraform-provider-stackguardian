@@ -173,9 +173,19 @@ var deploymentPlatformConfigAttrs = map[string]schema.Attribute{
 		MarkdownDescription: constants.DeploymentPlatformKind,
 		Required:            true,
 	},
-	"config": schema.StringAttribute{
-		MarkdownDescription: constants.DeploymentPlatformConfigDetails + " (JSON string)",
-		Optional:            true,
+	"config": schema.SingleNestedAttribute{
+		MarkdownDescription: constants.DeploymentPlatformConfigDetails,
+		Required:            true,
+		Attributes: map[string]schema.Attribute{
+			"integration_id": schema.StringAttribute{
+				MarkdownDescription: constants.DeploymentPlatformIntegrationId,
+				Required:            true,
+			},
+			"profile_name": schema.StringAttribute{
+				MarkdownDescription: constants.DeploymentPlatformProfileName,
+				Optional:            true,
+			},
+		},
 	},
 }
 
@@ -632,11 +642,17 @@ func (r *stackTemplateRevisionResource) Schema(_ context.Context, _ resource.Sch
 				MarkdownDescription: constants.StackTemplateRevisionNotes,
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: constants.StackTemplateRevisionDescription,
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"source_config_kind": schema.StringAttribute{
 				MarkdownDescription: constants.StackTemplateSourceConfigKindCommon,

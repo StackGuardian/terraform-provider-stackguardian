@@ -32,6 +32,7 @@ import (
 	roleassignment "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role_assignment"
 	rolev4 "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role_v4"
 	runnergroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/runner_group"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/stack"
 	stacktemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/stack_template"
 	stacktemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/stack_template_revision"
 	workflowfromtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_from_template"
@@ -257,6 +258,7 @@ func (p *stackguardianProvider) Resources(_ context.Context) []func() resource.R
 		workflowtemplaterevision.NewResource,
 		stacktemplate.NewResource,
 		stacktemplaterevision.NewResource,
+		stack.NewResource,
 		workflowgit.NewResource,
 		workflowfromtemplate.NewResource,
 	}

@@ -81,7 +81,12 @@ func deleteStackTemplateRevisionFixture(revisionId string) {
 
 func deprecateStackTemplateRevisionFixture(revisionId string) {
 	client := getClient()
-	effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
+	// effectiveDate must already be in the past for the deprecation to take
+	// effect immediately — a future date only schedules it, and the revision
+	// still counts as actively published (blocking delete) until then. This
+	// fixture always runs well after the revision was created, so a second
+	// back is enough margin without risking landing before creation.
+	effectiveDate := fmt.Sprintf("%d", time.Now().Add(-1*time.Second).Unix())
 	message := "This revision is deprecated"
 	client.StackTemplateRevisions.UpdateStackTemplateRevision(context.TODO(), org, revisionId, &stacktemplaterevisions.UpdateStackTemplateRevisionRequest{
 		Deprecation: sgsdkgo.Optional(stacktemplaterevisions.Deprecation{
@@ -270,6 +275,13 @@ func TestAccStackTemplateRevision_Lifecycle(t *testing.T) {
 	stackTemplateName := "tf-provider-stack-template-lifecycle"
 	wfTemplateName := "tf-provider-wft-lifecycle-for-stack"
 	alias := "v1"
+	// Must land after the revision is created (Step 1) but before Step 3
+	// actually applies the deprecation — see Step 3 below. This is computed
+	// now, before Step 1 has even run, so a negative offset would put it
+	// before creation; a few seconds into the future instead reliably lands
+	// after creation and has already elapsed into the past by the time Step 3
+	// runs, since Steps 1 and 2 each involve a real API round trip.
+	deprecationEffectiveDate := fmt.Sprintf("%d", time.Now().Add(3*time.Second).Unix())
 
 	// Safety-net cleanup. Defers run LIFO, so registration order here is the
 	// reverse of execution order:
@@ -291,7 +303,7 @@ func TestAccStackTemplateRevision_Lifecycle(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Step 1: Create parent stack template, parent workflow template, and revision
 			{
-				Config: testAccStackTemplateRevisionLifecycleConfig(stackTemplateName, wfTemplateName, alias, "", false),
+				Config: testAccStackTemplateRevisionLifecycleConfig(stackTemplateName, wfTemplateName, alias, "", false, ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_stack_template.parent", "template_name", stackTemplateName),
 					resource.TestCheckResourceAttrSet("stackguardian_stack_template.parent", "id"),
@@ -305,17 +317,20 @@ func TestAccStackTemplateRevision_Lifecycle(t *testing.T) {
 			},
 			// Step 2: Publish the revision
 			{
-				Config: testAccStackTemplateRevisionLifecycleConfig(stackTemplateName, wfTemplateName, alias, "1", false),
+				Config: testAccStackTemplateRevisionLifecycleConfig(stackTemplateName, wfTemplateName, alias, "1", false, ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "is_public", "1"),
 				),
 			},
-			// Step 3: Deprecate the revision
+			// Step 3: Deprecate the revision. effectiveDate must already be in
+			// the past, or the revision still counts as actively published
+			// and the implicit destroy below 400s with "Published template
+			// cannot be deleted. Please deprecate the template first."
 			{
-				Config: testAccStackTemplateRevisionLifecycleConfig(stackTemplateName, wfTemplateName, alias, "1", true),
+				Config: testAccStackTemplateRevisionLifecycleConfig(stackTemplateName, wfTemplateName, alias, "1", true, deprecationEffectiveDate),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "deprecation.message", "This revision is deprecated"),
-					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "deprecation.effective_date", fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())),
+					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "deprecation.effective_date", deprecationEffectiveDate),
 				),
 			},
 			// Terraform destroy automatically deletes the revision, stack template, and workflow template
@@ -325,8 +340,8 @@ func TestAccStackTemplateRevision_Lifecycle(t *testing.T) {
 
 // testAccStackTemplateRevisionLifecycleConfig generates the lifecycle Terraform config.
 // isPublic controls the revision's is_public value (pass "" to omit).
-// deprecated=true adds a deprecation block to the revision.
-func testAccStackTemplateRevisionLifecycleConfig(stackTemplateName, wfTemplateName, alias, isPublic string, deprecated bool) string {
+// deprecated=true adds a deprecation block to the revision using effectiveDate.
+func testAccStackTemplateRevisionLifecycleConfig(stackTemplateName, wfTemplateName, alias, isPublic string, deprecated bool, effectiveDate string) string {
 	isPublicLine := ""
 	if isPublic != "" {
 		isPublicLine = fmt.Sprintf("  is_public          = %q\n", isPublic)
@@ -335,9 +350,9 @@ func testAccStackTemplateRevisionLifecycleConfig(stackTemplateName, wfTemplateNa
 	if deprecated {
 		deprecationBlock = fmt.Sprintf(`
   deprecation = {
-    effective_date = "%d"
+    effective_date = %q
     message        = "This revision is deprecated"
-  }`, time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
+  }`, effectiveDate)
 	}
 	return fmt.Sprintf(`
 resource "stackguardian_workflow_template" "wf_parent" {
