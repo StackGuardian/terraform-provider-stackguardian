@@ -3,7 +3,6 @@
 page_title: "stackguardian_stack_template_revision Data Source - terraform-provider-stackguardian"
 subcategory: "Stacks"
 description: |-
-  **Note:** This data source is currently in **BETA**. Features and behavior may change.
   Reads a specific revision of a stack template, including its ordered workflows and their configuration.
 
 ---
@@ -13,8 +12,6 @@ description: |-
 <!-- docs-revamp-banner:start -->
 ~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
 <!-- docs-revamp-banner:end -->
-
-> **Note:** This data source is currently in **BETA**. Features and behavior may change.
 
 Reads a specific revision of a stack template, including its ordered workflows and their configuration.
 
@@ -37,7 +34,7 @@ output "revision_notes" {
 
 ### Required
 
-- `id` (String) Identifier of the resource: a bare slug, never a path. Use it to look the resource up, and to reference it elsewhere with the prefix the attribute expects (e.g. `"/integrations/${data.stackguardian_connector.x.id}"`).
+- `id` (String) Identifier of the revision, in the form `<template-name>:<revision>` (e.g. `my-stack-template:1`).
 
 ### Read-Only
 
@@ -50,9 +47,10 @@ output "revision_notes" {
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
 	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)
 - `notes` (String) Release notes or changelog for this revision.
+- `parent_template_id` (String) ID of the parent stack template to create the revision under.
 - `source_config_kind` (String) What the stack contains. Use `MIXED` — a stack groups workflows built from different tools, and the tool used by each individual workflow is recorded on that workflow rather than here. The other values (`TERRAFORM`, `OPENTOFU`, `ANSIBLE_PLAYBOOK`, `HELM`, `KUBECTL`, `CLOUDFORMATION`, `CUSTOM`) belong on a `stackguardian_workflow_template`, which describes a single workflow.
 - `tags` (List of String) A list of tags associated with the stack template revision. A maximum of 10 tags are allowed.
-- `template_id` (String) Parent stack template, as its bare `template_name` (which is also its `id`) — not a path.
+- `template_id` (String) The revision's `id` qualified with its owning organization, in the form `/<org>/<template-name>:<revision>` (e.g. `/my-org/my-stack-template:1`).
 - `workflows_config` (Attributes) JSON-encoded workflows configuration for the stack template revision. (see [below for nested schema](#nestedatt--workflows_config))
 
 <a id="nestedatt--actions"></a>
@@ -105,8 +103,17 @@ Read-Only:
 
 Read-Only:
 
-- `config` (String) Deployment platform configuration details. (JSON string)
+- `config` (Attributes) Deployment platform configuration details. (see [below for nested schema](#nestedatt--actions--order--parameters--deployment_platform_config--config))
 - `kind` (String) Which cloud this workflow deploys to and how it authenticates. Must match the `kind` of the connector named in `integration_id`. <ul><li>`AWS_STATIC` — AWS with a static access key pair.</li><li>`AWS_RBAC` — AWS by assuming an IAM role. Preferred over static keys.</li><li>`AWS_OIDC` — AWS through an OIDC identity provider, with no stored credentials.</li><li>`AZURE_STATIC` — Azure with a service principal and client secret.</li><li>`AZURE_OIDC` — Azure through workload identity federation.</li><li>`GCP_STATIC` — GCP with a service account key file.</li><li>`GCP_OIDC` — GCP through workload identity federation.</li></ul>See the [cloud connector docs](https://docs.stackguardian.io/docs/connectors/csp/).
+
+<a id="nestedatt--actions--order--parameters--deployment_platform_config--config"></a>
+### Nested Schema for `actions.order.parameters.deployment_platform_config.config`
+
+Read-Only:
+
+- `integration_id` (String) Connector supplying the credentials this workflow deploys with, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/production-aws`). Reference a `stackguardian_connector` rather than typing the string.
+- `profile_name` (String) Profile name for the deployment platform.
+
 
 
 <a id="nestedatt--actions--order--parameters--environment_variables"></a>
@@ -215,27 +222,36 @@ Read-Only:
 
 - `approvers` (List of String) Who can approve a workflow run that is waiting for approval. Each entry identifies one approver: <ul><li>Local user — the email address, e.g. `jane@example.com`</li><li>SSO user — `<sso-pool-id>/<sso-provider-name>/<email>`</li><li>SSO group — `<sso-pool-id>/group/<group-id>`, which lets anyone in that group approve</li></ul>Write emails in lowercase. A bare email address also matches an SSO sign-in with the same address; use `<local-pool-id>/local/<email>` to allow the local account only. See the [Approvers guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers) for the user pool ID of each region and worked examples.
 - `deployment_platform_config` (Attributes List) Deployment platform configuration. (see [below for nested schema](#nestedatt--workflows_config--workflows--deployment_platform_config))
-- `description` (String) Description of this workflow.
 - `environment_variables` (Attributes List) Environment variables for the workflow. (see [below for nested schema](#nestedatt--workflows_config--workflows--environment_variables))
+- `id` (String) UUID identifying the workflow within the stack template.
+- `input_schemas` (Attributes List) Input schema definitions for this workflow. (see [below for nested schema](#nestedatt--workflows_config--workflows--input_schemas))
+- `mini_steps` (Attributes) Actions that are required to be performed once workflow execution is complete (see [below for nested schema](#nestedatt--workflows_config--workflows--mini_steps))
 - `number_of_approvals_required` (Number) How many approvals release a workflow run that is waiting for approval. `0` waits for as many distinct approvals as there are entries in `approvers`, which means everyone when the list has only individual users. `1` or more means that many different people must approve — use this when the list contains an SSO group. A single rejection cancels the run whatever the value. Not validated against the list, so a value higher than the number of people who can approve leaves the run waiting. See [how approvals are counted](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers#how-many-approvals-are-needed).
 - `resource_name` (String) Name of the workflow resource within the stack.
 - `runner_constraints` (Attributes) Runner constraints for the workflow. (see [below for nested schema](#nestedatt--workflows_config--workflows--runner_constraints))
-- `tags` (List of String) Tags for the workflow.
 - `terraform_config` (Attributes) Terraform configuration. Valid only for terraform type template (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config))
 - `user_job_cpu` (Number) CPU limit for the user job.
 - `user_job_memory` (Number) Memory limit for the user job.
 - `user_schedules` (Attributes List) Scheduled run configuration. (see [below for nested schema](#nestedatt--workflows_config--workflows--user_schedules))
 - `vcs_config` (Attributes) VCS (version control) configuration for the workflow. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config))
 - `wf_steps_config` (Attributes List) Workflow steps configuration. (see [below for nested schema](#nestedatt--workflows_config--workflows--wf_steps_config))
-- `wf_type` (String) How this workflow is executed. <ul><li>`TERRAFORM` — run with Terraform.</li><li>`OPENTOFU` — run with OpenTofu.</li><li>`CUSTOM` — run the steps in `wf_steps_config` yourself, rather than a built-in engine. Templates of other kinds (Helm, Ansible, Kubectl, CloudFormation) run as `CUSTOM` workflows.</li></ul>This is a smaller set than a template's `source_config_kind`, which describes what the template contains rather than how the workflow runs.
 
 <a id="nestedatt--workflows_config--workflows--deployment_platform_config"></a>
 ### Nested Schema for `workflows_config.workflows.deployment_platform_config`
 
 Read-Only:
 
-- `config` (String) Deployment platform configuration details. (JSON string)
+- `config` (Attributes) Deployment platform configuration details. (see [below for nested schema](#nestedatt--workflows_config--workflows--deployment_platform_config--config))
 - `kind` (String) Which cloud this workflow deploys to and how it authenticates. Must match the `kind` of the connector named in `integration_id`. <ul><li>`AWS_STATIC` — AWS with a static access key pair.</li><li>`AWS_RBAC` — AWS by assuming an IAM role. Preferred over static keys.</li><li>`AWS_OIDC` — AWS through an OIDC identity provider, with no stored credentials.</li><li>`AZURE_STATIC` — Azure with a service principal and client secret.</li><li>`AZURE_OIDC` — Azure through workload identity federation.</li><li>`GCP_STATIC` — GCP with a service account key file.</li><li>`GCP_OIDC` — GCP through workload identity federation.</li></ul>See the [cloud connector docs](https://docs.stackguardian.io/docs/connectors/csp/).
+
+<a id="nestedatt--workflows_config--workflows--deployment_platform_config--config"></a>
+### Nested Schema for `workflows_config.workflows.deployment_platform_config.config`
+
+Read-Only:
+
+- `integration_id` (String) Connector supplying the credentials this workflow deploys with, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/production-aws`). Reference a `stackguardian_connector` rather than typing the string.
+- `profile_name` (String) Profile name for the deployment platform.
+
 
 
 <a id="nestedatt--workflows_config--workflows--environment_variables"></a>
@@ -254,6 +270,182 @@ Read-Only:
 - `secret_id` (String) Not used. To reference a secret, set `config.text_value` instead — see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `text_value` (String, Sensitive) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `var_name` (String) Name of the variable.
+
+
+
+<a id="nestedatt--workflows_config--workflows--input_schemas"></a>
+### Nested Schema for `workflows_config.workflows.input_schemas`
+
+Read-Only:
+
+- `encoded_data` (String) Base64-encoded schema data.
+- `name` (String) Name of the input schema.
+- `type` (String) Schema type (e.g. FORM_JSONSCHEMA).
+- `ui_schema_data` (String) Schema for how the JSON schema is to be visualized. The schema needs to be base64 encoded.
+
+
+<a id="nestedatt--workflows_config--workflows--mini_steps"></a>
+### Nested Schema for `workflows_config.workflows.mini_steps`
+
+Read-Only:
+
+- `notifications` (Attributes) Configuration for notifications to be sent on workflow completion (see [below for nested schema](#nestedatt--workflows_config--workflows--mini_steps--notifications))
+- `webhooks` (Attributes) Configuration for webhooks to be triggered on completion. Statuses on which webhooks can be sent: <span style="background-color: #eff0f0; color: #e53835;">approval_required</span>, <span style="background-color: #eff0f0; color: #e53835;">cancelled</span>, <span style="background-color: #eff0f0; color: #e53835;">completed</span>, <span style="background-color: #eff0f0; color: #e53835;">drift_detected</span>, <span style="background-color: #eff0f0; color: #e53835;">errored</span> (see [below for nested schema](#nestedatt--workflows_config--workflows--mini_steps--webhooks))
+- `wf_chaining` (Attributes) Configuration for other workflows to be triggered on completion. Statuses on which workflows can be chained: <span style="background-color: #eff0f0; color: #e53835;">completed</span>, <span style="background-color: #eff0f0; color: #e53835;">errored</span> (see [below for nested schema](#nestedatt--workflows_config--workflows--mini_steps--wf_chaining))
+
+<a id="nestedatt--workflows_config--workflows--mini_steps--notifications"></a>
+### Nested Schema for `workflows_config.workflows.mini_steps.notifications`
+
+Read-Only:
+
+- `email` (Attributes) Configuration for email notifications to be sent on completion. Statuses on which notifications can be sent: <span style="background-color: #eff0f0; color: #e53835;">approval_required</span>, <span style="background-color: #eff0f0; color: #e53835;">cancelled</span>, <span style="background-color: #eff0f0; color: #e53835;">completed</span>, <span style="background-color: #eff0f0; color: #e53835;">drift_detected</span>, <span style="background-color: #eff0f0; color: #e53835;">errored</span> (see [below for nested schema](#nestedatt--workflows_config--workflows--mini_steps--notifications--email))
+
+<a id="nestedatt--workflows_config--workflows--mini_steps--notifications--email"></a>
+### Nested Schema for `workflows_config.workflows.mini_steps.notifications.email`
+
+Read-Only:
+
+- `approval_required` (Attributes List) (see [below for nested schema](#nestedatt--workflows_config--workflows--mini_steps--notifications--email--approval_required))
+- `cancelled` (Attributes List) (see [below for nested schema](#nestedatt--workflows_config--workflows--mini_steps--notifications--email--cancelled))
+- `completed` (Attributes List) (see [below for nested schema](#nestedatt--workflows_config--workflows--mini_steps--notifications--email--completed))
+- `drift_detected` (Attributes List) (see [below for nested schema](#nestedatt--workflows_config--workflows--mini_steps--notifications--email--drift_detected))
+- `errored` (Attributes List) (see [below for nested schema](#nestedatt--workflows_config--workflows--mini_steps--notifications--email--errored))
+
+<a id="nestedatt--workflows_config--workflows--mini_steps--notifications--email--approval_required"></a>
+### Nested Schema for `workflows_config.workflows.mini_steps.notifications.email.approval_required`
+
+Read-Only:
+
+- `recipients` (List of String) List of emails
+
+
+<a id="nestedatt--workflows_config--workflows--mini_steps--notifications--email--cancelled"></a>
+### Nested Schema for `workflows_config.workflows.mini_steps.notifications.email.cancelled`
+
+Read-Only:
+
+- `recipients` (List of String) List of emails
+
+
+<a id="nestedatt--workflows_config--workflows--mini_steps--notifications--email--completed"></a>
+### Nested Schema for `workflows_config.workflows.mini_steps.notifications.email.completed`
+
+Read-Only:
+
+- `recipients` (List of String) List of emails
+
+
+<a id="nestedatt--workflows_config--workflows--mini_steps--notifications--email--drift_detected"></a>
+### Nested Schema for `workflows_config.workflows.mini_steps.notifications.email.drift_detected`
+
+Read-Only:
+
+- `recipients` (List of String) List of emails
+
+
+<a id="nestedatt--workflows_config--workflows--mini_steps--notifications--email--errored"></a>
+### Nested Schema for `workflows_config.workflows.mini_steps.notifications.email.errored`
+
+Read-Only:
+
+- `recipients` (List of String) List of emails
+
+
+
+
+<a id="nestedatt--workflows_config--workflows--mini_steps--webhooks"></a>
+### Nested Schema for `workflows_config.workflows.mini_steps.webhooks`
+
+Read-Only:
+
+- `approval_required` (Attributes List) (see [below for nested schema](#nestedatt--workflows_config--workflows--mini_steps--webhooks--approval_required))
+- `cancelled` (Attributes List) (see [below for nested schema](#nestedatt--workflows_config--workflows--mini_steps--webhooks--cancelled))
+- `completed` (Attributes List) (see [below for nested schema](#nestedatt--workflows_config--workflows--mini_steps--webhooks--completed))
+- `drift_detected` (Attributes List) (see [below for nested schema](#nestedatt--workflows_config--workflows--mini_steps--webhooks--drift_detected))
+- `errored` (Attributes List) (see [below for nested schema](#nestedatt--workflows_config--workflows--mini_steps--webhooks--errored))
+
+<a id="nestedatt--workflows_config--workflows--mini_steps--webhooks--approval_required"></a>
+### Nested Schema for `workflows_config.workflows.mini_steps.webhooks.approval_required`
+
+Read-Only:
+
+- `webhook_name` (String) Webhook name
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
+- `webhook_url` (String) Webhook URL
+
+
+<a id="nestedatt--workflows_config--workflows--mini_steps--webhooks--cancelled"></a>
+### Nested Schema for `workflows_config.workflows.mini_steps.webhooks.cancelled`
+
+Read-Only:
+
+- `webhook_name` (String) Webhook name
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
+- `webhook_url` (String) Webhook URL
+
+
+<a id="nestedatt--workflows_config--workflows--mini_steps--webhooks--completed"></a>
+### Nested Schema for `workflows_config.workflows.mini_steps.webhooks.completed`
+
+Read-Only:
+
+- `webhook_name` (String) Webhook name
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
+- `webhook_url` (String) Webhook URL
+
+
+<a id="nestedatt--workflows_config--workflows--mini_steps--webhooks--drift_detected"></a>
+### Nested Schema for `workflows_config.workflows.mini_steps.webhooks.drift_detected`
+
+Read-Only:
+
+- `webhook_name` (String) Webhook name
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
+- `webhook_url` (String) Webhook URL
+
+
+<a id="nestedatt--workflows_config--workflows--mini_steps--webhooks--errored"></a>
+### Nested Schema for `workflows_config.workflows.mini_steps.webhooks.errored`
+
+Read-Only:
+
+- `webhook_name` (String) Webhook name
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
+- `webhook_url` (String) Webhook URL
+
+
+
+<a id="nestedatt--workflows_config--workflows--mini_steps--wf_chaining"></a>
+### Nested Schema for `workflows_config.workflows.mini_steps.wf_chaining`
+
+Read-Only:
+
+- `completed` (Attributes List) (see [below for nested schema](#nestedatt--workflows_config--workflows--mini_steps--wf_chaining--completed))
+- `errored` (Attributes List) (see [below for nested schema](#nestedatt--workflows_config--workflows--mini_steps--wf_chaining--errored))
+
+<a id="nestedatt--workflows_config--workflows--mini_steps--wf_chaining--completed"></a>
+### Nested Schema for `workflows_config.workflows.mini_steps.wf_chaining.completed`
+
+Read-Only:
+
+- `stack_id` (String) Stack to trigger, as a bare name within `workflow_group_id`.
+- `stack_run_payload` (String) JSON string specifying overrides for the stack to be triggered
+- `workflow_group_id` (String) Workflow group containing the workflow to trigger, as a bare name. For a nested group give the full path (e.g. `platform/networking`).
+- `workflow_id` (String) Workflow to trigger, as a bare name within `workflow_group_id`.
+- `workflow_run_payload` (String) JSON string specifying overrides for the workflow to be triggered
+
+
+<a id="nestedatt--workflows_config--workflows--mini_steps--wf_chaining--errored"></a>
+### Nested Schema for `workflows_config.workflows.mini_steps.wf_chaining.errored`
+
+Read-Only:
+
+- `stack_id` (String) Stack to trigger, as a bare name within `workflow_group_id`.
+- `stack_run_payload` (String) JSON string specifying overrides for the stack to be triggered
+- `workflow_group_id` (String) Workflow group containing the workflow to trigger, as a bare name. For a nested group give the full path (e.g. `platform/networking`).
+- `workflow_id` (String) Workflow to trigger, as a bare name within `workflow_group_id`.
+- `workflow_run_payload` (String) JSON string specifying overrides for the workflow to be triggered
+
 
 
 
@@ -548,33 +740,7 @@ Read-Only:
 
 Read-Only:
 
-- `custom_source` (Attributes) Custom source configuration. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source))
 - `iac_template_id` (String) Workflow template this stack workflow is created from, as the bare `template_name` of a template in your own organization (e.g. `my-workflow-template`). The provider qualifies it with your organization, so do not give the `/<org>/…` form.
-- `use_marketplace_template` (Boolean) Whether to use a marketplace template.
-
-<a id="nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source"></a>
-### Nested Schema for `workflows_config.workflows.vcs_config.iac_vcs_config.custom_source`
-
-Read-Only:
-
-- `config` (Attributes) Source configuration details. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source--config))
-- `source_config_dest_kind` (String) Which VCS provider hosts the repository. This decides how StackGuardian authenticates and, for `vcs_triggers`, which webhook integration is used. <ul><li>`GITHUB_COM` — github.com. See the [GitHub connector docs](https://docs.stackguardian.io/docs/connectors/vcs/githubcom/).</li><li>`GITHUB_APP_CUSTOM` — GitHub Enterprise, or a GitHub App you manage yourself. See the [GitHub Enterprise docs](https://docs.stackguardian.io/docs/connectors/vcs/github_enterprise/).</li><li>`GITLAB_COM` — gitlab.com. See the [GitLab connector docs](https://docs.stackguardian.io/docs/connectors/vcs/gitlabcom/).</li><li>`BITBUCKET_ORG` — Bitbucket Cloud. See the [Bitbucket connector docs](https://docs.stackguardian.io/docs/connectors/vcs/bitbucket/).</li><li>`AZURE_DEVOPS` — Azure DevOps. See the [Azure DevOps connector docs](https://docs.stackguardian.io/docs/connectors/vcs/azuredevops/).</li><li>`AZURE_DEVOPS_SP` — Azure DevOps authenticated with a service principal.</li><li>`GIT_OTHER` — any other Git host, including public repositories that need no authentication.</li></ul>
-
-<a id="nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source--config"></a>
-### Nested Schema for `workflows_config.workflows.vcs_config.iac_vcs_config.custom_source.config`
-
-Read-Only:
-
-- `auth` (String, Sensitive) Credential for cloning a private repository, as a path-form ID. Either a VCS connector — `/integrations/<connector-name>`, built as `"/integrations/${stackguardian_connector.github.id}"` — for `GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG` and `AZURE_DEVOPS*` sources, or a secret `/secrets/<secret-name>`. `GIT_OTHER` accepts only the secret form. Required when `is_private` is `true`.
-- `git_core_auto_crlf` (Boolean) Whether to automatically handle CRLF line endings.
-- `git_sparse_checkout_config` (String) Git sparse checkout command line git cli options.
-- `include_sub_module` (Boolean) Whether to include git submodules.
-- `is_private` (Boolean) Whether the repository is private. Auth is required if the repository is private
-- `ref` (String) Git reference (branch, tag, or commit hash).
-- `repo` (String) Git repository URL.
-- `working_dir` (String) Working directory within the repository.
-
-
 
 
 

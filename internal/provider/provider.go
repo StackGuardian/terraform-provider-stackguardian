@@ -15,6 +15,7 @@ import (
 	roleassignmentdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/role_assignment"
 	runnergroupdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/runner_group"
 	runnergrouptoken "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/runner_group_token"
+	stackdatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack"
 	stackoutputs "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_outputs"
 	stacktemplatedatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_template"
 	stacktemplaterevisiondatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/stack_template_revision"
@@ -32,6 +33,7 @@ import (
 	roleassignment "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role_assignment"
 	rolev4 "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/role_v4"
 	runnergroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/runner_group"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/stack"
 	stacktemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/stack_template"
 	stacktemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/stack_template_revision"
 	workflowfromtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_from_template"
@@ -241,6 +243,7 @@ func (p *stackguardianProvider) DataSources(_ context.Context) []func() datasour
 		stacktemplatedatasource.NewDataSource,
 		stacktemplaterevisiondatasource.NewDataSource,
 		workflowgitdatasource.NewDataSource,
+		stackdatasource.NewDataSource,
 	}
 }
 
@@ -260,6 +263,7 @@ func (p *stackguardianProvider) Resources(_ context.Context) []func() resource.R
 		workflowtemplaterevision.NewResource,
 		stacktemplate.NewResource,
 		stacktemplaterevision.NewResource,
+		stack.NewResource,
 		workflowgit.NewResource,
 		workflowfromtemplate.NewResource,
 	}

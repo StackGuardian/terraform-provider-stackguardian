@@ -175,9 +175,19 @@ var deploymentPlatformConfigAttrs = map[string]schema.Attribute{
 		MarkdownDescription: constants.DeploymentPlatformKind,
 		Required:            true,
 	},
-	"config": schema.StringAttribute{
-		MarkdownDescription: constants.DeploymentPlatformConfigDetails + " (JSON string)",
-		Optional:            true,
+	"config": schema.SingleNestedAttribute{
+		MarkdownDescription: constants.DeploymentPlatformConfigDetails,
+		Required:            true,
+		Attributes: map[string]schema.Attribute{
+			"integration_id": schema.StringAttribute{
+				MarkdownDescription: constants.DeploymentPlatformIntegrationId,
+				Required:            true,
+			},
+			"profile_name": schema.StringAttribute{
+				MarkdownDescription: constants.DeploymentPlatformProfileName,
+				Optional:            true,
+			},
+		},
 	},
 }
 
@@ -186,10 +196,6 @@ var deploymentPlatformConfigAttrs = map[string]schema.Attribute{
 var workflowInStackAttrs = map[string]schema.Attribute{
 	"id": schema.StringAttribute{
 		MarkdownDescription: "UUID identifying the workflow within the stack template.",
-		Required:            true,
-	},
-	"template_id": schema.StringAttribute{
-		MarkdownDescription: constants.StackTemplateRevisionIacTemplateId,
 		Required:            true,
 	},
 	"resource_name": schema.StringAttribute{
@@ -317,68 +323,15 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 	},
 	"vcs_config": schema.SingleNestedAttribute{
 		MarkdownDescription: "VCS (version control) configuration for the workflow.",
-		Optional:            true,
+		Required:            true,
 		Attributes: map[string]schema.Attribute{
 			"iac_vcs_config": schema.SingleNestedAttribute{
 				MarkdownDescription: "IaC VCS configuration.",
-				Optional:            true,
+				Required:            true,
 				Attributes: map[string]schema.Attribute{
-					"use_marketplace_template": schema.BoolAttribute{
-						MarkdownDescription: "Whether to use a marketplace template.",
-						Optional:            true,
-					},
 					"iac_template_id": schema.StringAttribute{
 						MarkdownDescription: constants.StackTemplateRevisionIacTemplateId,
-						Optional:            true,
-					},
-					"custom_source": schema.SingleNestedAttribute{
-						MarkdownDescription: "Custom source configuration.",
-						Optional:            true,
-						Attributes: map[string]schema.Attribute{
-							"source_config_dest_kind": schema.StringAttribute{
-								MarkdownDescription: constants.RuntimeSourceDestKind,
-								Required:            true,
-							},
-							"config": schema.SingleNestedAttribute{
-								MarkdownDescription: "Source configuration details.",
-								Optional:            true,
-								Attributes: map[string]schema.Attribute{
-									"is_private": schema.BoolAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigIsPrivate,
-										Optional:            true,
-									},
-									"auth": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigAuth,
-										Optional:            true,
-										Sensitive:           true,
-									},
-									"working_dir": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigWorkingDir,
-										Optional:            true,
-									},
-									"git_sparse_checkout_config": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigGitSparse,
-										Optional:            true,
-									},
-									"git_core_auto_crlf": schema.BoolAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigGitCoreCRLF,
-										Optional:            true,
-									},
-									"ref": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigRef,
-										Optional:            true,
-									},
-									"repo": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigRepo,
-										Optional:            true,
-									},
-									"include_sub_module": schema.BoolAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigIncludeSubmodule,
-										Optional:            true,
-									},
-								},
-							},
-						},
+						Required:            true,
 					},
 				},
 			},
@@ -399,22 +352,6 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 						Optional:            true,
 					},
 				},
-			},
-		},
-	},
-	// iac_input_data at the workflow level corresponds to TemplatesIacInputData in the SDK.
-	// Used when the workflow is instantiated from a workflow template (template_id).
-	"iac_input_data": schema.SingleNestedAttribute{
-		MarkdownDescription: "Top-level IaC input data for this workflow, used when the workflow is instantiated from a workflow template (`template_id`).",
-		Optional:            true,
-		Attributes: map[string]schema.Attribute{
-			"schema_type": schema.StringAttribute{
-				MarkdownDescription: "Schema type for the input data (e.g. RAW_JSON).",
-				Required:            true,
-			},
-			"data": schema.StringAttribute{
-				MarkdownDescription: constants.WorkflowIacInputDataData,
-				Optional:            true,
 			},
 		},
 	},
@@ -479,17 +416,8 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 		Optional:            true,
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
-				"id": schema.StringAttribute{
-					MarkdownDescription: constants.Id,
-					Computed:            true,
-					Optional:            true,
-				},
 				"name": schema.StringAttribute{
 					MarkdownDescription: constants.InputSchemaName,
-					Optional:            true,
-				},
-				"description": schema.StringAttribute{
-					MarkdownDescription: fmt.Sprintf(constants.Description, "workflow"),
 					Optional:            true,
 				},
 				"type": schema.StringAttribute{
@@ -503,10 +431,6 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 				"ui_schema_data": schema.StringAttribute{
 					MarkdownDescription: constants.InputSchemaUISchemaData,
 					Optional:            true,
-				},
-				"is_committed": schema.BoolAttribute{
-					Optional: true,
-					Computed: true,
 				},
 			},
 		},
@@ -651,11 +575,17 @@ func (r *stackTemplateRevisionResource) Schema(_ context.Context, _ resource.Sch
 				MarkdownDescription: constants.StackTemplateRevisionNotes,
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: constants.StackTemplateRevisionDescription,
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"source_config_kind": schema.StringAttribute{
 				MarkdownDescription: constants.StackTemplateSourceConfigKindCommon,

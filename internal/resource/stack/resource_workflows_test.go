@@ -1,0 +1,793 @@
+package stack_test
+
+import (
+	"fmt"
+	"regexp"
+	"testing"
+
+	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
+)
+
+// TODO: ModifyPlan's revision-change branch (resource.go) only re-resolves
+// actions when it's left unset in config AND the new revision defines its
+// own actions (reResolveOnRevisionChange's doc comment in model.go). When
+// actions is unset but the new revision has none of its own, plan.Actions is
+// currently left untouched — carried forward from the old revision's already-
+// resolved value — instead of being re-resolved (e.g. back to whatever the
+// API would generate). It should be re-resolved whenever actions isn't
+// provided in the resource config, regardless of what the new revision does.
+// No test currently covers this gap.
+
+// TestAccStack_WorkflowsConfigMinimalEntry verifies a minimal workflow entry
+// (only the Required id) creates successfully, and doubles as a regression
+// test for the Optional+Computed guard fix: omitted fields must resolve to
+// real server-assigned values, not the forced-empty/zero values
+// ValueStringPointer()/ValueInt64Pointer() return for unknown.
+func TestAccStack_WorkflowsConfigMinimalEntry(t *testing.T) {
+	wfGrpName := "tf-provider-stack-wfmin-wfgrp"
+	wfTemplateName := "tf-provider-stack-wfmin-wftmpl"
+	stackTemplateName := "tf-provider-stack-wfmin-stmpl"
+	id := "tf-provider-stack-wfmin"
+
+	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+
+	config := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      { id = %q }
+    ]
+  }
+`, testWorkflowUUID)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", testWorkflowUUID),
+					// None of these were declared — must resolve to real values, not
+					// be forced to "" / 0 by the unknown-value guard bug.
+					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.resource_name"),
+					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.user_job_cpu"),
+					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.user_job_memory"),
+				),
+			},
+			{
+				// Round trips with no diff.
+				Config:   testAccStackConfig(wfGrpName, revision, id, config),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccStack_WorkflowsConfigInvalidEnums verifies invalid wf_type and
+// parallel_execution values each produce their own provider-side diagnostic
+// (expandWorkflowsConfig) instead of being passed through to the API. Each
+// step's apply fails before anything is created, so they can safely share
+// one resource address across steps.
+func TestAccStack_WorkflowsConfigInvalidEnums(t *testing.T) {
+	wfGrpName := "tf-provider-stack-wfenum-wfgrp"
+	wfTemplateName := "tf-provider-stack-wfenum-wftmpl"
+	stackTemplateName := "tf-provider-stack-wfenum-stmpl"
+	id := "tf-provider-stack-wfenum"
+
+	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+
+	workflowConfig := func(field, value string) string {
+		return fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id       = %q
+        %s = %q
+      }
+    ]
+  }
+`, testWorkflowUUID, field, value)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccStackConfig(wfGrpName, revision, id, workflowConfig("wf_type", "NOT_A_TYPE")),
+				ExpectError: regexp.MustCompile("Invalid wf_type"),
+			},
+			{
+				Config:      testAccStackConfig(wfGrpName, revision, id, workflowConfig("parallel_execution", "sideways")),
+				ExpectError: regexp.MustCompile("Invalid parallel_execution"),
+			},
+		},
+	})
+}
+
+// TestAccStack_WorkflowsConfigMismatchRejected verifies
+// validateWorkflowsConfigMatchesRevision (model.go) rejects
+// workflows_config.workflows whenever it doesn't exactly match the
+// referenced stack template revision's own workflow list, in both directions of
+// mismatch that check guards against: a missing workflow, and the same workflows
+// declared out of order. See that function's doc comment for why both are
+// enforced (completeness, so a template's workflow never silently goes
+// undeclared; order, so the stack's own listing can't drift out of sync with
+// the order the API's default action-chaining derives from). Each step's
+// apply fails before anything is created, so they can safely share one
+// resource address across steps (mirrors TestAccStack_WorkflowsConfigInvalidEnums).
+func TestAccStack_WorkflowsConfigMismatchRejected(t *testing.T) {
+	wfGrpName := "tf-provider-stack-wfmismatch-wfgrp"
+	wfTemplateName := "tf-provider-stack-wfmismatch-wftmpl"
+	stackTemplateName := "tf-provider-stack-wfmismatch-stmpl"
+	id := "tf-provider-stack-wfmismatch"
+
+	t.Cleanup(func() {
+		logCleanupErr(t, fmt.Sprintf("delete workflow group %q", wfGrpName), deleteWorkflowGroupFixture(wfGrpName))
+	})
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil && !is409(err) {
+		t.Fatalf("TestAccStack_WorkflowsConfigMismatchRejected: create workflow group %q: %s", wfGrpName, err)
+	}
+	workflowTemplateID := setupStackWorkflowTemplate(t, wfTemplateName)
+	// setupStackTemplateChainNoActions declares two workflows — testWorkflowUUID then
+	// secondWorkflowUUID, in that order — so both directions of mismatch can be
+	// exercised against a single fixture.
+	revision := setupStackTemplateChainNoActions(t, stackTemplateName, workflowTemplateID)
+	t.Cleanup(func() { deleteStackFixture(wfGrpName, id) })
+
+	missingWorkflow := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      { id = %q }
+    ]
+  }
+`, testWorkflowUUID)
+
+	wrongOrder := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      { id = %q },
+      { id = %q }
+    ]
+  }
+`, secondWorkflowUUID, testWorkflowUUID)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				// The revision defines testWorkflowUUID AND secondWorkflowUUID — declaring
+				// only one is a missing workflow, not a valid partial subset.
+				Config:      testAccStackConfig(wfGrpName, revision, id, missingWorkflow),
+				ExpectError: regexp.MustCompile("does not match the stack template revision"),
+			},
+			{
+				// The same two workflows, declared in the opposite order from the
+				// revision's own declaration order.
+				Config:      testAccStackConfig(wfGrpName, revision, id, wrongOrder),
+				ExpectError: regexp.MustCompile("does not match the stack template revision"),
+			},
+		},
+	})
+}
+
+// TODO: TestAccStack_WorkflowsConfigMismatchRejected only exercises the CREATE-time call to
+// validateWorkflowsConfigMatchesRevision — both its steps fail before anything is ever
+// created, so a fresh resource.go's Create() is the only call site actually proven to reject
+// a mismatch. The check now also runs from two other call sites (see the "ModifyPlan only
+// re-validates..." comments in resource.go's Update()/ModifyPlan, added when the
+// double-fetch-per-apply was eliminated), and neither is covered by a live test yet:
+//   - Update() with NO revision change: create a stack successfully with a valid
+//     workflows_config, then apply an update that changes workflows_config into a mismatch
+//     (a workflow removed, or reordered) while template_group_id stays the same — must still be
+//     rejected, not silently accepted just because the resource already exists.
+//   - ModifyPlan's revision-change branch: create successfully against revision1, then switch
+//     template_group_id to a revision2 whose own workflow list, if carried over verbatim from
+//     revision1's declared workflows_config, would now be a missing-workflow or wrong-order
+//     mismatch against revision2 — must be rejected at plan time, mirroring
+//     TestAccStack_ActionsRevisionRemovedWorkflow's pattern in resource_stack_upgrade_test.go.
+//
+// Why order specifically has to match (not just membership): the platform's own default
+// action generation (an unset "actions" attribute — see TestAccStack_ActionsGeneratedFromTemplate)
+// chains apply/plan/destroy dependencies ACROSS workflows in the stack template revision's own
+// declaration order — first workflow has no dependency, second depends on the first, and so
+// on (reversed for destroy). If workflows_config.workflows[] could list the same workflows in a
+// different order than the revision declares them, the stack's own visible listing would
+// silently disagree with the order those generated dependencies are actually chained in, with
+// nothing in the diff ever explaining why. Pinning the declared order to the revision's own
+// order is what keeps the two from ever drifting apart.
+
+// TestAccStack_WorkflowsConfigPrecedenceMerge exercises the three-way
+// precedence merge for a workflow's terraform_config: workflow template
+// revision default (lowest, terraform_version 1.5.0 — see
+// setupStackWorkflowTemplate) < stack template revision's override for the
+// workflow (middle, terraform_version 1.5.7 — see setupStackTemplateChain) < the
+// stack's own workflows_config.workflows[] entry (highest). Step 1 leaves
+// terraform_config unset on the stack entry, so it must resolve to the
+// middle layer's 1.5.7 (not the bottom layer's 1.5.0). Step 2 declares
+// terraform_version directly on the stack entry, which must win over both
+// lower layers — 1.5.5 is used rather than something above 1.5.7 since the
+// API no longer supports Terraform versions past that; precedence here
+// doesn't depend on numeric ordering, only on which layer declared a value.
+func TestAccStack_WorkflowsConfigPrecedenceMerge(t *testing.T) {
+	wfGrpName := "tf-provider-stack-wfmerge-wfgrp"
+	wfTemplateName := "tf-provider-stack-wfmerge-wftmpl"
+	stackTemplateName := "tf-provider-stack-wfmerge-stmpl"
+	id := "tf-provider-stack-wfmerge"
+
+	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+
+	inheritedConfig := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      { id = %q }
+    ]
+  }
+`, testWorkflowUUID)
+
+	overrideConfig := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id = %q
+        terraform_config = {
+          terraform_version = "1.5.5"
+        }
+      }
+    ]
+  }
+`, testWorkflowUUID)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, inheritedConfig),
+				Check: resource.TestCheckResourceAttr(
+					"stackguardian_stack.test", "workflows_config.workflows.0.terraform_config.terraform_version", "1.5.7"),
+			},
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, overrideConfig),
+				Check: resource.TestCheckResourceAttr(
+					"stackguardian_stack.test", "workflows_config.workflows.0.terraform_config.terraform_version", "1.5.5"),
+			},
+		},
+	})
+}
+
+// TestAccStack_WorkflowsConfigVcsConfigComputedOnly verifies
+// vcs_config.iac_vcs_config can't be set directly in config — it's
+// Computed-only and always inherited from the matched stack-template-revision
+// workflow (see resolveWorkflowTemplates/mergeWorkflowWithStackTemplateOverride).
+func TestAccStack_WorkflowsConfigVcsConfigComputedOnly(t *testing.T) {
+	wfGrpName := "tf-provider-stack-wfvcs-wfgrp"
+	wfTemplateName := "tf-provider-stack-wfvcs-wftmpl"
+	stackTemplateName := "tf-provider-stack-wfvcs-stmpl"
+	id := "tf-provider-stack-wfvcs"
+
+	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+
+	config := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id = %q
+        vcs_config = {
+          iac_vcs_config = {
+            use_marketplace_template = true
+          }
+        }
+      }
+    ]
+  }
+`, testWorkflowUUID)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccStackConfig(wfGrpName, revision, id, config),
+				ExpectError: regexp.MustCompile("Invalid Configuration for Read-Only Attribute"),
+			},
+		},
+	})
+}
+
+// TestAccStack_WorkflowsConfigRoundTrip covers a batch of the remaining
+// per-workflow attributes together: approvers, user_schedules (per-workflow
+// shape — cron/state Required, no "inputs" field, unlike the stack-level
+// copy), context_tags, runner_constraints, and mini_steps.
+func TestAccStack_WorkflowsConfigRoundTrip(t *testing.T) {
+	wfGrpName := "tf-provider-stack-wfrt-wfgrp"
+	wfTemplateName := "tf-provider-stack-wfrt-wftmpl"
+	stackTemplateName := "tf-provider-stack-wfrt-stmpl"
+	id := "tf-provider-stack-wfrt"
+
+	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+
+	config := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id        = %q
+        approvers = ["alice@example.com"]
+
+        user_schedules = [
+          {
+            cron  = "0 8 ? * MON *"
+            state = "ENABLED"
+          }
+        ]
+
+        context_tags = {
+          env = "dev"
+        }
+
+        runner_constraints = {
+          type  = "private"
+          names = ["runner-1"]
+        }
+
+        mini_steps = {
+          webhooks = {
+            completed = [
+              {
+                webhook_name = "on-completed"
+                webhook_url  = "https://example.com/hook"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+`, testWorkflowUUID)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.approvers.0", "alice@example.com"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.0.cron", "0 8 ? * MON *"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.0.state", "ENABLED"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.context_tags.env", "dev"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.runner_constraints.type", "private"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.runner_constraints.names.0", "runner-1"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.mini_steps.webhooks.completed.0.webhook_name", "on-completed"),
+				),
+			},
+			{
+				// Round trips with no diff.
+				Config:   testAccStackConfig(wfGrpName, revision, id, config),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccStack_WorkflowsConfigUpdate verifies that changing per-workflow
+// values on an ALREADY-EXISTING stack actually applies — approvers,
+// user_schedules, context_tags, runner_constraints, and mini_steps all
+// round-tripped at create in TestAccStack_WorkflowsConfigRoundTrip, but were
+// never re-verified after a real update to a different value. Step 3 clears
+// every override back to unset and checks the ones with a known-empty
+// flatten default (tags/approvers/user_schedules/context_tags) settle to
+// empty rather than erroring or keeping a stale value — exercising that path
+// on a genuine update, not just a fresh create.
+func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
+	wfGrpName := "tf-provider-stack-wfupd-wfgrp"
+	wfTemplateName := "tf-provider-stack-wfupd-wftmpl"
+	stackTemplateName := "tf-provider-stack-wfupd-stmpl"
+	id := "tf-provider-stack-wfupd"
+
+	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+
+	initialConfig := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id        = %q
+        tags      = ["v1"]
+        approvers = ["alice@example.com"]
+
+        user_schedules = [
+          { cron = "0 8 ? * MON *", state = "ENABLED" }
+        ]
+
+        context_tags = {
+          env = "dev"
+        }
+
+        runner_constraints = {
+          type  = "private"
+          names = ["runner-1"]
+        }
+
+        mini_steps = {
+          webhooks = {
+            completed = [
+              { webhook_name = "on-completed", webhook_url = "https://example.com/hook" }
+            ]
+          }
+        }
+      }
+    ]
+  }
+`, testWorkflowUUID)
+
+	updatedConfig := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id        = %q
+        tags      = ["v2"]
+        approvers = ["bob@example.com"]
+
+        user_schedules = [
+          { cron = "0 9 ? * TUE *", state = "DISABLED" }
+        ]
+
+        context_tags = {
+          env = "prod"
+        }
+
+        runner_constraints = {
+          type  = "private"
+          names = ["runner-2"]
+        }
+
+        mini_steps = {
+          webhooks = {
+            completed = [
+              { webhook_name = "on-completed-v2", webhook_url = "https://example.com/hook-v2" }
+            ]
+          }
+        }
+      }
+    ]
+  }
+`, testWorkflowUUID)
+
+	// Explicit empty values, not omission: removing an attribute from config
+	// entirely is indistinguishable, at plan time, from never having set it —
+	// UseStateForUnknown then just carries the prior (Step 2) value forward
+	// with no diff, so omitting these here would silently keep testing Step
+	// 2's values instead of exercising a real clear. An explicit [] / {} is a
+	// known, non-null config value, so it plans as a genuine change — same
+	// pattern as TestAccWorkflowUsingTemplate_ExplicitEmptySuppressesTemplateDefault.
+	clearedConfig := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id             = %q
+        tags           = []
+        approvers      = []
+        user_schedules = []
+        context_tags   = {}
+      }
+    ]
+  }
+`, testWorkflowUUID)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, initialConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.tags.0", "v1"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.approvers.0", "alice@example.com"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.0.cron", "0 8 ? * MON *"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.0.state", "ENABLED"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.context_tags.env", "dev"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.runner_constraints.names.0", "runner-1"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.mini_steps.webhooks.completed.0.webhook_name", "on-completed"),
+				),
+			},
+			{
+				// Update: every value above changes to a different one on the
+				// SAME stack — verifies the change actually applies, not just
+				// that the initial create round trips.
+				Config: testAccStackConfig(wfGrpName, revision, id, updatedConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.tags.0", "v2"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.approvers.0", "bob@example.com"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.0.cron", "0 9 ? * TUE *"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.0.state", "DISABLED"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.context_tags.env", "prod"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.runner_constraints.names.0", "runner-2"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.mini_steps.webhooks.completed.0.webhook_name", "on-completed-v2"),
+				),
+			},
+			{
+				// Clear every override back to unset — the template supplies no
+				// default for any of these, so the known-empty ones must settle
+				// to empty rather than error or keep the prior step's value.
+				Config: testAccStackConfig(wfGrpName, revision, id, clearedConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.tags.#", "0"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.approvers.#", "0"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.#", "0"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.context_tags.%", "0"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccStack_WorkflowsConfigRoundTripRemainingFields covers the per-workflow attributes the
+// other workflows_config tests don't set: description, wf_type, parallel_execution,
+// environment_variables, number_of_approvals_required, deployment_platform_config,
+// iac_input_data, the rest of terraform_config (drift, approval, plan/init options, timeout,
+// hooks, and a pre-plan workflow step), and mini_steps email notifications and wf_chaining.
+// Each value must come back from the API exactly as sent — a mismatch fails the apply itself
+// ("Provider produced inconsistent result after apply") — and the second step checks it then
+// re-plans with no diff.
+func TestAccStack_WorkflowsConfigRoundTripRemainingFields(t *testing.T) {
+	wfGrpName := acctest.ResourceName("stack-wfrest-wfgrp")
+	wfTemplateName := acctest.ResourceName("stack-wfrest-wftmpl")
+	stackTemplateName := acctest.ResourceName("stack-wfrest-stmpl")
+	id := acctest.ResourceName("stack-wfrest")
+
+	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+	stepTemplateID := setupStackWorkflowStepTemplate(t, acctest.ResourceName("stack-wfrest-step"))
+
+	config := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id                 = %[1]q
+        description        = "workflow description"
+        wf_type            = "TERRAFORM"
+        parallel_execution = "enabled"
+
+        approvers                    = ["alice@example.com"]
+        number_of_approvals_required = 1
+
+        environment_variables = [
+          {
+            kind = "PLAIN_TEXT"
+            config = {
+              var_name   = "WF_VAR"
+              text_value = "wf-value"
+            }
+          }
+        ]
+
+        deployment_platform_config = [
+          {
+            kind = "AWS_RBAC"
+            config = {
+              integration_id = "/integrations/test-integration"
+              profile_name   = "test-profile"
+            }
+          }
+        ]
+
+        vcs_config = {
+          iac_input_data = {
+            schema_type = "RAW_JSON"
+            data        = jsonencode({ bucket_region = "eu-central-1" })
+          }
+        }
+
+        terraform_config = {
+          terraform_version       = "1.5.5"
+          managed_terraform_state = true
+          drift_check             = true
+          drift_cron              = "0 */6 * * ? *"
+          approval_pre_apply      = true
+          terraform_plan_options  = "-input=false"
+          terraform_init_options  = "-input=false"
+          timeout                 = 3600
+          pre_plan_hooks          = ["echo pre-plan"]
+          post_apply_hooks        = ["echo post-apply"]
+
+          pre_plan_wf_steps_config = [
+            {
+              name                = "pre-plan-step"
+              wf_step_template_id = %[2]q
+            }
+          ]
+        }
+
+        mini_steps = {
+          notifications = {
+            email = {
+              completed = [
+                {
+                  recipients = ["alice@example.com"]
+                }
+              ]
+            }
+          }
+          wf_chaining = {
+            errored = [
+              {
+                workflow_group_id = "kk"
+                workflow_id       = "retest-of-bug-cewgh6dt-i7vp-0vo474rl"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+`, testWorkflowUUID, stepTemplateID)
+
+	const res = "stackguardian_stack.test"
+	wf := "workflows_config.workflows.0."
+	tc := wf + "terraform_config."
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(res, wf+"description", "workflow description"),
+					resource.TestCheckResourceAttr(res, wf+"wf_type", "TERRAFORM"),
+					resource.TestCheckResourceAttr(res, wf+"parallel_execution", "enabled"),
+					resource.TestCheckResourceAttr(res, wf+"approvers.0", "alice@example.com"),
+					resource.TestCheckResourceAttr(res, wf+"number_of_approvals_required", "1"),
+
+					resource.TestCheckResourceAttr(res, wf+"environment_variables.#", "1"),
+					resource.TestCheckResourceAttr(res, wf+"environment_variables.0.kind", "PLAIN_TEXT"),
+					resource.TestCheckResourceAttr(res, wf+"environment_variables.0.config.var_name", "WF_VAR"),
+					resource.TestCheckResourceAttr(res, wf+"environment_variables.0.config.text_value", "wf-value"),
+
+					resource.TestCheckResourceAttr(res, wf+"deployment_platform_config.#", "1"),
+					resource.TestCheckResourceAttr(res, wf+"deployment_platform_config.0.kind", "AWS_RBAC"),
+					resource.TestCheckResourceAttr(res, wf+"deployment_platform_config.0.config.integration_id", "/integrations/test-integration"),
+					resource.TestCheckResourceAttr(res, wf+"deployment_platform_config.0.config.profile_name", "test-profile"),
+
+					resource.TestCheckResourceAttr(res, wf+"vcs_config.iac_input_data.schema_type", "RAW_JSON"),
+					resource.TestCheckResourceAttr(res, wf+"vcs_config.iac_input_data.data", `{"bucket_region":"eu-central-1"}`),
+
+					resource.TestCheckResourceAttr(res, tc+"terraform_version", "1.5.5"),
+					resource.TestCheckResourceAttr(res, tc+"managed_terraform_state", "true"),
+					resource.TestCheckResourceAttr(res, tc+"drift_check", "true"),
+					resource.TestCheckResourceAttr(res, tc+"drift_cron", "0 */6 * * ? *"),
+					resource.TestCheckResourceAttr(res, tc+"approval_pre_apply", "true"),
+					resource.TestCheckResourceAttr(res, tc+"terraform_plan_options", "-input=false"),
+					resource.TestCheckResourceAttr(res, tc+"terraform_init_options", "-input=false"),
+					resource.TestCheckResourceAttr(res, tc+"timeout", "3600"),
+					resource.TestCheckResourceAttr(res, tc+"pre_plan_hooks.0", "echo pre-plan"),
+					resource.TestCheckResourceAttr(res, tc+"post_apply_hooks.0", "echo post-apply"),
+					resource.TestCheckResourceAttr(res, tc+"pre_plan_wf_steps_config.#", "1"),
+					resource.TestCheckResourceAttr(res, tc+"pre_plan_wf_steps_config.0.name", "pre-plan-step"),
+					resource.TestCheckResourceAttr(res, tc+"pre_plan_wf_steps_config.0.wf_step_template_id", stepTemplateID),
+
+					resource.TestCheckResourceAttr(res, wf+"mini_steps.notifications.email.completed.0.recipients.0", "alice@example.com"),
+					resource.TestCheckResourceAttr(res, wf+"mini_steps.wf_chaining.errored.0.workflow_group_id", "kk"),
+					resource.TestCheckResourceAttr(res, wf+"mini_steps.wf_chaining.errored.0.workflow_id", "retest-of-bug-cewgh6dt-i7vp-0vo474rl"),
+				),
+			},
+			{
+				// Round trips with no diff.
+				Config:   testAccStackConfig(wfGrpName, revision, id, config),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccStack_WorkflowsConfigCustomWfStepsConfig covers a workflow's top-level
+// wf_steps_config, which only applies to CUSTOM workflows — so this stack's template revision
+// is built on a CUSTOM workflow template rather than the TERRAFORM one the other tests use. The
+// declared steps must come back from the API exactly as sent, then re-plan with no diff.
+func TestAccStack_WorkflowsConfigCustomWfStepsConfig(t *testing.T) {
+	wfGrpName := acctest.ResourceName("stack-wfcustom-wfgrp")
+	wfTemplateName := acctest.ResourceName("stack-wfcustom-wftmpl")
+	stackTemplateName := acctest.ResourceName("stack-wfcustom-stmpl")
+	id := acctest.ResourceName("stack-wfcustom")
+
+	t.Cleanup(func() {
+		logCleanupErr(t, fmt.Sprintf("delete workflow group %q", wfGrpName), deleteWorkflowGroupFixture(wfGrpName))
+	})
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil && !is409(err) {
+		t.Fatalf("TestAccStack_WorkflowsConfigCustomWfStepsConfig: create workflow group %q: %s", wfGrpName, err)
+	}
+	workflowTemplateID := setupStackWorkflowTemplateOfKind(t, wfTemplateName, workflowtemplates.WorkflowTemplateSourceConfigKindCustom)
+	revision := setupStackTemplateChain(t, stackTemplateName, workflowTemplateID)
+	stepTemplateID := setupStackWorkflowStepTemplate(t, acctest.ResourceName("stack-wfcustom-step"))
+	t.Cleanup(func() { deleteStackFixture(wfGrpName, id) })
+
+	config := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id      = %[1]q
+        wf_type = "CUSTOM"
+
+        wf_steps_config = [
+          {
+            name                = "step-one"
+            wf_step_template_id = %[2]q
+            approval            = true
+            timeout             = 600
+            cmd_override        = "echo hello"
+
+            environment_variables = [
+              {
+                kind = "PLAIN_TEXT"
+                config = {
+                  var_name   = "STEP_VAR"
+                  text_value = "step-value"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+`, testWorkflowUUID, stepTemplateID)
+
+	const res = "stackguardian_stack.test"
+	step := "workflows_config.workflows.0.wf_steps_config.0."
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(res, "workflows_config.workflows.0.wf_type", "CUSTOM"),
+					resource.TestCheckResourceAttr(res, "workflows_config.workflows.0.wf_steps_config.#", "1"),
+					resource.TestCheckResourceAttr(res, step+"name", "step-one"),
+					resource.TestCheckResourceAttr(res, step+"wf_step_template_id", stepTemplateID),
+					resource.TestCheckResourceAttr(res, step+"approval", "true"),
+					resource.TestCheckResourceAttr(res, step+"timeout", "600"),
+					resource.TestCheckResourceAttr(res, step+"cmd_override", "echo hello"),
+					resource.TestCheckResourceAttr(res, step+"environment_variables.0.config.var_name", "STEP_VAR"),
+					resource.TestCheckResourceAttr(res, step+"environment_variables.0.config.text_value", "step-value"),
+				),
+			},
+			{
+				// Round trips with no diff.
+				Config:   testAccStackConfig(wfGrpName, revision, id, config),
+				PlanOnly: true,
+			},
+		},
+	})
+}
