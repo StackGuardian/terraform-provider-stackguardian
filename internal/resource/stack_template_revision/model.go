@@ -344,15 +344,27 @@ func (TerraformConfigModel) AttributeTypes() map[string]attr.Type {
 // Deployment platform config
 // ---------------------------------------------------------------------------
 
+type DeploymentPlatformConfigConfigModel struct {
+	IntegrationId types.String `tfsdk:"integration_id"`
+	ProfileName   types.String `tfsdk:"profile_name"`
+}
+
+func (DeploymentPlatformConfigConfigModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"integration_id": types.StringType,
+		"profile_name":   types.StringType,
+	}
+}
+
 type DeploymentPlatformConfigModel struct {
 	Kind   types.String `tfsdk:"kind"`
-	Config types.String `tfsdk:"config"` // JSON string (map[string]interface{})
+	Config types.Object `tfsdk:"config"`
 }
 
 func (DeploymentPlatformConfigModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"kind":   types.StringType,
-		"config": types.StringType,
+		"config": types.ObjectType{AttrTypes: DeploymentPlatformConfigConfigModel{}.AttributeTypes()},
 	}
 }
 
@@ -773,15 +785,20 @@ func convertTerraformConfigToAPI(ctx context.Context, obj types.Object) (*sgsdkg
 		return nil, diags
 	}
 	tc := &sgsdkgo.TerraformConfig{
-		TerraformVersion:       m.TerraformVersion.ValueStringPointer(),
-		DriftCheck:             m.DriftCheck.ValueBoolPointer(),
-		DriftCron:              m.DriftCron.ValueStringPointer(),
-		ManagedTerraformState:  m.ManagedTerraformState.ValueBoolPointer(),
-		ApprovalPreApply:       m.ApprovalPreApply.ValueBoolPointer(),
-		TerraformPlanOptions:   m.TerraformPlanOptions.ValueStringPointer(),
-		TerraformInitOptions:   m.TerraformInitOptions.ValueStringPointer(),
-		Timeout:                expanders.IntPtr(m.Timeout.ValueInt64Pointer()),
-		RunPreInitHooksOnDrift: m.RunPreInitHooksOnDrift.ValueBoolPointer(),
+		TerraformVersion:      m.TerraformVersion.ValueStringPointer(),
+		DriftCheck:            m.DriftCheck.ValueBoolPointer(),
+		DriftCron:             m.DriftCron.ValueStringPointer(),
+		ManagedTerraformState: m.ManagedTerraformState.ValueBoolPointer(),
+		ApprovalPreApply:      m.ApprovalPreApply.ValueBoolPointer(),
+		TerraformPlanOptions:  m.TerraformPlanOptions.ValueStringPointer(),
+		TerraformInitOptions:  m.TerraformInitOptions.ValueStringPointer(),
+		Timeout:               expanders.IntPtr(m.Timeout.ValueInt64Pointer()),
+	}
+	// run_pre_init_hooks_on_drift is Optional+Computed: ValueBoolPointer() returns &false
+	// for unknown, which would force the field false on create/update whenever the user
+	// hasn't set it. Only set it when it has a known value.
+	if !m.RunPreInitHooksOnDrift.IsNull() && !m.RunPreInitHooksOnDrift.IsUnknown() {
+		tc.RunPreInitHooksOnDrift = m.RunPreInitHooksOnDrift.ValueBoolPointer()
 	}
 	if !m.TerraformBinPath.IsNull() && !m.TerraformBinPath.IsUnknown() {
 		mps, diags := convertMountPointsToAPI(ctx, m.TerraformBinPath)
@@ -838,9 +855,20 @@ func convertDeploymentPlatformConfigToAPI(ctx context.Context, list types.List) 
 	}
 	result := make([]*sgsdkgo.DeploymentPlatformConfig, len(models))
 	for i, m := range models {
-		dpc := &sgsdkgo.DeploymentPlatformConfig{
-			Kind:   sgsdkgo.DeploymentPlatformConfigKindEnum(m.Kind.ValueString()),
-			Config: parseJSONToMap(m.Config.ValueString()),
+		kind, err := sgsdkgo.NewDeploymentPlatformConfigKindEnumFromString(m.Kind.ValueString())
+		if err != nil {
+			return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid deployment platform config kind", fmt.Sprintf("Value '%s' is not a valid kind", m.Kind.ValueString()))}
+		}
+		dpc := &sgsdkgo.DeploymentPlatformConfig{Kind: &kind}
+		if !m.Config.IsNull() && !m.Config.IsUnknown() {
+			var cfgModel DeploymentPlatformConfigConfigModel
+			if diags := m.Config.As(ctx, &cfgModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
+				return nil, diags
+			}
+			dpc.Config = &sgsdkgo.DeploymentPlatformConfigConfig{
+				IntegrationId: cfgModel.IntegrationId.ValueStringPointer(),
+				ProfileName:   cfgModel.ProfileName.ValueStringPointer(),
+			}
 		}
 		result[i] = dpc
 	}
@@ -1422,15 +1450,23 @@ func convertWorkflowsConfigToAPI(ctx context.Context, obj types.Object, orgName 
 			}
 			schemas := make([]*sgsdkgo.InputSchemas, len(isModels))
 			for j, ism := range isModels {
-				schemas[j] = &sgsdkgo.InputSchemas{
-					Id:           ism.Id.ValueStringPointer(),
+				is := &sgsdkgo.InputSchemas{
 					Name:         ism.Name.ValueStringPointer(),
 					Description:  ism.Description.ValueStringPointer(),
 					Type:         sgsdkgo.InputSchemasTypeEnum(ism.Type.ValueString()),
 					EncodedData:  ism.EncodedData.ValueStringPointer(),
 					UiSchemaData: ism.UiSchemaData.ValueStringPointer(),
-					IsCommitted:  ism.IsCommitted.ValueBoolPointer(),
 				}
+				// id/is_committed are Optional+Computed: ValueStringPointer()/ValueBoolPointer()
+				// return &""/&false for unknown, which would send a spurious empty id or force
+				// is_committed=false on create when the user hasn't set them. Only set when known.
+				if !ism.Id.IsNull() && !ism.Id.IsUnknown() {
+					is.Id = ism.Id.ValueStringPointer()
+				}
+				if !ism.IsCommitted.IsNull() && !ism.IsCommitted.IsUnknown() {
+					is.IsCommitted = ism.IsCommitted.ValueBoolPointer()
+				}
+				schemas[j] = is
 			}
 			wf.InputSchemas = schemas
 		}
@@ -1457,9 +1493,16 @@ func convertActionsToAPI(ctx context.Context, actionsMap types.Map) (map[string]
 	result := make(map[string]*sgsdkgo.Actions, len(models))
 	for k, am := range models {
 		action := &sgsdkgo.Actions{
-			Name:        am.Name.ValueString(),
-			Description: am.Description.ValueStringPointer(),
-			Default:     am.Default.ValueBoolPointer(),
+			Name: am.Name.ValueString(),
+		}
+		// description/default are Optional+Computed: ValueStringPointer()/ValueBoolPointer()
+		// return &""/&false for unknown, which would clear the description or force
+		// default=false on create when the user hasn't set them. Only set when known.
+		if !am.Description.IsNull() && !am.Description.IsUnknown() {
+			action.Description = am.Description.ValueStringPointer()
+		}
+		if !am.Default.IsNull() && !am.Default.IsUnknown() {
+			action.Default = am.Default.ValueBoolPointer()
 		}
 		if !am.Order.IsNull() && !am.Order.IsUnknown() {
 			var orderModels map[string]ActionOrderModel
@@ -1480,8 +1523,13 @@ func convertActionsToAPI(ctx context.Context, actionsMap types.Map) (map[string]
 						if diags := pm.TerraformAction.As(ctx, &tam, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 							return nil, diags
 						}
-						actionEnum := sgsdkgo.ActionEnum(tam.Action.ValueString())
-						params.TerraformAction = &sgsdkgo.TerraformAction{Action: &actionEnum}
+						// action is Computed-only (never user-set): only forward it when the
+						// plan actually resolved a value, otherwise ValueString() on unknown
+						// would send action="" and clobber the API-assigned action.
+						if !tam.Action.IsNull() && !tam.Action.IsUnknown() {
+							actionEnum := sgsdkgo.ActionEnum(tam.Action.ValueString())
+							params.TerraformAction = &sgsdkgo.TerraformAction{Action: &actionEnum}
+						}
 					}
 					if !pm.DeploymentPlatformConfig.IsNull() && !pm.DeploymentPlatformConfig.IsUnknown() {
 						dpcs, diags := convertDeploymentPlatformConfigToAPI(ctx, pm.DeploymentPlatformConfig)
@@ -1754,8 +1802,19 @@ func deploymentPlatformConfigFromAPI(dpcs []*sgsdkgo.DeploymentPlatformConfig) (
 			continue
 		}
 		m := DeploymentPlatformConfigModel{
-			Kind:   flatteners.String(string(dpc.Kind)),
-			Config: marshalToJSONString(dpc.Config),
+			Kind:   flatteners.StringPtr((*string)(dpc.Kind)),
+			Config: types.ObjectNull(DeploymentPlatformConfigConfigModel{}.AttributeTypes()),
+		}
+		if dpc.Config != nil {
+			cfgModel := DeploymentPlatformConfigConfigModel{
+				IntegrationId: flatteners.StringPtr(dpc.Config.IntegrationId),
+				ProfileName:   flatteners.StringPtr(dpc.Config.ProfileName),
+			}
+			cfgObj, diags := types.ObjectValueFrom(context.Background(), DeploymentPlatformConfigConfigModel{}.AttributeTypes(), cfgModel)
+			if diags.HasError() {
+				return listNull, diags
+			}
+			m.Config = cfgObj
 		}
 		obj, diags := types.ObjectValueFrom(context.Background(), DeploymentPlatformConfigModel{}.AttributeTypes(), m)
 		if diags.HasError() {
