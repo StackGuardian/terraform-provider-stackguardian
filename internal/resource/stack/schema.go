@@ -609,23 +609,6 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 										},
 									},
 								},
-								// iac_input_data at the workflow level corresponds to TemplatesIacInputData
-								// in the SDK. Used when the workflow is instantiated from a workflow template
-								// (template_id).
-								"iac_input_data": schema.SingleNestedAttribute{
-									MarkdownDescription: "Top-level IaC input data for this workflow, used when the workflow is instantiated from a workflow template (`template_id`).",
-									Optional:            true,
-									Attributes: map[string]schema.Attribute{
-										"schema_type": schema.StringAttribute{
-											MarkdownDescription: "Schema type for the input data (e.g. RAW_JSON).",
-											Required:            true,
-										},
-										"data": schema.StringAttribute{
-											MarkdownDescription: "Input data as a JSON string.",
-											Optional:            true,
-										},
-									},
-								},
 								"input_schemas": schema.ListNestedAttribute{
 									MarkdownDescription: "Input schema definitions for this workflow.",
 									Optional:            true,

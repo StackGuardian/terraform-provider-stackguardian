@@ -527,9 +527,10 @@ func TestAccStack_Import(t *testing.T) {
 //     deployment_platform_config: both need wf_step_template_id /
 //     integration_id fixtures respectively (workflow_from_template's tests
 //     have a setupWorkflowStepTemplate fixture that could be ported over).
-// - vcs_config.iac_input_data / top-level iac_input_data: distinct
-//     TemplatesIacInputData vs IacInputData shapes: needs a schema_type value
-//     confirmed valid against the live API to write a meaningful round trip.
+// - vcs_config.iac_input_data: needs a schema_type value confirmed valid
+//     against the live API to write a meaningful round trip. (The root-level
+//     iac_input_data on workflows_config.workflows[] — TemplatesIacInputData
+//     — was removed: it doesn't apply to stacks.)
 // - Multiple workflows in workflows_config.workflows[]: needs a second
 //     workflow slot registered on the stack template revision fixture (a
 //     second workflow template + revision, or a second slot on the same
