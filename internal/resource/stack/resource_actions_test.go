@@ -238,7 +238,7 @@ func TestAccStack_CustomActionsRoundTrip(t *testing.T) {
 // all. Used only by TestAccStack_GeneratedDefaultActions, which needs a
 // template that supplies neither apply/plan/destroy NOR a dependency chain to
 // inherit, so the only source for them is the provider's own generation
-// (fillGeneratedDefaultActions), and needs a second workflow to prove that
+// (generateStackActions), and needs a second workflow to prove that
 // generation actually chains multiple workflows rather than only handling
 // the trivial single-workflow case. Registers cleanup. Returns the bare
 // revision id ("<name>:1").
@@ -335,17 +335,16 @@ func setupStackTemplateChainNoActions(t *testing.T, stackTemplateID, workflowTem
 	return revisionID
 }
 
-// TestAccStack_GeneratedDefaultActions verifies the fix for a real gap: the
-// platform only auto-generates its own apply/plan/destroy actions when the
-// create/update request's Actions field is entirely absent. Once custom_actions
-// populates Actions for any reason, the platform stops filling those in, so
-// without fillGeneratedDefaultActions they'd silently be missing whenever a
-// stack declares custom_actions but its template defines no actions of its
-// own — this test's fixture (setupStackTemplateChainNoActions) is exactly
-// that case. Checks the generated shape matches default_actions.json: name/
-// description/default=true, and workflows chained in declaration order for
-// apply/plan and REVERSED for destroy, each with a COMPLETED-status
-// dependency on the previous workflow in its chain.
+// TestAccStack_GeneratedDefaultActions verifies generateStackActions against
+// default_actions_generation_doc.txt's exact algorithm: when the stack
+// template revision defines no Actions of its own, apply/plan/destroy are
+// synthesized from the revision's OWN WorkflowsConfig.workflows list — never
+// the stack's own workflows_config, which this algorithm doesn't consult at
+// all (setupStackTemplateChainNoActions wires two slots on the template,
+// testWfSlotId then secondWfSlotId, and the stack in this test declares no
+// workflows_config of its own). Order map keys are the bare template slot ids
+// (StackTemplateRevisionWorkflow.Id) — not the workflow's own post-creation
+// resource id, since at create time that doesn't exist yet.
 func TestAccStack_GeneratedDefaultActions(t *testing.T) {
 	wfGrpName := "tf-provider-stack-gendef-wfgrp"
 	wfTemplateName := "tf-provider-stack-gendef-wftmpl"
@@ -364,15 +363,9 @@ func TestAccStack_GeneratedDefaultActions(t *testing.T) {
 
 	// custom_actions only declares an unrelated "notify" action — apply/plan/
 	// destroy come from neither custom_actions nor the template (which has
-	// none), so they must be generated.
-	config := fmt.Sprintf(`
-  workflows_config = {
-    workflows = [
-      { id = %q },
-      { id = %q }
-    ]
-  }
-
+	// none), so they must be generated. Its own order key is unrelated to
+	// generation and keys by the slot id like everything else here.
+	withNotifyOnly := fmt.Sprintf(`
   custom_actions = {
     notify = {
       name = "notify"
@@ -387,20 +380,16 @@ func TestAccStack_GeneratedDefaultActions(t *testing.T) {
       }
     }
   }
-`, testWfSlotId, secondWfSlotId)
+`, testWfSlotId)
 
-	// Same shape, but with the two workflows declared in the OPPOSITE order —
-	// used by Step 3 to prove generation re-derives the chain correctly on
-	// Update (ToUpdateAPIModel), not just on Create: it must not leave the
-	// create-time chain stale.
-	swappedConfig := fmt.Sprintf(`
-  workflows_config = {
-    workflows = [
-      { id = %q },
-      { id = %q }
-    ]
-  }
-
+	// Step 2: custom_actions now ALSO declares "apply" itself — proving
+	// generation is RE-EVALUATED on Update (ToUpdateAPIModel), not left stuck
+	// with the create-time result: "apply" must move out of default_actions
+	// (generated) into custom_actions (user-authored), while plan/destroy
+	// remain generated. Since generateStackActions's source (the template's
+	// WorkflowsConfig.workflows) never changes, this is the only thing that
+	// CAN change generation's outcome between create and update here.
+	withNotifyAndApply := fmt.Sprintf(`
   custom_actions = {
     notify = {
       name = "notify"
@@ -414,8 +403,20 @@ func TestAccStack_GeneratedDefaultActions(t *testing.T) {
         }
       }
     }
+    apply = {
+      name = "apply"
+      order = {
+        %[1]q = {
+          parameters = {
+            terraform_action = {
+              action = "apply"
+            }
+          }
+        }
+      }
+    }
   }
-`, secondWfSlotId, testWfSlotId)
+`, testWfSlotId)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -425,7 +426,7 @@ func TestAccStack_GeneratedDefaultActions(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccStackConfig(wfGrpName, revision, id, config),
+				Config: testAccStackConfig(wfGrpName, revision, id, withNotifyOnly),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// custom_actions survives untouched.
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "custom_actions.notify.name", "notify"),
@@ -438,8 +439,8 @@ func TestAccStack_GeneratedDefaultActions(t *testing.T) {
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.destroy.name", "Destroy"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.destroy.description", "use this action to destroy resources in the stack"),
 
-					// apply/plan chain in declaration order: testWfSlotId first (no
-					// dependencies), secondWfSlotId depends on it.
+					// apply/plan chain in the template's own declaration order:
+					// testWfSlotId first (no dependencies), secondWfSlotId depends on it.
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
 						fmt.Sprintf("default_actions.apply.order.%s.dependencies.#", testWfSlotId), "0"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
@@ -448,6 +449,8 @@ func TestAccStack_GeneratedDefaultActions(t *testing.T) {
 						fmt.Sprintf("default_actions.apply.order.%s.dependencies.0.condition.latest_status", secondWfSlotId), "COMPLETED"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
 						fmt.Sprintf("default_actions.apply.order.%s.parameters.terraform_action.action", testWfSlotId), "apply"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test",
+						fmt.Sprintf("default_actions.plan.order.%s.parameters.terraform_action.action", testWfSlotId), "plan"),
 
 					// destroy chains in REVERSE: secondWfSlotId first (no dependencies),
 					// testWfSlotId depends on it.
@@ -456,41 +459,31 @@ func TestAccStack_GeneratedDefaultActions(t *testing.T) {
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
 						fmt.Sprintf("default_actions.destroy.order.%s.dependencies.0.id", testWfSlotId), secondWfSlotId),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("default_actions.destroy.order.%s.parameters.terraform_action.action", testWfSlotId), "destroy"),
+						fmt.Sprintf("default_actions.destroy.order.%s.parameters.terraform_action.action", secondWfSlotId), "destroy"),
 				),
 			},
 			{
 				// Round trips with no diff.
-				Config:   testAccStackConfig(wfGrpName, revision, id, config),
+				Config:   testAccStackConfig(wfGrpName, revision, id, withNotifyOnly),
 				PlanOnly: true,
 			},
 			{
-				// Update: swap the workflow declaration order. The generated
-				// chains must be RE-DERIVED for the new order via
-				// ToUpdateAPIModel, not left stuck with the create-time chain —
-				// proving generation runs correctly on Update, not only Create.
-				Config: testAccStackConfig(wfGrpName, revision, id, swappedConfig),
+				// Update: custom_actions now covers "apply" itself.
+				Config: testAccStackConfig(wfGrpName, revision, id, withNotifyAndApply),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// apply/plan chain now starts with secondWfSlotId (declared
-					// first this time), testWfSlotId depends on it.
-					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("default_actions.apply.order.%s.dependencies.#", secondWfSlotId), "0"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("default_actions.apply.order.%s.dependencies.0.id", testWfSlotId), secondWfSlotId),
-					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("default_actions.plan.order.%s.dependencies.0.id", testWfSlotId), secondWfSlotId),
-
-					// destroy now starts with testWfSlotId (reverse of the new
-					// order), secondWfSlotId depends on it.
-					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("default_actions.destroy.order.%s.dependencies.#", testWfSlotId), "0"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("default_actions.destroy.order.%s.dependencies.0.id", secondWfSlotId), testWfSlotId),
+					// "apply" moved to custom_actions (user-authored, Default=false)...
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "custom_actions.apply.name", "apply"),
+					// ...and is no longer in default_actions.
+					resource.TestCheckNoResourceAttr("stackguardian_stack.test", "default_actions.apply"),
+					// plan/destroy are still generated (the template still defines
+					// neither, and custom_actions still doesn't cover them).
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.plan.name", "Plan"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.destroy.name", "Destroy"),
 				),
 			},
 			{
-				// And the post-update chain round trips with no diff.
-				Config:   testAccStackConfig(wfGrpName, revision, id, swappedConfig),
+				// And the post-update state round trips with no diff.
+				Config:   testAccStackConfig(wfGrpName, revision, id, withNotifyAndApply),
 				PlanOnly: true,
 			},
 		},
