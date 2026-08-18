@@ -117,7 +117,6 @@ resource "stackguardian_stack_template_revision" "test" {
     workflows = [
       {
         id            = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
-        template_id   = "%s"
         resource_name = "wf-1"
 
         terraform_config = {
@@ -128,7 +127,7 @@ resource "stackguardian_stack_template_revision" "test" {
     ]
   }
 }
-`, stackTemplateID, alias, notes, description, wfTemplateID)
+`, stackTemplateID, alias, notes, description)
 }
 
 func testAccStackTemplateRevisionWithWorkflowsConfig(stackTemplateID, wfTemplateID, alias string) string {
@@ -144,7 +143,6 @@ resource "stackguardian_stack_template_revision" "test" {
     workflows = [
       {
         id            = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
-        template_id   = "%s"
         resource_name = "wf-1"
 
         vcs_config = {
@@ -168,7 +166,7 @@ resource "stackguardian_stack_template_revision" "test" {
     ]
   }
 }
-`, stackTemplateID, alias, wfTemplateID, wfTemplateID)
+`, stackTemplateID, alias, wfTemplateID)
 }
 
 // --- Tests ---
@@ -390,7 +388,6 @@ resource "stackguardian_stack_template_revision" "test" {
     workflows = [
       {
         id            = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
-        template_id   = stackguardian_workflow_template.wf_parent.id
         resource_name = "wf-1"
 
         terraform_config = {
