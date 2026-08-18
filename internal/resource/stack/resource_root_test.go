@@ -137,16 +137,19 @@ func TestAccStack_IdRequiresReplace(t *testing.T) {
 // the NEW revision, rather than carrying the old revision's value forward
 // via UseStateForUnknown (see ModifyPlan/reResolveOnRevisionChange).
 //
-// It also regression-tests a real "Provider produced inconsistent result
-// after apply" risk in that same code path: revision2 (like revision1) only
-// defines apply/plan, not destroy, so ToUpdateAPIModel's expandActionsMap
-// generates "destroy" at apply time (fillGeneratedDefaultActions) — if
-// reResolveOnRevisionChange naively set plan.DefaultActions to a KNOWN value
-// containing only apply/plan, apply's actual result (including the generated
-// destroy) wouldn't match what the plan promised, and Terraform would fail
-// the whole step with that harness-level error rather than any assertion
-// below even running. Step 2 succeeding at all, plus destroy actually
-// appearing afterward, is the proof.
+// It also regression-tests the "Provider produced inconsistent result after
+// apply" risk in that same code path (reResolveOnRevisionChange): revision1
+// and revision2 both define their own apply/plan Actions (see
+// setupStackTemplateChain/setupSecondStackTemplateRevision), so
+// generateStackActions's step 1 (verbatim copy — see
+// default_actions_generation_doc.txt) applies for both, and no generation
+// ever happens on this path. reResolveOnRevisionChange only needs
+// actionsNeedGeneration(tpl) to correctly recognize that (tpl.Actions
+// non-empty) and keep plan.DefaultActions known instead of forcing it
+// unknown; if it got that wrong the whole step would fail with that
+// harness-level error rather than any assertion below even running. Step 2
+// succeeding at all, with default_actions reflecting revision2's own
+// apply/plan verbatim, is the proof.
 func TestAccStack_TemplateGroupIdReResolution(t *testing.T) {
 	wfGrpName := "tf-provider-stack-tmplswitch-wfgrp"
 	wfTemplateName := "tf-provider-stack-tmplswitch-wftmpl"
@@ -175,8 +178,9 @@ func TestAccStack_TemplateGroupIdReResolution(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "template_group_id", revision2),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "description", "revision two description"),
-					// Neither revision defines "destroy" — generated at apply time.
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.destroy.name", "Destroy"),
+					// revision2's own Actions, copied verbatim (no generation).
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.apply.name", "apply"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.plan.name", "plan"),
 				),
 			},
 		},
