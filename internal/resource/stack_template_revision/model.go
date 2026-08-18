@@ -490,14 +490,12 @@ func (VcsConfigModel) AttributeTypes() map[string]attr.Type {
 
 type WorkflowInStackModel struct {
 	Id                        types.String `tfsdk:"id"`
-	TemplateId                types.String `tfsdk:"template_id"`
 	ResourceName              types.String `tfsdk:"resource_name"`
 	WfStepsConfig             types.List   `tfsdk:"wf_steps_config"`
 	TerraformConfig           types.Object `tfsdk:"terraform_config"`
 	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
 	DeploymentPlatformConfig  types.List   `tfsdk:"deployment_platform_config"`
 	VcsConfig                 types.Object `tfsdk:"vcs_config"`
-	IacInputData              types.Object `tfsdk:"iac_input_data"`
 	UserSchedules             types.List   `tfsdk:"user_schedules"`
 	Approvers                 types.List   `tfsdk:"approvers"`
 	NumberOfApprovalsRequired types.Int64  `tfsdk:"number_of_approvals_required"`
@@ -511,14 +509,12 @@ type WorkflowInStackModel struct {
 func (WorkflowInStackModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"id":                           types.StringType,
-		"template_id":                  types.StringType,
 		"resource_name":                types.StringType,
 		"wf_steps_config":              types.ListType{ElemType: types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}},
 		"terraform_config":             types.ObjectType{AttrTypes: TerraformConfigModel{}.AttributeTypes()},
 		"environment_variables":        types.ListType{ElemType: types.ObjectType{AttrTypes: EnvVarModel{}.AttributeTypes()}},
 		"deployment_platform_config":   types.ListType{ElemType: types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()}},
 		"vcs_config":                   types.ObjectType{AttrTypes: VcsConfigModel{}.AttributeTypes()},
-		"iac_input_data":               types.ObjectType{AttrTypes: WfStepInputDataModel{}.AttributeTypes()},
 		"user_schedules":               types.ListType{ElemType: types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()}},
 		"approvers":                    types.ListType{ElemType: types.StringType},
 		"number_of_approvals_required": types.Int64Type,
@@ -1362,16 +1358,8 @@ func convertWorkflowsConfigToAPI(ctx context.Context, obj types.Object, orgName 
 
 	workflows := make([]*stacktemplaterevisions.StackTemplateRevisionWorkflow, len(wfModels))
 	for i, wm := range wfModels {
-		// Prefix template_id with /<orgName>/
-		var prefixedTemplateId *string
-		if tid := wm.TemplateId.ValueStringPointer(); tid != nil {
-			v := fmt.Sprintf("/%s/%s", orgName, *tid)
-			prefixedTemplateId = &v
-		}
-
 		wf := &stacktemplaterevisions.StackTemplateRevisionWorkflow{
 			Id:                        wm.Id.ValueStringPointer(),
-			TemplateId:                prefixedTemplateId,
 			ResourceName:              wm.ResourceName.ValueStringPointer(),
 			NumberOfApprovalsRequired: expanders.IntPtr(wm.NumberOfApprovalsRequired.ValueInt64Pointer()),
 			UserJobCpu:                expanders.IntPtr(wm.UserJobCpu.ValueInt64Pointer()),
@@ -1411,16 +1399,6 @@ func convertWorkflowsConfigToAPI(ctx context.Context, obj types.Object, orgName 
 				return nil, diags
 			}
 			wf.VcsConfig = vcs
-		}
-		if !wm.IacInputData.IsNull() && !wm.IacInputData.IsUnknown() {
-			var idm WfStepInputDataModel
-			if diags := wm.IacInputData.As(ctx, &idm, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
-				return nil, diags
-			}
-			wf.IacInputData = &sgsdkgo.TemplatesIacInputData{
-				SchemaType: idm.SchemaType.ValueStringPointer(),
-				Data:       parseJSONToMap(idm.Data.ValueString()),
-			}
 		}
 		if !wm.UserSchedules.IsNull() && !wm.UserSchedules.IsUnknown() {
 			us, diags := convertUserSchedulesToAPI(ctx, wm.UserSchedules)
@@ -1983,20 +1961,6 @@ func workflowsConfigFromAPI(wc *stacktemplaterevisions.StackTemplateRevisionWork
 		if diags.HasError() {
 			return nullObj, diags
 		}
-		// IacInputData (TemplatesIacInputData)
-		iacInputDataObj := types.ObjectNull(WfStepInputDataModel{}.AttributeTypes())
-		if wf.IacInputData != nil {
-			// wf.IacInputData is TemplatesIacInputData (Data is a plain map, not the
-			// pointer-typed sgsdkgo.IacInputData) — no deref needed.
-			idm := WfStepInputDataModel{
-				SchemaType: flatteners.String(string(*wf.IacInputData.SchemaType)),
-				Data:       marshalToJSONString(wf.IacInputData.Data),
-			}
-			iacInputDataObj, diags = types.ObjectValueFrom(context.Background(), WfStepInputDataModel{}.AttributeTypes(), idm)
-			if diags.HasError() {
-				return nullObj, diags
-			}
-		}
 		us, diags := userSchedulesFromAPI(wf.UserSchedules)
 		if diags.HasError() {
 			return nullObj, diags
@@ -2044,24 +2008,14 @@ func workflowsConfigFromAPI(wc *stacktemplaterevisions.StackTemplateRevisionWork
 			}
 		}
 
-		// Strip /<ownerOrg>/ prefix from template_id returned by the API
-		var strippedTemplateId *string
-		if wf.TemplateId != nil {
-			parts := strings.Split(*wf.TemplateId, "/")
-			base := parts[len(parts)-1]
-			strippedTemplateId = &base
-		}
-
 		wm := WorkflowInStackModel{
 			Id:                        flatteners.StringPtr(wf.Id),
-			TemplateId:                flatteners.StringPtr(strippedTemplateId),
 			ResourceName:              flatteners.StringPtr(wf.ResourceName),
 			WfStepsConfig:             wfSteps,
 			TerraformConfig:           tcObj,
 			EnvironmentVariables:      envVars,
 			DeploymentPlatformConfig:  dpcs,
 			VcsConfig:                 vcs,
-			IacInputData:              iacInputDataObj,
 			UserSchedules:             us,
 			Approvers:                 approvers,
 			NumberOfApprovalsRequired: flatteners.Int64Ptr(wf.NumberOfApprovalsRequired),

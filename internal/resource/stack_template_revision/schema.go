@@ -196,10 +196,6 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 		MarkdownDescription: "UUID identifying the workflow within the stack template.",
 		Required:            true,
 	},
-	"template_id": schema.StringAttribute{
-		MarkdownDescription: "ID of the workflow template that this workflow is based on.",
-		Required:            true,
-	},
 	"resource_name": schema.StringAttribute{
 		MarkdownDescription: "Name of the workflow resource within the stack.",
 		Optional:            true,
@@ -397,22 +393,6 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 						Optional:            true,
 					},
 				},
-			},
-		},
-	},
-	// iac_input_data at the workflow level corresponds to TemplatesIacInputData in the SDK.
-	// Used when the workflow is instantiated from a workflow template (template_id).
-	"iac_input_data": schema.SingleNestedAttribute{
-		MarkdownDescription: "Top-level IaC input data for this workflow, used when the workflow is instantiated from a workflow template (`template_id`).",
-		Optional:            true,
-		Attributes: map[string]schema.Attribute{
-			"schema_type": schema.StringAttribute{
-				MarkdownDescription: "Schema type for the input data (e.g. RAW_JSON).",
-				Required:            true,
-			},
-			"data": schema.StringAttribute{
-				MarkdownDescription: "Input data as a JSON string.",
-				Optional:            true,
 			},
 		},
 	},
