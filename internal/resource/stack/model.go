@@ -8,6 +8,7 @@ import (
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	"github.com/StackGuardian/sg-sdk-go/stacktemplaterevisions"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
+	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/expanders"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/flatteners"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -353,21 +354,6 @@ func (VcsConfigModel) AttributeTypes() map[string]attr.Type {
 	}
 }
 
-// WfIacInputDataModel is the top-level-of-workflow iac_input_data, used when
-// the workflow is instantiated from a workflow template. It corresponds to
-// the SDK's sgsdkgo.TemplatesIacInputData (schema_type + data only).
-type WfIacInputDataModel struct {
-	SchemaType types.String `tfsdk:"schema_type"`
-	Data       types.String `tfsdk:"data"`
-}
-
-func (WfIacInputDataModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"schema_type": types.StringType,
-		"data":        types.StringType,
-	}
-}
-
 // ---------------------------------------------------------------------------
 // Input schemas (for workflows_config workflows)
 // ---------------------------------------------------------------------------
@@ -532,7 +518,6 @@ type WorkflowInStackModel struct {
 	WorkflowId                types.String `tfsdk:"workflow_id"`
 	IsActive                  types.String `tfsdk:"is_active"`
 	VcsConfig                 types.Object `tfsdk:"vcs_config"`
-	IacInputData              types.Object `tfsdk:"iac_input_data"`
 	InputSchemas              types.List   `tfsdk:"input_schemas"`
 	Approvers                 types.List   `tfsdk:"approvers"`
 	NumberOfApprovalsRequired types.Int64  `tfsdk:"number_of_approvals_required"`
@@ -560,7 +545,6 @@ func (WorkflowInStackModel) AttributeTypes() map[string]attr.Type {
 		"workflow_id":                  types.StringType,
 		"is_active":                    types.StringType,
 		"vcs_config":                   types.ObjectType{AttrTypes: VcsConfigModel{}.AttributeTypes()},
-		"iac_input_data":               types.ObjectType{AttrTypes: WfIacInputDataModel{}.AttributeTypes()},
 		"input_schemas":                types.ListType{ElemType: types.ObjectType{AttrTypes: StackInputSchemaModel{}.AttributeTypes()}},
 		"approvers":                    types.ListType{ElemType: types.StringType},
 		"number_of_approvals_required": types.Int64Type,
@@ -2091,9 +2075,6 @@ func mergeWorkflowWithStackTemplateOverride(wf *sgsdkgo.StackWorkflowsConfigWork
 	if wf.UserJobMemory == nil {
 		wf.UserJobMemory = stackTplWf.UserJobMemory
 	}
-	if wf.IacInputData == nil {
-		wf.IacInputData = stackTplWf.IacInputData
-	}
 	if len(wf.InputSchemas) == 0 {
 		wf.InputSchemas = stackTplWf.InputSchemas
 	}
@@ -2295,16 +2276,6 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 			}
 			wf.VcsConfig = vcs
 		}
-		if !wm.IacInputData.IsNull() && !wm.IacInputData.IsUnknown() {
-			var idm WfIacInputDataModel
-			if diags := wm.IacInputData.As(ctx, &idm, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
-				return nil, diags
-			}
-			wf.IacInputData = &sgsdkgo.TemplatesIacInputData{
-				SchemaType: idm.SchemaType.ValueStringPointer(),
-				Data:       parseJSONToMap(idm.Data.ValueString()),
-			}
-		}
 		if !wm.InputSchemas.IsNull() && !wm.InputSchemas.IsUnknown() {
 			schemas, diags := expandInputSchemas(ctx, wm.InputSchemas)
 			if diags.HasError() {
@@ -2436,19 +2407,6 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 			approversList = l
 		}
 
-		iacInputObj := types.ObjectNull(WfIacInputDataModel{}.AttributeTypes())
-		if wf.IacInputData != nil {
-			idm := WfIacInputDataModel{
-				SchemaType: flatteners.StringPtr(wf.IacInputData.SchemaType),
-				Data:       marshalToJSONString(wf.IacInputData.Data),
-			}
-			obj, diags := types.ObjectValueFrom(ctx, WfIacInputDataModel{}.AttributeTypes(), idm)
-			if diags.HasError() {
-				return nullObj, diags
-			}
-			iacInputObj = obj
-		}
-
 		wfType := ""
 		if wf.WfType != nil {
 			wfType = string(*wf.WfType)
@@ -2477,7 +2435,6 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 			WorkflowId:                flatteners.StringPtr(wf.WorkflowId),
 			IsActive:                  flatteners.String(isActive),
 			VcsConfig:                 vcs,
-			IacInputData:              iacInputObj,
 			InputSchemas:              inputSchemas,
 			Approvers:                 approversList,
 			NumberOfApprovalsRequired: flatteners.Int64Ptr(wf.NumberOfApprovalsRequired),
@@ -2636,14 +2593,11 @@ func expandSingleActionsMap(ctx context.Context, actions types.Map, isDefault bo
 // into the single map the SDK's Actions field expects, stamping Default=true on
 // entries from defaultActions and Default=false on entries from customActions.
 // An action key present in both is a config error, since it's ambiguous which
-// Default value should win. Any action defined on the stack template revision
-// (tpl) that isn't already covered by defaultActions/customActions is filled
-// in as a lowest-precedence default — the template provides a baseline, but
-// never overrides what the user/state already resolved for a given key.
-//
-// wfc is the stack's own resolved workflows_config (nil if unset) — see
-// fillGeneratedDefaultActions.
-func expandActionsMap(ctx context.Context, defaultActions, customActions types.Map, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, wfc *sgsdkgo.StackWorkflowsConfig) (map[string]*sgsdkgo.Actions, diag.Diagnostics) {
+// Default value should win. Any action the stack template revision (tpl)
+// resolves to — its own Actions verbatim, or a freshly generated set — that
+// isn't already covered by defaultActions/customActions is filled in as a
+// lowest-precedence default; see generateStackActions.
+func expandActionsMap(ctx context.Context, defaultActions, customActions types.Map, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) (map[string]*sgsdkgo.Actions, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	defaults, d := expandSingleActionsMap(ctx, defaultActions, true)
@@ -2654,10 +2608,6 @@ func expandActionsMap(ctx context.Context, defaultActions, customActions types.M
 	customs, d := expandSingleActionsMap(ctx, customActions, false)
 	diags.Append(d...)
 	if diags.HasError() {
-		return nil, diags
-	}
-
-	if defaults == nil && customs == nil && (tpl == nil || len(tpl.Actions) == 0) {
 		return nil, diags
 	}
 
@@ -2678,140 +2628,132 @@ func expandActionsMap(ctx context.Context, defaultActions, customActions types.M
 	if diags.HasError() {
 		return nil, diags
 	}
-	if tpl != nil {
-		isDefault := true
-		for k, v := range tpl.Actions {
-			if _, exists := result[k]; exists || v == nil {
-				continue
-			}
-			// Force Default=true on a shallow copy: an action inherited from the
-			// template is always a default action for the stack, regardless of
-			// what Default flag the template itself recorded for it. custom_actions
-			// is exclusively user-authored, so template entries never count as custom.
-			action := *v
-			action.Default = &isDefault
-			result[k] = &action
+
+	isDefault := true
+	for k, v := range generateStackActions(tpl, workflowTemplates) {
+		if _, exists := result[k]; exists || v == nil {
+			continue
 		}
+		// Force Default=true on a shallow copy: an action resolved from the
+		// template is always a default action for the stack, regardless of
+		// what Default flag it carries. custom_actions is exclusively
+		// user-authored, so these entries never count as custom.
+		action := *v
+		action.Default = &isDefault
+		result[k] = &action
 	}
 	if len(result) == 0 {
 		return nil, diags
 	}
 
-	// The platform only auto-generates its own apply/plan/destroy actions when
-	// Actions is absent from the request entirely — since result is non-empty
-	// here, we're already sending a populated map (from custom_actions/
-	// default_actions/the template above), so the platform won't fill in
-	// whichever of those three it's missing on its own. Do it ourselves so
-	// they aren't silently lost just because the user declared some other
-	// custom_actions entry.
-	result = fillGeneratedDefaultActions(result, defaultActionOrderKeys(wfc, tpl))
-
 	return result, diags
 }
 
-// generatedDefaultActions describes the apply/plan/destroy actions the
-// platform normally auto-generates server-side (see default_actions.json for
-// a real example) — but only when the request's Actions field is entirely
-// absent.
-var generatedDefaultActions = []struct {
-	key, name, description string
-	action                 sgsdkgo.ActionEnum
-	reverseOrder           bool
-}{
-	{"apply", "Create", "use this action to create resources in the stack", sgsdkgo.ActionEnumApply, false},
-	{"plan", "Plan", "use this action to plan resources in the stack", sgsdkgo.ActionEnumPlan, false},
-	{"destroy", "Destroy", "use this action to destroy resources in the stack", sgsdkgo.ActionEnumDestroy, true},
-}
+// generateStackActions resolves the stack template revision's Actions,
+// following the platform's own create-flow algorithm exactly (see
+// default_actions_generation_doc.txt):
+//
+//  1. If the revision already defines its own Actions, they're used verbatim
+//     — nothing is generated.
+//  2. Otherwise, generate exactly three actions (apply/plan/destroy) from the
+//     revision's own WorkflowsConfig.workflows list, in declaration order —
+//     never the stack's own workflows_config, which this algorithm doesn't
+//     consult at all. apply/plan chain forward through that list; destroy
+//     chains backward. Each entry depends on the previous one visited in its
+//     own chain's direction (a COMPLETED-status dependency); the first
+//     workflow visited in a given direction has none. Order map keys are the
+//     workflow slot id (StackTemplateRevisionWorkflow.Id) — bare, no prefix,
+//     since at create time the workflow doesn't have its own resource id yet.
+//  3. Post-process: for any workflow slot whose referenced workflow template
+//     resolves to a non-Terraform source_config_kind (HELM, KUBECTL,
+//     ANSIBLE_PLAYBOOK, CUSTOM, or CLOUDFORMATION), its parameters are
+//     cleared to empty in all three actions — dependencies stay untouched.
+//     terraform apply/plan/destroy has no meaning for those step types.
+//
+// workflowTemplates is keyed by workflow slot id (see resolveWorkflowTemplates
+// in resource.go) — nil is safe (every slot is then treated as Terraform-typed
+// for step 3, since there's nothing to classify it by) but only accurate when
+// tpl.Actions is already populated (step 1 doesn't need workflowTemplates at
+// all); see reResolveOnRevisionChange's use of that fact.
+func generateStackActions(tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) map[string]*sgsdkgo.Actions {
+	if tpl == nil {
+		return nil
+	}
+	if len(tpl.Actions) > 0 {
+		return tpl.Actions
+	}
+	if tpl.WorkflowsConfig == nil || len(tpl.WorkflowsConfig.Workflows) == 0 {
+		return nil
+	}
 
-// defaultActionOrderKeys returns, in order, the order-map keys to chain the
-// generated default actions across: "/wfs/<workflow's own resource id>" when
-// known (matching default_actions.json), falling back to the bare slot id
-// when the workflow doesn't exist yet (a fresh create — its resource id isn't
-// assigned until the server creates it). Sourced from the stack's own
-// resolved workflows_config when it declares one, else from the stack
-// template revision's workflow slots (the set the stack inherits when it
-// doesn't override workflows_config itself).
-func defaultActionOrderKeys(wfc *sgsdkgo.StackWorkflowsConfig, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel) []string {
-	if wfc != nil && len(wfc.Workflows) > 0 {
-		keys := make([]string, 0, len(wfc.Workflows))
-		for _, wf := range wfc.Workflows {
-			if wf == nil || wf.Id == nil {
-				continue
-			}
-			if wf.WorkflowId != nil && *wf.WorkflowId != "" {
-				keys = append(keys, "/wfs/"+*wf.WorkflowId)
-			} else {
-				keys = append(keys, *wf.Id)
-			}
-		}
-		return keys
-	}
-	if tpl != nil && tpl.WorkflowsConfig != nil {
-		keys := make([]string, 0, len(tpl.WorkflowsConfig.Workflows))
-		for _, wf := range tpl.WorkflowsConfig.Workflows {
-			if wf == nil || wf.Id == nil {
-				continue
-			}
-			keys = append(keys, *wf.Id)
-		}
-		return keys
-	}
-	return nil
-}
-
-// fillGeneratedDefaultActions adds generatedDefaultActions' apply/plan/destroy
-// actions into result for any of those three keys not already present (from
-// custom_actions/default_actions/the template). Each chains orderKeys
-// sequentially — apply/plan in the given order, destroy in reverse — with a
-// COMPLETED-status dependency on the previous workflow in the chain, matching
-// the shape a mature stack's own server-generated actions take (see
-// default_actions.json). A no-op when orderKeys is empty: without at least
-// one workflow to reference there's nothing valid to build an order map from.
-func fillGeneratedDefaultActions(result map[string]*sgsdkgo.Actions, orderKeys []string) map[string]*sgsdkgo.Actions {
-	if len(orderKeys) == 0 {
-		return result
-	}
-	for _, def := range generatedDefaultActions {
-		if _, exists := result[def.key]; exists {
+	ids := make([]string, 0, len(tpl.WorkflowsConfig.Workflows))
+	nonTerraformIds := make(map[string]bool)
+	for _, w := range tpl.WorkflowsConfig.Workflows {
+		if w == nil || w.Id == nil {
 			continue
 		}
-		keys := orderKeys
-		if def.reverseOrder {
-			keys = make([]string, len(orderKeys))
-			for i, k := range orderKeys {
-				keys[len(orderKeys)-1-i] = k
+		ids = append(ids, *w.Id)
+		if wt := workflowTemplates[*w.Id]; wt != nil && wt.SourceConfigKind != nil {
+			switch *wt.SourceConfigKind {
+			case workflowtemplates.WorkflowTemplateSourceConfigKindHelm,
+				workflowtemplates.WorkflowTemplateSourceConfigKindKubectl,
+				workflowtemplates.WorkflowTemplateSourceConfigKindAnsiblePlaybook,
+				workflowtemplates.WorkflowTemplateSourceConfigKindCustom,
+				workflowtemplates.WorkflowTemplateSourceConfigKindCloudformation:
+				nonTerraformIds[*w.Id] = true
 			}
 		}
-		action := def.action
-		order := make(map[string]*sgsdkgo.ActionOrder, len(keys))
-		for i, k := range keys {
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	reversedIds := make([]string, len(ids))
+	for i, wfId := range ids {
+		reversedIds[len(ids)-1-i] = wfId
+	}
+
+	chain := func(action sgsdkgo.ActionEnum, order []string) map[string]*sgsdkgo.ActionOrder {
+		result := make(map[string]*sgsdkgo.ActionOrder, len(order))
+		for i, wfId := range order {
 			var deps []*sgsdkgo.ActionDependency
 			if i > 0 {
 				deps = []*sgsdkgo.ActionDependency{
 					{
-						Id:        keys[i-1],
+						Id:        order[i-1],
 						Condition: &sgsdkgo.ActionDependencyCondition{LatestStatus: "COMPLETED"},
 					},
 				}
 			}
-			order[k] = &sgsdkgo.ActionOrder{
-				Parameters:   &sgsdkgo.StackActionParameters{TerraformAction: &sgsdkgo.TerraformAction{Action: &action}},
+			a := action
+			result[wfId] = &sgsdkgo.ActionOrder{
+				Parameters:   &sgsdkgo.StackActionParameters{TerraformAction: &sgsdkgo.TerraformAction{Action: &a}},
 				Dependencies: deps,
 			}
 		}
-		isDefault := true
-		name, desc := def.name, def.description
-		if result == nil {
-			result = make(map[string]*sgsdkgo.Actions)
-		}
-		result[def.key] = &sgsdkgo.Actions{
-			Name:        name,
-			Description: &desc,
-			Default:     &isDefault,
-			Order:       order,
+		return result
+	}
+
+	isDefault := true
+	applyDesc := "use this action to create resources in the stack"
+	planDesc := "use this action to plan resources in the stack"
+	destroyDesc := "use this action to destroy resources in the stack"
+	actions := map[string]*sgsdkgo.Actions{
+		"apply":   {Name: "Create", Description: &applyDesc, Default: &isDefault, Order: chain(sgsdkgo.ActionEnumApply, ids)},
+		"plan":    {Name: "Plan", Description: &planDesc, Default: &isDefault, Order: chain(sgsdkgo.ActionEnumPlan, ids)},
+		"destroy": {Name: "Destroy", Description: &destroyDesc, Default: &isDefault, Order: chain(sgsdkgo.ActionEnumDestroy, reversedIds)},
+	}
+
+	// Post-process: blank parameters for non-Terraform workflow types across
+	// all three actions; dependencies stay as chained above.
+	for wfId := range nonTerraformIds {
+		for _, action := range actions {
+			if entry := action.Order[wfId]; entry != nil {
+				entry.Parameters = &sgsdkgo.StackActionParameters{}
+			}
 		}
 	}
-	return result
+
+	return actions
 }
 
 // flattenActionsMap converts the API actions map to Terraform format,
@@ -3027,31 +2969,28 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context, orgName string, tpl
 		apiModel.TemplateGroupId = &prefixed
 	}
 
-	// workflows_config resolves per-slot from up to three layers — see
-	// expandWorkflowsConfig. Expanded before Actions below, since generating
-	// the default apply/plan/destroy actions needs the resolved workflow order.
-	var wfc *sgsdkgo.StackWorkflowsConfig
-	if !m.WorkflowsConfig.IsUnknown() && !m.WorkflowsConfig.IsNull() {
-		var wfcDiags diag.Diagnostics
-		wfc, wfcDiags = expandWorkflowsConfig(ctx, m.WorkflowsConfig, tpl, workflowTemplates)
-		diags.Append(wfcDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		apiModel.WorkflowsConfig = wfc
-	}
-
 	// default_actions and custom_actions are merged into the SDK's single Actions
 	// map, with Default set true/false based on which Terraform attribute each
 	// action came from; any template action not already covered fills in as a
 	// lowest-precedence default.
-	actions, actionDiags := expandActionsMap(ctx, m.DefaultActions, m.CustomActions, tpl, wfc)
+	actions, actionDiags := expandActionsMap(ctx, m.DefaultActions, m.CustomActions, tpl, workflowTemplates)
 	diags.Append(actionDiags...)
 	if diags.HasError() {
 		return nil, diags
 	}
 	if actions != nil {
 		apiModel.Actions = actions
+	}
+
+	// workflows_config resolves per-slot from up to three layers — see
+	// expandWorkflowsConfig.
+	if !m.WorkflowsConfig.IsUnknown() && !m.WorkflowsConfig.IsNull() {
+		wfc, wfcDiags := expandWorkflowsConfig(ctx, m.WorkflowsConfig, tpl, workflowTemplates)
+		diags.Append(wfcDiags...)
+		if diags.HasError() {
+			return nil, diags
+		}
+		apiModel.WorkflowsConfig = wfc
 	}
 
 	// No template counterpart exists for user_schedules.
@@ -3170,17 +3109,29 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 		apiModel.TemplateGroupId = sgsdkgo.Null[string]()
 	}
 
+	// default_actions and custom_actions are merged into the SDK's single Actions
+	// map, with Default set true/false based on which Terraform attribute each
+	// action came from; any template action not already covered fills in as a
+	// lowest-precedence default.
+	actions, actionDiags := expandActionsMap(ctx, m.DefaultActions, m.CustomActions, tpl, workflowTemplates)
+	diags.Append(actionDiags...)
+	if diags.HasError() {
+		return nil, diags
+	}
+	if actions != nil {
+		apiModel.Actions = sgsdkgo.Optional(actions)
+	} else if m.DefaultActions.IsNull() || m.CustomActions.IsNull() {
+		apiModel.Actions = sgsdkgo.Null[map[string]*sgsdkgo.Actions]()
+	}
+
 	// workflows_config resolves per-slot from up to three layers — see
-	// expandWorkflowsConfig. Expanded before Actions below, since generating
-	// the default apply/plan/destroy actions needs the resolved workflow
-	// order. updateWorkflowsFromConfig is a query param (not part of the
-	// request body) telling the API to propagate this resolved WorkflowsConfig
-	// down to the actual live workflow resources; it's only set when we're
-	// actually sending workflow config data, not on an explicit clear.
-	var wfc *sgsdkgo.StackWorkflowsConfig
+	// expandWorkflowsConfig. updateWorkflowsFromConfig is a query param (not
+	// part of the request body) telling the API to propagate this resolved
+	// WorkflowsConfig down to the actual live workflow resources; it's only
+	// set when we're actually sending workflow config data, not on an
+	// explicit clear.
 	if !m.WorkflowsConfig.IsUnknown() && !m.WorkflowsConfig.IsNull() {
-		var wfcDiags diag.Diagnostics
-		wfc, wfcDiags = expandWorkflowsConfig(ctx, m.WorkflowsConfig, tpl, workflowTemplates)
+		wfc, wfcDiags := expandWorkflowsConfig(ctx, m.WorkflowsConfig, tpl, workflowTemplates)
 		diags.Append(wfcDiags...)
 		if diags.HasError() {
 			return nil, diags
@@ -3194,21 +3145,6 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 		}
 	} else if m.WorkflowsConfig.IsNull() {
 		apiModel.WorkflowsConfig = sgsdkgo.Null[sgsdkgo.StackWorkflowsConfig]()
-	}
-
-	// default_actions and custom_actions are merged into the SDK's single Actions
-	// map, with Default set true/false based on which Terraform attribute each
-	// action came from; any template action not already covered fills in as a
-	// lowest-precedence default.
-	actions, actionDiags := expandActionsMap(ctx, m.DefaultActions, m.CustomActions, tpl, wfc)
-	diags.Append(actionDiags...)
-	if diags.HasError() {
-		return nil, diags
-	}
-	if actions != nil {
-		apiModel.Actions = sgsdkgo.Optional(actions)
-	} else if m.DefaultActions.IsNull() || m.CustomActions.IsNull() {
-		apiModel.Actions = sgsdkgo.Null[map[string]*sgsdkgo.Actions]()
 	}
 
 	// No template counterpart exists for user_schedules.
@@ -3303,55 +3239,43 @@ func reResolveOnRevisionChange(ctx context.Context, plan *StackResourceModel, co
 	}
 
 	// forceDefault=true: custom_actions is exclusively user-authored on the
-	// stack, so it's never touched here — everything the template defines
+	// stack, so it's never touched here — everything the template resolves to
 	// counts as a default action for the stack, regardless of what Default
-	// flag the template itself recorded for it.
-	defaultActions, _, d := flattenActionsMap(ctx, tpl.Actions, true)
+	// flag it carries. generateStackActions(tpl, nil) is passed a nil
+	// workflowTemplates since ModifyPlan never calls resolveWorkflowTemplates
+	// — safe (and exactly accurate) whenever tpl.Actions is already populated,
+	// since that path (step 1: verbatim copy) never consults
+	// workflowTemplates at all; see actionsNeedGeneration below for the case
+	// where it doesn't.
+	defaultActions, _, d := flattenActionsMap(ctx, generateStackActions(tpl, nil), true)
 	diags.Append(d...)
 	if diags.HasError() {
 		return diags
 	}
 	plan.DefaultActions = defaultActions
 
-	// If apply/plan/destroy aren't all covered between the new template's own
-	// Actions and custom_actions, ToUpdateAPIModel's expandActionsMap will
-	// generate the missing ones at apply time (fillGeneratedDefaultActions) —
-	// and doing that accurately needs the resolved workflow order, which this
-	// function has no access to (ModifyPlan never calls
-	// resolveWorkflowTemplates). A known plan.DefaultActions value here that
-	// then doesn't match what apply actually produces is exactly what
-	// Terraform's "Provider produced inconsistent result after apply" guards
-	// against, so mark it unknown instead whenever generation might add
-	// something — deferring to apply-time truth is always safe, since
-	// Terraform's consistency check only applies to values that were known in
-	// the plan. When tpl.Actions ∪ custom_actions already cover all three, no
-	// generation happens and the known value above is accurate as-is.
-	customs, cd := expandSingleActionsMap(ctx, plan.CustomActions, false)
-	diags.Append(cd...)
-	if diags.HasError() {
-		return diags
-	}
-	if plan.CustomActions.IsUnknown() || actionsNeedGeneration(tpl.Actions, customs) {
+	// When tpl.Actions is empty, ToUpdateAPIModel's actual expandActionsMap
+	// call generates a fresh apply/plan/destroy set AND blanks parameters for
+	// non-Terraform workflow types (generateStackActions step 3) — a
+	// classification that needs workflowTemplates, which this function has no
+	// way to resolve. A known plan.DefaultActions value that then doesn't
+	// match what apply actually returns is exactly what Terraform's "Provider
+	// produced inconsistent result after apply" guards against, so mark it
+	// unknown instead whenever that's a possibility — deferring to apply-time
+	// truth is always safe, since Terraform's consistency check only applies
+	// to values that were known in the plan.
+	if actionsNeedGeneration(tpl) {
 		plan.DefaultActions = types.MapUnknown(types.ObjectType{AttrTypes: ActionsModel{}.AttributeTypes()})
 	}
 
 	return diags
 }
 
-// actionsNeedGeneration reports whether fillGeneratedDefaultActions would add
-// anything to the merge of defaultActions and customActions — i.e. whether
-// apply/plan/destroy aren't all already covered by one or the other.
-func actionsNeedGeneration(defaultActions, customActions map[string]*sgsdkgo.Actions) bool {
-	for _, def := range generatedDefaultActions {
-		if _, ok := defaultActions[def.key]; ok {
-			continue
-		}
-		if _, ok := customActions[def.key]; ok {
-			continue
-		}
-		return true
-	}
-	return false
+// actionsNeedGeneration reports whether generateStackActions would need to
+// synthesize a fresh apply/plan/destroy set (tpl.Actions is empty) rather
+// than just copying tpl.Actions verbatim.
+func actionsNeedGeneration(tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel) bool {
+	return tpl == nil || len(tpl.Actions) == 0
 }
 
 // BuildAPIModelToStackModel converts the API response into a StackResourceModel.
