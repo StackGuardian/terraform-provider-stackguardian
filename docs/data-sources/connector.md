@@ -142,7 +142,7 @@ Read-Only:
 		- arm_client_secret
 		- arm_subscription_id
 		- arm_tenant_id
-	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_OIDC <a href="https://docs.stackguardian.io/docs/connectors/csp/azure/#service-principal-with-workload-identity"><span class="fa fa-external-link"></span></span></a>
+	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_OIDC & AZURE_MANAGED_ID_OIDC <a href="https://docs.stackguardian.io/docs/connectors/csp/azure/#service-principal-with-workload-identity"><span class="fa fa-external-link"></span></span></a>
 		- arm_tenant_id
 		- arm_subscription_id
 		- arm_client_id
