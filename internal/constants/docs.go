@@ -50,7 +50,7 @@ const (
 		- arm_client_secret
 		- arm_subscription_id
 		- arm_tenant_id
-	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_OIDC <a href="https://docs.stackguardian.io/docs/connectors/csp/azure/#service-principal-with-workload-identity"><span class="fa fa-external-link"></span></span></a>
+	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_OIDC & AZURE_MANAGED_ID_OIDC <a href="https://docs.stackguardian.io/docs/connectors/csp/azure/#service-principal-with-workload-identity"><span class="fa fa-external-link"></span></span></a>
 		- arm_tenant_id
 		- arm_subscription_id
 		- arm_client_id
@@ -219,15 +219,15 @@ const (
 
 // Common Workflow and Workflow Template Revision attributes
 const (
-	WfApprovers         = "List of approvers for approvals during workflow execution."
-	WfNumberOfApprovals = "Number of approvals required."
-	WfUserJobCPU        = "Limits to set user job CPU."
-	WfUserJobMemory     = "Limits to set user job memory."
-	WfMiniSteps         = "Actions that are required to be performed once workflow execution is complete"
-	WfUserSchedules     = "Configuration for scheduling runs for the workflows."
-	WfStepsConfig       = "Workflow steps configuration. Valid for custom workflow types."
-	WfEnvironmentVariables                    = "Environment variables for worklfow in workflow runs."
-	WfDeploymentPlatformConfig                = "Deployment platform configuration."
+	WfApprovers                = "List of approvers for approvals during workflow execution."
+	WfNumberOfApprovals        = "Number of approvals required."
+	WfUserJobCPU               = "Limits to set user job CPU."
+	WfUserJobMemory            = "Limits to set user job memory."
+	WfMiniSteps                = "Actions that are required to be performed once workflow execution is complete"
+	WfUserSchedules            = "Configuration for scheduling runs for the workflows."
+	WfStepsConfig              = "Workflow steps configuration. Valid for custom workflow types."
+	WfEnvironmentVariables     = "Environment variables for worklfow in workflow runs."
+	WfDeploymentPlatformConfig = "Deployment platform configuration."
 )
 
 ////////////// Data Source

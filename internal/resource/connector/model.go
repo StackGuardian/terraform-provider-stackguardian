@@ -334,8 +334,12 @@ func settingsToAPIModel(m types.Object) (*sgsdkgo.IntegrationsSettings, diag.Dia
 		return nil, diags
 	}
 
+	kind, err := sgsdkgo.NewIntegrationsSettingsKindEnumFromString(settingsModelValue.Kind.ValueString())
+	if err != nil {
+		return nil, []diag.Diagnostic{diag.NewErrorDiagnostic("Invalid connector kind: %s", err.Error())}
+	}
 	settings := &sgsdkgo.IntegrationsSettings{
-		Kind: sgsdkgo.IntegrationsSettingsKindEnum(settingsModelValue.Kind.ValueString()),
+		Kind: kind,
 	}
 
 	settingsConfigAPIValue := []*sgsdkgo.SettingsConfig{settingsConfigModel[0].toAPIModel()}
