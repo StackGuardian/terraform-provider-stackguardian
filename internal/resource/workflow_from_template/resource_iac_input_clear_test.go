@@ -69,7 +69,6 @@ func setupTemplateWithInputDefaults(t *testing.T, name string) string {
 				{
 					Type:        sgsdkgo.InputSchemasTypeEnumFormJsonschema,
 					EncodedData: &formSchema,
-					IsCommitted: &isCommitted,
 				},
 			},
 		})
