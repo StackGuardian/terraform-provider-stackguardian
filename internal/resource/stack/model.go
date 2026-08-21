@@ -2,7 +2,6 @@ package stack
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
@@ -18,50 +17,19 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// Helper: parse JSON string to map[string]interface{} and back
-// ---------------------------------------------------------------------------
-
-func parseJSONToMap(s string) map[string]interface{} {
-	if s == "" {
-		return nil
-	}
-	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(s), &result); err != nil {
-		return nil
-	}
-	return result
-}
-
-func marshalToJSONString(v interface{}) types.String {
-	if v == nil {
-		return types.StringNull()
-	}
-	b, err := json.Marshal(v)
-	if err != nil {
-		return types.StringNull()
-	}
-	return flatteners.String(string(b))
-}
-
-// ---------------------------------------------------------------------------
 // Root resource model
 // ---------------------------------------------------------------------------
 
 type StackResourceModel struct {
-	Id                       types.String `tfsdk:"id"`
-	WorkflowGroupId          types.String `tfsdk:"workflow_group_id"`
-	ResourceName             types.String `tfsdk:"resource_name"`
-	Description              types.String `tfsdk:"description"`
-	Tags                     types.List   `tfsdk:"tags"`
-	EnvironmentVariables     types.List   `tfsdk:"environment_variables"`
-	DeploymentPlatformConfig types.List   `tfsdk:"deployment_platform_config"`
-	DefaultActions           types.Map    `tfsdk:"default_actions"`
-	CustomActions            types.Map    `tfsdk:"custom_actions"`
-	TemplateGroupId          types.String `tfsdk:"template_group_id"`
-	WorkflowsConfig          types.Object `tfsdk:"workflows_config"`
-	UserSchedules            types.List   `tfsdk:"user_schedules"`
-	ContextTags              types.Map    `tfsdk:"context_tags"`
-	MiniSteps                types.Object `tfsdk:"mini_steps"`
+	Id              types.String `tfsdk:"id"`
+	WorkflowGroupId types.String `tfsdk:"workflow_group_id"`
+	ResourceName    types.String `tfsdk:"resource_name"`
+	Description     types.String `tfsdk:"description"`
+	Tags            types.List   `tfsdk:"tags"`
+	Actions         types.Map    `tfsdk:"actions"`
+	TemplateGroupId types.String `tfsdk:"template_group_id"`
+	WorkflowsConfig types.Object `tfsdk:"workflows_config"`
+	ContextTags     types.Map    `tfsdk:"context_tags"`
 }
 
 // ---------------------------------------------------------------------------
@@ -257,39 +225,6 @@ func (RunnerConstraintsModel) AttributeTypes() map[string]attr.Type {
 // User schedules
 // ---------------------------------------------------------------------------
 
-// StackActionInputsModel is the "inputs" payload for a top-level stack user
-// schedule. It corresponds to the SDK's StackAction, which is just an action
-// type identifier (not the richer {action, resource_name} shape).
-type StackActionInputsModel struct {
-	ActionType types.String `tfsdk:"action_type"`
-}
-
-func (StackActionInputsModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"action_type": types.StringType,
-	}
-}
-
-// UserSchedulesModel represents a top-level stack user schedule
-// (sgsdkgo.StackUserSchedules), which carries an optional Inputs payload.
-type UserSchedulesModel struct {
-	Name   types.String `tfsdk:"name"`
-	Desc   types.String `tfsdk:"desc"`
-	Cron   types.String `tfsdk:"cron"`
-	State  types.String `tfsdk:"state"`
-	Inputs types.Object `tfsdk:"inputs"`
-}
-
-func (UserSchedulesModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"name":   types.StringType,
-		"desc":   types.StringType,
-		"cron":   types.StringType,
-		"state":  types.StringType,
-		"inputs": types.ObjectType{AttrTypes: StackActionInputsModel{}.AttributeTypes()},
-	}
-}
-
 // WfUserSchedulesModel represents a per-workflow user schedule
 // (sgsdkgo.UserSchedules), which has no Inputs field.
 type WfUserSchedulesModel struct {
@@ -351,32 +286,6 @@ func (VcsConfigModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"iac_vcs_config": types.ObjectType{AttrTypes: IacVcsConfigModel{}.AttributeTypes()},
 		"iac_input_data": types.ObjectType{AttrTypes: VcsIacInputDataModel{}.AttributeTypes()},
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Input schemas (for workflows_config workflows)
-// ---------------------------------------------------------------------------
-
-type StackInputSchemaModel struct {
-	Id           types.String `tfsdk:"id"`
-	Name         types.String `tfsdk:"name"`
-	Description  types.String `tfsdk:"description"`
-	Type         types.String `tfsdk:"type"`
-	EncodedData  types.String `tfsdk:"encoded_data"`
-	UiSchemaData types.String `tfsdk:"ui_schema_data"`
-	IsCommitted  types.Bool   `tfsdk:"is_committed"`
-}
-
-func (StackInputSchemaModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"id":             types.StringType,
-		"name":           types.StringType,
-		"description":    types.StringType,
-		"type":           types.StringType,
-		"encoded_data":   types.StringType,
-		"ui_schema_data": types.StringType,
-		"is_committed":   types.BoolType,
 	}
 }
 
@@ -514,11 +423,7 @@ type WorkflowInStackModel struct {
 	TerraformConfig           types.Object `tfsdk:"terraform_config"`
 	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
 	DeploymentPlatformConfig  types.List   `tfsdk:"deployment_platform_config"`
-	TemplateId                types.String `tfsdk:"template_id"`
-	WorkflowId                types.String `tfsdk:"workflow_id"`
-	IsActive                  types.String `tfsdk:"is_active"`
 	VcsConfig                 types.Object `tfsdk:"vcs_config"`
-	InputSchemas              types.List   `tfsdk:"input_schemas"`
 	Approvers                 types.List   `tfsdk:"approvers"`
 	NumberOfApprovalsRequired types.Int64  `tfsdk:"number_of_approvals_required"`
 	UserJobCpu                types.Int64  `tfsdk:"user_job_cpu"`
@@ -541,11 +446,7 @@ func (WorkflowInStackModel) AttributeTypes() map[string]attr.Type {
 		"terraform_config":             types.ObjectType{AttrTypes: TerraformConfigModel{}.AttributeTypes()},
 		"environment_variables":        types.ListType{ElemType: types.ObjectType{AttrTypes: EnvironmentVariableModel{}.AttributeTypes()}},
 		"deployment_platform_config":   types.ListType{ElemType: types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()}},
-		"template_id":                  types.StringType,
-		"workflow_id":                  types.StringType,
-		"is_active":                    types.StringType,
 		"vcs_config":                   types.ObjectType{AttrTypes: VcsConfigModel{}.AttributeTypes()},
-		"input_schemas":                types.ListType{ElemType: types.ObjectType{AttrTypes: StackInputSchemaModel{}.AttributeTypes()}},
 		"approvers":                    types.ListType{ElemType: types.StringType},
 		"number_of_approvals_required": types.Int64Type,
 		"user_job_cpu":                 types.Int64Type,
@@ -798,7 +699,7 @@ func expandWfStepsConfig(ctx context.Context, list types.List) ([]*sgsdkgo.WfSte
 			}
 			step.WfStepInputData = &sgsdkgo.WfStepInputData{
 				SchemaType: &schemaType,
-				Data:       parseJSONToMap(idm.Data.ValueString()),
+				Data:       expanders.JSONStringToMap(idm.Data.ValueString()),
 			}
 		}
 		result[i] = step
@@ -843,7 +744,7 @@ func flattenWfStepsConfig(ctx context.Context, steps []*sgsdkgo.WfStepsConfig) (
 		if s.WfStepInputData != nil {
 			idm := WfStepInputDataModel{
 				SchemaType: flatteners.String(string(*s.WfStepInputData.SchemaType)),
-				Data:       marshalToJSONString(s.WfStepInputData.Data),
+				Data:       flatteners.JSONInterfaceToString(s.WfStepInputData.Data),
 			}
 			obj, diags := types.ObjectValueFrom(ctx, WfStepInputDataModel{}.AttributeTypes(), idm)
 			if diags.HasError() {
@@ -883,6 +784,19 @@ func envVarPointerSlice(vals []sgsdkgo.EnvVars) []*sgsdkgo.EnvVars {
 	return result
 }
 
+// isSet reports whether s is a known, non-null value (including "").
+func isSet(s types.String) bool { return !s.IsNull() && !s.IsUnknown() }
+
+// isNonEmpty reports whether s is set and non-empty. Use for allow_blank=False
+// API string fields: a known "" stored for Computed plan stability must be
+// treated as unset (omitted) rather than sent as a blank the API rejects.
+func isNonEmpty(s types.String) bool { return isSet(s) && s.ValueString() != "" }
+
+// isSetBool reports whether b is a known, non-null value. Bools have no
+// "blank" sentinel — false is always a meaningful value to send — so this is
+// just the null/unknown guard, unlike isNonEmpty for strings.
+func isSetBool(b types.Bool) bool { return !b.IsNull() && !b.IsUnknown() }
+
 func expandTerraformConfig(ctx context.Context, obj types.Object) (*sgsdkgo.TerraformConfig, diag.Diagnostics) {
 	if obj.IsNull() || obj.IsUnknown() {
 		return nil, nil
@@ -891,16 +805,36 @@ func expandTerraformConfig(ctx context.Context, obj types.Object) (*sgsdkgo.Terr
 	if diags := obj.As(ctx, &m, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 		return nil, diags
 	}
-	tc := &sgsdkgo.TerraformConfig{
-		TerraformVersion:       m.TerraformVersion.ValueStringPointer(),
-		DriftCheck:             m.DriftCheck.ValueBoolPointer(),
-		DriftCron:              m.DriftCron.ValueStringPointer(),
-		ManagedTerraformState:  m.ManagedTerraformState.ValueBoolPointer(),
-		ApprovalPreApply:       m.ApprovalPreApply.ValueBoolPointer(),
-		TerraformPlanOptions:   m.TerraformPlanOptions.ValueStringPointer(),
-		TerraformInitOptions:   m.TerraformInitOptions.ValueStringPointer(),
-		Timeout:                expanders.IntPtr(m.Timeout.ValueInt64Pointer()),
-		RunPreInitHooksOnDrift: m.RunPreInitHooksOnDrift.ValueBoolPointer(),
+	tc := &sgsdkgo.TerraformConfig{}
+	if !m.Timeout.IsNull() && !m.Timeout.IsUnknown() {
+		tc.Timeout = expanders.IntPtr(m.Timeout.ValueInt64Pointer())
+	}
+	// allow_blank=False string fields: a known "" (stored for Computed plan
+	// stability, see flattenTerraformConfig) means unset, so it must be omitted
+	// rather than sent as a blank the API rejects.
+	if isNonEmpty(m.TerraformVersion) {
+		tc.TerraformVersion = m.TerraformVersion.ValueStringPointer()
+	}
+	if isSetBool(m.DriftCheck) {
+		tc.DriftCheck = m.DriftCheck.ValueBoolPointer()
+	}
+	if isNonEmpty(m.DriftCron) {
+		tc.DriftCron = m.DriftCron.ValueStringPointer()
+	}
+	if isSetBool(m.ManagedTerraformState) {
+		tc.ManagedTerraformState = m.ManagedTerraformState.ValueBoolPointer()
+	}
+	if isSetBool(m.ApprovalPreApply) {
+		tc.ApprovalPreApply = m.ApprovalPreApply.ValueBoolPointer()
+	}
+	if isNonEmpty(m.TerraformPlanOptions) {
+		tc.TerraformPlanOptions = m.TerraformPlanOptions.ValueStringPointer()
+	}
+	if isNonEmpty(m.TerraformInitOptions) {
+		tc.TerraformInitOptions = m.TerraformInitOptions.ValueStringPointer()
+	}
+	if isSetBool(m.RunPreInitHooksOnDrift) {
+		tc.RunPreInitHooksOnDrift = m.RunPreInitHooksOnDrift.ValueBoolPointer()
 	}
 	if !m.TerraformBinPath.IsNull() && !m.TerraformBinPath.IsUnknown() {
 		mps, diags := expandMountPoints(ctx, m.TerraformBinPath)
@@ -1015,25 +949,36 @@ func flattenTerraformConfig(ctx context.Context, tc *sgsdkgo.TerraformConfig) (t
 	}
 
 	m := TerraformConfigModel{
-		TerraformVersion:       flatteners.StringPtr(tc.TerraformVersion),
-		DriftCheck:             flatteners.BoolPtr(tc.DriftCheck),
-		DriftCron:              flatteners.StringPtr(tc.DriftCron),
-		ManagedTerraformState:  flatteners.BoolPtr(tc.ManagedTerraformState),
-		ApprovalPreApply:       flatteners.BoolPtr(tc.ApprovalPreApply),
-		TerraformPlanOptions:   flatteners.StringPtr(tc.TerraformPlanOptions),
-		TerraformInitOptions:   flatteners.StringPtr(tc.TerraformInitOptions),
-		TerraformBinPath:       binPath,
-		Timeout:                flatteners.Int64Ptr(tc.Timeout),
-		PostApplyWfStepsConfig: postApply,
-		PreApplyWfStepsConfig:  preApply,
-		PrePlanWfStepsConfig:   prePlan,
-		PostPlanWfStepsConfig:  postPlan,
-		PreInitHooks:           preInit,
-		PrePlanHooks:           prePlanHooks,
-		PostPlanHooks:          postPlanHooks,
-		PreApplyHooks:          preApplyHooks,
-		PostApplyHooks:         postApplyHooks,
-		RunPreInitHooksOnDrift: flatteners.BoolPtr(tc.RunPreInitHooksOnDrift),
+		// Scalars the API returns empty are coerced to known values (not null)
+		// for Computed plan stability — UseStateForUnknown skips null state.
+		// expandTerraformConfig treats an empty string / false as "unset" and
+		// omits it, so this never produces a blank payload the API rejects.
+		TerraformVersion:       flatteners.StringPtrDefault(tc.TerraformVersion),
+		DriftCheck:             flatteners.BoolPtrDefault(tc.DriftCheck),
+		DriftCron:              flatteners.StringPtrDefault(tc.DriftCron),
+		ManagedTerraformState:  flatteners.BoolPtrDefault(tc.ManagedTerraformState),
+		ApprovalPreApply:       flatteners.BoolPtrDefault(tc.ApprovalPreApply),
+		TerraformPlanOptions:   flatteners.StringPtrDefault(tc.TerraformPlanOptions),
+		TerraformInitOptions:   flatteners.StringPtrDefault(tc.TerraformInitOptions),
+		TerraformBinPath:       knownEmptyListIfNull(binPath, types.ObjectType{AttrTypes: MountPointModel{}.AttributeTypes()}),
+		Timeout:                flatteners.Int64PtrDefault(tc.Timeout),
+		PostApplyWfStepsConfig: knownEmptyListIfNull(postApply, types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}),
+		PreApplyWfStepsConfig:  knownEmptyListIfNull(preApply, types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}),
+		PrePlanWfStepsConfig:   knownEmptyListIfNull(prePlan, types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}),
+		PostPlanWfStepsConfig:  knownEmptyListIfNull(postPlan, types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}),
+		PreInitHooks:           knownEmptyListIfNull(preInit, types.StringType),
+		PrePlanHooks:           knownEmptyListIfNull(prePlanHooks, types.StringType),
+		PostPlanHooks:          knownEmptyListIfNull(postPlanHooks, types.StringType),
+		PreApplyHooks:          knownEmptyListIfNull(preApplyHooks, types.StringType),
+		PostApplyHooks:         knownEmptyListIfNull(postApplyHooks, types.StringType),
+		RunPreInitHooksOnDrift: flatteners.BoolPtrDefault(tc.RunPreInitHooksOnDrift),
+	}
+	// drift_cron is only meaningful when drift checking is on. If the API
+	// returns a cron alongside drift_check=false, drop it so state mirrors the
+	// resolved coupling (see coupleDriftFields) — otherwise a stale cron would
+	// persist in state forever.
+	if !m.DriftCheck.ValueBool() {
+		m.DriftCron = types.StringValue("")
 	}
 	obj, diags := types.ObjectValueFrom(ctx, TerraformConfigModel{}.AttributeTypes(), m)
 	if diags.HasError() {
@@ -1137,8 +1082,17 @@ func expandRunnerConstraints(ctx context.Context, obj types.Object) (*sgsdkgo.Ru
 	if diags.HasError() {
 		return nil, diags
 	}
+	rcType := (*sgsdkgo.RunnerConstraintsTypeEnum)(m.Type.ValueStringPointer())
+	// type is Required within runner_constraints, so a non-null object should
+	// never reach here with rcType nil — but if it does (e.g. a known-but-empty
+	// placeholder), send nil rather than an empty struct: the API rejects
+	// RunnerConstraints{} outright since type is required once the field is
+	// present at all.
+	if rcType == nil && len(names) == 0 {
+		return nil, nil
+	}
 	return &sgsdkgo.RunnerConstraints{
-		Type:  (*sgsdkgo.RunnerConstraintsTypeEnum)(m.Type.ValueStringPointer()),
+		Type:  rcType,
 		Names: names,
 	}, nil
 }
@@ -1197,7 +1151,7 @@ func expandVcsConfig(ctx context.Context, obj types.Object) (*sgsdkgo.VcsConfig,
 			SchemaId:   idModel.SchemaId.ValueStringPointer(),
 			SchemaType: &schemaType,
 		}
-		if dataMap := parseJSONToMap(idModel.Data.ValueString()); dataMap != nil {
+		if dataMap := expanders.JSONStringToMap(idModel.Data.ValueString()); dataMap != nil {
 			vcsConfig.IacInputData.Data = &dataMap
 		}
 	}
@@ -1230,7 +1184,7 @@ func flattenVcsConfig(ctx context.Context, vc *sgsdkgo.VcsConfig) (types.Object,
 	if vc.IacInputData != nil {
 		dataStr := types.StringNull()
 		if vc.IacInputData.Data != nil {
-			dataStr = marshalToJSONString(*vc.IacInputData.Data)
+			dataStr = flatteners.JSONInterfaceToString(*vc.IacInputData.Data)
 		}
 		idM := VcsIacInputDataModel{
 			SchemaId:   flatteners.StringPtr(vc.IacInputData.SchemaId),
@@ -1252,67 +1206,6 @@ func flattenVcsConfig(ctx context.Context, vc *sgsdkgo.VcsConfig) (types.Object,
 	return obj, nil
 }
 
-func expandInputSchemas(ctx context.Context, list types.List) ([]*sgsdkgo.InputSchemas, diag.Diagnostics) {
-	if list.IsNull() || list.IsUnknown() {
-		return nil, nil
-	}
-	var models []StackInputSchemaModel
-	if diags := list.ElementsAs(ctx, &models, false); diags.HasError() {
-		return nil, diags
-	}
-	result := make([]*sgsdkgo.InputSchemas, len(models))
-	for i, ism := range models {
-		is := &sgsdkgo.InputSchemas{
-			Name:         ism.Name.ValueStringPointer(),
-			Description:  ism.Description.ValueStringPointer(),
-			Type:         sgsdkgo.InputSchemasTypeEnum(ism.Type.ValueString()),
-			EncodedData:  ism.EncodedData.ValueStringPointer(),
-			UiSchemaData: ism.UiSchemaData.ValueStringPointer(),
-		}
-		// id/is_committed are Optional+Computed: ValueStringPointer()/ValueBoolPointer()
-		// return &""/&false for unknown, which would send a spurious empty id or force
-		// is_committed=false on create when the user hasn't set them. Only set when known.
-		if !ism.Id.IsNull() && !ism.Id.IsUnknown() {
-			is.Id = ism.Id.ValueStringPointer()
-		}
-		if !ism.IsCommitted.IsNull() && !ism.IsCommitted.IsUnknown() {
-			is.IsCommitted = ism.IsCommitted.ValueBoolPointer()
-		}
-		result[i] = is
-	}
-	return result, nil
-}
-
-func flattenInputSchemas(ctx context.Context, items []*sgsdkgo.InputSchemas) (types.List, diag.Diagnostics) {
-	nullList := types.ListNull(types.ObjectType{AttrTypes: StackInputSchemaModel{}.AttributeTypes()})
-	if len(items) == 0 {
-		return nullList, nil
-	}
-	models := make([]StackInputSchemaModel, 0, len(items))
-	for _, is := range items {
-		if is == nil {
-			continue
-		}
-		models = append(models, StackInputSchemaModel{
-			Id:           flatteners.StringPtr(is.Id),
-			Name:         flatteners.StringPtr(is.Name),
-			Description:  flatteners.StringPtr(is.Description),
-			Type:         flatteners.String(string(is.Type)),
-			EncodedData:  flatteners.StringPtr(is.EncodedData),
-			UiSchemaData: flatteners.StringPtr(is.UiSchemaData),
-			IsCommitted:  flatteners.BoolPtr(is.IsCommitted),
-		})
-	}
-	if len(models) == 0 {
-		return nullList, nil
-	}
-	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: StackInputSchemaModel{}.AttributeTypes()}, models)
-	if diags.HasError() {
-		return nullList, diags
-	}
-	return list, nil
-}
-
 // expandWfUserSchedules converts a per-workflow user_schedules list to
 // []*sgsdkgo.UserSchedules (no Inputs field, unlike the stack-level schedules).
 func expandWfUserSchedules(ctx context.Context, list types.List) ([]*sgsdkgo.UserSchedules, diag.Diagnostics) {
@@ -1326,8 +1219,8 @@ func expandWfUserSchedules(ctx context.Context, list types.List) ([]*sgsdkgo.Use
 	result := make([]*sgsdkgo.UserSchedules, len(models))
 	for i, m := range models {
 		state := sgsdkgo.StateEnum(m.State.ValueString())
+		// name is Computed-only — server-assigned, never sent.
 		result[i] = &sgsdkgo.UserSchedules{
-			Name:  m.Name.ValueStringPointer(),
 			Desc:  m.Desc.ValueStringPointer(),
 			Cron:  m.Cron.ValueStringPointer(),
 			State: &state,
@@ -1361,74 +1254,6 @@ func flattenWfUserSchedules(ctx context.Context, us []*sgsdkgo.UserSchedules) (t
 		return nullList, nil
 	}
 	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: WfUserSchedulesModel{}.AttributeTypes()}, models)
-	if diags.HasError() {
-		return nullList, diags
-	}
-	return list, nil
-}
-
-// expandUserSchedules converts the stack-level user_schedules list to
-// []*sgsdkgo.StackUserSchedules, including the Inputs (StackAction) payload.
-func expandUserSchedules(ctx context.Context, list types.List) ([]*sgsdkgo.StackUserSchedules, diag.Diagnostics) {
-	if list.IsNull() || list.IsUnknown() {
-		return nil, nil
-	}
-	var models []UserSchedulesModel
-	if diags := list.ElementsAs(ctx, &models, false); diags.HasError() {
-		return nil, diags
-	}
-	result := make([]*sgsdkgo.StackUserSchedules, len(models))
-	for i, m := range models {
-		us := &sgsdkgo.StackUserSchedules{
-			Name:  m.Name.ValueStringPointer(),
-			Desc:  m.Desc.ValueStringPointer(),
-			Cron:  m.Cron.ValueString(),
-			State: sgsdkgo.StateEnum(m.State.ValueString()),
-		}
-		if !m.Inputs.IsNull() && !m.Inputs.IsUnknown() {
-			var inputsModel StackActionInputsModel
-			if diags := m.Inputs.As(ctx, &inputsModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
-				return nil, diags
-			}
-			us.Inputs = &sgsdkgo.StackAction{ActionType: inputsModel.ActionType.ValueString()}
-		}
-		result[i] = us
-	}
-	return result, nil
-}
-
-func flattenUserSchedules(ctx context.Context, us []*sgsdkgo.StackUserSchedules) (types.List, diag.Diagnostics) {
-	nullList := types.ListNull(types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()})
-	if len(us) == 0 {
-		return nullList, nil
-	}
-	models := make([]UserSchedulesModel, 0, len(us))
-	for _, s := range us {
-		if s == nil {
-			continue
-		}
-		inputsObj := types.ObjectNull(StackActionInputsModel{}.AttributeTypes())
-		if s.Inputs != nil {
-			obj, diags := types.ObjectValueFrom(ctx, StackActionInputsModel{}.AttributeTypes(), StackActionInputsModel{
-				ActionType: flatteners.String(s.Inputs.ActionType),
-			})
-			if diags.HasError() {
-				return nullList, diags
-			}
-			inputsObj = obj
-		}
-		models = append(models, UserSchedulesModel{
-			Name:   flatteners.StringPtr(s.Name),
-			Desc:   flatteners.StringPtr(s.Desc),
-			Cron:   flatteners.String(s.Cron),
-			State:  flatteners.String(string(s.State)),
-			Inputs: inputsObj,
-		})
-	}
-	if len(models) == 0 {
-		return nullList, nil
-	}
-	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()}, models)
 	if diags.HasError() {
 		return nullList, diags
 	}
@@ -1491,7 +1316,7 @@ func expandNotificationRecipients(ctx context.Context, list types.List) ([]*sgsd
 	return result, nil
 }
 
-func expandWebhooks(ctx context.Context, list types.List) ([]map[string]interface{}, diag.Diagnostics) {
+func expandWebhooks(ctx context.Context, list types.List) ([]*sgsdkgo.Webhook, diag.Diagnostics) {
 	if list.IsNull() || list.IsUnknown() {
 		return nil, nil
 	}
@@ -1499,14 +1324,14 @@ func expandWebhooks(ctx context.Context, list types.List) ([]map[string]interfac
 	if diags := list.ElementsAs(ctx, &models, false); diags.HasError() {
 		return nil, diags
 	}
-	result := make([]map[string]interface{}, len(models))
+	result := make([]*sgsdkgo.Webhook, len(models))
 	for i, m := range models {
-		wh := map[string]interface{}{
-			"webhookName": m.WebhookName.ValueString(),
-			"webhookUrl":  m.WebhookUrl.ValueString(),
+		wh := &sgsdkgo.Webhook{
+			WebhookName: m.WebhookName.ValueString(),
+			WebhookUrl:  m.WebhookUrl.ValueString(),
 		}
 		if !m.WebhookSecret.IsNull() && !m.WebhookSecret.IsUnknown() {
-			wh["webhookSecret"] = m.WebhookSecret.ValueString()
+			wh.WebhookSecret = m.WebhookSecret.ValueStringPointer()
 		}
 		result[i] = wh
 	}
@@ -1529,10 +1354,10 @@ func expandWfChaining(ctx context.Context, list types.List) ([]*sgsdkgo.MiniStep
 			StackId:         m.StackId.ValueStringPointer(),
 		}
 		if !m.WorkflowRunPayload.IsNull() && !m.WorkflowRunPayload.IsUnknown() {
-			ms.WorkflowRunPayload = parseJSONToMap(m.WorkflowRunPayload.ValueString())
+			ms.WorkflowRunPayload = expanders.JSONStringToMap(m.WorkflowRunPayload.ValueString())
 		}
 		if !m.StackRunPayload.IsNull() && !m.StackRunPayload.IsUnknown() {
-			ms.StackRunPayload = parseJSONToMap(m.StackRunPayload.ValueString())
+			ms.StackRunPayload = expanders.JSONStringToMap(m.StackRunPayload.ValueString())
 		}
 		result[i] = ms
 	}
@@ -1592,7 +1417,7 @@ func expandMiniSteps(ctx context.Context, obj types.Object) (*sgsdkgo.MiniStepsS
 		wh := &sgsdkgo.WebhookTypes{}
 		for _, pair := range []struct {
 			list *types.List
-			dest *[]map[string]interface{}
+			dest *[]*sgsdkgo.Webhook
 		}{
 			{&whModel.ApprovalRequired, &wh.ApprovalRequired},
 			{&whModel.Cancelled, &wh.Cancelled},
@@ -1664,21 +1489,24 @@ func flattenNotificationRecipients(ctx context.Context, recipients []*sgsdkgo.No
 	return list, nil
 }
 
-func flattenWebhooks(ctx context.Context, webhooks []map[string]interface{}) (types.List, diag.Diagnostics) {
+func flattenWebhooks(ctx context.Context, webhooks []*sgsdkgo.Webhook) (types.List, diag.Diagnostics) {
 	nullList := types.ListNull(types.ObjectType{AttrTypes: MinistepsWebhooksModel{}.AttributeTypes()})
 	if len(webhooks) == 0 {
 		return nullList, nil
 	}
 	models := make([]MinistepsWebhooksModel, 0, len(webhooks))
 	for _, wh := range webhooks {
-		name, _ := wh["webhookName"].(string)
-		url, _ := wh["webhookUrl"].(string)
-		secret, _ := wh["webhookSecret"].(string)
+		if wh == nil {
+			continue
+		}
 		models = append(models, MinistepsWebhooksModel{
-			WebhookName:   flatteners.String(name),
-			WebhookUrl:    flatteners.String(url),
-			WebhookSecret: flatteners.String(secret),
+			WebhookName:   flatteners.String(wh.WebhookName),
+			WebhookUrl:    flatteners.String(wh.WebhookUrl),
+			WebhookSecret: flatteners.StringPtr(wh.WebhookSecret),
 		})
+	}
+	if len(models) == 0 {
+		return nullList, nil
 	}
 	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: MinistepsWebhooksModel{}.AttributeTypes()}, models)
 	if diags.HasError() {
@@ -1700,9 +1528,9 @@ func flattenWfChaining(ctx context.Context, items []*sgsdkgo.MiniSteps) (types.L
 		models = append(models, MinistepsWorkflowChainingModel{
 			WorkflowGroupId:    flatteners.String(item.WorkflowGroupId),
 			StackId:            flatteners.StringPtr(item.StackId),
-			StackRunPayload:    marshalToJSONString(item.StackRunPayload),
+			StackRunPayload:    flatteners.JSONInterfaceToString(item.StackRunPayload),
 			WorkflowId:         flatteners.StringPtr(item.WorkflowId),
-			WorkflowRunPayload: marshalToJSONString(item.WorkflowRunPayload),
+			WorkflowRunPayload: flatteners.JSONInterfaceToString(item.WorkflowRunPayload),
 		})
 	}
 	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: MinistepsWorkflowChainingModel{}.AttributeTypes()}, models)
@@ -1962,19 +1790,6 @@ func envVarsPtrSliceFromValues(vals []sgsdkgo.EnvVars) []*sgsdkgo.EnvVars {
 	return result
 }
 
-// inputSchemasPtrSliceFromValues converts a value slice to the pointer slice
-// StackWorkflowsConfigWorkflow expects.
-func inputSchemasPtrSliceFromValues(vals []sgsdkgo.InputSchemas) []*sgsdkgo.InputSchemas {
-	if len(vals) == 0 {
-		return nil
-	}
-	result := make([]*sgsdkgo.InputSchemas, len(vals))
-	for i := range vals {
-		result[i] = &vals[i]
-	}
-	return result
-}
-
 // deploymentPlatformConfigFromWorkflowTemplate adapts the workflow template
 // revision's own DeploymentPlatformConfig type (workflowtemplaterevisions
 // package) to the root SDK type StackWorkflowsConfigWorkflow expects — these
@@ -2027,12 +1842,21 @@ func userSchedulesFromWorkflowTemplate(items []workflowtemplaterevisions.UserSch
 	return result
 }
 
-// mergeWorkflowWithStackTemplateOverride fills wf's still-nil/empty fields from
+// mergeWorkflowWithStackTemplateOverride fills wf's still-nil fields from
 // stackTplWf, the matching workflow slot on the stack template revision — the
-// middle precedence layer. vcs_config.iac_vcs_config is a special case: it is
-// unconditionally overwritten (never merely filled), because it is Computed-only
-// on the stack resource and the stack template is its ONLY source of truth,
-// never something to preserve from a stale prior value.
+// middle precedence layer. Slice/map fields on wf are *pointers* to
+// slice/map (see StackWorkflowsConfigWorkflow), guarded with == nil rather
+// than len() == 0: expandWorkflowsConfig only ever sets one to non-nil when
+// the user explicitly declared it (even []/{}), so == nil correctly means
+// "user left this unset" — a len() == 0 guard couldn't tell that apart from
+// an explicit empty value and would overwrite it. Filling from the template
+// only happens when the template's own (plain, non-pointer) value is
+// non-empty — an empty template value is left as "unset" too, rather than
+// forcing an explicit-empty pointer with nothing behind it.
+// vcs_config.iac_vcs_config is a special case: it is unconditionally
+// overwritten (never merely filled), because it is Computed-only on the stack
+// resource and the stack template is its ONLY source of truth, never
+// something to preserve from a stale prior value.
 func mergeWorkflowWithStackTemplateOverride(wf *sgsdkgo.StackWorkflowsConfigWorkflow, stackTplWf *stacktemplaterevisions.StackTemplateRevisionWorkflow) {
 	if wf == nil || stackTplWf == nil {
 		return
@@ -2041,27 +1865,30 @@ func mergeWorkflowWithStackTemplateOverride(wf *sgsdkgo.StackWorkflowsConfigWork
 	if wf.ResourceName == nil {
 		wf.ResourceName = stackTplWf.ResourceName
 	}
-	if wf.TemplateId == nil {
-		wf.TemplateId = stackTplWf.TemplateId
+	if wf.WfType == nil {
+		wf.WfType = stackTplWf.WfType
 	}
-	if len(wf.WfStepsConfig) == 0 {
-		wf.WfStepsConfig = stackTplWf.WfStepsConfig
+	if wf.ParallelExecution == nil {
+		wf.ParallelExecution = stackTplWf.ParallelExecution
+	}
+	if wf.WfStepsConfig == nil && len(stackTplWf.WfStepsConfig) > 0 {
+		wf.WfStepsConfig = &stackTplWf.WfStepsConfig
 	}
 	wf.TerraformConfig = mergeTerraformConfig(wf.TerraformConfig, stackTplWf.TerraformConfig)
-	if len(wf.EnvironmentVariables) == 0 {
-		wf.EnvironmentVariables = stackTplWf.EnvironmentVariables
+	if wf.EnvironmentVariables == nil && len(stackTplWf.EnvironmentVariables) > 0 {
+		wf.EnvironmentVariables = &stackTplWf.EnvironmentVariables
 	}
-	if len(wf.DeploymentPlatformConfig) == 0 {
-		wf.DeploymentPlatformConfig = stackTplWf.DeploymentPlatformConfig
+	if wf.DeploymentPlatformConfig == nil && len(stackTplWf.DeploymentPlatformConfig) > 0 {
+		wf.DeploymentPlatformConfig = &stackTplWf.DeploymentPlatformConfig
 	}
-	if len(wf.UserSchedules) == 0 {
-		wf.UserSchedules = stackTplWf.UserSchedules
+	if wf.UserSchedules == nil && len(stackTplWf.UserSchedules) > 0 {
+		wf.UserSchedules = &stackTplWf.UserSchedules
 	}
 	if wf.MiniSteps == nil {
 		wf.MiniSteps = stackTplWf.MiniSteps
 	}
-	if len(wf.Approvers) == 0 {
-		wf.Approvers = stackTplWf.Approvers
+	if wf.Approvers == nil && len(stackTplWf.Approvers) > 0 {
+		wf.Approvers = &stackTplWf.Approvers
 	}
 	if wf.NumberOfApprovalsRequired == nil {
 		wf.NumberOfApprovalsRequired = stackTplWf.NumberOfApprovalsRequired
@@ -2074,9 +1901,6 @@ func mergeWorkflowWithStackTemplateOverride(wf *sgsdkgo.StackWorkflowsConfigWork
 	}
 	if wf.UserJobMemory == nil {
 		wf.UserJobMemory = stackTplWf.UserJobMemory
-	}
-	if len(wf.InputSchemas) == 0 {
-		wf.InputSchemas = stackTplWf.InputSchemas
 	}
 
 	// iac_vcs_config is never user-settable on the stack resource (Computed-only) —
@@ -2092,13 +1916,14 @@ func mergeWorkflowWithStackTemplateOverride(wf *sgsdkgo.StackWorkflowsConfigWork
 	}
 }
 
-// mergeWorkflowWithWorkflowTemplateDefaults fills wf's still-nil/empty fields
-// from workflowTpl — the lowest precedence layer. mini_steps has no fallback
-// here: the workflow template revision's Ministeps type is structurally
-// distinct from sgsdkgo.MiniStepsSchema (separate type trees for
-// notifications/webhooks/wf_chaining), so it is intentionally not bridged;
-// mini_steps still resolves fully from the stack's own config and the stack
-// template override layer, which share the same type.
+// mergeWorkflowWithWorkflowTemplateDefaults fills wf's still-nil fields from
+// workflowTpl — the lowest precedence layer. Slice/map fields follow the same
+// == nil / non-empty-template-only rule as mergeWorkflowWithStackTemplateOverride.
+// mini_steps has no fallback here: the workflow template revision's Ministeps
+// type is structurally distinct from sgsdkgo.MiniStepsSchema (separate type
+// trees for notifications/webhooks/wf_chaining), so it is intentionally not
+// bridged; mini_steps still resolves fully from the stack's own config and
+// the stack template override layer, which share the same type.
 func mergeWorkflowWithWorkflowTemplateDefaults(wf *sgsdkgo.StackWorkflowsConfigWorkflow, workflowTpl *workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) {
 	if wf == nil || workflowTpl == nil {
 		return
@@ -2106,6 +1931,12 @@ func mergeWorkflowWithWorkflowTemplateDefaults(wf *sgsdkgo.StackWorkflowsConfigW
 
 	if wf.Description == nil {
 		wf.Description = workflowTpl.LongDescription
+	}
+	if wf.WfType == nil {
+		wf.WfType = workflowTpl.WfType
+	}
+	if wf.ParallelExecution == nil {
+		wf.ParallelExecution = workflowTpl.ParallelExecution
 	}
 	if wf.NumberOfApprovalsRequired == nil {
 		wf.NumberOfApprovalsRequired = workflowTpl.NumberOfApprovalsRequired
@@ -2120,32 +1951,36 @@ func mergeWorkflowWithWorkflowTemplateDefaults(wf *sgsdkgo.StackWorkflowsConfigW
 	if wf.RunnerConstraints == nil {
 		wf.RunnerConstraints = workflowTpl.RunnerConstraints
 	}
-	if len(wf.Tags) == 0 {
-		wf.Tags = workflowTpl.Tags
+	if wf.Tags == nil && len(workflowTpl.Tags) > 0 {
+		wf.Tags = &workflowTpl.Tags
 	}
-	if len(wf.Approvers) == 0 {
-		wf.Approvers = workflowTpl.Approvers
+	if wf.Approvers == nil && len(workflowTpl.Approvers) > 0 {
+		wf.Approvers = &workflowTpl.Approvers
 	}
-	if len(wf.ContextTags) == 0 && len(workflowTpl.ContextTags) > 0 {
-		wf.ContextTags = contextTagsFromTemplate(workflowTpl.ContextTags)
+	if wf.ContextTags == nil {
+		if ct := contextTagsFromTemplate(workflowTpl.ContextTags); len(ct) > 0 {
+			wf.ContextTags = &ct
+		}
 	}
-	if wf.IsActive == nil {
-		wf.IsActive = workflowTpl.IsActive
+	if wf.WfStepsConfig == nil {
+		if steps := wfStepsConfigPtrSlice(workflowTpl.WfStepsConfig); len(steps) > 0 {
+			wf.WfStepsConfig = &steps
+		}
 	}
-	if len(wf.WfStepsConfig) == 0 {
-		wf.WfStepsConfig = wfStepsConfigPtrSlice(workflowTpl.WfStepsConfig)
+	if wf.EnvironmentVariables == nil {
+		if envVars := envVarsPtrSliceFromValues(workflowTpl.EnvironmentVariables); len(envVars) > 0 {
+			wf.EnvironmentVariables = &envVars
+		}
 	}
-	if len(wf.EnvironmentVariables) == 0 {
-		wf.EnvironmentVariables = envVarsPtrSliceFromValues(workflowTpl.EnvironmentVariables)
+	if wf.DeploymentPlatformConfig == nil {
+		if dpc := deploymentPlatformConfigFromWorkflowTemplate(workflowTpl.DeploymentPlatformConfig); len(dpc) > 0 {
+			wf.DeploymentPlatformConfig = &dpc
+		}
 	}
-	if len(wf.InputSchemas) == 0 {
-		wf.InputSchemas = inputSchemasPtrSliceFromValues(workflowTpl.InputSchemas)
-	}
-	if len(wf.DeploymentPlatformConfig) == 0 {
-		wf.DeploymentPlatformConfig = deploymentPlatformConfigFromWorkflowTemplate(workflowTpl.DeploymentPlatformConfig)
-	}
-	if len(wf.UserSchedules) == 0 {
-		wf.UserSchedules = userSchedulesFromWorkflowTemplate(workflowTpl.UserSchedules)
+	if wf.UserSchedules == nil {
+		if us := userSchedulesFromWorkflowTemplate(workflowTpl.UserSchedules); len(us) > 0 {
+			wf.UserSchedules = &us
+		}
 	}
 }
 
@@ -2187,8 +2022,8 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 			// entry against the stack template revision's workflows_config below.
 			Id: wm.Id.ValueStringPointer(),
 		}
-		// resource_name/description/template_id/workflow_id/number_of_approvals_required/
-		// user_job_cpu/user_job_memory are all Optional+Computed: ValueStringPointer()/
+		// resource_name/description/number_of_approvals_required/user_job_cpu/
+		// user_job_memory are all Optional+Computed: ValueStringPointer()/
 		// ValueInt64Pointer() return &""/&0 for unknown, which would send spurious empty/zero
 		// values on create whenever the user hasn't set them. Only set when known.
 		if !wm.ResourceName.IsNull() && !wm.ResourceName.IsUnknown() {
@@ -2196,12 +2031,6 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 		}
 		if !wm.Description.IsNull() && !wm.Description.IsUnknown() {
 			wf.Description = wm.Description.ValueStringPointer()
-		}
-		if !wm.TemplateId.IsNull() && !wm.TemplateId.IsUnknown() {
-			wf.TemplateId = wm.TemplateId.ValueStringPointer()
-		}
-		if !wm.WorkflowId.IsNull() && !wm.WorkflowId.IsUnknown() {
-			wf.WorkflowId = wm.WorkflowId.ValueStringPointer()
 		}
 		if !wm.NumberOfApprovalsRequired.IsNull() && !wm.NumberOfApprovalsRequired.IsUnknown() {
 			wf.NumberOfApprovalsRequired = expanders.IntPtr(wm.NumberOfApprovalsRequired.ValueInt64Pointer())
@@ -2218,7 +2047,7 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 			if diags.HasError() {
 				return nil, diags
 			}
-			wf.Tags = tags
+			wf.Tags = &tags
 		}
 		if !wm.WfType.IsNull() && !wm.WfType.IsUnknown() {
 			wfType, err := sgsdkgo.NewWfTypeEnumFromString(wm.WfType.ValueString())
@@ -2234,19 +2063,12 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 			}
 			wf.ParallelExecution = &pe
 		}
-		if !wm.IsActive.IsNull() && !wm.IsActive.IsUnknown() {
-			isActive, err := sgsdkgo.NewIsPublicEnumFromString(wm.IsActive.ValueString())
-			if err != nil {
-				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid is_active", "Value '"+wm.IsActive.ValueString()+"' is not a valid value")}
-			}
-			wf.IsActive = &isActive
-		}
 		if !wm.WfStepsConfig.IsNull() && !wm.WfStepsConfig.IsUnknown() {
 			steps, diags := expandWfStepsConfig(ctx, wm.WfStepsConfig)
 			if diags.HasError() {
 				return nil, diags
 			}
-			wf.WfStepsConfig = steps
+			wf.WfStepsConfig = &steps
 		}
 		if !wm.TerraformConfig.IsNull() && !wm.TerraformConfig.IsUnknown() {
 			tc, diags := expandTerraformConfig(ctx, wm.TerraformConfig)
@@ -2260,14 +2082,14 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 			if diags.HasError() {
 				return nil, diags
 			}
-			wf.EnvironmentVariables = envVars
+			wf.EnvironmentVariables = &envVars
 		}
 		if !wm.DeploymentPlatformConfig.IsNull() && !wm.DeploymentPlatformConfig.IsUnknown() {
 			dpcs, diags := expandDeploymentPlatformConfig(ctx, wm.DeploymentPlatformConfig)
 			if diags.HasError() {
 				return nil, diags
 			}
-			wf.DeploymentPlatformConfig = dpcs
+			wf.DeploymentPlatformConfig = &dpcs
 		}
 		if !wm.VcsConfig.IsNull() && !wm.VcsConfig.IsUnknown() {
 			vcs, diags := expandVcsConfig(ctx, wm.VcsConfig)
@@ -2276,19 +2098,12 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 			}
 			wf.VcsConfig = vcs
 		}
-		if !wm.InputSchemas.IsNull() && !wm.InputSchemas.IsUnknown() {
-			schemas, diags := expandInputSchemas(ctx, wm.InputSchemas)
-			if diags.HasError() {
-				return nil, diags
-			}
-			wf.InputSchemas = schemas
-		}
 		if !wm.Approvers.IsNull() && !wm.Approvers.IsUnknown() {
 			approvers, diags := expanders.StringList(ctx, wm.Approvers)
 			if diags.HasError() {
 				return nil, diags
 			}
-			wf.Approvers = approvers
+			wf.Approvers = &approvers
 		}
 		if !wm.RunnerConstraints.IsNull() && !wm.RunnerConstraints.IsUnknown() {
 			rc, diags := expandRunnerConstraints(ctx, wm.RunnerConstraints)
@@ -2302,7 +2117,7 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 			if diags.HasError() {
 				return nil, diags
 			}
-			wf.UserSchedules = us
+			wf.UserSchedules = &us
 		}
 		if !wm.MiniSteps.IsNull() && !wm.MiniSteps.IsUnknown() {
 			ms, diags := expandMiniSteps(ctx, wm.MiniSteps)
@@ -2316,7 +2131,7 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 			if diags.HasError() {
 				return nil, diags
 			}
-			wf.ContextTags = ct
+			wf.ContextTags = &ct
 		}
 
 		// Layer 2: fill whatever the user left unset from the matching stack
@@ -2349,95 +2164,104 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 		if wf == nil {
 			continue
 		}
-		wfSteps, diags := flattenWfStepsConfig(ctx, wf.WfStepsConfig)
+		wfSteps, diags := flattenWfStepsConfig(ctx, deref(wf.WfStepsConfig))
 		if diags.HasError() {
 			return nullObj, diags
 		}
+		wfSteps = knownEmptyListIfNull(wfSteps, types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()})
 		tcObj, diags := flattenTerraformConfig(ctx, wf.TerraformConfig)
 		if diags.HasError() {
 			return nullObj, diags
 		}
-		envVars, diags := flattenEnvironmentVariables(ctx, wf.EnvironmentVariables)
+		envVars, diags := flattenEnvironmentVariables(ctx, deref(wf.EnvironmentVariables))
 		if diags.HasError() {
 			return nullObj, diags
 		}
-		dpcs, diags := flattenDeploymentPlatformConfig(ctx, wf.DeploymentPlatformConfig)
+		envVars = knownEmptyListIfNull(envVars, types.ObjectType{AttrTypes: EnvironmentVariableModel{}.AttributeTypes()})
+		dpcs, diags := flattenDeploymentPlatformConfig(ctx, deref(wf.DeploymentPlatformConfig))
 		if diags.HasError() {
 			return nullObj, diags
 		}
+		dpcs = knownEmptyListIfNull(dpcs, types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()})
 		vcs, diags := flattenVcsConfig(ctx, wf.VcsConfig)
 		if diags.HasError() {
 			return nullObj, diags
 		}
-		inputSchemas, diags := flattenInputSchemas(ctx, wf.InputSchemas)
+		us, diags := flattenWfUserSchedules(ctx, deref(wf.UserSchedules))
 		if diags.HasError() {
 			return nullObj, diags
 		}
-		us, diags := flattenWfUserSchedules(ctx, wf.UserSchedules)
-		if diags.HasError() {
-			return nullObj, diags
-		}
+		us = knownEmptyListIfNull(us, types.ObjectType{AttrTypes: WfUserSchedulesModel{}.AttributeTypes()})
 		rc, diags := flattenRunnerConstraints(ctx, wf.RunnerConstraints)
 		if diags.HasError() {
 			return nullObj, diags
 		}
+		// Known-empty (not null) so UseStateForUnknown holds it stable across
+		// plans. Safe now that expandRunnerConstraints nils out an empty
+		// {type: null, names: null} object before it ever reaches the API,
+		// instead of sending it as a bare RunnerConstraints{} the API rejects.
+		rc = knownEmptyObjectIfNull(rc, RunnerConstraintsModel{}.AttributeTypes())
 		msObj, diags := flattenMiniSteps(ctx, wf.MiniSteps)
 		if diags.HasError() {
 			return nullObj, diags
 		}
-		ctMap, diags := flattenContextTags(ctx, wf.ContextTags)
+		msObj = knownEmptyObjectIfNull(msObj, MinistepsModel{}.AttributeTypes())
+		ctMap, diags := flattenContextTags(ctx, deref(wf.ContextTags))
 		if diags.HasError() {
 			return nullObj, diags
 		}
+		ctMap = knownEmptyMapIfNull(ctMap, types.StringType)
 
 		tagsList := types.ListNull(types.StringType)
 		if wf.Tags != nil {
-			l, diags := types.ListValueFrom(ctx, types.StringType, wf.Tags)
+			l, diags := types.ListValueFrom(ctx, types.StringType, *wf.Tags)
 			if diags.HasError() {
 				return nullObj, diags
 			}
 			tagsList = l
 		}
+		tagsList = knownEmptyListIfNull(tagsList, types.StringType)
 		approversList := types.ListNull(types.StringType)
 		if wf.Approvers != nil {
-			l, diags := types.ListValueFrom(ctx, types.StringType, wf.Approvers)
+			l, diags := types.ListValueFrom(ctx, types.StringType, *wf.Approvers)
 			if diags.HasError() {
 				return nullObj, diags
 			}
 			approversList = l
 		}
+		approversList = knownEmptyListIfNull(approversList, types.StringType)
 
 		wfType := ""
 		if wf.WfType != nil {
 			wfType = string(*wf.WfType)
 		}
-		parallelExecution := ""
+		// Default to "disabled" (a valid enum value), not "": expand parses this
+		// string back into ParallelExecutionEnum on the next apply, and an empty
+		// string isn't a valid enum member — it would fail that parse instead of
+		// being treated as unset.
+		parallelExecution := string(sgsdkgo.ParallelExecutionEnumDisabled)
 		if wf.ParallelExecution != nil {
 			parallelExecution = string(*wf.ParallelExecution)
 		}
-		isActive := ""
-		if wf.IsActive != nil {
-			isActive = string(*wf.IsActive)
-		}
-
 		wm := WorkflowInStackModel{
-			Id:                        flatteners.StringPtr(wf.Id),
-			ResourceName:              flatteners.StringPtr(wf.ResourceName),
-			Description:               flatteners.StringPtr(wf.Description),
-			Tags:                      tagsList,
-			WfType:                    flatteners.String(wfType),
-			ParallelExecution:         flatteners.String(parallelExecution),
-			WfStepsConfig:             wfSteps,
-			TerraformConfig:           tcObj,
-			EnvironmentVariables:      envVars,
-			DeploymentPlatformConfig:  dpcs,
-			TemplateId:                flatteners.StringPtr(wf.TemplateId),
-			WorkflowId:                flatteners.StringPtr(wf.WorkflowId),
-			IsActive:                  flatteners.String(isActive),
-			VcsConfig:                 vcs,
-			InputSchemas:              inputSchemas,
-			Approvers:                 approversList,
-			NumberOfApprovalsRequired: flatteners.Int64Ptr(wf.NumberOfApprovalsRequired),
+			Id:                       flatteners.StringPtr(wf.Id),
+			ResourceName:             flatteners.StringPtr(wf.ResourceName),
+			Description:              flatteners.StringPtr(wf.Description),
+			Tags:                     tagsList,
+			WfType:                   flatteners.String(wfType),
+			ParallelExecution:        flatteners.String(parallelExecution),
+			WfStepsConfig:            wfSteps,
+			TerraformConfig:          tcObj,
+			EnvironmentVariables:     envVars,
+			DeploymentPlatformConfig: dpcs,
+			VcsConfig:                vcs,
+			Approvers:                approversList,
+			// Int64PtrDefault (0, not null) — matches workflow_from_template's
+			// documented platform behavior: the API assigns 0 when nothing resolves
+			// a value, rather than leaving the field absent. A null here would be
+			// unrecoverable: UseStateForUnknown no-ops on null state, so it would
+			// re-plan as "known after apply" on every subsequent plan.
+			NumberOfApprovalsRequired: flatteners.Int64PtrDefault(wf.NumberOfApprovalsRequired),
 			UserJobCpu:                flatteners.Int64Ptr(wf.UserJobCpu),
 			UserJobMemory:             flatteners.Int64Ptr(wf.UserJobMemory),
 			UserSchedules:             us,
@@ -2464,9 +2288,8 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 // Actions converters
 // ---------------------------------------------------------------------------
 
-// expandSingleActionsMap converts one Terraform actions map (either
-// default_actions or custom_actions) to API format, stamping isDefault onto
-// every action's Default field.
+// expandSingleActionsMap converts a Terraform actions map to API format,
+// stamping isDefault onto every action's Default field.
 func expandSingleActionsMap(ctx context.Context, actions types.Map, isDefault bool) (map[string]*sgsdkgo.Actions, diag.Diagnostics) {
 	if actions.IsNull() || actions.IsUnknown() {
 		return nil, nil
@@ -2589,64 +2412,16 @@ func expandSingleActionsMap(ctx context.Context, actions types.Map, isDefault bo
 	return result, nil
 }
 
-// expandActionsMap merges the Terraform default_actions and custom_actions maps
-// into the single map the SDK's Actions field expects, stamping Default=true on
-// entries from defaultActions and Default=false on entries from customActions.
-// An action key present in both is a config error, since it's ambiguous which
-// Default value should win. Any action the stack template revision (tpl)
-// resolves to — its own Actions verbatim, or a freshly generated set — that
-// isn't already covered by defaultActions/customActions is filled in as a
-// lowest-precedence default; see generateStackActions.
-func expandActionsMap(ctx context.Context, defaultActions, customActions types.Map, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) (map[string]*sgsdkgo.Actions, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	defaults, d := expandSingleActionsMap(ctx, defaultActions, true)
-	diags.Append(d...)
-	if diags.HasError() {
-		return nil, diags
+// expandActionsMap resolves the stack's actions: if the user declared actions
+// in config, that map is expanded and used as-is (Default=false stamped on
+// every entry — user-authored). Otherwise it falls back to whatever the stack
+// template revision (tpl) resolves to — its own Actions verbatim, or a freshly
+// generated apply/plan/destroy set; see generateStackActions.
+func expandActionsMap(ctx context.Context, actions types.Map, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) (map[string]*sgsdkgo.Actions, diag.Diagnostics) {
+	if !actions.IsNull() && !actions.IsUnknown() {
+		return expandSingleActionsMap(ctx, actions, false)
 	}
-	customs, d := expandSingleActionsMap(ctx, customActions, false)
-	diags.Append(d...)
-	if diags.HasError() {
-		return nil, diags
-	}
-
-	result := make(map[string]*sgsdkgo.Actions, len(defaults)+len(customs))
-	for k, v := range defaults {
-		result[k] = v
-	}
-	for k, v := range customs {
-		if _, exists := result[k]; exists {
-			diags.Append(diag.NewErrorDiagnostic(
-				"Duplicate action key",
-				"Action \""+k+"\" is defined in both default_actions and custom_actions; it must only appear in one.",
-			))
-			continue
-		}
-		result[k] = v
-	}
-	if diags.HasError() {
-		return nil, diags
-	}
-
-	isDefault := true
-	for k, v := range generateStackActions(tpl, workflowTemplates) {
-		if _, exists := result[k]; exists || v == nil {
-			continue
-		}
-		// Force Default=true on a shallow copy: an action resolved from the
-		// template is always a default action for the stack, regardless of
-		// what Default flag it carries. custom_actions is exclusively
-		// user-authored, so these entries never count as custom.
-		action := *v
-		action.Default = &isDefault
-		result[k] = &action
-	}
-	if len(result) == 0 {
-		return nil, diags
-	}
-
-	return result, diags
+	return generateStackActions(tpl, workflowTemplates), nil
 }
 
 // generateStackActions resolves the stack template revision's Actions,
@@ -2756,21 +2531,80 @@ func generateStackActions(tpl *stacktemplaterevisions.ReadStackTemplateRevisionM
 	return actions
 }
 
+// translateActionsOrderKeys rewrites action order map keys AND dependency ids
+// back to slot uuid using relations (WorkflowRelationsMap: {slot uuid:
+// workflow's own resource id, e.g. "/wfs/<name>"}). Once a workflow exists,
+// the platform substitutes its real id for the slot uuid everywhere in
+// returned Actions — both the order key and dependencies[].id (see
+// default_actions.json) — flattening that directly caused "inconsistent
+// result after apply" (state must stay keyed by the uuid the user
+// configured). Ids with no match in relations are left as-is.
+func translateActionsOrderKeys(actions map[string]*sgsdkgo.Actions, relations map[string]interface{}) map[string]*sgsdkgo.Actions {
+	if len(actions) == 0 || len(relations) == 0 {
+		return actions
+	}
+	reverse := make(map[string]string, len(relations))
+	for slotId, v := range relations {
+		if workflowId, ok := v.(string); ok && workflowId != "" {
+			reverse[workflowId] = slotId
+		}
+	}
+	if len(reverse) == 0 {
+		return actions
+	}
+
+	result := make(map[string]*sgsdkgo.Actions, len(actions))
+	for k, a := range actions {
+		if a == nil || len(a.Order) == 0 {
+			result[k] = a
+			continue
+		}
+		translatedOrder := make(map[string]*sgsdkgo.ActionOrder, len(a.Order))
+		for orderKey, ao := range a.Order {
+			newKey := orderKey
+			if slotId, ok := reverse[orderKey]; ok {
+				newKey = slotId
+			}
+			translatedOrder[newKey] = translateDependencyIds(ao, reverse)
+		}
+		action := *a
+		action.Order = translatedOrder
+		result[k] = &action
+	}
+	return result
+}
+
+// translateDependencyIds applies the same slot-uuid translation to an order
+// entry's dependency ids — they reference other workflows, so the API
+// substitutes real workflow ids there too, not just in the order key.
+func translateDependencyIds(ao *sgsdkgo.ActionOrder, reverse map[string]string) *sgsdkgo.ActionOrder {
+	if ao == nil || len(ao.Dependencies) == 0 {
+		return ao
+	}
+	deps := make([]*sgsdkgo.ActionDependency, len(ao.Dependencies))
+	for i, dep := range ao.Dependencies {
+		if dep == nil {
+			continue
+		}
+		d := *dep
+		if slotId, ok := reverse[d.Id]; ok {
+			d.Id = slotId
+		}
+		deps[i] = &d
+	}
+	result := *ao
+	result.Dependencies = deps
+	return &result
+}
+
 // flattenActionsMap converts the API actions map to Terraform format,
-// including the order/parameters/dependencies structure. Actions with
-// Default == true are split into defaultActions; everything else goes into
-// customActions — unless forceDefault is set, in which case every action goes
-// into defaultActions regardless of its own Default flag. forceDefault is for
-// flattening a stack TEMPLATE's actions: custom_actions is exclusively
-// user-authored on the stack itself, so nothing from a template — even an
-// action the template itself marked non-default — may ever land there.
-func flattenActionsMap(ctx context.Context, actions map[string]*sgsdkgo.Actions, forceDefault bool) (defaultActions types.Map, customActions types.Map, diags diag.Diagnostics) {
+// including the order/parameters/dependencies structure.
+func flattenActionsMap(ctx context.Context, actions map[string]*sgsdkgo.Actions) (types.Map, diag.Diagnostics) {
 	mapNull := types.MapNull(types.ObjectType{AttrTypes: ActionsModel{}.AttributeTypes()})
 	if actions == nil {
-		return mapNull, mapNull, nil
+		return mapNull, nil
 	}
-	defaultElements := make(map[string]attr.Value)
-	customElements := make(map[string]attr.Value)
+	elements := make(map[string]attr.Value)
 	for k, a := range actions {
 		if a == nil {
 			continue
@@ -2790,21 +2624,21 @@ func flattenActionsMap(ctx context.Context, actions map[string]*sgsdkgo.Actions,
 						tam := TerraformActionModel{Action: flatteners.String(string(*p.TerraformAction.Action))}
 						obj, d := types.ObjectValueFrom(ctx, TerraformActionModel{}.AttributeTypes(), tam)
 						if d.HasError() {
-							return mapNull, mapNull, d
+							return mapNull, d
 						}
 						taObj = obj
 					}
 					dpcList, d := flattenDeploymentPlatformConfig(ctx, p.DeploymentPlatformConfig)
 					if d.HasError() {
-						return mapNull, mapNull, d
+						return mapNull, d
 					}
 					wfStepsList, d := flattenWfStepsConfig(ctx, p.WfStepsConfig)
 					if d.HasError() {
-						return mapNull, mapNull, d
+						return mapNull, d
 					}
 					envList, d := flattenEnvironmentVariables(ctx, p.EnvironmentVariables)
 					if d.HasError() {
-						return mapNull, mapNull, d
+						return mapNull, d
 					}
 					pm := StackActionParametersModel{
 						TerraformAction:          taObj,
@@ -2814,13 +2648,16 @@ func flattenActionsMap(ctx context.Context, actions map[string]*sgsdkgo.Actions,
 					}
 					obj, d := types.ObjectValueFrom(ctx, StackActionParametersModel{}.AttributeTypes(), pm)
 					if d.HasError() {
-						return mapNull, mapNull, d
+						return mapNull, d
 					}
 					paramsObj = obj
 				}
 
+				// len == 0, not != nil: config had no dependencies (null), but the API
+				// echoes an explicit [] instead of omitting the field — flattening that
+				// as a non-null empty list caused "inconsistent result after apply".
 				depListObj := types.ListNull(types.ObjectType{AttrTypes: ActionDependencyModel{}.AttributeTypes()})
-				if ao.Dependencies != nil {
+				if len(ao.Dependencies) > 0 {
 					depElems := make([]attr.Value, 0, len(ao.Dependencies))
 					for _, dep := range ao.Dependencies {
 						if dep == nil {
@@ -2831,33 +2668,33 @@ func flattenActionsMap(ctx context.Context, actions map[string]*sgsdkgo.Actions,
 							condM := ActionDependencyConditionModel{LatestStatus: flatteners.String(dep.Condition.LatestStatus)}
 							obj, d := types.ObjectValueFrom(ctx, ActionDependencyConditionModel{}.AttributeTypes(), condM)
 							if d.HasError() {
-								return mapNull, mapNull, d
+								return mapNull, d
 							}
 							condObj = obj
 						}
 						dm := ActionDependencyModel{Id: flatteners.String(dep.Id), Condition: condObj}
 						depObj, d := types.ObjectValueFrom(ctx, ActionDependencyModel{}.AttributeTypes(), dm)
 						if d.HasError() {
-							return mapNull, mapNull, d
+							return mapNull, d
 						}
 						depElems = append(depElems, depObj)
 					}
 					l, d := types.ListValue(types.ObjectType{AttrTypes: ActionDependencyModel{}.AttributeTypes()}, depElems)
 					if d.HasError() {
-						return mapNull, mapNull, d
+						return mapNull, d
 					}
 					depListObj = l
 				}
 				aoM := ActionOrderModel{Parameters: paramsObj, Dependencies: depListObj}
 				aoObj, d := types.ObjectValueFrom(ctx, ActionOrderModel{}.AttributeTypes(), aoM)
 				if d.HasError() {
-					return mapNull, mapNull, d
+					return mapNull, d
 				}
 				orderElements[wfId] = aoObj
 			}
 			m, d := types.MapValue(types.ObjectType{AttrTypes: ActionOrderModel{}.AttributeTypes()}, orderElements)
 			if d.HasError() {
-				return mapNull, mapNull, d
+				return mapNull, d
 			}
 			orderObj = m
 		}
@@ -2868,28 +2705,92 @@ func flattenActionsMap(ctx context.Context, actions map[string]*sgsdkgo.Actions,
 		}
 		obj, d := types.ObjectValueFrom(ctx, ActionsModel{}.AttributeTypes(), am)
 		if d.HasError() {
-			return mapNull, mapNull, d
+			return mapNull, d
 		}
-		if forceDefault || (a.Default != nil && *a.Default) {
-			defaultElements[k] = obj
-		} else {
-			customElements[k] = obj
-		}
+		elements[k] = obj
 	}
-	defaultMap, d := types.MapValue(types.ObjectType{AttrTypes: ActionsModel{}.AttributeTypes()}, defaultElements)
+	result, d := types.MapValue(types.ObjectType{AttrTypes: ActionsModel{}.AttributeTypes()}, elements)
 	if d.HasError() {
-		return mapNull, mapNull, d
+		return mapNull, d
 	}
-	customMap, d := types.MapValue(types.ObjectType{AttrTypes: ActionsModel{}.AttributeTypes()}, customElements)
-	if d.HasError() {
-		return mapNull, mapNull, d
-	}
-	return defaultMap, customMap, nil
+	return result, nil
 }
 
 // ---------------------------------------------------------------------------
 // ToAPIModel / ToUpdateAPIModel / BuildAPIModelToStackModel
 // ---------------------------------------------------------------------------
+
+// deref returns the zero value of T when p is nil, otherwise *p. Used to read
+// StackWorkflowsConfigWorkflow's pointer-to-slice/map fields (see its own
+// doc comment) back into the plain slice/map the existing flatten helpers
+// expect — a nil pointer and an empty slice/map are both "nothing to
+// flatten" from a Read perspective.
+func deref[T any](p *T) T {
+	var zero T
+	if p == nil {
+		return zero
+	}
+	return *p
+}
+
+// knownEmptyListIfNull returns a known empty list (of elemType) when in is null,
+// otherwise returns in unchanged. Computed list attributes must hold a known value
+// in state so UseStateForUnknown engages on subsequent plans — that plan modifier
+// no-ops when req.StateValue.IsNull() (see terraform-plugin-framework's
+// listplanmodifier), so a null value re-plans as "known after apply" forever.
+// Mirrors workflow_from_template's identically-named helper.
+func knownEmptyListIfNull(in types.List, elemType attr.Type) types.List {
+	if in.IsNull() {
+		return types.ListValueMust(elemType, []attr.Value{})
+	}
+	return in
+}
+
+// knownEmptyMapIfNull is the map equivalent of knownEmptyListIfNull.
+func knownEmptyMapIfNull(in types.Map, elemType attr.Type) types.Map {
+	if in.IsNull() {
+		return types.MapValueMust(elemType, map[string]attr.Value{})
+	}
+	return in
+}
+
+// knownEmptyObjectIfNull returns a known object with all-null attributes (of
+// attrTypes) when in is null, otherwise returns in unchanged. Same rationale as
+// knownEmptyListIfNull.
+func knownEmptyObjectIfNull(in types.Object, attrTypes map[string]attr.Type) types.Object {
+	if in.IsNull() {
+		values := make(map[string]attr.Value, len(attrTypes))
+		for name, t := range attrTypes {
+			values[name] = newNullValue(t)
+		}
+		return types.ObjectValueMust(attrTypes, values)
+	}
+	return in
+}
+
+// newNullValue returns a typed null attr.Value for the given attr.Type.
+func newNullValue(t attr.Type) attr.Value {
+	switch tt := t.(type) {
+	case types.ObjectType:
+		return types.ObjectNull(tt.AttrTypes)
+	case types.ListType:
+		return types.ListNull(tt.ElemType)
+	case types.MapType:
+		return types.MapNull(tt.ElemType)
+	case types.SetType:
+		return types.SetNull(tt.ElemType)
+	case basetypes.BoolType:
+		return types.BoolNull()
+	case basetypes.Int64Type:
+		return types.Int64Null()
+	case basetypes.Float64Type:
+		return types.Float64Null()
+	case basetypes.NumberType:
+		return types.NumberNull()
+	default:
+		return types.StringNull()
+	}
+}
 
 // contextTagsFromTemplate converts a stack template revision's ContextTags
 // (map[string]string) to the map[string]*string shape sgsdkgo.Stack expects.
@@ -2944,36 +2845,15 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context, orgName string, tpl
 		apiModel.Tags = tpl.Tags
 	}
 
-	// No template counterpart exists for environment_variables.
-	if !m.EnvironmentVariables.IsUnknown() && !m.EnvironmentVariables.IsNull() {
-		envVars, envDiags := expandEnvironmentVariables(ctx, m.EnvironmentVariables)
-		diags.Append(envDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		apiModel.EnvironmentVariables = envVars
-	}
-
-	// No template counterpart exists for deployment_platform_config.
-	if !m.DeploymentPlatformConfig.IsUnknown() && !m.DeploymentPlatformConfig.IsNull() {
-		dpc, dpcDiags := expandDeploymentPlatformConfig(ctx, m.DeploymentPlatformConfig)
-		diags.Append(dpcDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		apiModel.DeploymentPlatformConfig = dpc
-	}
-
 	if !m.TemplateGroupId.IsUnknown() && !m.TemplateGroupId.IsNull() {
 		prefixed := fmt.Sprintf("/%s/%s", orgName, m.TemplateGroupId.ValueString())
 		apiModel.TemplateGroupId = &prefixed
 	}
 
-	// default_actions and custom_actions are merged into the SDK's single Actions
-	// map, with Default set true/false based on which Terraform attribute each
-	// action came from; any template action not already covered fills in as a
-	// lowest-precedence default.
-	actions, actionDiags := expandActionsMap(ctx, m.DefaultActions, m.CustomActions, tpl, workflowTemplates)
+	// actions falls back to the stack template revision's own value (verbatim,
+	// or freshly generated) when the user leaves the attribute unset; see
+	// expandActionsMap.
+	actions, actionDiags := expandActionsMap(ctx, m.Actions, tpl, workflowTemplates)
 	diags.Append(actionDiags...)
 	if diags.HasError() {
 		return nil, diags
@@ -2993,16 +2873,6 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context, orgName string, tpl
 		apiModel.WorkflowsConfig = wfc
 	}
 
-	// No template counterpart exists for user_schedules.
-	if !m.UserSchedules.IsUnknown() && !m.UserSchedules.IsNull() {
-		userSchedules, usDiags := expandUserSchedules(ctx, m.UserSchedules)
-		diags.Append(usDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		apiModel.UserSchedules = userSchedules
-	}
-
 	if !m.ContextTags.IsUnknown() && !m.ContextTags.IsNull() {
 		contextTags, ctDiags := expandContextTags(ctx, m.ContextTags)
 		diags.Append(ctDiags...)
@@ -3012,16 +2882,6 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context, orgName string, tpl
 		apiModel.ContextTags = contextTags
 	} else if tpl != nil {
 		apiModel.ContextTags = contextTagsFromTemplate(tpl.ContextTags)
-	}
-
-	// No template counterpart exists for mini_steps.
-	if !m.MiniSteps.IsUnknown() && !m.MiniSteps.IsNull() {
-		miniSteps, msDiags := expandMiniSteps(ctx, m.MiniSteps)
-		diags.Append(msDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		apiModel.MiniSteps = miniSteps
 	}
 
 	return apiModel, diags
@@ -3071,57 +2931,32 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 		apiModel.Tags = sgsdkgo.Optional(tpl.Tags)
 	}
 
-	// No template counterpart exists for environment_variables.
-	if !m.EnvironmentVariables.IsUnknown() && !m.EnvironmentVariables.IsNull() {
-		envVars, envDiags := expandEnvironmentVariables(ctx, m.EnvironmentVariables)
-		diags.Append(envDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		if envVars != nil {
-			apiModel.EnvironmentVariables = sgsdkgo.Optional(envVars)
-		} else {
-			apiModel.EnvironmentVariables = sgsdkgo.Null[[]*sgsdkgo.EnvVars]()
-		}
-	} else if m.EnvironmentVariables.IsNull() {
-		apiModel.EnvironmentVariables = sgsdkgo.Null[[]*sgsdkgo.EnvVars]()
-	}
-
-	// No template counterpart exists for deployment_platform_config.
-	if !m.DeploymentPlatformConfig.IsUnknown() && !m.DeploymentPlatformConfig.IsNull() {
-		dpc, dpcDiags := expandDeploymentPlatformConfig(ctx, m.DeploymentPlatformConfig)
-		diags.Append(dpcDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		if dpc != nil {
-			apiModel.DeploymentPlatformConfig = sgsdkgo.Optional(dpc)
-		} else {
-			apiModel.DeploymentPlatformConfig = sgsdkgo.Null[[]*sgsdkgo.DeploymentPlatformConfig]()
-		}
-	} else if m.DeploymentPlatformConfig.IsNull() {
-		apiModel.DeploymentPlatformConfig = sgsdkgo.Null[[]*sgsdkgo.DeploymentPlatformConfig]()
-	}
-
 	if !m.TemplateGroupId.IsUnknown() && !m.TemplateGroupId.IsNull() {
 		apiModel.TemplateGroupId = sgsdkgo.Optional(fmt.Sprintf("/%s/%s", orgName, m.TemplateGroupId.ValueString()))
 	} else if m.TemplateGroupId.IsNull() {
 		apiModel.TemplateGroupId = sgsdkgo.Null[string]()
 	}
 
-	// default_actions and custom_actions are merged into the SDK's single Actions
-	// map, with Default set true/false based on which Terraform attribute each
-	// action came from; any template action not already covered fills in as a
-	// lowest-precedence default.
-	actions, actionDiags := expandActionsMap(ctx, m.DefaultActions, m.CustomActions, tpl, workflowTemplates)
-	diags.Append(actionDiags...)
-	if diags.HasError() {
-		return nil, diags
-	}
-	if actions != nil {
-		apiModel.Actions = sgsdkgo.Optional(actions)
-	} else if m.DefaultActions.IsNull() || m.CustomActions.IsNull() {
+	// actions falls back to the stack template revision's own value when
+	// unset; see expandActionsMap. An explicit null clears it — never
+	// inherits, even with a template present.
+	if !m.Actions.IsUnknown() && !m.Actions.IsNull() {
+		actions, actionDiags := expandSingleActionsMap(ctx, m.Actions, false)
+		diags.Append(actionDiags...)
+		if diags.HasError() {
+			return nil, diags
+		}
+		if actions != nil {
+			apiModel.Actions = sgsdkgo.Optional(actions)
+		} else {
+			apiModel.Actions = sgsdkgo.Null[map[string]*sgsdkgo.Actions]()
+		}
+	} else if m.Actions.IsNull() {
 		apiModel.Actions = sgsdkgo.Null[map[string]*sgsdkgo.Actions]()
+	} else if tpl != nil {
+		if generated := generateStackActions(tpl, workflowTemplates); generated != nil {
+			apiModel.Actions = sgsdkgo.Optional(generated)
+		}
 	}
 
 	// workflows_config resolves per-slot from up to three layers — see
@@ -3147,22 +2982,6 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 		apiModel.WorkflowsConfig = sgsdkgo.Null[sgsdkgo.StackWorkflowsConfig]()
 	}
 
-	// No template counterpart exists for user_schedules.
-	if !m.UserSchedules.IsUnknown() && !m.UserSchedules.IsNull() {
-		userSchedules, usDiags := expandUserSchedules(ctx, m.UserSchedules)
-		diags.Append(usDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		if userSchedules != nil {
-			apiModel.UserSchedules = sgsdkgo.Optional(userSchedules)
-		} else {
-			apiModel.UserSchedules = sgsdkgo.Null[[]*sgsdkgo.StackUserSchedules]()
-		}
-	} else if m.UserSchedules.IsNull() {
-		apiModel.UserSchedules = sgsdkgo.Null[[]*sgsdkgo.StackUserSchedules]()
-	}
-
 	if !m.ContextTags.IsUnknown() && !m.ContextTags.IsNull() {
 		contextTags, ctDiags := expandContextTags(ctx, m.ContextTags)
 		diags.Append(ctDiags...)
@@ -3180,35 +2999,89 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 		apiModel.ContextTags = sgsdkgo.Optional(contextTagsFromTemplate(tpl.ContextTags))
 	}
 
-	// No template counterpart exists for mini_steps.
-	if !m.MiniSteps.IsUnknown() && !m.MiniSteps.IsNull() {
-		miniSteps, msDiags := expandMiniSteps(ctx, m.MiniSteps)
-		diags.Append(msDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		if miniSteps != nil {
-			apiModel.MiniSteps = sgsdkgo.Optional(*miniSteps)
-		} else {
-			apiModel.MiniSteps = sgsdkgo.Null[sgsdkgo.MiniStepsSchema]()
-		}
-	} else if m.MiniSteps.IsNull() {
-		apiModel.MiniSteps = sgsdkgo.Null[sgsdkgo.MiniStepsSchema]()
+	return apiModel, diags
+}
+
+// validateActionsAgainstRevision errors when a user-declared actions entry's
+// order key or dependency id references a workflow slot that no longer
+// exists on the new stack template revision tpl. actions left unset in
+// config gets rebuilt from tpl's own workflow list automatically (see
+// reResolveOnRevisionChange), but a value the user explicitly declared can't
+// be silently rewritten — a dangling reference must be caught here rather
+// than surfacing as an opaque API error. Ids also present in the stack's own
+// workflows_config.workflows are exempt: those are user-declared slots that
+// may have no template backing at all. actions is expected to be the CONFIG
+// value (not plan) — the check only applies when the user actually declared
+// it for this apply.
+func validateActionsAgainstRevision(ctx context.Context, actions types.Map, workflowsConfig types.Object, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+	if actions.IsNull() || actions.IsUnknown() {
+		return diags
 	}
 
-	return apiModel, diags
+	valid := make(map[string]bool)
+	if tpl != nil && tpl.WorkflowsConfig != nil {
+		for _, w := range tpl.WorkflowsConfig.Workflows {
+			if w != nil && w.Id != nil {
+				valid[*w.Id] = true
+			}
+		}
+	}
+	if !workflowsConfig.IsNull() && !workflowsConfig.IsUnknown() {
+		var wfc WorkflowsConfigModel
+		if d := workflowsConfig.As(ctx, &wfc, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); !d.HasError() && !wfc.Workflows.IsNull() && !wfc.Workflows.IsUnknown() {
+			var wfModels []WorkflowInStackModel
+			if d2 := wfc.Workflows.ElementsAs(ctx, &wfModels, false); !d2.HasError() {
+				for _, wm := range wfModels {
+					if !wm.Id.IsNull() && !wm.Id.IsUnknown() {
+						valid[wm.Id.ValueString()] = true
+					}
+				}
+			}
+		}
+	}
+
+	declared, d := expandSingleActionsMap(ctx, actions, false)
+	diags.Append(d...)
+	if diags.HasError() {
+		return diags
+	}
+	for actionKey, a := range declared {
+		if a == nil {
+			continue
+		}
+		for orderKey, ao := range a.Order {
+			if !valid[orderKey] {
+				diags.AddError(
+					"actions references a removed workflow",
+					fmt.Sprintf("actions[%q].order references workflow %q, which no longer exists on the new stack template revision. Update actions to remove it before changing template_group_id.", actionKey, orderKey),
+				)
+			}
+			if ao == nil {
+				continue
+			}
+			for _, dep := range ao.Dependencies {
+				if dep != nil && !valid[dep.Id] {
+					diags.AddError(
+						"actions references a removed workflow",
+						fmt.Sprintf("actions[%q].order[%q].dependencies references workflow %q, which no longer exists on the new stack template revision. Update actions to remove it before changing template_group_id.", actionKey, orderKey, dep.Id),
+					)
+				}
+			}
+		}
+	}
+	return diags
 }
 
 // reResolveOnRevisionChange re-resolves the template-derived fields the user
 // left unset against the NEW stack template revision tpl, used by ModifyPlan
 // on a template_group_id change. Values are computed via the same flatteners
-// the Read path (BuildAPIModelToStackModel) uses, so plan == apply.
-// default_actions is always re-resolved — it's Computed-only, so it's always
-// "user-unset" by definition. custom_actions and the scalar fields are only
-// re-resolved when the user left them unset in config. Fields with no
-// template counterpart (resource_name, environment_variables,
-// deployment_platform_config, user_schedules, mini_steps) and
-// workflows_config are untouched.
+// the Read path (BuildAPIModelToStackModel) uses, so plan == apply. actions
+// and the scalar fields are only re-resolved when the user left them unset in
+// config — a value the user declared is validated instead, see
+// validateActionsAgainstRevision. Fields with no template counterpart
+// (resource_name, environment_variables, deployment_platform_config,
+// user_schedules, mini_steps) and workflows_config are untouched.
 func reResolveOnRevisionChange(ctx context.Context, plan *StackResourceModel, config StackResourceModel, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
@@ -3223,9 +3096,9 @@ func reResolveOnRevisionChange(ctx context.Context, plan *StackResourceModel, co
 			if diags.HasError() {
 				return diags
 			}
-			plan.Tags = tagsList
+			plan.Tags = knownEmptyListIfNull(tagsList, types.StringType)
 		} else {
-			plan.Tags = types.ListNull(types.StringType)
+			plan.Tags = types.ListValueMust(types.StringType, []attr.Value{})
 		}
 	}
 
@@ -3235,37 +3108,35 @@ func reResolveOnRevisionChange(ctx context.Context, plan *StackResourceModel, co
 		if diags.HasError() {
 			return diags
 		}
-		plan.ContextTags = ctMap
+		plan.ContextTags = knownEmptyMapIfNull(ctMap, types.StringType)
 	}
 
-	// forceDefault=true: custom_actions is exclusively user-authored on the
-	// stack, so it's never touched here — everything the template resolves to
-	// counts as a default action for the stack, regardless of what Default
-	// flag it carries. generateStackActions(tpl, nil) is passed a nil
-	// workflowTemplates since ModifyPlan never calls resolveWorkflowTemplates
-	// — safe (and exactly accurate) whenever tpl.Actions is already populated,
-	// since that path (step 1: verbatim copy) never consults
-	// workflowTemplates at all; see actionsNeedGeneration below for the case
-	// where it doesn't.
-	defaultActions, _, d := flattenActionsMap(ctx, generateStackActions(tpl, nil), true)
-	diags.Append(d...)
-	if diags.HasError() {
-		return diags
-	}
-	plan.DefaultActions = defaultActions
+	if config.Actions.IsNull() {
+		// generateStackActions(tpl, nil) is passed a nil workflowTemplates since
+		// ModifyPlan never calls resolveWorkflowTemplates — safe (and exactly
+		// accurate) whenever tpl.Actions is already populated, since that path
+		// (step 1: verbatim copy) never consults workflowTemplates at all; see
+		// actionsNeedGeneration below for the case where it doesn't.
+		actions, d := flattenActionsMap(ctx, generateStackActions(tpl, nil))
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.Actions = knownEmptyMapIfNull(actions, types.ObjectType{AttrTypes: ActionsModel{}.AttributeTypes()})
 
-	// When tpl.Actions is empty, ToUpdateAPIModel's actual expandActionsMap
-	// call generates a fresh apply/plan/destroy set AND blanks parameters for
-	// non-Terraform workflow types (generateStackActions step 3) — a
-	// classification that needs workflowTemplates, which this function has no
-	// way to resolve. A known plan.DefaultActions value that then doesn't
-	// match what apply actually returns is exactly what Terraform's "Provider
-	// produced inconsistent result after apply" guards against, so mark it
-	// unknown instead whenever that's a possibility — deferring to apply-time
-	// truth is always safe, since Terraform's consistency check only applies
-	// to values that were known in the plan.
-	if actionsNeedGeneration(tpl) {
-		plan.DefaultActions = types.MapUnknown(types.ObjectType{AttrTypes: ActionsModel{}.AttributeTypes()})
+		// When tpl.Actions is empty, ToUpdateAPIModel's actual expandActionsMap
+		// call generates a fresh apply/plan/destroy set AND blanks parameters for
+		// non-Terraform workflow types (generateStackActions step 3) — a
+		// classification that needs workflowTemplates, which this function has no
+		// way to resolve. A known plan.Actions value that then doesn't match what
+		// apply actually returns is exactly what Terraform's "Provider produced
+		// inconsistent result after apply" guards against, so mark it unknown
+		// instead whenever that's a possibility — deferring to apply-time truth is
+		// always safe, since Terraform's consistency check only applies to values
+		// that were known in the plan.
+		if actionsNeedGeneration(tpl) {
+			plan.Actions = types.MapUnknown(types.ObjectType{AttrTypes: ActionsModel{}.AttributeTypes()})
+		}
 	}
 
 	return diags
@@ -3276,6 +3147,43 @@ func reResolveOnRevisionChange(ctx context.Context, plan *StackResourceModel, co
 // than just copying tpl.Actions verbatim.
 func actionsNeedGeneration(tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel) bool {
 	return tpl == nil || len(tpl.Actions) == 0
+}
+
+// reResolveWorkflowsConfigOnRevisionChange re-derives workflows_config's
+// template-derived per-workflow fields (see mergeWorkflowWithStackTemplateOverride
+// / mergeWorkflowWithWorkflowTemplateDefaults) against the new revision tpl.
+// That merge only runs inside expandWorkflowsConfig, which apply calls with
+// the PLAN value — so if plan still carries the OLD revision's merged values
+// forward (UseStateForUnknown, since config left them unset), apply would
+// silently send stale data instead of re-deriving from the new revision.
+// Every per-workflow field now has a template counterpart in one of the two
+// merge layers, so a plain re-expand against config (using the NEW tpl/
+// workflowTemplates) is sufficient — nothing needs to be preserved from prior
+// state.
+func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackResourceModel, config StackResourceModel, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	if config.WorkflowsConfig.IsNull() || config.WorkflowsConfig.IsUnknown() {
+		return diags
+	}
+
+	fresh, d := expandWorkflowsConfig(ctx, config.WorkflowsConfig, tpl, workflowTemplates)
+	diags.Append(d...)
+	if diags.HasError() {
+		return diags
+	}
+	if fresh == nil {
+		return diags
+	}
+
+	wfcObj, d := flattenWorkflowsConfig(ctx, fresh)
+	diags.Append(d...)
+	if diags.HasError() {
+		return diags
+	}
+	plan.WorkflowsConfig = wfcObj
+
+	return diags
 }
 
 // BuildAPIModelToStackModel converts the API response into a StackResourceModel.
@@ -3311,32 +3219,17 @@ func BuildAPIModelToStackModel(ctx context.Context, orgName string, apiResponse 
 		if diags.HasError() {
 			return nil, diags
 		}
-		stackModel.Tags = tagsList
+		stackModel.Tags = knownEmptyListIfNull(tagsList, types.StringType)
 	} else {
-		stackModel.Tags = types.ListNull(types.StringType)
+		stackModel.Tags = types.ListValueMust(types.StringType, []attr.Value{})
 	}
 
-	envVarsList, diagsEnv := flattenEnvironmentVariables(ctx, apiResponse.EnvironmentVariables)
-	diags.Append(diagsEnv...)
-	if diags.HasError() {
-		return nil, diags
-	}
-	stackModel.EnvironmentVariables = envVarsList
-
-	dpcList, diagsDpc := flattenDeploymentPlatformConfig(ctx, apiResponse.DeploymentPlatformConfig)
-	diags.Append(diagsDpc...)
-	if diags.HasError() {
-		return nil, diags
-	}
-	stackModel.DeploymentPlatformConfig = dpcList
-
-	defaultActions, customActions, diagsAct := flattenActionsMap(ctx, apiResponse.Actions, false)
+	actions, diagsAct := flattenActionsMap(ctx, translateActionsOrderKeys(apiResponse.Actions, apiResponse.WorkflowRelationsMap))
 	diags.Append(diagsAct...)
 	if diags.HasError() {
 		return nil, diags
 	}
-	stackModel.DefaultActions = defaultActions
-	stackModel.CustomActions = customActions
+	stackModel.Actions = knownEmptyMapIfNull(actions, types.ObjectType{AttrTypes: ActionsModel{}.AttributeTypes()})
 
 	wfcObj, diagsWfc := flattenWorkflowsConfig(ctx, apiResponse.WorkflowsConfig)
 	diags.Append(diagsWfc...)
@@ -3345,26 +3238,12 @@ func BuildAPIModelToStackModel(ctx context.Context, orgName string, apiResponse 
 	}
 	stackModel.WorkflowsConfig = wfcObj
 
-	usList, diagsUs := flattenUserSchedules(ctx, apiResponse.UserSchedules)
-	diags.Append(diagsUs...)
-	if diags.HasError() {
-		return nil, diags
-	}
-	stackModel.UserSchedules = usList
-
 	ctMap, diagsCt := flattenContextTags(ctx, apiResponse.ContextTags)
 	diags.Append(diagsCt...)
 	if diags.HasError() {
 		return nil, diags
 	}
-	stackModel.ContextTags = ctMap
-
-	msObj, diagsMs := flattenMiniSteps(ctx, apiResponse.MiniSteps)
-	diags.Append(diagsMs...)
-	if diags.HasError() {
-		return nil, diags
-	}
-	stackModel.MiniSteps = msObj
+	stackModel.ContextTags = knownEmptyMapIfNull(ctMap, types.StringType)
 
 	return stackModel, diags
 }

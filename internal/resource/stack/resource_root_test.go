@@ -16,8 +16,11 @@ import (
 // setupSecondStackTemplateRevision creates and publishes revision :2 of an
 // existing stack template (already created by setupStackTemplateChain), with
 // the given description and wired to the same workflow slot/template as
-// revision :1. Registers cleanup. Returns the bare revision id ("<name>:2").
-func setupSecondStackTemplateRevision(t *testing.T, stackTemplateID, workflowTemplateID, description string) string {
+// revision :1. numberOfApprovalsRequired, if non-nil, is set on that workflow
+// slot — used to test workflows_config's revision-based re-resolution
+// (reResolveWorkflowsConfigOnRevisionChange), since revision :1 never sets it.
+// Registers cleanup. Returns the bare revision id ("<name>:2").
+func setupSecondStackTemplateRevision(t *testing.T, stackTemplateID, workflowTemplateID, description string, numberOfApprovalsRequired *int) string {
 	t.Helper()
 	client := getClient()
 	revisionID := fmt.Sprintf("%s:2", stackTemplateID)
@@ -47,9 +50,10 @@ func setupSecondStackTemplateRevision(t *testing.T, stackTemplateID, workflowTem
 			WorkflowsConfig: &stacktemplaterevisions.StackTemplateRevisionWorkflowsConfig{
 				Workflows: []*stacktemplaterevisions.StackTemplateRevisionWorkflow{
 					{
-						Id:           sgsdkgo.String(testWfSlotId),
-						TemplateId:   &prefixedWorkflowTemplateID,
-						ResourceName: sgsdkgo.String("wf-1"),
+						Id:                        sgsdkgo.String(testWfSlotId),
+						TemplateId:                &prefixedWorkflowTemplateID,
+						ResourceName:              sgsdkgo.String("wf-1"),
+						NumberOfApprovalsRequired: numberOfApprovalsRequired,
 						VcsConfig: &sgsdkgo.VcsConfig{
 							IacVcsConfig: &sgsdkgo.IacvcsConfig{
 								UseMarketplaceTemplate: &useMarketplace,
@@ -145,11 +149,10 @@ func TestAccStack_IdRequiresReplace(t *testing.T) {
 // default_actions_generation_doc.txt) applies for both, and no generation
 // ever happens on this path. reResolveOnRevisionChange only needs
 // actionsNeedGeneration(tpl) to correctly recognize that (tpl.Actions
-// non-empty) and keep plan.DefaultActions known instead of forcing it
-// unknown; if it got that wrong the whole step would fail with that
-// harness-level error rather than any assertion below even running. Step 2
-// succeeding at all, with default_actions reflecting revision2's own
-// apply/plan verbatim, is the proof.
+// non-empty) and keep plan.Actions known instead of forcing it unknown; if it
+// got that wrong the whole step would fail with that harness-level error
+// rather than any assertion below even running. Step 2 succeeding at all,
+// with actions reflecting revision2's own apply/plan verbatim, is the proof.
 func TestAccStack_TemplateGroupIdReResolution(t *testing.T) {
 	wfGrpName := "tf-provider-stack-tmplswitch-wfgrp"
 	wfTemplateName := "tf-provider-stack-tmplswitch-wftmpl"
@@ -157,7 +160,7 @@ func TestAccStack_TemplateGroupIdReResolution(t *testing.T) {
 	id := "tf-provider-stack-tmplswitch"
 
 	revision1 := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
-	revision2 := setupSecondStackTemplateRevision(t, stackTemplateName, wfTemplateName, "revision two description")
+	revision2 := setupSecondStackTemplateRevision(t, stackTemplateName, wfTemplateName, "revision two description", nil)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -179,8 +182,8 @@ func TestAccStack_TemplateGroupIdReResolution(t *testing.T) {
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "template_group_id", revision2),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "description", "revision two description"),
 					// revision2's own Actions, copied verbatim (no generation).
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.apply.name", "apply"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.plan.name", "plan"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.apply.name", "apply"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.plan.name", "plan"),
 				),
 			},
 		},
