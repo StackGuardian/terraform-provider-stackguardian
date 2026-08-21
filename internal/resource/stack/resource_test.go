@@ -267,9 +267,9 @@ func setupStackTemplateChain(t *testing.T, stackTemplateID, workflowTemplateID s
 	prefixedWorkflowTemplateID := fmt.Sprintf("/%s/%s", org, workflowTemplateID)
 	prefixedWorkflowRevisionID := fmt.Sprintf("/%s/%s:1", org, workflowTemplateID)
 
-	// apply/plan actions so a plain stack (no custom_actions of its own — that
-	// has its own dedicated test) can inherit them into default_actions via
-	// the template-merge; CreateStack requires both.
+	// apply/plan actions so a plain stack (no actions of its own — that has
+	// its own dedicated test) can inherit them via the template fallback;
+	// CreateStack requires both.
 	applyAction := sgsdkgo.ActionEnumApply
 	planAction := sgsdkgo.ActionEnumPlan
 
@@ -393,9 +393,9 @@ func setupStackDependencyChain(t *testing.T, wfGrpName, wfTemplateName, stackTem
 
 // testAccStackConfig returns config for the stack resource alone; its
 // prerequisites are SDK fixtures (setupStackDependencyChain), not Terraform
-// resources. No custom_actions here — that has its own test; apply/plan come
-// from the stack template revision instead. additionalConfig is inserted
-// verbatim into the resource body.
+// resources. No actions here — that has its own test; apply/plan come from
+// the stack template revision instead. additionalConfig is inserted verbatim
+// into the resource body.
 func testAccStackConfig(wfGrpName, stackTemplateRevisionID, id, additionalConfig string) string {
 	return fmt.Sprintf(`
 resource "stackguardian_stack" "test" {
@@ -496,34 +496,28 @@ func TestAccStack_Import(t *testing.T) {
 
 // --- Remaining cases (not yet implemented) ---
 //
-// Covered, split across resource_root_test.go / resource_attrs_test.go /
+// Covered, split across resource_root_test.go /
 // resource_actions_test.go / resource_workflows_test.go:
 //   - id RequiresReplace; template_group_id round trip + re-resolution on
 //     revision change; Read removes state on 404; Delete treats 404 as
 //     success (resource.go's isStackNotFound, added alongside its test).
-//   - environment_variables round trip (set + omitted).
-//   - deployment_platform_config: invalid kind diagnostic.
 //   - workflows_config.workflows[]: minimal entry + Optional+Computed guard
-//     regression; invalid wf_type/parallel_execution/is_active diagnostics;
+//     regression; invalid wf_type/parallel_execution diagnostics;
 //     three-way terraform_config precedence merge; vcs_config.iac_vcs_config
-//     Computed-only rejection; input_schemas id guard, approvers,
-//     user_schedules, context_tags, runner_constraints, mini_steps round
-//     trip.
-//   - default_actions Computed-only rejection; duplicate action key across
-//     default_actions/custom_actions (reachable via a template_group_id
-//     change colliding with a custom_actions key — see
-//     TestAccStack_ActionsDuplicateKey); custom_actions nested round trip
-//     (terraform_action, environment_variables, dependencies) + removal on
-//     update; template-inherited actions land in default_actions.
-//   - Stack-level mini_steps and user_schedules[].inputs round trip.
+//     Computed-only rejection; approvers, user_schedules, context_tags,
+//     runner_constraints, mini_steps round trip.
+//   - actions: template fallback when unset (generated apply/plan/destroy,
+//     and verbatim template Actions), wholesale override once the user
+//     declares actions (see TestAccStack_ActionsGeneratedFromTemplate);
+//     nested round trip (terraform_action, environment_variables,
+//     dependencies) + removal on update (TestAccStack_ActionsRoundTrip);
+//     dangling workflow reference rejected on a template_group_id change
+//     (TestAccStack_ActionsRevisionRemovedWorkflow).
 //
 // Deferred — each needs infrastructure or live-API knowledge this session
 // doesn't have:
-//   - deployment_platform_config valid kind+config round trip and
-//     profile_name UseStateForUnknown: needs a real integration_id (a
-//     connector/integration fixture, not set up anywhere in this package).
 //   - wf_steps_config round trip (top-level, per-workflow, and inside
-//     actions[].order[].parameters), and custom_actions'
+//     actions[].order[].parameters), and actions'
 //     deployment_platform_config: both need wf_step_template_id /
 //     integration_id fixtures respectively (workflow_from_template's tests
 //     have a setupWorkflowStepTemplate fixture that could be ported over).
@@ -538,8 +532,8 @@ func TestAccStack_Import(t *testing.T) {
 // - updateWorkflowsFromConfig query param: not observable through
 //     resource.Test's black-box testing (would need an HTTP-level
 //     interceptor to inspect the actual request query string).
-// - default_actions/custom_actions read/refresh re-split after an
-//     out-of-band API-side Actions change: doable, but needs the raw PATCH
-//     payload to exactly reproduce the existing "apply" action's shape
-//     alongside the injected one to avoid an unrelated diff — deferred as
-//     the highest-effort-for-value item in this group.
+// - actions read/refresh reflecting an out-of-band API-side Actions change:
+//     doable, but needs the raw PATCH payload to exactly reproduce the
+//     existing "apply" action's shape alongside the injected one to avoid an
+//     unrelated diff — deferred as the highest-effort-for-value item in this
+//     group.

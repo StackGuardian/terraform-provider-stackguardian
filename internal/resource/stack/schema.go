@@ -193,98 +193,179 @@ var deploymentPlatformConfigAttrs = map[string]schema.Attribute{
 	},
 }
 
+// terraformConfigAttrs' fields are all Optional+Computed with UseStateForUnknown:
+// mergeTerraformConfig (see model.go) fills any field the user leaves unset from
+// the stack template revision, then the workflow template revision — a value that
+// can come from a template layer, not just the user, needs Computed or Terraform
+// core forces it to null on every plan while apply returns the merged value
+// ("Provider produced inconsistent result after apply").
 var terraformConfigAttrs = map[string]schema.Attribute{
 	"terraform_version": schema.StringAttribute{
 		MarkdownDescription: constants.TerraformVersion,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
 	},
 	"drift_check": schema.BoolAttribute{
 		MarkdownDescription: constants.TerraformDriftCheck,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.Bool{
+			boolplanmodifier.UseStateForUnknown(),
+		},
 	},
 	"drift_cron": schema.StringAttribute{
 		MarkdownDescription: constants.TerraformDriftCron,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
 	},
 	"managed_terraform_state": schema.BoolAttribute{
 		MarkdownDescription: constants.TerraformManagedState,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.Bool{
+			boolplanmodifier.UseStateForUnknown(),
+		},
 	},
 	"approval_pre_apply": schema.BoolAttribute{
 		MarkdownDescription: constants.TerraformApprovalPreApply,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.Bool{
+			boolplanmodifier.UseStateForUnknown(),
+		},
 	},
 	"terraform_plan_options": schema.StringAttribute{
 		MarkdownDescription: constants.TerraformPlanOptions,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
 	},
 	"terraform_init_options": schema.StringAttribute{
 		MarkdownDescription: constants.TerraformInitOptions,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
 	},
 	"terraform_bin_path": schema.ListNestedAttribute{
 		MarkdownDescription: constants.TerraformBinPath,
 		Optional:            true,
-		NestedObject:        schema.NestedAttributeObject{Attributes: mountPointAttrs},
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		NestedObject: schema.NestedAttributeObject{Attributes: mountPointAttrs},
 	},
 	"timeout": schema.Int64Attribute{
 		MarkdownDescription: constants.TerraformTimeout,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.Int64{
+			int64planmodifier.UseStateForUnknown(),
+		},
 	},
 	"post_apply_wf_steps_config": schema.ListNestedAttribute{
 		MarkdownDescription: constants.TerraformPostApplyWfSteps,
 		Optional:            true,
-		NestedObject:        wfStepsConfigNestedObj,
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		NestedObject: wfStepsConfigNestedObj,
 	},
 	"pre_apply_wf_steps_config": schema.ListNestedAttribute{
 		MarkdownDescription: constants.TerraformPreApplyWfSteps,
 		Optional:            true,
-		NestedObject:        wfStepsConfigNestedObj,
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		NestedObject: wfStepsConfigNestedObj,
 	},
 	"pre_plan_wf_steps_config": schema.ListNestedAttribute{
 		MarkdownDescription: constants.TerraformPrePlanWfSteps,
 		Optional:            true,
-		NestedObject:        wfStepsConfigNestedObj,
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		NestedObject: wfStepsConfigNestedObj,
 	},
 	"post_plan_wf_steps_config": schema.ListNestedAttribute{
 		MarkdownDescription: constants.TerraformPostPlanWfSteps,
 		Optional:            true,
-		NestedObject:        wfStepsConfigNestedObj,
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		NestedObject: wfStepsConfigNestedObj,
 	},
 	"pre_init_hooks": schema.ListAttribute{
 		MarkdownDescription: constants.TerraformPreInitHooks,
 		Optional:            true,
-		ElementType:         types.StringType,
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		ElementType: types.StringType,
 	},
 	"pre_plan_hooks": schema.ListAttribute{
 		MarkdownDescription: constants.TerraformPrePlanHooks,
 		Optional:            true,
-		ElementType:         types.StringType,
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		ElementType: types.StringType,
 	},
 	"post_plan_hooks": schema.ListAttribute{
 		MarkdownDescription: constants.TerraformPostPlanHooks,
 		Optional:            true,
-		ElementType:         types.StringType,
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		ElementType: types.StringType,
 	},
 	"pre_apply_hooks": schema.ListAttribute{
 		MarkdownDescription: constants.TerraformPreApplyHooks,
 		Optional:            true,
-		ElementType:         types.StringType,
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		ElementType: types.StringType,
 	},
 	"post_apply_hooks": schema.ListAttribute{
 		MarkdownDescription: constants.TerraformPostApplyHooks,
 		Optional:            true,
-		ElementType:         types.StringType,
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		ElementType: types.StringType,
 	},
 	"run_pre_init_hooks_on_drift": schema.BoolAttribute{
 		MarkdownDescription: constants.TerraformRunPreInitHooksOnDrift,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.Bool{
+			boolplanmodifier.UseStateForUnknown(),
+		},
 	},
 }
 
-// actionsAttrs defines the schema attributes for a single action value, shared
-// between the "default_actions" (computed, server-reflected) and "custom_actions"
-// (user-authored) top-level attributes — both describe the same shape.
+// actionsAttrs defines the schema attributes for a single action value inside
+// the "actions" top-level attribute.
 var actionsAttrs = map[string]schema.Attribute{
 	"name": schema.StringAttribute{
 		MarkdownDescription: "Name of the action.",
@@ -358,7 +439,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 		MarkdownDescription: "Manages a stack resource.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: constants.Id,
+				MarkdownDescription: "Id for the resource. Use it to reference the resource in other resources. Allowed characters are ^[a-zA-Z0-9_]+$",
 				Required:            true,
 				// The SDK has no way to change a stack's id via update (PatchedStack has
 				// no Id field), so a change must recreate the resource.
@@ -384,7 +465,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Description, "stack"),
+				MarkdownDescription: "Description of the stack. Must be less than 256 characters.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -400,33 +481,8 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 					listplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"environment_variables": schema.ListNestedAttribute{
-				MarkdownDescription: "Environment variables for the stack.",
-				Optional:            true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: envVarsAttrs,
-				},
-			},
-			"deployment_platform_config": schema.ListNestedAttribute{
-				MarkdownDescription: "Deployment platform configuration.",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
-				},
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: deploymentPlatformConfigAttrs,
-				},
-			},
-			"default_actions": schema.MapNestedAttribute{
-				MarkdownDescription: "Actions define the sequence in which the workflows in the Stack are executed. This reflects the full set of actions on the stack (built-in and custom); use `custom_actions` to author your own.",
-				Computed:            true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: actionsAttrs,
-				},
-			},
-			"custom_actions": schema.MapNestedAttribute{
-				MarkdownDescription: "User-authored actions to add to the stack. Same shape as `default_actions`. Computed because the API returns one merged actions map with no \"is custom\" marker other than Default=false, so this is re-derived from the server response on every read.",
+			"actions": schema.MapNestedAttribute{
+				MarkdownDescription: "Actions define the sequence in which the workflows in the Stack are executed. Optional+Computed: when left unset, inherits the actions resolved from the stack template revision (its own actions verbatim, or a generated apply/plan/destroy set — see the template revision docs); when set, this value is used as-is instead of the template's.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Map{
@@ -458,7 +514,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"id": schema.StringAttribute{
-									MarkdownDescription: "UUID of the workflow slot as defined in the stack template. Required so the provider can match this entry against the stack template revision's workflows_config for merging.",
+									MarkdownDescription: "UUID of the workflow slot as defined in the stack template.",
 									Required:            true,
 								},
 								"resource_name": schema.StringAttribute{
@@ -542,30 +598,6 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 										Attributes: deploymentPlatformConfigAttrs,
 									},
 								},
-								"template_id": schema.StringAttribute{
-									MarkdownDescription: "ID of the workflow template that this workflow is based on.",
-									Optional:            true,
-									Computed:            true,
-									PlanModifiers: []planmodifier.String{
-										stringplanmodifier.UseStateForUnknown(),
-									},
-								},
-								"workflow_id": schema.StringAttribute{
-									MarkdownDescription: "The workflow's own resource ID, distinct from `id` (the template-defined workflow slot this entry fills).",
-									Optional:            true,
-									Computed:            true,
-									PlanModifiers: []planmodifier.String{
-										stringplanmodifier.UseStateForUnknown(),
-									},
-								},
-								"is_active": schema.StringAttribute{
-									MarkdownDescription: "Whether the workflow is active.",
-									Optional:            true,
-									Computed:            true,
-									PlanModifiers: []planmodifier.String{
-										stringplanmodifier.UseStateForUnknown(),
-									},
-								},
 								"vcs_config": schema.SingleNestedAttribute{
 									MarkdownDescription: "VCS (version control) configuration for the workflow.",
 									Optional:            true,
@@ -609,45 +641,6 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 										},
 									},
 								},
-								"input_schemas": schema.ListNestedAttribute{
-									MarkdownDescription: "Input schema definitions for this workflow.",
-									Optional:            true,
-									NestedObject: schema.NestedAttributeObject{
-										Attributes: map[string]schema.Attribute{
-											"id": schema.StringAttribute{
-												Computed: true,
-												Optional: true,
-												PlanModifiers: []planmodifier.String{
-													stringplanmodifier.UseStateForUnknown(),
-												},
-											},
-											"name": schema.StringAttribute{
-												Optional: true,
-											},
-											"description": schema.StringAttribute{
-												Optional: true,
-											},
-											"type": schema.StringAttribute{
-												MarkdownDescription: "Schema type (e.g. FORM_JSONSCHEMA).",
-												Required:            true,
-											},
-											"encoded_data": schema.StringAttribute{
-												MarkdownDescription: "Base64-encoded schema data.",
-												Optional:            true,
-											},
-											"ui_schema_data": schema.StringAttribute{
-												Optional: true,
-											},
-											"is_committed": schema.BoolAttribute{
-												Optional: true,
-												Computed: true,
-												PlanModifiers: []planmodifier.Bool{
-													boolplanmodifier.UseStateForUnknown(),
-												},
-											},
-										},
-									},
-								},
 								"approvers": schema.ListAttribute{
 									MarkdownDescription: "List of approvers.",
 									ElementType:         types.StringType,
@@ -684,9 +677,18 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 								"user_schedules": schema.ListNestedAttribute{
 									MarkdownDescription: "User-defined schedules.",
 									Optional:            true,
+									Computed:            true,
+									PlanModifiers: []planmodifier.List{
+										listplanmodifier.UseStateForUnknown(),
+									},
 									NestedObject: schema.NestedAttributeObject{
 										Attributes: map[string]schema.Attribute{
-											"name":  schema.StringAttribute{Optional: true},
+											"name": schema.StringAttribute{
+												Computed: true,
+												PlanModifiers: []planmodifier.String{
+													stringplanmodifier.UseStateForUnknown(),
+												},
+											},
 											"desc":  schema.StringAttribute{Optional: true},
 											"cron":  schema.StringAttribute{Required: true},
 											"state": schema.StringAttribute{Required: true},
@@ -696,6 +698,10 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 								"mini_steps": schema.SingleNestedAttribute{
 									MarkdownDescription: "Mini steps configuration.",
 									Optional:            true,
+									Computed:            true,
+									PlanModifiers: []planmodifier.Object{
+										objectplanmodifier.UseStateForUnknown(),
+									},
 									Attributes: map[string]schema.Attribute{
 										"notifications": schema.SingleNestedAttribute{
 											Optional: true,
@@ -743,6 +749,10 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 								"runner_constraints": schema.SingleNestedAttribute{
 									MarkdownDescription: "Runner constraints.",
 									Optional:            true,
+									Computed:            true,
+									PlanModifiers: []planmodifier.Object{
+										objectplanmodifier.UseStateForUnknown(),
+									},
 									Attributes: map[string]schema.Attribute{
 										"type": schema.StringAttribute{Required: true},
 										"names": schema.ListAttribute{
@@ -756,28 +766,6 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 					},
 				},
 			},
-			"user_schedules": schema.ListNestedAttribute{
-				MarkdownDescription: "User-defined schedules for the stack.",
-				Optional:            true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"name":  schema.StringAttribute{Optional: true},
-						"desc":  schema.StringAttribute{Optional: true},
-						"cron":  schema.StringAttribute{Required: true},
-						"state": schema.StringAttribute{Required: true},
-						"inputs": schema.SingleNestedAttribute{
-							MarkdownDescription: "Action to run on this schedule.",
-							Optional:            true,
-							Attributes: map[string]schema.Attribute{
-								"action_type": schema.StringAttribute{
-									MarkdownDescription: "The action to trigger for this schedule.",
-									Required:            true,
-								},
-							},
-						},
-					},
-				},
-			},
 			"context_tags": schema.MapAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.ContextTags, "stack"),
 				ElementType:         types.StringType,
@@ -785,44 +773,6 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Computed:            true,
 				PlanModifiers: []planmodifier.Map{
 					mapplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"mini_steps": schema.SingleNestedAttribute{
-				MarkdownDescription: "Mini steps configuration for the stack.",
-				Optional:            true,
-				Attributes: map[string]schema.Attribute{
-					"notifications": schema.SingleNestedAttribute{
-						Optional: true,
-						Attributes: map[string]schema.Attribute{
-							"email": schema.SingleNestedAttribute{
-								Optional: true,
-								Attributes: map[string]schema.Attribute{
-									"approval_required": ministepsNotificationRecipients,
-									"cancelled":         ministepsNotificationRecipients,
-									"completed":         ministepsNotificationRecipients,
-									"drift_detected":    ministepsNotificationRecipients,
-									"errored":           ministepsNotificationRecipients,
-								},
-							},
-						},
-					},
-					"webhooks": schema.SingleNestedAttribute{
-						Optional: true,
-						Attributes: map[string]schema.Attribute{
-							"approval_required": ministepsWebhooks,
-							"cancelled":         ministepsWebhooks,
-							"completed":         ministepsWebhooks,
-							"drift_detected":    ministepsWebhooks,
-							"errored":           ministepsWebhooks,
-						},
-					},
-					"wf_chaining": schema.SingleNestedAttribute{
-						Optional: true,
-						Attributes: map[string]schema.Attribute{
-							"completed": ministepsWorkflowChaining,
-							"errored":   ministepsWorkflowChaining,
-						},
-					},
 				},
 			},
 		},
