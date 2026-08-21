@@ -2,7 +2,6 @@ package stack
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
@@ -16,32 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
-
-// ---------------------------------------------------------------------------
-// Helper: parse JSON string to map[string]interface{} and back
-// ---------------------------------------------------------------------------
-
-func parseJSONToMap(s string) map[string]interface{} {
-	if s == "" {
-		return nil
-	}
-	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(s), &result); err != nil {
-		return nil
-	}
-	return result
-}
-
-func marshalToJSONString(v interface{}) types.String {
-	if v == nil {
-		return types.StringNull()
-	}
-	b, err := json.Marshal(v)
-	if err != nil {
-		return types.StringNull()
-	}
-	return flatteners.String(string(b))
-}
 
 // ---------------------------------------------------------------------------
 // Root resource model
@@ -798,7 +771,7 @@ func expandWfStepsConfig(ctx context.Context, list types.List) ([]*sgsdkgo.WfSte
 			}
 			step.WfStepInputData = &sgsdkgo.WfStepInputData{
 				SchemaType: &schemaType,
-				Data:       parseJSONToMap(idm.Data.ValueString()),
+				Data:       expanders.JSONStringToMap(idm.Data.ValueString()),
 			}
 		}
 		result[i] = step
@@ -843,7 +816,7 @@ func flattenWfStepsConfig(ctx context.Context, steps []*sgsdkgo.WfStepsConfig) (
 		if s.WfStepInputData != nil {
 			idm := WfStepInputDataModel{
 				SchemaType: flatteners.String(string(*s.WfStepInputData.SchemaType)),
-				Data:       marshalToJSONString(s.WfStepInputData.Data),
+				Data:       flatteners.JSONInterfaceToString(s.WfStepInputData.Data),
 			}
 			obj, diags := types.ObjectValueFrom(ctx, WfStepInputDataModel{}.AttributeTypes(), idm)
 			if diags.HasError() {
@@ -1197,7 +1170,7 @@ func expandVcsConfig(ctx context.Context, obj types.Object) (*sgsdkgo.VcsConfig,
 			SchemaId:   idModel.SchemaId.ValueStringPointer(),
 			SchemaType: &schemaType,
 		}
-		if dataMap := parseJSONToMap(idModel.Data.ValueString()); dataMap != nil {
+		if dataMap := expanders.JSONStringToMap(idModel.Data.ValueString()); dataMap != nil {
 			vcsConfig.IacInputData.Data = &dataMap
 		}
 	}
@@ -1230,7 +1203,7 @@ func flattenVcsConfig(ctx context.Context, vc *sgsdkgo.VcsConfig) (types.Object,
 	if vc.IacInputData != nil {
 		dataStr := types.StringNull()
 		if vc.IacInputData.Data != nil {
-			dataStr = marshalToJSONString(*vc.IacInputData.Data)
+			dataStr = flatteners.JSONInterfaceToString(*vc.IacInputData.Data)
 		}
 		idM := VcsIacInputDataModel{
 			SchemaId:   flatteners.StringPtr(vc.IacInputData.SchemaId),
@@ -1529,10 +1502,10 @@ func expandWfChaining(ctx context.Context, list types.List) ([]*sgsdkgo.MiniStep
 			StackId:         m.StackId.ValueStringPointer(),
 		}
 		if !m.WorkflowRunPayload.IsNull() && !m.WorkflowRunPayload.IsUnknown() {
-			ms.WorkflowRunPayload = parseJSONToMap(m.WorkflowRunPayload.ValueString())
+			ms.WorkflowRunPayload = expanders.JSONStringToMap(m.WorkflowRunPayload.ValueString())
 		}
 		if !m.StackRunPayload.IsNull() && !m.StackRunPayload.IsUnknown() {
-			ms.StackRunPayload = parseJSONToMap(m.StackRunPayload.ValueString())
+			ms.StackRunPayload = expanders.JSONStringToMap(m.StackRunPayload.ValueString())
 		}
 		result[i] = ms
 	}
@@ -1700,9 +1673,9 @@ func flattenWfChaining(ctx context.Context, items []*sgsdkgo.MiniSteps) (types.L
 		models = append(models, MinistepsWorkflowChainingModel{
 			WorkflowGroupId:    flatteners.String(item.WorkflowGroupId),
 			StackId:            flatteners.StringPtr(item.StackId),
-			StackRunPayload:    marshalToJSONString(item.StackRunPayload),
+			StackRunPayload:    flatteners.JSONInterfaceToString(item.StackRunPayload),
 			WorkflowId:         flatteners.StringPtr(item.WorkflowId),
-			WorkflowRunPayload: marshalToJSONString(item.WorkflowRunPayload),
+			WorkflowRunPayload: flatteners.JSONInterfaceToString(item.WorkflowRunPayload),
 		})
 	}
 	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: MinistepsWorkflowChainingModel{}.AttributeTypes()}, models)
@@ -2756,6 +2729,72 @@ func generateStackActions(tpl *stacktemplaterevisions.ReadStackTemplateRevisionM
 	return actions
 }
 
+// translateActionsOrderKeys rewrites action order map keys AND dependency ids
+// back to slot uuid using relations (WorkflowRelationsMap: {slot uuid:
+// workflow's own resource id, e.g. "/wfs/<name>"}). Once a workflow exists,
+// the platform substitutes its real id for the slot uuid everywhere in
+// returned Actions — both the order key and dependencies[].id (see
+// default_actions.json) — flattening that directly caused "inconsistent
+// result after apply" (state must stay keyed by the uuid the user
+// configured). Ids with no match in relations are left as-is.
+func translateActionsOrderKeys(actions map[string]*sgsdkgo.Actions, relations map[string]interface{}) map[string]*sgsdkgo.Actions {
+	if len(actions) == 0 || len(relations) == 0 {
+		return actions
+	}
+	reverse := make(map[string]string, len(relations))
+	for slotId, v := range relations {
+		if workflowId, ok := v.(string); ok && workflowId != "" {
+			reverse[workflowId] = slotId
+		}
+	}
+	if len(reverse) == 0 {
+		return actions
+	}
+
+	result := make(map[string]*sgsdkgo.Actions, len(actions))
+	for k, a := range actions {
+		if a == nil || len(a.Order) == 0 {
+			result[k] = a
+			continue
+		}
+		translatedOrder := make(map[string]*sgsdkgo.ActionOrder, len(a.Order))
+		for orderKey, ao := range a.Order {
+			newKey := orderKey
+			if slotId, ok := reverse[orderKey]; ok {
+				newKey = slotId
+			}
+			translatedOrder[newKey] = translateDependencyIds(ao, reverse)
+		}
+		action := *a
+		action.Order = translatedOrder
+		result[k] = &action
+	}
+	return result
+}
+
+// translateDependencyIds applies the same slot-uuid translation to an order
+// entry's dependency ids — they reference other workflows, so the API
+// substitutes real workflow ids there too, not just in the order key.
+func translateDependencyIds(ao *sgsdkgo.ActionOrder, reverse map[string]string) *sgsdkgo.ActionOrder {
+	if ao == nil || len(ao.Dependencies) == 0 {
+		return ao
+	}
+	deps := make([]*sgsdkgo.ActionDependency, len(ao.Dependencies))
+	for i, dep := range ao.Dependencies {
+		if dep == nil {
+			continue
+		}
+		d := *dep
+		if slotId, ok := reverse[d.Id]; ok {
+			d.Id = slotId
+		}
+		deps[i] = &d
+	}
+	result := *ao
+	result.Dependencies = deps
+	return &result
+}
+
 // flattenActionsMap converts the API actions map to Terraform format,
 // including the order/parameters/dependencies structure. Actions with
 // Default == true are split into defaultActions; everything else goes into
@@ -2819,8 +2858,11 @@ func flattenActionsMap(ctx context.Context, actions map[string]*sgsdkgo.Actions,
 					paramsObj = obj
 				}
 
+				// len == 0, not != nil: config had no dependencies (null), but the API
+				// echoes an explicit [] instead of omitting the field — flattening that
+				// as a non-null empty list caused "inconsistent result after apply".
 				depListObj := types.ListNull(types.ObjectType{AttrTypes: ActionDependencyModel{}.AttributeTypes()})
-				if ao.Dependencies != nil {
+				if len(ao.Dependencies) > 0 {
 					depElems := make([]attr.Value, 0, len(ao.Dependencies))
 					for _, dep := range ao.Dependencies {
 						if dep == nil {
@@ -3330,7 +3372,7 @@ func BuildAPIModelToStackModel(ctx context.Context, orgName string, apiResponse 
 	}
 	stackModel.DeploymentPlatformConfig = dpcList
 
-	defaultActions, customActions, diagsAct := flattenActionsMap(ctx, apiResponse.Actions, false)
+	defaultActions, customActions, diagsAct := flattenActionsMap(ctx, translateActionsOrderKeys(apiResponse.Actions, apiResponse.WorkflowRelationsMap), false)
 	diags.Append(diagsAct...)
 	if diags.HasError() {
 		return nil, diags
