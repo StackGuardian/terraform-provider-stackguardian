@@ -2,7 +2,6 @@ package stacktemplaterevision
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -618,32 +617,6 @@ func (ActionsModel) AttributeTypes() map[string]attr.Type {
 }
 
 // ---------------------------------------------------------------------------
-// Helper: parse JSON string to map[string]interface{}
-// ---------------------------------------------------------------------------
-
-func parseJSONToMap(s string) map[string]interface{} {
-	if s == "" {
-		return nil
-	}
-	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(s), &result); err != nil {
-		return nil
-	}
-	return result
-}
-
-func marshalToJSONString(v interface{}) types.String {
-	if v == nil {
-		return types.StringNull()
-	}
-	b, err := json.Marshal(v)
-	if err != nil {
-		return types.StringNull()
-	}
-	return flatteners.String(string(b))
-}
-
-// ---------------------------------------------------------------------------
 // Converters: Terraform model → SDK API types
 // ---------------------------------------------------------------------------
 
@@ -749,7 +722,7 @@ func convertWfStepsConfigToAPI(ctx context.Context, list types.List) ([]sgsdkgo.
 			}
 			step.WfStepInputData = &sgsdkgo.WfStepInputData{
 				SchemaType: &schemaType,
-				Data:       parseJSONToMap(idm.Data.ValueString()),
+				Data:       expanders.JSONStringToMap(idm.Data.ValueString()),
 			}
 		}
 		result[i] = step
@@ -983,7 +956,7 @@ func convertVcsConfigToAPI(ctx context.Context, obj types.Object, orgName string
 		}
 		// Data is *map: nil map (empty/invalid string) leaves the pointer nil -> key
 		// omitted, matching prior omitempty behavior; a non-nil map (incl. {}) is sent.
-		if dataMap := parseJSONToMap(idModel.Data.ValueString()); dataMap != nil {
+		if dataMap := expanders.JSONStringToMap(idModel.Data.ValueString()); dataMap != nil {
 			vcsConfig.IacInputData.Data = &dataMap
 		}
 	}
@@ -1052,10 +1025,10 @@ func convertWfChainingToAPI(ctx context.Context, list types.List) ([]*sgsdkgo.Mi
 			StackId:         m.StackId.ValueStringPointer(),
 		}
 		if !m.WorkflowRunPayload.IsNull() && !m.WorkflowRunPayload.IsUnknown() {
-			ms.WorkflowRunPayload = parseJSONToMap(m.WorkflowRunPayload.ValueString())
+			ms.WorkflowRunPayload = expanders.JSONStringToMap(m.WorkflowRunPayload.ValueString())
 		}
 		if !m.StackRunPayload.IsNull() && !m.StackRunPayload.IsUnknown() {
-			ms.StackRunPayload = parseJSONToMap(m.StackRunPayload.ValueString())
+			ms.StackRunPayload = expanders.JSONStringToMap(m.StackRunPayload.ValueString())
 		}
 		result[i] = ms
 	}
@@ -1221,9 +1194,9 @@ func convertWfChainingFromAPI(ctx context.Context, items []*sgsdkgo.MiniSteps) (
 		m := MinistepsWorkflowChainingModel{
 			WorkflowGroupId:    flatteners.String(item.WorkflowGroupId),
 			StackId:            flatteners.StringPtr(item.StackId),
-			StackRunPayload:    marshalToJSONString(item.StackRunPayload),
+			StackRunPayload:    flatteners.JSONInterfaceToString(item.StackRunPayload),
 			WorkflowId:         flatteners.StringPtr(item.WorkflowId),
-			WorkflowRunPayload: marshalToJSONString(item.WorkflowRunPayload),
+			WorkflowRunPayload: flatteners.JSONInterfaceToString(item.WorkflowRunPayload),
 		}
 		elems = append(elems, m)
 	}
@@ -1640,7 +1613,7 @@ func wfStepsConfigFromAPI(steps []sgsdkgo.WfStepsConfig) (types.List, diag.Diagn
 		}
 		inputDataObj := types.ObjectNull(WfStepInputDataModel{}.AttributeTypes())
 		if s.WfStepInputData != nil {
-			dataStr := marshalToJSONString(s.WfStepInputData.Data)
+			dataStr := flatteners.JSONInterfaceToString(s.WfStepInputData.Data)
 			idm := WfStepInputDataModel{
 				SchemaType: flatteners.String(string(*s.WfStepInputData.SchemaType)),
 				Data:       dataStr,
@@ -1904,10 +1877,10 @@ func vcsConfigFromAPI(vc *sgsdkgo.VcsConfig) (types.Object, diag.Diagnostics) {
 	iacInputNull := types.ObjectNull(IacInputDataModel{}.AttributeTypes())
 	if vc.IacInputData != nil {
 		// Data is *map: guard the nil pointer — a typed nil inside interface{} would slip
-		// past marshalToJSONString's nil check and marshal to the string "null".
+		// past JSONInterfaceToString's nil check and marshal to the string "null".
 		dataStr := types.StringNull()
 		if vc.IacInputData.Data != nil {
-			dataStr = marshalToJSONString(*vc.IacInputData.Data)
+			dataStr = flatteners.JSONInterfaceToString(*vc.IacInputData.Data)
 		}
 		idM := IacInputDataModel{
 			SchemaId:   flatteners.StringPtr(vc.IacInputData.SchemaId),
