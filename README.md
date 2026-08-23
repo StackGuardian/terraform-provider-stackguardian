@@ -37,29 +37,9 @@ resource "stackguardian_workflow_group" "example" {
 }
 ```
 
-## Supported resources
+## Documentation
 
-| Resource                                             | Data source |
-| ---------------------------------------------------- | ----------- |
-| `stackguardian_connector`                            | ✓           |
-| `stackguardian_workflow_group`                       | ✓           |
-| `stackguardian_role`                                 | ✓           |
-| `stackguardian_rolev4`                               |             |
-| `stackguardian_role_assignment`                      | ✓           |
-| `stackguardian_policy`                               | ✓           |
-| `stackguardian_runner_group`                         | ✓           |
-| `stackguardian_workflow_template`                    | ✓           |
-| `stackguardian_workflow_template_revision`           | ✓           |
-| `stackguardian_workflow_step_template`               | ✓           |
-| `stackguardian_workflow_step_template_revision`      | ✓           |
-| `stackguardian_stack_template`                       | ✓           |
-| `stackguardian_stack_template_revision`              | ✓           |
-| `stackguardian_workflow_git`                         | ✓           |
-| `stackguardian_workflow_from_template`               |             |
-
-Additional data sources: `stackguardian_workflow_outputs`, `stackguardian_stack_outputs`, `stackguardian_stack_workflow_outputs`, and `stackguardian_runner_group_token`.
-
-Full documentation for every resource and data source is available on the [Terraform Registry](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs) and in the [`docs/`](/docs) directory.
+The full list of supported resources and data sources, with documentation for each, is available on the [Terraform Registry](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs).
 
 ## Examples
 
