@@ -10,6 +10,9 @@
 
 The [StackGuardian Terraform Provider](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest) allows [Terraform](https://www.terraform.io/) to programmatically interact with the [StackGuardian API](https://docs.stackguardian.io/docs/api/overview) to help you manage resources on the StackGuardian platform, ultimately enabling organizations to manage cloud infrastructure in a cost-efficient, secure, and compliant way.
 
+> [!TIP]
+> Looking for ready-to-use examples? All StackGuardian Terraform modules and examples are maintained in the **[terraform-stackguardian-modules](https://github.com/StackGuardian/terraform-stackguardian-modules)** repository.
+
 ## Usage
 
 The provider is available on the [Terraform Registry](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest):
@@ -43,6 +46,7 @@ The full list of supported resources and data sources, with documentation for ea
 
 ## Examples
 
+- **[terraform-stackguardian-modules](https://github.com/StackGuardian/terraform-stackguardian-modules)** — the collection of StackGuardian Terraform modules and examples.
 - [Quickstart guide](/docs-guides-assets/quickstart) — a minimal working configuration to get started.
 - [Onboarding examples](/docs-guides-assets/onboarding) — end-to-end projects covering connectors, workflow groups, roles, and role assignments.
 
