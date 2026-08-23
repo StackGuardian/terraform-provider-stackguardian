@@ -4,111 +4,99 @@
 
 # StackGuardian Terraform Provider
 
-_**DISCLAIMER:** This Terraform Provider project is currently in pre-release mode and is intended to be used with StackGuardian test servers and not in production environments_.
+[![Terraform Registry](https://img.shields.io/badge/terraform-registry-623CE4?logo=terraform)](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest)
+[![Release](https://img.shields.io/github/v/release/StackGuardian/terraform-provider-stackguardian)](https://github.com/StackGuardian/terraform-provider-stackguardian/releases)
+[![License](https://img.shields.io/badge/license-MPL--2.0-blue)](/LICENSE)
 
-The [StackGuardian Terraform Provider](https://github.com/StackGuardian/terraform-provider-stackguardian) allows [Terraform](https://www.terraform.io/) to programmatically interact with the [StackGuardian Orchestrator Test API](https://docs.qa.stackguardian.io/docs/api/overview) to help you manage resources on StackGaudian platform and ultimatelty enabling organizations to manage cloud infrastructure in a cost-efficient, secure, and compliant way.
+The [StackGuardian Terraform Provider](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest) allows [Terraform](https://www.terraform.io/) to programmatically interact with the [StackGuardian API](https://docs.stackguardian.io/docs/api/overview) to help you manage resources on the StackGuardian platform, ultimately enabling organizations to manage cloud infrastructure in a cost-efficient, secure, and compliant way.
 
-The [StackGuardian Terraform Provider](https://github.com/StackGuardian/terraform-provider-stackguardian) allows [Terraform](https://www.terraform.io/) to programmatically interact with the [StackGuardian Orchestrator Test API](https://docs.qa.stackguardian.io/docs/api/overview) to help you manage resources on StackGaudian platform and ultimatelty enabling organizations to manage cloud infrastructure in a cost-efficient, secure, and compliant way.
+## Usage
 
-## Documentation
+The provider is available on the [Terraform Registry](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest):
 
-This Terraform provider currently supports the following StackGuardian resources:
-
-- Connector (Cloud and Version Control)
-- Workflow Group
-- Role
-- Role Assignment (Users and SSO Groups)
-
-Please refer to the [onboarding examples files](/docs-guides-assets/onboarding) for details on how to work with these resources. Other resources like Policies, Runner Groups etc. are work under progress and will be released in the future releases. You can show your interested in new features by creating issues in our GitHub repo.
-
-## Installation steps
-
-**This version of the StackGuardian Terraform provider is currently in pre release and is not yet available on the Terraform Registry.**\
-To install it, you will need to download the zip file for your platform and architecture from the [latest pre release](https://github.com/StackGuardian/terraform-provider-stackguardian/releases/tag/v1.0.0-rc) and extract it to your local machine.
-
-1. Create a directory for the StackGuardian Terraform provider.
-
-   **Linux/MacOS**\
-   Replace `<OS_ARCH>` in the command below with the operating system and architecture of your machine, for example `linux_amd64`, `darwin_arm64`.
-
-   ```
-   export OS_ARCH=<OS_ARCH>
-   mkdir -p ~/.terraform.d/plugins/terraform.local/local/StackGuardian/1.0.0-rc/${OS_ARCH}
-   ```
-
-   **Windows**
-
-   ```
-   mkdir %USERPROFILE%\.terraform.d\plugins\terraform.local\local\StackGuardian\1.0.0-rc\windows_amd64
-   ```
-
-2. We need to make sure that the following configuration is set in the `.terraformrc` file so that Terraform can find the local StackGuardian Terraform provider.\
-   _Please replace `<Fully qualified path to .terraform.d/plugins>` with the fully qualified path to your `.terraform.d/plugins` directory._
-
-   ```
-    provider_installation {
-        filesystem_mirror
-        {
-            path    = "<Fully qualified path to .terraform.d/plugins>"
-        }
-        direct
-        {
-            exclude = ["terraform.local/*/*"]
-        }
+```terraform
+terraform {
+  required_providers {
+    stackguardian = {
+      source  = "StackGuardian/stackguardian"
+      version = "~> 1.12"
     }
+  }
+}
 
-   ```
+provider "stackguardian" {
+  api_key  = "<YOUR-API-KEY>"                   # or env var STACKGUARDIAN_API_KEY
+  org_name = "<YOUR-ORG-NAME>"                  # or env var STACKGUARDIAN_ORG_NAME
+  api_uri  = "https://api.app.stackguardian.io" # or env var STACKGUARDIAN_API_URI; use "https://api.us.stackguardian.io" for the US region
+}
 
-3. Download the zip file for your platform and architecture from the [latest pre release](https://github.com/StackGuardian/terraform-provider-stackguardian/releases/tag/v1.0.0-rc) and extract it to the directory you created in step 1.\
-   **Linux/MacOS**
+resource "stackguardian_workflow_group" "example" {
+  resource_name = "Simple-Workflow-Group"
+  description   = "Example of how to create a workflow group using the StackGuardian Terraform Provider"
+  tags          = ["tf-provider-example", "example"]
+}
+```
 
-   ```sh
-   curl -L -o ~/.terraform.d/plugins/terraform.local/local/StackGuardian/1.0.0-rc/${OS_ARCH}/terraform-provider-stackguardian_v1.0.0-rc.tar.gz \
-   "https://github.com/StackGuardian/terraform-provider-stackguardian/releases/download/v1.0.0-rc/terraform-provider-stackguardian_${OS_ARCH}.tar.gz"
-   ```
+## Supported resources
 
-   ```sh
-   cd ~/.terraform.d/plugins/terraform.local/local/StackGuardian/1.0.0-rc/${OS_ARCH}
-   tar -xvf terraform-provider-stackguardian_v1.0.0-rc.tar.gz
-   ```
+| Resource                                             | Data source |
+| ---------------------------------------------------- | ----------- |
+| `stackguardian_connector`                            | ✓           |
+| `stackguardian_workflow_group`                       | ✓           |
+| `stackguardian_role`                                 | ✓           |
+| `stackguardian_rolev4`                               |             |
+| `stackguardian_role_assignment`                      | ✓           |
+| `stackguardian_policy`                               | ✓           |
+| `stackguardian_runner_group`                         | ✓           |
+| `stackguardian_workflow_template`                    | ✓           |
+| `stackguardian_workflow_template_revision`           | ✓           |
+| `stackguardian_workflow_step_template`               | ✓           |
+| `stackguardian_workflow_step_template_revision`      | ✓           |
+| `stackguardian_stack_template`                       | ✓           |
+| `stackguardian_stack_template_revision`              | ✓           |
+| `stackguardian_workflow_git`                         | ✓           |
+| `stackguardian_workflow_from_template`               |             |
 
-   **Windows**
-   _On Windows using curl and tar requires Windows 10 version 1803 or later._
+Additional data sources: `stackguardian_workflow_outputs`, `stackguardian_stack_outputs`, `stackguardian_stack_workflow_outputs`, and `stackguardian_runner_group_token`.
 
-   ```
-   curl -L -o terraform-provider-stackguardian_v1.0.0-rc.zip \
-   "https://github.com/StackGuardian/terraform-provider-stackguardian/releases/download/v1.0.0-rc/terraform-provider-stackguardian_Windows_x86_64.zip"
-   ```
+Full documentation for every resource and data source is available on the [Terraform Registry](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs) and in the [`docs/`](/docs) directory.
 
-   ```
-   tar -xfz terraform-provider-stackguardian_v1.0.0-rc.zip -C %USERPROFILE%\.terraform.d\plugins\terraform.local\local\StackGuardian\1.0.0-rc\windows_amd64\
-   ```
+## Examples
 
-4. [Optional] Delete the downloaded zip file.\
-   **Linux/MacOS**
+- [Quickstart guide](/docs-guides-assets/quickstart) — a minimal working configuration to get started.
+- [Onboarding examples](/docs-guides-assets/onboarding) — end-to-end projects covering connectors, workflow groups, roles, and role assignments.
 
-   ```sh
-   rm terraform-provider-stackguardian_v1.0.0-rc.tar.gz
-   ```
+## Development
 
-   **Windows**
+Requirements:
 
-   ```
-   del terraform-provider-stackguardian_v1.0.0-rc.zip
-   ```
+- [Go](https://go.dev/) >= 1.21
+- [Terraform](https://developer.hashicorp.com/terraform/downloads) >= 0.13
 
-5. For Linux and MacOS systems you might need to set execute permissions on the terraform-provider-stackguardian binary.
+```bash
+make build          # compile the provider binary
+make install        # build and install into ~/.terraform.d/plugins for local use
+make test           # run unit tests
+make test-acc       # run acceptance tests (see below)
+make docs-generate  # regenerate docs with tfplugindocs
+make docs-validate  # validate generated docs
+```
 
-   ```sh
-   chmod +x terraform-provider-stackguardian
-   ```
+Acceptance tests run against a real StackGuardian organization and require:
 
-6. All done! You can now use the StackGuardian Terraform provider to create and manage resources in your StackGuardian test environment organization.
+```bash
+export TF_ACC=1
+export STACKGUARDIAN_API_KEY=<key>
+export STACKGUARDIAN_API_URI=<uri>
+export STACKGUARDIAN_ORG_NAME=<org>
+```
 
-To get started you can try `project-01` and `project-02` from the [onboarding examples files](/docs-guides-assets/onboarding).
-_Do remember to replace the `<ORG_NAME>` and `<API_KEY>` placeholders in the provider definition with your actual values from your organization on the StackGuardian test environment._
+Release notes for each version are in the [CHANGELOG](/CHANGELOG.md) and on the [GitHub releases page](https://github.com/StackGuardian/terraform-provider-stackguardian/releases).
 
 ## Contributing
 
-This project is currently only open to limited external contributions, please reachout to [@akshat0694](https://github.com/akshat0694).
-It will become generalliy available for contrinutions after the release of v1.0.0.
+Contributions are welcome — please see [CONTRIBUTING.md](/CONTRIBUTING.md) for guidelines and the [Code of Conduct](/CODE_OF_CONDUCT.md) for community standards. Use [GitHub issues](https://github.com/StackGuardian/terraform-provider-stackguardian/issues) to report bugs or request features.
+
+## License
+
+This project is licensed under the [Mozilla Public License 2.0](/LICENSE).
