@@ -121,24 +121,18 @@ func (WfStepInputDataModel) AttributeTypes() map[string]attr.Type {
 // ---------------------------------------------------------------------------
 
 type StackInputSchemaModel struct {
-	Id           types.String `tfsdk:"id"`
 	Name         types.String `tfsdk:"name"`
-	Description  types.String `tfsdk:"description"`
 	Type         types.String `tfsdk:"type"`
 	EncodedData  types.String `tfsdk:"encoded_data"`
 	UiSchemaData types.String `tfsdk:"ui_schema_data"`
-	IsCommitted  types.Bool   `tfsdk:"is_committed"`
 }
 
 func (StackInputSchemaModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
-		"id":             types.StringType,
 		"name":           types.StringType,
-		"description":    types.StringType,
 		"type":           types.StringType,
 		"encoded_data":   types.StringType,
 		"ui_schema_data": types.StringType,
-		"is_committed":   types.BoolType,
 	}
 }
 
@@ -987,7 +981,7 @@ func convertNotificationRecipientsToAPI(ctx context.Context, list types.List) ([
 	return result, nil
 }
 
-func convertWebhooksToAPI(ctx context.Context, list types.List) ([]map[string]interface{}, diag.Diagnostics) {
+func convertWebhooksToAPI(ctx context.Context, list types.List) ([]*sgsdkgo.Webhook, diag.Diagnostics) {
 	if list.IsNull() || list.IsUnknown() {
 		return nil, nil
 	}
@@ -995,14 +989,14 @@ func convertWebhooksToAPI(ctx context.Context, list types.List) ([]map[string]in
 	if diags := list.ElementsAs(ctx, &models, false); diags.HasError() {
 		return nil, diags
 	}
-	result := make([]map[string]interface{}, len(models))
+	result := make([]*sgsdkgo.Webhook, len(models))
 	for i, m := range models {
-		wh := map[string]interface{}{
-			"webhookName": m.WebhookName.ValueString(),
-			"webhookUrl":  m.WebhookUrl.ValueString(),
+		wh := &sgsdkgo.Webhook{
+			WebhookName: m.WebhookName.ValueString(),
+			WebhookUrl:  m.WebhookUrl.ValueString(),
 		}
 		if !m.WebhookSecret.IsNull() && !m.WebhookSecret.IsUnknown() {
-			wh["webhookSecret"] = m.WebhookSecret.ValueString()
+			wh.WebhookSecret = m.WebhookSecret.ValueStringPointer()
 		}
 		result[i] = wh
 	}
@@ -1088,7 +1082,7 @@ func convertMiniStepsToAPI(ctx context.Context, obj types.Object) (*sgsdkgo.Mini
 		wh := &sgsdkgo.WebhookTypes{}
 		for _, pair := range []struct {
 			list *types.List
-			dest *[]map[string]interface{}
+			dest *[]*sgsdkgo.Webhook
 		}{
 			{&whModel.ApprovalRequired, &wh.ApprovalRequired},
 			{&whModel.Cancelled, &wh.Cancelled},
@@ -1157,20 +1151,20 @@ func convertNotificationRecipientsFromAPI(ctx context.Context, recipients []*sgs
 	return obj, nil
 }
 
-func convertWebhooksFromAPI(ctx context.Context, webhooks []map[string]interface{}) (types.List, diag.Diagnostics) {
+func convertWebhooksFromAPI(ctx context.Context, webhooks []*sgsdkgo.Webhook) (types.List, diag.Diagnostics) {
 	nullObj := types.ListNull(types.ObjectType{AttrTypes: MinistepsWebhooksModel{}.AttributeTypes()})
 	if webhooks == nil {
 		return nullObj, nil
 	}
 	elems := make([]MinistepsWebhooksModel, 0, len(webhooks))
 	for _, wh := range webhooks {
-		name, _ := wh["webhookName"].(string)
-		url, _ := wh["webhookUrl"].(string)
-		secret, _ := wh["webhookSecret"].(string)
+		if wh == nil {
+			continue
+		}
 		m := MinistepsWebhooksModel{
-			WebhookName:   flatteners.String(name),
-			WebhookUrl:    flatteners.String(url),
-			WebhookSecret: flatteners.String(secret),
+			WebhookName:   flatteners.String(wh.WebhookName),
+			WebhookUrl:    flatteners.String(wh.WebhookUrl),
+			WebhookSecret: flatteners.StringPtr(wh.WebhookSecret),
 		}
 		elems = append(elems, m)
 	}
@@ -1401,23 +1395,12 @@ func convertWorkflowsConfigToAPI(ctx context.Context, obj types.Object, orgName 
 			}
 			schemas := make([]*sgsdkgo.InputSchemas, len(isModels))
 			for j, ism := range isModels {
-				is := &sgsdkgo.InputSchemas{
+				schemas[j] = &sgsdkgo.InputSchemas{
 					Name:         ism.Name.ValueStringPointer(),
-					Description:  ism.Description.ValueStringPointer(),
 					Type:         sgsdkgo.InputSchemasTypeEnum(ism.Type.ValueString()),
 					EncodedData:  ism.EncodedData.ValueStringPointer(),
 					UiSchemaData: ism.UiSchemaData.ValueStringPointer(),
 				}
-				// id/is_committed are Optional+Computed: ValueStringPointer()/ValueBoolPointer()
-				// return &""/&false for unknown, which would send a spurious empty id or force
-				// is_committed=false on create when the user hasn't set them. Only set when known.
-				if !ism.Id.IsNull() && !ism.Id.IsUnknown() {
-					is.Id = ism.Id.ValueStringPointer()
-				}
-				if !ism.IsCommitted.IsNull() && !ism.IsCommitted.IsUnknown() {
-					is.IsCommitted = ism.IsCommitted.ValueBoolPointer()
-				}
-				schemas[j] = is
 			}
 			wf.InputSchemas = schemas
 		}
@@ -1961,13 +1944,10 @@ func workflowsConfigFromAPI(wc *stacktemplaterevisions.StackTemplateRevisionWork
 					continue
 				}
 				ism := StackInputSchemaModel{
-					Id:           flatteners.StringPtr(is.Id),
 					Name:         flatteners.StringPtr(is.Name),
-					Description:  flatteners.StringPtr(is.Description),
 					Type:         flatteners.String(string(is.Type)),
 					EncodedData:  flatteners.StringPtr(is.EncodedData),
 					UiSchemaData: flatteners.StringPtr(is.UiSchemaData),
-					IsCommitted:  flatteners.BoolPtr(is.IsCommitted),
 				}
 				isObj, diags2 := types.ObjectValueFrom(context.Background(), StackInputSchemaModel{}.AttributeTypes(), ism)
 				if diags2.HasError() {

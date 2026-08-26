@@ -7,7 +7,6 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
@@ -550,14 +549,6 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 										stringplanmodifier.UseStateForUnknown(),
 									},
 								},
-								"workflow_id": schema.StringAttribute{
-									MarkdownDescription: "The workflow's own resource ID, distinct from `id` (the template-defined workflow slot this entry fills).",
-									Optional:            true,
-									Computed:            true,
-									PlanModifiers: []planmodifier.String{
-										stringplanmodifier.UseStateForUnknown(),
-									},
-								},
 								"is_active": schema.StringAttribute{
 									MarkdownDescription: "Whether the workflow is active.",
 									Optional:            true,
@@ -612,19 +603,13 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 								"input_schemas": schema.ListNestedAttribute{
 									MarkdownDescription: "Input schema definitions for this workflow.",
 									Optional:            true,
+									Computed:            true,
+									PlanModifiers: []planmodifier.List{
+										listplanmodifier.UseStateForUnknown(),
+									},
 									NestedObject: schema.NestedAttributeObject{
 										Attributes: map[string]schema.Attribute{
-											"id": schema.StringAttribute{
-												Computed: true,
-												Optional: true,
-												PlanModifiers: []planmodifier.String{
-													stringplanmodifier.UseStateForUnknown(),
-												},
-											},
 											"name": schema.StringAttribute{
-												Optional: true,
-											},
-											"description": schema.StringAttribute{
 												Optional: true,
 											},
 											"type": schema.StringAttribute{
@@ -637,13 +622,6 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 											},
 											"ui_schema_data": schema.StringAttribute{
 												Optional: true,
-											},
-											"is_committed": schema.BoolAttribute{
-												Optional: true,
-												Computed: true,
-												PlanModifiers: []planmodifier.Bool{
-													boolplanmodifier.UseStateForUnknown(),
-												},
 											},
 										},
 									},
@@ -684,6 +662,10 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 								"user_schedules": schema.ListNestedAttribute{
 									MarkdownDescription: "User-defined schedules.",
 									Optional:            true,
+									Computed:            true,
+									PlanModifiers: []planmodifier.List{
+										listplanmodifier.UseStateForUnknown(),
+									},
 									NestedObject: schema.NestedAttributeObject{
 										Attributes: map[string]schema.Attribute{
 											"name":  schema.StringAttribute{Optional: true},
@@ -696,6 +678,10 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 								"mini_steps": schema.SingleNestedAttribute{
 									MarkdownDescription: "Mini steps configuration.",
 									Optional:            true,
+									Computed:            true,
+									PlanModifiers: []planmodifier.Object{
+										objectplanmodifier.UseStateForUnknown(),
+									},
 									Attributes: map[string]schema.Attribute{
 										"notifications": schema.SingleNestedAttribute{
 											Optional: true,
@@ -743,6 +729,10 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 								"runner_constraints": schema.SingleNestedAttribute{
 									MarkdownDescription: "Runner constraints.",
 									Optional:            true,
+									Computed:            true,
+									PlanModifiers: []planmodifier.Object{
+										objectplanmodifier.UseStateForUnknown(),
+									},
 									Attributes: map[string]schema.Attribute{
 										"type": schema.StringAttribute{Required: true},
 										"names": schema.ListAttribute{
@@ -761,13 +751,18 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"name":  schema.StringAttribute{Optional: true},
+						"name": schema.StringAttribute{
+							Computed: true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
+						},
 						"desc":  schema.StringAttribute{Optional: true},
 						"cron":  schema.StringAttribute{Required: true},
 						"state": schema.StringAttribute{Required: true},
 						"inputs": schema.SingleNestedAttribute{
 							MarkdownDescription: "Action to run on this schedule.",
-							Optional:            true,
+							Required:            true,
 							Attributes: map[string]schema.Attribute{
 								"action_type": schema.StringAttribute{
 									MarkdownDescription: "The action to trigger for this schedule.",

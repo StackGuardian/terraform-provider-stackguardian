@@ -467,17 +467,8 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 		Optional:            true,
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
-				"id": schema.StringAttribute{
-					MarkdownDescription: constants.Id,
-					Computed:            true,
-					Optional:            true,
-				},
 				"name": schema.StringAttribute{
 					MarkdownDescription: constants.InputSchemaName,
-					Optional:            true,
-				},
-				"description": schema.StringAttribute{
-					MarkdownDescription: fmt.Sprintf(constants.Description, "workflow"),
 					Optional:            true,
 				},
 				"type": schema.StringAttribute{
@@ -491,10 +482,6 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 				"ui_schema_data": schema.StringAttribute{
 					MarkdownDescription: constants.InputSchemaUISchemaData,
 					Optional:            true,
-				},
-				"is_committed": schema.BoolAttribute{
-					Optional: true,
-					Computed: true,
 				},
 			},
 		},

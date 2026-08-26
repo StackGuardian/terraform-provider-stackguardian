@@ -16,8 +16,11 @@ import (
 // setupSecondStackTemplateRevision creates and publishes revision :2 of an
 // existing stack template (already created by setupStackTemplateChain), with
 // the given description and wired to the same workflow slot/template as
-// revision :1. Registers cleanup. Returns the bare revision id ("<name>:2").
-func setupSecondStackTemplateRevision(t *testing.T, stackTemplateID, workflowTemplateID, description string) string {
+// revision :1. numberOfApprovalsRequired, if non-nil, is set on that workflow
+// slot — used to test workflows_config's revision-based re-resolution
+// (reResolveWorkflowsConfigOnRevisionChange), since revision :1 never sets it.
+// Registers cleanup. Returns the bare revision id ("<name>:2").
+func setupSecondStackTemplateRevision(t *testing.T, stackTemplateID, workflowTemplateID, description string, numberOfApprovalsRequired *int) string {
 	t.Helper()
 	client := getClient()
 	revisionID := fmt.Sprintf("%s:2", stackTemplateID)
@@ -47,9 +50,10 @@ func setupSecondStackTemplateRevision(t *testing.T, stackTemplateID, workflowTem
 			WorkflowsConfig: &stacktemplaterevisions.StackTemplateRevisionWorkflowsConfig{
 				Workflows: []*stacktemplaterevisions.StackTemplateRevisionWorkflow{
 					{
-						Id:           sgsdkgo.String(testWfSlotId),
-						TemplateId:   &prefixedWorkflowTemplateID,
-						ResourceName: sgsdkgo.String("wf-1"),
+						Id:                        sgsdkgo.String(testWfSlotId),
+						TemplateId:                &prefixedWorkflowTemplateID,
+						ResourceName:              sgsdkgo.String("wf-1"),
+						NumberOfApprovalsRequired: numberOfApprovalsRequired,
 						VcsConfig: &sgsdkgo.VcsConfig{
 							IacVcsConfig: &sgsdkgo.IacvcsConfig{
 								UseMarketplaceTemplate: &useMarketplace,
@@ -157,7 +161,7 @@ func TestAccStack_TemplateGroupIdReResolution(t *testing.T) {
 	id := "tf-provider-stack-tmplswitch"
 
 	revision1 := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
-	revision2 := setupSecondStackTemplateRevision(t, stackTemplateName, wfTemplateName, "revision two description")
+	revision2 := setupSecondStackTemplateRevision(t, stackTemplateName, wfTemplateName, "revision two description", nil)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },

@@ -70,7 +70,7 @@ func TestAccStack_ActionsDuplicateKey(t *testing.T) {
 	id := "tf-provider-stack-actdupe"
 
 	revision1 := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
-	revision2 := setupSecondStackTemplateRevision(t, stackTemplateName, wfTemplateName, "revision two")
+	revision2 := setupSecondStackTemplateRevision(t, stackTemplateName, wfTemplateName, "revision two", nil)
 
 	collidingCustomActions := fmt.Sprintf(`
   custom_actions = {
@@ -102,6 +102,68 @@ func TestAccStack_ActionsDuplicateKey(t *testing.T) {
 			{
 				Config:      testAccStackConfig(wfGrpName, revision2, id, collidingCustomActions),
 				ExpectError: regexp.MustCompile("Duplicate action key"),
+			},
+		},
+	})
+}
+
+// TestAccStack_CustomActionsRevisionRemovedWorkflow verifies that switching
+// template_group_id to a revision that dropped a workflow slot custom_actions
+// still references is rejected at plan time (validateCustomActionsAgainstRevision),
+// rather than sending a dangling reference the API would reject with a less
+// actionable error. revision1 (setupStackTemplateChainNoActions) wires
+// testWfSlotId and secondWfSlotId; revision2 (setupSecondStackTemplateRevision)
+// only re-declares testWfSlotId, so secondWfSlotId is the removed workflow.
+func TestAccStack_CustomActionsRevisionRemovedWorkflow(t *testing.T) {
+	wfGrpName := "tf-provider-stack-actrmwf-wfgrp"
+	wfTemplateName := "tf-provider-stack-actrmwf-wftmpl"
+	stackTemplateName := "tf-provider-stack-actrmwf-stmpl"
+	id := "tf-provider-stack-actrmwf"
+
+	t.Cleanup(func() {
+		logCleanupErr(t, fmt.Sprintf("delete workflow group %q", wfGrpName), deleteWorkflowGroupFixture(wfGrpName))
+	})
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil && !is409(err) {
+		t.Fatalf("TestAccStack_CustomActionsRevisionRemovedWorkflow: create workflow group %q: %s", wfGrpName, err)
+	}
+	workflowTemplateID := setupStackWorkflowTemplate(t, wfTemplateName)
+	revision1 := setupStackTemplateChainNoActions(t, stackTemplateName, workflowTemplateID)
+	revision2 := setupSecondStackTemplateRevision(t, stackTemplateName, workflowTemplateID, "revision two", nil)
+	t.Cleanup(func() { deleteStackFixture(wfGrpName, id) })
+
+	referencesSecondSlot := fmt.Sprintf(`
+  custom_actions = {
+    notify = {
+      name = "notify"
+      order = {
+        %[1]q = {
+          parameters = {
+            terraform_action = {
+              action = "apply"
+            }
+          }
+        }
+      }
+    }
+  }
+`, secondWfSlotId)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision1, id, referencesSecondSlot),
+				Check:  resource.TestCheckResourceAttr("stackguardian_stack.test", "custom_actions.notify.name", "notify"),
+			},
+			{
+				// revision2 dropped secondWfSlotId — custom_actions still
+				// references it, so the switch must be rejected.
+				Config:      testAccStackConfig(wfGrpName, revision2, id, referencesSecondSlot),
+				ExpectError: regexp.MustCompile("custom_actions references a removed workflow"),
 			},
 		},
 	})
