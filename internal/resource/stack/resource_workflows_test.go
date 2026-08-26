@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"testing"
 
+	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
@@ -45,7 +46,6 @@ func TestAccStack_WorkflowsConfigMinimalEntry(t *testing.T) {
 					// None of these were declared — must resolve to real values, not
 					// be forced to "" / 0 by the unknown-value guard bug.
 					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.resource_name"),
-					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.workflow_id"),
 					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.template_id"),
 					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.user_job_cpu"),
 					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.user_job_memory"),
@@ -55,6 +55,56 @@ func TestAccStack_WorkflowsConfigMinimalEntry(t *testing.T) {
 				// Round trips with no diff.
 				Config:   testAccStackConfig(wfGrpName, revision, id, config),
 				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccStack_WorkflowsConfigRevisionReResolution verifies
+// reResolveWorkflowsConfigOnRevisionChange: a per-workflow field the stack
+// leaves unset (number_of_approvals_required) must pick up a value the new
+// revision provides that the old one didn't (step 2), and must go back to
+// empty when a later revision drops it again (step 3) — rather than the
+// value getting stuck at whatever UseStateForUnknown last carried forward.
+func TestAccStack_WorkflowsConfigRevisionReResolution(t *testing.T) {
+	wfGrpName := "tf-provider-stack-wfrevre-wfgrp"
+	wfTemplateName := "tf-provider-stack-wfrevre-wftmpl"
+	stackTemplateName := "tf-provider-stack-wfrevre-stmpl"
+	id := "tf-provider-stack-wfrevre"
+
+	revision1 := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+	revision2 := setupSecondStackTemplateRevision(t, stackTemplateName, wfTemplateName, "revision two", sgsdkgo.Int(2))
+
+	config := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      { id = %q }
+    ]
+  }
+`, testWfSlotId)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				// revision1 never sets number_of_approvals_required.
+				Config: testAccStackConfig(wfGrpName, revision1, id, config),
+				Check:  resource.TestCheckNoResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.number_of_approvals_required"),
+			},
+			{
+				// revision2 sets it to 2 — must now appear, though nothing in
+				// this stack's own config changed.
+				Config: testAccStackConfig(wfGrpName, revision2, id, config),
+				Check:  resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.number_of_approvals_required", "2"),
+			},
+			{
+				// Back to revision1 — must clear again, not stay stuck at 2.
+				Config: testAccStackConfig(wfGrpName, revision1, id, config),
+				Check:  resource.TestCheckNoResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.number_of_approvals_required"),
 			},
 		},
 	})
@@ -278,7 +328,6 @@ func TestAccStack_WorkflowsConfigRoundTrip(t *testing.T) {
 			{
 				Config: testAccStackConfig(wfGrpName, revision, id, config),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.input_schemas.0.id"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.input_schemas.0.type", "FORM_JSONSCHEMA"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.approvers.0", "alice@example.com"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.0.cron", "0 8 ? * MON *"),

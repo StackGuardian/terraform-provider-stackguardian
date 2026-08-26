@@ -102,8 +102,8 @@ func TestAccStack_DeploymentPlatformConfigInvalidKind(t *testing.T) {
 
 // TestAccStack_MiniStepsAndUserSchedules covers the stack-level mini_steps
 // (notifications/webhooks/wf_chaining) and user_schedules[].inputs (the
-// StackAction shape: action_type only) round trip, and that inputs is
-// omittable entirely.
+// StackAction shape: action_type only) round trip. inputs is Required — a
+// schedule with no action isn't meaningful — so every entry declares one.
 func TestAccStack_MiniStepsAndUserSchedules(t *testing.T) {
 	wfGrpName := "tf-provider-stack-ministeps-wfgrp"
 	wfTemplateName := "tf-provider-stack-ministeps-wftmpl"
@@ -133,7 +133,6 @@ func TestAccStack_MiniStepsAndUserSchedules(t *testing.T) {
 
   user_schedules = [
     {
-      name  = "nightly"
       desc  = "Nightly run"
       cron  = "0 8 ? * MON *"
       state = "ENABLED"
@@ -144,6 +143,9 @@ func TestAccStack_MiniStepsAndUserSchedules(t *testing.T) {
     {
       cron  = "0 9 ? * TUE *"
       state = "DISABLED"
+      inputs = {
+        action_type = "plan"
+      }
     }
   ]
 `
@@ -161,12 +163,12 @@ func TestAccStack_MiniStepsAndUserSchedules(t *testing.T) {
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "mini_steps.notifications.email.completed.0.recipients.0", "a@example.com"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "mini_steps.webhooks.completed.0.webhook_name", "on-completed"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "mini_steps.webhooks.completed.0.webhook_url", "https://example.com/hook"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "user_schedules.0.name", "nightly"),
+					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "user_schedules.0.name"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "user_schedules.0.cron", "0 8 ? * MON *"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "user_schedules.0.inputs.action_type", "apply"),
-					// Second entry omits inputs entirely — must not error.
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "user_schedules.1.cron", "0 9 ? * TUE *"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "user_schedules.1.state", "DISABLED"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "user_schedules.1.inputs.action_type", "plan"),
 				),
 			},
 			{

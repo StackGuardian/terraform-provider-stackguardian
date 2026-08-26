@@ -234,10 +234,10 @@ func (r *stackResource) resolveWorkflowTemplates(ctx context.Context, plan Stack
 // runs for them. Setting those fields to concrete resolved values here lets
 // plan == apply. Fields the user declared in config are left untouched.
 //
-// Only description/tags/context_tags/default_actions/custom_actions are
-// handled here — those are the only Stack attributes with a real counterpart
-// on a stack template revision. workflows_config has no revision-based
-// resolution yet.
+// Covers description/tags/context_tags/default_actions (stack-level) and
+// workflows_config's per-workflow template-derived fields. custom_actions has
+// no template counterpart to re-resolve, but is validated here: a reference
+// to a workflow the new revision dropped is an error, not a silent carry-forward.
 func (r *stackResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
 		return // create or destroy — no revision transition to handle
@@ -261,7 +261,23 @@ func (r *stackResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 		return
 	}
 
+	resp.Diagnostics.Append(validateCustomActionsAgainstRevision(ctx, plan.CustomActions, plan.WorkflowsConfig, tpl)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	workflowTemplates, d := r.resolveWorkflowTemplates(ctx, plan, tpl)
+	resp.Diagnostics.Append(d...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	resp.Diagnostics.Append(reResolveOnRevisionChange(ctx, &plan, config, tpl)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(reResolveWorkflowsConfigOnRevisionChange(ctx, &plan, config, state, tpl, workflowTemplates)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
