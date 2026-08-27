@@ -1995,6 +1995,12 @@ func mergeWorkflowWithStackTemplateOverride(wf *sgsdkgo.StackWorkflowsConfigWork
 	if wf.TemplateId == nil {
 		wf.TemplateId = stackTplWf.TemplateId
 	}
+	if wf.WfType == nil {
+		wf.WfType = stackTplWf.WfType
+	}
+	if wf.ParallelExecution == nil {
+		wf.ParallelExecution = stackTplWf.ParallelExecution
+	}
 	if len(wf.WfStepsConfig) == 0 {
 		wf.WfStepsConfig = stackTplWf.WfStepsConfig
 	}
@@ -2057,6 +2063,12 @@ func mergeWorkflowWithWorkflowTemplateDefaults(wf *sgsdkgo.StackWorkflowsConfigW
 
 	if wf.Description == nil {
 		wf.Description = workflowTpl.LongDescription
+	}
+	if wf.WfType == nil {
+		wf.WfType = workflowTpl.WfType
+	}
+	if wf.ParallelExecution == nil {
+		wf.ParallelExecution = workflowTpl.ParallelExecution
 	}
 	if wf.NumberOfApprovalsRequired == nil {
 		wf.NumberOfApprovalsRequired = workflowTpl.NumberOfApprovalsRequired
@@ -2301,6 +2313,7 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 		if diags.HasError() {
 			return nullObj, diags
 		}
+		wfSteps = knownEmptyListIfNull(wfSteps, types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()})
 		tcObj, diags := flattenTerraformConfig(ctx, wf.TerraformConfig)
 		if diags.HasError() {
 			return nullObj, diags
@@ -2309,10 +2322,12 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 		if diags.HasError() {
 			return nullObj, diags
 		}
+		envVars = knownEmptyListIfNull(envVars, types.ObjectType{AttrTypes: EnvironmentVariableModel{}.AttributeTypes()})
 		dpcs, diags := flattenDeploymentPlatformConfig(ctx, wf.DeploymentPlatformConfig)
 		if diags.HasError() {
 			return nullObj, diags
 		}
+		dpcs = knownEmptyListIfNull(dpcs, types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()})
 		vcs, diags := flattenVcsConfig(ctx, wf.VcsConfig)
 		if diags.HasError() {
 			return nullObj, diags
@@ -2321,22 +2336,27 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 		if diags.HasError() {
 			return nullObj, diags
 		}
+		inputSchemas = knownEmptyListIfNull(inputSchemas, types.ObjectType{AttrTypes: StackInputSchemaModel{}.AttributeTypes()})
 		us, diags := flattenWfUserSchedules(ctx, wf.UserSchedules)
 		if diags.HasError() {
 			return nullObj, diags
 		}
+		us = knownEmptyListIfNull(us, types.ObjectType{AttrTypes: WfUserSchedulesModel{}.AttributeTypes()})
 		rc, diags := flattenRunnerConstraints(ctx, wf.RunnerConstraints)
 		if diags.HasError() {
 			return nullObj, diags
 		}
+		rc = knownEmptyObjectIfNull(rc, RunnerConstraintsModel{}.AttributeTypes())
 		msObj, diags := flattenMiniSteps(ctx, wf.MiniSteps)
 		if diags.HasError() {
 			return nullObj, diags
 		}
+		msObj = knownEmptyObjectIfNull(msObj, MinistepsModel{}.AttributeTypes())
 		ctMap, diags := flattenContextTags(ctx, wf.ContextTags)
 		if diags.HasError() {
 			return nullObj, diags
 		}
+		ctMap = knownEmptyMapIfNull(ctMap, types.StringType)
 
 		tagsList := types.ListNull(types.StringType)
 		if wf.Tags != nil {
@@ -2346,6 +2366,7 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 			}
 			tagsList = l
 		}
+		tagsList = knownEmptyListIfNull(tagsList, types.StringType)
 		approversList := types.ListNull(types.StringType)
 		if wf.Approvers != nil {
 			l, diags := types.ListValueFrom(ctx, types.StringType, wf.Approvers)
@@ -2354,6 +2375,7 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 			}
 			approversList = l
 		}
+		approversList = knownEmptyListIfNull(approversList, types.StringType)
 
 		wfType := ""
 		if wf.WfType != nil {
@@ -2369,22 +2391,27 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 		}
 
 		wm := WorkflowInStackModel{
-			Id:                        flatteners.StringPtr(wf.Id),
-			ResourceName:              flatteners.StringPtr(wf.ResourceName),
-			Description:               flatteners.StringPtr(wf.Description),
-			Tags:                      tagsList,
-			WfType:                    flatteners.String(wfType),
-			ParallelExecution:         flatteners.String(parallelExecution),
-			WfStepsConfig:             wfSteps,
-			TerraformConfig:           tcObj,
-			EnvironmentVariables:      envVars,
-			DeploymentPlatformConfig:  dpcs,
-			TemplateId:                flatteners.StringPtr(wf.TemplateId),
-			IsActive:                  flatteners.String(isActive),
-			VcsConfig:                 vcs,
-			InputSchemas:              inputSchemas,
-			Approvers:                 approversList,
-			NumberOfApprovalsRequired: flatteners.Int64Ptr(wf.NumberOfApprovalsRequired),
+			Id:                       flatteners.StringPtr(wf.Id),
+			ResourceName:             flatteners.StringPtr(wf.ResourceName),
+			Description:              flatteners.StringPtr(wf.Description),
+			Tags:                     tagsList,
+			WfType:                   flatteners.String(wfType),
+			ParallelExecution:        flatteners.String(parallelExecution),
+			WfStepsConfig:            wfSteps,
+			TerraformConfig:          tcObj,
+			EnvironmentVariables:     envVars,
+			DeploymentPlatformConfig: dpcs,
+			TemplateId:               flatteners.StringPtr(wf.TemplateId),
+			IsActive:                 flatteners.String(isActive),
+			VcsConfig:                vcs,
+			InputSchemas:             inputSchemas,
+			Approvers:                approversList,
+			// Int64PtrDefault (0, not null) — matches workflow_from_template's
+			// documented platform behavior: the API assigns 0 when nothing resolves
+			// a value, rather than leaving the field absent. A null here would be
+			// unrecoverable: UseStateForUnknown no-ops on null state, so it would
+			// re-plan as "known after apply" on every subsequent plan.
+			NumberOfApprovalsRequired: flatteners.Int64PtrDefault(wf.NumberOfApprovalsRequired),
 			UserJobCpu:                flatteners.Int64Ptr(wf.UserJobCpu),
 			UserJobMemory:             flatteners.Int64Ptr(wf.UserJobMemory),
 			UserSchedules:             us,
@@ -2907,6 +2934,65 @@ func flattenActionsMap(ctx context.Context, actions map[string]*sgsdkgo.Actions,
 // ToAPIModel / ToUpdateAPIModel / BuildAPIModelToStackModel
 // ---------------------------------------------------------------------------
 
+// knownEmptyListIfNull returns a known empty list (of elemType) when in is null,
+// otherwise returns in unchanged. Computed list attributes must hold a known value
+// in state so UseStateForUnknown engages on subsequent plans — that plan modifier
+// no-ops when req.StateValue.IsNull() (see terraform-plugin-framework's
+// listplanmodifier), so a null value re-plans as "known after apply" forever.
+// Mirrors workflow_from_template's identically-named helper.
+func knownEmptyListIfNull(in types.List, elemType attr.Type) types.List {
+	if in.IsNull() {
+		return types.ListValueMust(elemType, []attr.Value{})
+	}
+	return in
+}
+
+// knownEmptyMapIfNull is the map equivalent of knownEmptyListIfNull.
+func knownEmptyMapIfNull(in types.Map, elemType attr.Type) types.Map {
+	if in.IsNull() {
+		return types.MapValueMust(elemType, map[string]attr.Value{})
+	}
+	return in
+}
+
+// knownEmptyObjectIfNull returns a known object with all-null attributes (of
+// attrTypes) when in is null, otherwise returns in unchanged. Same rationale as
+// knownEmptyListIfNull.
+func knownEmptyObjectIfNull(in types.Object, attrTypes map[string]attr.Type) types.Object {
+	if in.IsNull() {
+		values := make(map[string]attr.Value, len(attrTypes))
+		for name, t := range attrTypes {
+			values[name] = newNullValue(t)
+		}
+		return types.ObjectValueMust(attrTypes, values)
+	}
+	return in
+}
+
+// newNullValue returns a typed null attr.Value for the given attr.Type.
+func newNullValue(t attr.Type) attr.Value {
+	switch tt := t.(type) {
+	case types.ObjectType:
+		return types.ObjectNull(tt.AttrTypes)
+	case types.ListType:
+		return types.ListNull(tt.ElemType)
+	case types.MapType:
+		return types.MapNull(tt.ElemType)
+	case types.SetType:
+		return types.SetNull(tt.ElemType)
+	case basetypes.BoolType:
+		return types.BoolNull()
+	case basetypes.Int64Type:
+		return types.Int64Null()
+	case basetypes.Float64Type:
+		return types.Float64Null()
+	case basetypes.NumberType:
+		return types.NumberNull()
+	default:
+		return types.StringNull()
+	}
+}
+
 // contextTagsFromTemplate converts a stack template revision's ContextTags
 // (map[string]string) to the map[string]*string shape sgsdkgo.Stack expects.
 func contextTagsFromTemplate(ct map[string]string) map[string]*string {
@@ -3308,9 +3394,9 @@ func reResolveOnRevisionChange(ctx context.Context, plan *StackResourceModel, co
 			if diags.HasError() {
 				return diags
 			}
-			plan.Tags = tagsList
+			plan.Tags = knownEmptyListIfNull(tagsList, types.StringType)
 		} else {
-			plan.Tags = types.ListNull(types.StringType)
+			plan.Tags = types.ListValueMust(types.StringType, []attr.Value{})
 		}
 	}
 
@@ -3320,7 +3406,7 @@ func reResolveOnRevisionChange(ctx context.Context, plan *StackResourceModel, co
 		if diags.HasError() {
 			return diags
 		}
-		plan.ContextTags = ctMap
+		plan.ContextTags = knownEmptyMapIfNull(ctMap, types.StringType)
 	}
 
 	// forceDefault=true: custom_actions is exclusively user-authored on the
@@ -3370,32 +3456,15 @@ func actionsNeedGeneration(tpl *stacktemplaterevisions.ReadStackTemplateRevision
 // the PLAN value — so if plan still carries the OLD revision's merged values
 // forward (UseStateForUnknown, since config left them unset), apply would
 // silently send stale data instead of re-deriving from the new revision.
-// wf_type/parallel_execution have no template counterpart, so they're
-// preserved from prior state rather than wiped to null; a slot newly added in
-// this same apply has no prior value to preserve, so those are left as
-// expandWorkflowsConfig(config, ...) computed them. state, not plan,
-// is the source for prior values — plan can be Unknown here for reasons
-// unrelated to the revision change (e.g. a slot added/removed in the same
-// apply), while state is always fully known.
-func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackResourceModel, config, state StackResourceModel, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) diag.Diagnostics {
+// Every per-workflow field now has a template counterpart in one of the two
+// merge layers, so a plain re-expand against config (using the NEW tpl/
+// workflowTemplates) is sufficient — nothing needs to be preserved from prior
+// state.
+func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackResourceModel, config StackResourceModel, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	if config.WorkflowsConfig.IsNull() || config.WorkflowsConfig.IsUnknown() {
 		return diags
-	}
-
-	prior, d := expandWorkflowsConfig(ctx, state.WorkflowsConfig, tpl, workflowTemplates)
-	diags.Append(d...)
-	if diags.HasError() {
-		return diags
-	}
-	priorById := make(map[string]*sgsdkgo.StackWorkflowsConfigWorkflow)
-	if prior != nil {
-		for _, w := range prior.Workflows {
-			if w != nil && w.Id != nil {
-				priorById[*w.Id] = w
-			}
-		}
 	}
 
 	fresh, d := expandWorkflowsConfig(ctx, config.WorkflowsConfig, tpl, workflowTemplates)
@@ -3405,15 +3474,6 @@ func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackRe
 	}
 	if fresh == nil {
 		return diags
-	}
-	for _, w := range fresh.Workflows {
-		if w == nil || w.Id == nil {
-			continue
-		}
-		if p := priorById[*w.Id]; p != nil {
-			w.WfType = p.WfType
-			w.ParallelExecution = p.ParallelExecution
-		}
 	}
 
 	wfcObj, d := flattenWorkflowsConfig(ctx, fresh)
@@ -3459,9 +3519,9 @@ func BuildAPIModelToStackModel(ctx context.Context, orgName string, apiResponse 
 		if diags.HasError() {
 			return nil, diags
 		}
-		stackModel.Tags = tagsList
+		stackModel.Tags = knownEmptyListIfNull(tagsList, types.StringType)
 	} else {
-		stackModel.Tags = types.ListNull(types.StringType)
+		stackModel.Tags = types.ListValueMust(types.StringType, []attr.Value{})
 	}
 
 	envVarsList, diagsEnv := flattenEnvironmentVariables(ctx, apiResponse.EnvironmentVariables)
@@ -3476,7 +3536,7 @@ func BuildAPIModelToStackModel(ctx context.Context, orgName string, apiResponse 
 	if diags.HasError() {
 		return nil, diags
 	}
-	stackModel.DeploymentPlatformConfig = dpcList
+	stackModel.DeploymentPlatformConfig = knownEmptyListIfNull(dpcList, types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()})
 
 	defaultActions, customActions, diagsAct := flattenActionsMap(ctx, translateActionsOrderKeys(apiResponse.Actions, apiResponse.WorkflowRelationsMap), false)
 	diags.Append(diagsAct...)
@@ -3505,7 +3565,7 @@ func BuildAPIModelToStackModel(ctx context.Context, orgName string, apiResponse 
 	if diags.HasError() {
 		return nil, diags
 	}
-	stackModel.ContextTags = ctMap
+	stackModel.ContextTags = knownEmptyMapIfNull(ctMap, types.StringType)
 
 	msObj, diagsMs := flattenMiniSteps(ctx, apiResponse.MiniSteps)
 	diags.Append(diagsMs...)

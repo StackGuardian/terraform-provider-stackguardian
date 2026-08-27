@@ -420,6 +420,9 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"default_actions": schema.MapNestedAttribute{
 				MarkdownDescription: "Actions define the sequence in which the workflows in the Stack are executed. This reflects the full set of actions on the stack (built-in and custom); use `custom_actions` to author your own.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.UseStateForUnknown(),
+				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: actionsAttrs,
 				},
