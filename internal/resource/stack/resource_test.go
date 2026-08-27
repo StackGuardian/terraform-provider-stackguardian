@@ -504,7 +504,7 @@ func TestAccStack_Import(t *testing.T) {
 //   - environment_variables round trip (set + omitted).
 //   - deployment_platform_config: invalid kind diagnostic.
 //   - workflows_config.workflows[]: minimal entry + Optional+Computed guard
-//     regression; invalid wf_type/parallel_execution/is_active diagnostics;
+//     regression; invalid wf_type/parallel_execution diagnostics;
 //     three-way terraform_config precedence merge; vcs_config.iac_vcs_config
 //     Computed-only rejection; input_schemas id guard, approvers,
 //     user_schedules, context_tags, runner_constraints, mini_steps round

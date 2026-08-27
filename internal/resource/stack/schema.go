@@ -7,6 +7,7 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
@@ -192,92 +193,174 @@ var deploymentPlatformConfigAttrs = map[string]schema.Attribute{
 	},
 }
 
+// terraformConfigAttrs' fields are all Optional+Computed with UseStateForUnknown:
+// mergeTerraformConfig (see model.go) fills any field the user leaves unset from
+// the stack template revision, then the workflow template revision — a value that
+// can come from a template layer, not just the user, needs Computed or Terraform
+// core forces it to null on every plan while apply returns the merged value
+// ("Provider produced inconsistent result after apply").
 var terraformConfigAttrs = map[string]schema.Attribute{
 	"terraform_version": schema.StringAttribute{
 		MarkdownDescription: constants.TerraformVersion,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
 	},
 	"drift_check": schema.BoolAttribute{
 		MarkdownDescription: constants.TerraformDriftCheck,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.Bool{
+			boolplanmodifier.UseStateForUnknown(),
+		},
 	},
 	"drift_cron": schema.StringAttribute{
 		MarkdownDescription: constants.TerraformDriftCron,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
 	},
 	"managed_terraform_state": schema.BoolAttribute{
 		MarkdownDescription: constants.TerraformManagedState,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.Bool{
+			boolplanmodifier.UseStateForUnknown(),
+		},
 	},
 	"approval_pre_apply": schema.BoolAttribute{
 		MarkdownDescription: constants.TerraformApprovalPreApply,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.Bool{
+			boolplanmodifier.UseStateForUnknown(),
+		},
 	},
 	"terraform_plan_options": schema.StringAttribute{
 		MarkdownDescription: constants.TerraformPlanOptions,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
 	},
 	"terraform_init_options": schema.StringAttribute{
 		MarkdownDescription: constants.TerraformInitOptions,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.UseStateForUnknown(),
+		},
 	},
 	"terraform_bin_path": schema.ListNestedAttribute{
 		MarkdownDescription: constants.TerraformBinPath,
 		Optional:            true,
-		NestedObject:        schema.NestedAttributeObject{Attributes: mountPointAttrs},
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		NestedObject: schema.NestedAttributeObject{Attributes: mountPointAttrs},
 	},
 	"timeout": schema.Int64Attribute{
 		MarkdownDescription: constants.TerraformTimeout,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.Int64{
+			int64planmodifier.UseStateForUnknown(),
+		},
 	},
 	"post_apply_wf_steps_config": schema.ListNestedAttribute{
 		MarkdownDescription: constants.TerraformPostApplyWfSteps,
 		Optional:            true,
-		NestedObject:        wfStepsConfigNestedObj,
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		NestedObject: wfStepsConfigNestedObj,
 	},
 	"pre_apply_wf_steps_config": schema.ListNestedAttribute{
 		MarkdownDescription: constants.TerraformPreApplyWfSteps,
 		Optional:            true,
-		NestedObject:        wfStepsConfigNestedObj,
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		NestedObject: wfStepsConfigNestedObj,
 	},
 	"pre_plan_wf_steps_config": schema.ListNestedAttribute{
 		MarkdownDescription: constants.TerraformPrePlanWfSteps,
 		Optional:            true,
-		NestedObject:        wfStepsConfigNestedObj,
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		NestedObject: wfStepsConfigNestedObj,
 	},
 	"post_plan_wf_steps_config": schema.ListNestedAttribute{
 		MarkdownDescription: constants.TerraformPostPlanWfSteps,
 		Optional:            true,
-		NestedObject:        wfStepsConfigNestedObj,
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		NestedObject: wfStepsConfigNestedObj,
 	},
 	"pre_init_hooks": schema.ListAttribute{
 		MarkdownDescription: constants.TerraformPreInitHooks,
 		Optional:            true,
-		ElementType:         types.StringType,
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		ElementType: types.StringType,
 	},
 	"pre_plan_hooks": schema.ListAttribute{
 		MarkdownDescription: constants.TerraformPrePlanHooks,
 		Optional:            true,
-		ElementType:         types.StringType,
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		ElementType: types.StringType,
 	},
 	"post_plan_hooks": schema.ListAttribute{
 		MarkdownDescription: constants.TerraformPostPlanHooks,
 		Optional:            true,
-		ElementType:         types.StringType,
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		ElementType: types.StringType,
 	},
 	"pre_apply_hooks": schema.ListAttribute{
 		MarkdownDescription: constants.TerraformPreApplyHooks,
 		Optional:            true,
-		ElementType:         types.StringType,
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		ElementType: types.StringType,
 	},
 	"post_apply_hooks": schema.ListAttribute{
 		MarkdownDescription: constants.TerraformPostApplyHooks,
 		Optional:            true,
-		ElementType:         types.StringType,
+		Computed:            true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
+		ElementType: types.StringType,
 	},
 	"run_pre_init_hooks_on_drift": schema.BoolAttribute{
 		MarkdownDescription: constants.TerraformRunPreInitHooksOnDrift,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.Bool{
+			boolplanmodifier.UseStateForUnknown(),
+		},
 	},
 }
 
@@ -357,7 +440,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 		MarkdownDescription: "Manages a stack resource.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: constants.Id,
+				MarkdownDescription: "Id for the resource. Use it to reference the resource in other resources. Allowed characters are ^[a-zA-Z0-9_]+$",
 				Required:            true,
 				// The SDK has no way to change a stack's id via update (PatchedStack has
 				// no Id field), so a change must recreate the resource.
@@ -383,7 +466,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Description, "stack"),
+				MarkdownDescription: "Description of the stack. Must be less than 256 characters.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -546,14 +629,6 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 								},
 								"template_id": schema.StringAttribute{
 									MarkdownDescription: "ID of the workflow template that this workflow is based on.",
-									Optional:            true,
-									Computed:            true,
-									PlanModifiers: []planmodifier.String{
-										stringplanmodifier.UseStateForUnknown(),
-									},
-								},
-								"is_active": schema.StringAttribute{
-									MarkdownDescription: "Whether the workflow is active.",
 									Optional:            true,
 									Computed:            true,
 									PlanModifiers: []planmodifier.String{

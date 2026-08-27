@@ -482,7 +482,6 @@ type WorkflowInStackModel struct {
 	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
 	DeploymentPlatformConfig  types.List   `tfsdk:"deployment_platform_config"`
 	TemplateId                types.String `tfsdk:"template_id"`
-	IsActive                  types.String `tfsdk:"is_active"`
 	VcsConfig                 types.Object `tfsdk:"vcs_config"`
 	InputSchemas              types.List   `tfsdk:"input_schemas"`
 	Approvers                 types.List   `tfsdk:"approvers"`
@@ -508,7 +507,6 @@ func (WorkflowInStackModel) AttributeTypes() map[string]attr.Type {
 		"environment_variables":        types.ListType{ElemType: types.ObjectType{AttrTypes: EnvironmentVariableModel{}.AttributeTypes()}},
 		"deployment_platform_config":   types.ListType{ElemType: types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()}},
 		"template_id":                  types.StringType,
-		"is_active":                    types.StringType,
 		"vcs_config":                   types.ObjectType{AttrTypes: VcsConfigModel{}.AttributeTypes()},
 		"input_schemas":                types.ListType{ElemType: types.ObjectType{AttrTypes: StackInputSchemaModel{}.AttributeTypes()}},
 		"approvers":                    types.ListType{ElemType: types.StringType},
@@ -848,6 +846,19 @@ func envVarPointerSlice(vals []sgsdkgo.EnvVars) []*sgsdkgo.EnvVars {
 	return result
 }
 
+// isSet reports whether s is a known, non-null value (including "").
+func isSet(s types.String) bool { return !s.IsNull() && !s.IsUnknown() }
+
+// isNonEmpty reports whether s is set and non-empty. Use for allow_blank=False
+// API string fields: a known "" stored for Computed plan stability must be
+// treated as unset (omitted) rather than sent as a blank the API rejects.
+func isNonEmpty(s types.String) bool { return isSet(s) && s.ValueString() != "" }
+
+// isSetBool reports whether b is a known, non-null value. Bools have no
+// "blank" sentinel — false is always a meaningful value to send — so this is
+// just the null/unknown guard, unlike isNonEmpty for strings.
+func isSetBool(b types.Bool) bool { return !b.IsNull() && !b.IsUnknown() }
+
 func expandTerraformConfig(ctx context.Context, obj types.Object) (*sgsdkgo.TerraformConfig, diag.Diagnostics) {
 	if obj.IsNull() || obj.IsUnknown() {
 		return nil, nil
@@ -856,16 +867,36 @@ func expandTerraformConfig(ctx context.Context, obj types.Object) (*sgsdkgo.Terr
 	if diags := obj.As(ctx, &m, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 		return nil, diags
 	}
-	tc := &sgsdkgo.TerraformConfig{
-		TerraformVersion:       m.TerraformVersion.ValueStringPointer(),
-		DriftCheck:             m.DriftCheck.ValueBoolPointer(),
-		DriftCron:              m.DriftCron.ValueStringPointer(),
-		ManagedTerraformState:  m.ManagedTerraformState.ValueBoolPointer(),
-		ApprovalPreApply:       m.ApprovalPreApply.ValueBoolPointer(),
-		TerraformPlanOptions:   m.TerraformPlanOptions.ValueStringPointer(),
-		TerraformInitOptions:   m.TerraformInitOptions.ValueStringPointer(),
-		Timeout:                expanders.IntPtr(m.Timeout.ValueInt64Pointer()),
-		RunPreInitHooksOnDrift: m.RunPreInitHooksOnDrift.ValueBoolPointer(),
+	tc := &sgsdkgo.TerraformConfig{}
+	if !m.Timeout.IsNull() && !m.Timeout.IsUnknown() {
+		tc.Timeout = expanders.IntPtr(m.Timeout.ValueInt64Pointer())
+	}
+	// allow_blank=False string fields: a known "" (stored for Computed plan
+	// stability, see flattenTerraformConfig) means unset, so it must be omitted
+	// rather than sent as a blank the API rejects.
+	if isNonEmpty(m.TerraformVersion) {
+		tc.TerraformVersion = m.TerraformVersion.ValueStringPointer()
+	}
+	if isSetBool(m.DriftCheck) {
+		tc.DriftCheck = m.DriftCheck.ValueBoolPointer()
+	}
+	if isNonEmpty(m.DriftCron) {
+		tc.DriftCron = m.DriftCron.ValueStringPointer()
+	}
+	if isSetBool(m.ManagedTerraformState) {
+		tc.ManagedTerraformState = m.ManagedTerraformState.ValueBoolPointer()
+	}
+	if isSetBool(m.ApprovalPreApply) {
+		tc.ApprovalPreApply = m.ApprovalPreApply.ValueBoolPointer()
+	}
+	if isNonEmpty(m.TerraformPlanOptions) {
+		tc.TerraformPlanOptions = m.TerraformPlanOptions.ValueStringPointer()
+	}
+	if isNonEmpty(m.TerraformInitOptions) {
+		tc.TerraformInitOptions = m.TerraformInitOptions.ValueStringPointer()
+	}
+	if isSetBool(m.RunPreInitHooksOnDrift) {
+		tc.RunPreInitHooksOnDrift = m.RunPreInitHooksOnDrift.ValueBoolPointer()
 	}
 	if !m.TerraformBinPath.IsNull() && !m.TerraformBinPath.IsUnknown() {
 		mps, diags := expandMountPoints(ctx, m.TerraformBinPath)
@@ -980,25 +1011,36 @@ func flattenTerraformConfig(ctx context.Context, tc *sgsdkgo.TerraformConfig) (t
 	}
 
 	m := TerraformConfigModel{
-		TerraformVersion:       flatteners.StringPtr(tc.TerraformVersion),
-		DriftCheck:             flatteners.BoolPtr(tc.DriftCheck),
-		DriftCron:              flatteners.StringPtr(tc.DriftCron),
-		ManagedTerraformState:  flatteners.BoolPtr(tc.ManagedTerraformState),
-		ApprovalPreApply:       flatteners.BoolPtr(tc.ApprovalPreApply),
-		TerraformPlanOptions:   flatteners.StringPtr(tc.TerraformPlanOptions),
-		TerraformInitOptions:   flatteners.StringPtr(tc.TerraformInitOptions),
-		TerraformBinPath:       binPath,
-		Timeout:                flatteners.Int64Ptr(tc.Timeout),
-		PostApplyWfStepsConfig: postApply,
-		PreApplyWfStepsConfig:  preApply,
-		PrePlanWfStepsConfig:   prePlan,
-		PostPlanWfStepsConfig:  postPlan,
-		PreInitHooks:           preInit,
-		PrePlanHooks:           prePlanHooks,
-		PostPlanHooks:          postPlanHooks,
-		PreApplyHooks:          preApplyHooks,
-		PostApplyHooks:         postApplyHooks,
-		RunPreInitHooksOnDrift: flatteners.BoolPtr(tc.RunPreInitHooksOnDrift),
+		// Scalars the API returns empty are coerced to known values (not null)
+		// for Computed plan stability — UseStateForUnknown skips null state.
+		// expandTerraformConfig treats an empty string / false as "unset" and
+		// omits it, so this never produces a blank payload the API rejects.
+		TerraformVersion:       flatteners.StringPtrDefault(tc.TerraformVersion),
+		DriftCheck:             flatteners.BoolPtrDefault(tc.DriftCheck),
+		DriftCron:              flatteners.StringPtrDefault(tc.DriftCron),
+		ManagedTerraformState:  flatteners.BoolPtrDefault(tc.ManagedTerraformState),
+		ApprovalPreApply:       flatteners.BoolPtrDefault(tc.ApprovalPreApply),
+		TerraformPlanOptions:   flatteners.StringPtrDefault(tc.TerraformPlanOptions),
+		TerraformInitOptions:   flatteners.StringPtrDefault(tc.TerraformInitOptions),
+		TerraformBinPath:       knownEmptyListIfNull(binPath, types.ObjectType{AttrTypes: MountPointModel{}.AttributeTypes()}),
+		Timeout:                flatteners.Int64PtrDefault(tc.Timeout),
+		PostApplyWfStepsConfig: knownEmptyListIfNull(postApply, types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}),
+		PreApplyWfStepsConfig:  knownEmptyListIfNull(preApply, types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}),
+		PrePlanWfStepsConfig:   knownEmptyListIfNull(prePlan, types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}),
+		PostPlanWfStepsConfig:  knownEmptyListIfNull(postPlan, types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}),
+		PreInitHooks:           knownEmptyListIfNull(preInit, types.StringType),
+		PrePlanHooks:           knownEmptyListIfNull(prePlanHooks, types.StringType),
+		PostPlanHooks:          knownEmptyListIfNull(postPlanHooks, types.StringType),
+		PreApplyHooks:          knownEmptyListIfNull(preApplyHooks, types.StringType),
+		PostApplyHooks:         knownEmptyListIfNull(postApplyHooks, types.StringType),
+		RunPreInitHooksOnDrift: flatteners.BoolPtrDefault(tc.RunPreInitHooksOnDrift),
+	}
+	// drift_cron is only meaningful when drift checking is on. If the API
+	// returns a cron alongside drift_check=false, drop it so state mirrors the
+	// resolved coupling (see coupleDriftFields) — otherwise a stale cron would
+	// persist in state forever.
+	if !m.DriftCheck.ValueBool() {
+		m.DriftCron = types.StringValue("")
 	}
 	obj, diags := types.ObjectValueFrom(ctx, TerraformConfigModel{}.AttributeTypes(), m)
 	if diags.HasError() {
@@ -1102,8 +1144,17 @@ func expandRunnerConstraints(ctx context.Context, obj types.Object) (*sgsdkgo.Ru
 	if diags.HasError() {
 		return nil, diags
 	}
+	rcType := (*sgsdkgo.RunnerConstraintsTypeEnum)(m.Type.ValueStringPointer())
+	// type is Required within runner_constraints, so a non-null object should
+	// never reach here with rcType nil — but if it does (e.g. a known-but-empty
+	// placeholder), send nil rather than an empty struct: the API rejects
+	// RunnerConstraints{} outright since type is required once the field is
+	// present at all.
+	if rcType == nil && len(names) == 0 {
+		return nil, nil
+	}
 	return &sgsdkgo.RunnerConstraints{
-		Type:  (*sgsdkgo.RunnerConstraintsTypeEnum)(m.Type.ValueStringPointer()),
+		Type:  rcType,
 		Names: names,
 	}, nil
 }
@@ -2092,9 +2143,6 @@ func mergeWorkflowWithWorkflowTemplateDefaults(wf *sgsdkgo.StackWorkflowsConfigW
 	if len(wf.ContextTags) == 0 && len(workflowTpl.ContextTags) > 0 {
 		wf.ContextTags = contextTagsFromTemplate(workflowTpl.ContextTags)
 	}
-	if wf.IsActive == nil {
-		wf.IsActive = workflowTpl.IsActive
-	}
 	if len(wf.WfStepsConfig) == 0 {
 		wf.WfStepsConfig = wfStepsConfigPtrSlice(workflowTpl.WfStepsConfig)
 	}
@@ -2193,13 +2241,6 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid parallel_execution", "Value '"+wm.ParallelExecution.ValueString()+"' is not a valid value")}
 			}
 			wf.ParallelExecution = &pe
-		}
-		if !wm.IsActive.IsNull() && !wm.IsActive.IsUnknown() {
-			isActive, err := sgsdkgo.NewIsPublicEnumFromString(wm.IsActive.ValueString())
-			if err != nil {
-				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid is_active", "Value '"+wm.IsActive.ValueString()+"' is not a valid value")}
-			}
-			wf.IsActive = &isActive
 		}
 		if !wm.WfStepsConfig.IsNull() && !wm.WfStepsConfig.IsUnknown() {
 			steps, diags := expandWfStepsConfig(ctx, wm.WfStepsConfig)
@@ -2346,6 +2387,10 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 		if diags.HasError() {
 			return nullObj, diags
 		}
+		// Known-empty (not null) so UseStateForUnknown holds it stable across
+		// plans. Safe now that expandRunnerConstraints nils out an empty
+		// {type: null, names: null} object before it ever reaches the API,
+		// instead of sending it as a bare RunnerConstraints{} the API rejects.
 		rc = knownEmptyObjectIfNull(rc, RunnerConstraintsModel{}.AttributeTypes())
 		msObj, diags := flattenMiniSteps(ctx, wf.MiniSteps)
 		if diags.HasError() {
@@ -2381,15 +2426,14 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 		if wf.WfType != nil {
 			wfType = string(*wf.WfType)
 		}
-		parallelExecution := ""
+		// Default to "disabled" (a valid enum value), not "": expand parses this
+		// string back into ParallelExecutionEnum on the next apply, and an empty
+		// string isn't a valid enum member — it would fail that parse instead of
+		// being treated as unset.
+		parallelExecution := string(sgsdkgo.ParallelExecutionEnumDisabled)
 		if wf.ParallelExecution != nil {
 			parallelExecution = string(*wf.ParallelExecution)
 		}
-		isActive := ""
-		if wf.IsActive != nil {
-			isActive = string(*wf.IsActive)
-		}
-
 		wm := WorkflowInStackModel{
 			Id:                       flatteners.StringPtr(wf.Id),
 			ResourceName:             flatteners.StringPtr(wf.ResourceName),
@@ -2402,7 +2446,6 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 			EnvironmentVariables:     envVars,
 			DeploymentPlatformConfig: dpcs,
 			TemplateId:               flatteners.StringPtr(wf.TemplateId),
-			IsActive:                 flatteners.String(isActive),
 			VcsConfig:                vcs,
 			InputSchemas:             inputSchemas,
 			Approvers:                approversList,

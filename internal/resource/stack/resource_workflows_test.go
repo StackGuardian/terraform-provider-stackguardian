@@ -110,11 +110,11 @@ func TestAccStack_WorkflowsConfigRevisionReResolution(t *testing.T) {
 	})
 }
 
-// TestAccStack_WorkflowsConfigInvalidEnums verifies invalid wf_type,
-// parallel_execution, and is_active values each produce their own
-// provider-side diagnostic (expandWorkflowsConfig) instead of being passed
-// through to the API. Each step's apply fails before anything is created, so
-// they can safely share one resource address across steps.
+// TestAccStack_WorkflowsConfigInvalidEnums verifies invalid wf_type and
+// parallel_execution values each produce their own provider-side diagnostic
+// (expandWorkflowsConfig) instead of being passed through to the API. Each
+// step's apply fails before anything is created, so they can safely share
+// one resource address across steps.
 func TestAccStack_WorkflowsConfigInvalidEnums(t *testing.T) {
 	wfGrpName := "tf-provider-stack-wfenum-wfgrp"
 	wfTemplateName := "tf-provider-stack-wfenum-wftmpl"
@@ -150,10 +150,6 @@ func TestAccStack_WorkflowsConfigInvalidEnums(t *testing.T) {
 			{
 				Config:      testAccStackConfig(wfGrpName, revision, id, workflowConfig("parallel_execution", "sideways")),
 				ExpectError: regexp.MustCompile("Invalid parallel_execution"),
-			},
-			{
-				Config:      testAccStackConfig(wfGrpName, revision, id, workflowConfig("is_active", "maybe")),
-				ExpectError: regexp.MustCompile("Invalid is_active"),
 			},
 		},
 	})
