@@ -28,6 +28,7 @@ func (r *policyResrouce) Schema(_ context.Context, _ resource.SchemaRequest, res
 				MarkdownDescription: "Name of the policy.",
 				Required:            true,
 			},
+
 			"description": schema.StringAttribute{
 				MarkdownDescription: "Description of the policy check. Must be less than 256 characters.",
 				Optional:            true,
@@ -61,17 +62,17 @@ func (r *policyResrouce) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Computed:            true,
 			},
 			"policies_config": schema.ListNestedAttribute{
-				MarkdownDescription: constants.PolicyConfig,
+				MarkdownDescription: "Policy Rules configuration.",
 				Optional:            true,
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"name": schema.StringAttribute{
-							MarkdownDescription: fmt.Sprintf(constants.ResourceName, "policy config"),
+							MarkdownDescription: "Name of the policy rule.",
 							Required:            true,
 						},
 						"skip": schema.BoolAttribute{
-							MarkdownDescription: constants.PolicyConfigSkip,
+							MarkdownDescription: "If true, the policy rule will be skipped.",
 							Optional:            true,
 						},
 						"on_fail": schema.StringAttribute{
@@ -97,15 +98,15 @@ func (r *policyResrouce) Schema(_ context.Context, _ resource.SchemaRequest, res
 							},
 						},
 						"policy_vcs_config": schema.SingleNestedAttribute{
-							MarkdownDescription: constants.PolicyVCSConfig,
+							MarkdownDescription: "Reference a policy template",
 							Optional:            true,
 							Attributes: map[string]schema.Attribute{
 								"use_marketplace_template": schema.BoolAttribute{
-									MarkdownDescription: constants.PolicyVCSConfigMarketplaceTemplate,
+									MarkdownDescription: "If true use a policy template or use a custom source.",
 									Required:            true,
 								},
 								"policy_template_id": schema.StringAttribute{
-									MarkdownDescription: "Must atmost 100 characters",
+									MarkdownDescription: "",
 									Optional:            true,
 								},
 								"custom_source": schema.SingleNestedAttribute{
