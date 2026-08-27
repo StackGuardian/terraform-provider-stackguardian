@@ -17,7 +17,7 @@ func (r *policyResrouce) Schema(_ context.Context, _ resource.SchemaRequest, res
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: constants.Id,
+				MarkdownDescription: "ID of the resource. Use this attribute to reference the resource in other resources. Allowed characters are ^[a-zA-Z0-9_]+$",
 				Computed:            true,
 				Optional:            true,
 				PlanModifiers: []planmodifier.String{
@@ -25,26 +25,26 @@ func (r *policyResrouce) Schema(_ context.Context, _ resource.SchemaRequest, res
 				},
 			},
 			"resource_name": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "policy"),
+				MarkdownDescription: "Name of the policy.",
 				Required:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Description, "policy"),
+				MarkdownDescription: "Description of the policy check. Must be less than 256 characters.",
 				Optional:            true,
 				Computed:            true,
 			},
 			"policy_type": schema.StringAttribute{
-				MarkdownDescription: constants.PolicyType,
+				MarkdownDescription: "Type of policy created <span style=\"background-color: #eff0f0; color: #e53835;\">GENERAL</span> or <span style=\"background-color: #eff0f0; color: #e53835;\">FILTER.INSIGHT</span>.",
 				Required:            true,
 			},
 			"approvers": schema.ListAttribute{
-				MarkdownDescription: constants.Approvers,
+				MarkdownDescription: "List of stackguardian users found in Access Management who can approve the policy check.",
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
 			},
 			"number_of_approvals_required": schema.Int32Attribute{
-				MarkdownDescription: constants.NumberOfApprovalsRequired,
+				MarkdownDescription: "Number of approvals required for a policy check to run.",
 				Optional:            true,
 				Computed:            true,
 			},
@@ -55,7 +55,7 @@ func (r *policyResrouce) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Computed:            true,
 			},
 			"enforced_on": schema.ListAttribute{
-				MarkdownDescription: constants.EnforcedOn,
+				MarkdownDescription: "List of resources on which this policy is to be applied on. Resources supported: <span style=\"background-color: #eff0f0; color: #e53835;\">*</span>, <span style=\"background-color: #eff0f0; color: #e53835;\">/wfgrps/<grp>[/<subgrp>...]</span>, <span style=\"background-color: #eff0f0; color: #e53835;\">/stacks/<stackId></span>, <span style=\"background-color: #eff0f0; color: #e53835;\">/integrations/<integrationId></span>",
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
