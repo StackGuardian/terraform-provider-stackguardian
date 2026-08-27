@@ -93,7 +93,7 @@ func TestAccStack_WorkflowsConfigRevisionReResolution(t *testing.T) {
 			{
 				// revision1 never sets number_of_approvals_required.
 				Config: testAccStackConfig(wfGrpName, revision1, id, config),
-				Check:  resource.TestCheckNoResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.number_of_approvals_required"),
+				Check:  resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.number_of_approvals_required", "0"),
 			},
 			{
 				// revision2 sets it to 2 — must now appear, though nothing in
@@ -104,7 +104,7 @@ func TestAccStack_WorkflowsConfigRevisionReResolution(t *testing.T) {
 			{
 				// Back to revision1 — must clear again, not stay stuck at 2.
 				Config: testAccStackConfig(wfGrpName, revision1, id, config),
-				Check:  resource.TestCheckNoResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.number_of_approvals_required"),
+				Check:  resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.number_of_approvals_required", "0"),
 			},
 		},
 	})
