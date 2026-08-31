@@ -48,8 +48,8 @@ const (
 
 // VCS Triggers attributes
 const (
-	VCSTriggers     = `VCS trigger configuration for the workflow. Only supported when ` + "`source_config_dest_kind`" + ` is <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, or <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>. **Requires** ` + "`vcs_config.iac_vcs_config.custom_source.config.is_private`" + ` to be ` + "`true`" + ` and ` + "`vcs_config.iac_vcs_config.custom_source.config.auth`" + ` to be set with a valid connector ID.`
-	VCSTriggersType = `The VCS platform type. Determines which webhook integration is used. Supported values: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>,`
+	VCSTriggers     = "Webhook triggers for this workflow. Supported when the repository is on `GITHUB_COM`, `GITHUB_APP_CUSTOM` or `GITLAB_COM`.<br><br>**Requires** `vcs_config.iac_vcs_config.custom_source.config.is_private` to be `true` and `...config.auth` to name a `stackguardian_connector` with access — StackGuardian has to authenticate to register the webhook. See the [VCS connector docs](https://docs.stackguardian.io/docs/connectors/vcs/)." + "`source_config_dest_kind`" + ` is <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, or <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>. **Requires** ` + "`vcs_config.iac_vcs_config.custom_source.config.is_private`" + ` to be ` + "`true`" + ` and ` + "`vcs_config.iac_vcs_config.custom_source.config.auth`" + ` to be set with a valid connector ID.`
+	VCSTriggersType = "Which VCS platform the webhook is registered with. <ul><li>`GITHUB_COM` — github.com.</li><li>`GITHUB_APP_CUSTOM` — GitHub Enterprise, or a GitHub App you manage yourself.</li><li>`GITLAB_COM` — gitlab.com.</li></ul>Must match the provider hosting the repository in `runtime_source`."
 	// TemplateVCSTriggers documents the `vcs_triggers` block on `stackguardian_workflow_template`.
 	// It is deliberately separate from VCSTriggers above: a workflow template has no `vcs_config`
 	// attribute (it uses `runtime_source`), and its only trigger creates a new *template revision*
@@ -157,7 +157,7 @@ const (
 // Terraform Config attributes
 const (
 	TerraformConfig                  = "Terraform configuration. Valid only for terraform type template"
-	TerraformVersion                 = "Terraform version to use."
+	TerraformVersion                 = "Terraform or OpenTofu version, in bare form (e.g. `1.5.7`). StackGuardian stores an engine prefix (`TERRAFORM-` / `OPENTOFU-`) internally; the provider strips it, so the value can be referenced directly into another resource without producing a perpetual diff. Which engine runs is decided by `wf_type`, not by this value."
 	TerraformDriftCheck              = "Enable drift check."
 	TerraformDriftCron               = "Cron expression for drift check."
 	TerraformManagedState            = "Enable stackguardian managed terraform state."

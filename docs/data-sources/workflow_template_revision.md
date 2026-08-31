@@ -348,7 +348,7 @@ Read-Only:
 - `terraform_bin_path` (Attributes List) Mount points for terraform binary. (see [below for nested schema](#nestedatt--terraform_config--terraform_bin_path))
 - `terraform_init_options` (String) Additional options for terraform init.
 - `terraform_plan_options` (String) Additional options for terraform plan.
-- `terraform_version` (String) Terraform/OpenTofu version, returned in the bare form (e.g. `1.5.7`). The engine prefix the API stores (`TERRAFORM-` / `OPENTOFU-`) is stripped so the value can be referenced directly into a `stackguardian_workflow_from_template` resource without producing a perpetual diff.
+- `terraform_version` (String) Terraform or OpenTofu version, in bare form (e.g. `1.5.7`). StackGuardian stores an engine prefix (`TERRAFORM-` / `OPENTOFU-`) internally; the provider strips it, so the value can be referenced directly into another resource without producing a perpetual diff. Which engine runs is decided by `wf_type`, not by this value.
 - `timeout` (Number) Timeout for terraform operations in seconds.
 
 <a id="nestedatt--terraform_config--post_apply_wf_steps_config"></a>

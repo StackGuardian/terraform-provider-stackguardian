@@ -74,11 +74,7 @@ const (
 
 	WorkflowStepTemplateRevisionDescription = "A brief description of the workflow step template revision. Must be less than 256 characters."
 
-	WorkflowStepTemplateRevisionType = `Type of the template. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">WORKFLOW_STEP</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">IAC</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">IAC_GROUP</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">IAC_POLICY</span>`
+	WorkflowStepTemplateRevisionType = "Which family of template this revision belongs to. Read-only, and always `WORKFLOW_STEP` here. StackGuardian uses the same field across all template types: <ul><li>`WORKFLOW_STEP` — a workflow step template.</li><li>`IAC` — a workflow template.</li><li>`IAC_GROUP` — a stack template.</li><li>`IAC_POLICY` — a policy template.</li></ul>"
 
 	WorkflowStepTemplateRevisionSourceConfigKind = "Where the step's runnable definition comes from. `DOCKER_IMAGE` — a container image, pulled from the registry described by `runtime_source`."
 

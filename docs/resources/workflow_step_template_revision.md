@@ -79,11 +79,7 @@ resource "stackguardian_workflow_step_template_revision" "example" {
 ### Read-Only
 
 - `id` (String) ID of the revision in the format `templateId:revisionNumber`.
-- `template_type` (String) Type of the template. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">WORKFLOW_STEP</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">IAC</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">IAC_GROUP</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">IAC_POLICY</span>
+- `template_type` (String) Which family of template this revision belongs to. Read-only, and always `WORKFLOW_STEP` here. StackGuardian uses the same field across all template types: <ul><li>`WORKFLOW_STEP` — a workflow step template.</li><li>`IAC` — a workflow template.</li><li>`IAC_GROUP` — a stack template.</li><li>`IAC_POLICY` — a policy template.</li></ul>
 
 <a id="nestedatt--runtime_source"></a>
 ### Nested Schema for `runtime_source`

@@ -54,11 +54,7 @@ output "workflow_step_template_revision_info" {
 - `source_config_kind` (String) Where the step's runnable definition comes from. `DOCKER_IMAGE` — a container image, pulled from the registry described by `runtime_source`.
 - `tags` (List of String) A list of tags associated with the revision. A maximum of 10 tags are allowed.
 - `template_id` (String) ID of the parent workflow step template.
-- `template_type` (String) Type of the template. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">WORKFLOW_STEP</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">IAC</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">IAC_GROUP</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">IAC_POLICY</span>
+- `template_type` (String) Which family of template this revision belongs to. Read-only, and always `WORKFLOW_STEP` here. StackGuardian uses the same field across all template types: <ul><li>`WORKFLOW_STEP` — a workflow step template.</li><li>`IAC` — a workflow template.</li><li>`IAC_GROUP` — a stack template.</li><li>`IAC_POLICY` — a policy template.</li></ul>
 
 <a id="nestedatt--deprecation"></a>
 ### Nested Schema for `deprecation`
