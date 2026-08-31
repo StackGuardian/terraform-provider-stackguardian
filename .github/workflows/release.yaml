@@ -11,8 +11,41 @@ permissions:
 
 jobs:
 
+  provider-release_preflight:
+    name: "Preflight checks"
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: '${{ github.token }}'
+    steps:
+
+      - name: "Require a tag ref"
+        run: |
+          set -euo pipefail;
+          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then
+            echo "::error::A release must be cut from a tag, but this run is on ${GITHUB_REF_TYPE} '${GITHUB_REF_NAME}'. Push a tag instead, e.g. 'git tag v1.13.0 && git push origin v1.13.0'.";
+            exit 1;
+          fi;
+          echo "Releasing from tag ${GITHUB_REF_NAME}.";
+        shell: bash
+
+      - name: "Refuse to re-release a published version"
+        run: |
+          set -euo pipefail;
+          TAG="${GITHUB_REF_NAME}";
+          if ! IS_DRAFT="$(gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" --json isDraft --jq .isDraft 2>/dev/null)"; then
+            echo "No existing release for ${TAG} - proceeding.";
+            exit 0;
+          fi;
+          if [ "${IS_DRAFT}" = "false" ]; then
+            echo "::error::${TAG} is already published. Terraform Registry versions are immutable, so replacing its artifacts would break every user that has pinned it in a lock file. Cut a new patch version instead of re-running this workflow.";
+            exit 1;
+          fi;
+          echo "An unpublished draft for ${TAG} already exists and will be replaced.";
+        shell: bash
+
   provider-release_pre-test:
     name: "Test Provider code before the Release"
+    needs: provider-release_preflight
     uses: ./.github/workflows/test.yaml
     secrets: inherit
 
@@ -25,9 +58,61 @@ jobs:
     with:
       setup-go-version-file: 'go.mod'
 
+  provider-release_publish:
+    name: "Verify artifacts and publish the Release"
+    needs: provider-release_build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: '${{ github.token }}'
+      # Keep in sync with the build matrix in .goreleaser.yml:
+      # darwin x2, freebsd x4, linux x4, windows x3.
+      EXPECTED_ZIPS: '13'
+    steps:
+
+      - name: "Verify release artifacts"
+        run: |
+          set -euo pipefail;
+          TAG="${GITHUB_REF_NAME}";
+          VERSION="${TAG#v}";
+          PREFIX="terraform-provider-stackguardian_${VERSION}";
+
+          WORKDIR="$(mktemp -d)";
+          cd "${WORKDIR}";
+          gh release download "${TAG}" --repo "${GITHUB_REPOSITORY}";
+
+          for f in "${PREFIX}_SHA256SUMS" "${PREFIX}_SHA256SUMS.sig"; do
+            test -f "${f}" || { echo "::error::missing release asset ${f}"; exit 1; };
+          done;
+
+          # Verifies every archive and the registry manifest listed in
+          # SHA256SUMS: both that it is present and that it is byte-intact.
+          echo "Checking artifacts against ${PREFIX}_SHA256SUMS";
+          sha256sum --check --strict "${PREFIX}_SHA256SUMS";
+
+          # SHA256SUMS only covers what goreleaser actually built, so assert the
+          # platform count separately to catch a silently shrunken build matrix.
+          COUNT="$(find . -maxdepth 1 -type f -name "${PREFIX}_*.zip" | wc -l | tr -d ' ')";
+          if [ "${COUNT}" -ne "${EXPECTED_ZIPS}" ]; then
+            echo "::error::expected ${EXPECTED_ZIPS} platform archives, found ${COUNT}";
+            find . -maxdepth 1 -type f -name "${PREFIX}_*.zip" -printf '  %f\n' | sort;
+            exit 1;
+          fi;
+
+          echo "Verified ${COUNT} platform archives, their checksums, and the detached signature.";
+        shell: bash
+
+      - name: "Publish the Release"
+        run: |
+          set -eu;
+          gh release edit "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --draft=false;
+          echo "Published ${GITHUB_REF_NAME}.";
+        shell: bash
+
   # provider-release_post-test:
   #   name: "Test Provider artifact after the Release"
-  #   needs: provider-release_build
+  #   needs: provider-release_publish
   #   continue-on-error: true
   #   runs-on: ubuntu-latest
   #   steps:
