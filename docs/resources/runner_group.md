@@ -62,16 +62,16 @@ Optional:
 
 - `auth` (Attributes) Authentication required by the runner to access the backend storage. Required only for type "aws_s3" (see [below for nested schema](#nestedatt--storage_backend_config--auth))
 - `aws_region` (String) AWS region where the bucket is placed
-- `azure_blob_storage_access_key` (String) Access key for you blob storage account
-- `azure_blob_storage_account_name` (String) Account of your azure blob storage
-- `s3_bucket_name` (String) S3 buckget name
+- `azure_blob_storage_access_key` (String) Access key for your Azure Blob Storage account.
+- `azure_blob_storage_account_name` (String) Name of your Azure Blob Storage account.
+- `s3_bucket_name` (String) Name of the S3 bucket used to store runner logs.
 
 <a id="nestedatt--storage_backend_config--auth"></a>
 ### Nested Schema for `storage_backend_config.auth`
 
 Required:
 
-- `integration_id` (String) SG Connector Id. Required only for type "aws_s3" eg: /integrations/test-connector
+- `integration_id` (String) Connector the runner authenticates to the storage backend with, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/runner-log-storage`). Required only when `type` is `aws_s3`.
 
 
 
@@ -94,7 +94,7 @@ Optional:
 - `git_core_auto_crlf` (Boolean) Indicates if core.autocrlf should be enabled.
 - `git_sparse_checkout_config` (String) Configuration for git sparse checkout
 - `include_sub_module` (Boolean) Indicates whether to include sub-modules.
-- `local_workspace_dir` (String)
+- `local_workspace_dir` (String) Working directory path inside the workspace, relative to the repository root.
 - `ref` (String) Reference identifier for the repository.
 - `repo` (String) Repository name or URL.
 - `working_dir` (String) Working directory for operations.

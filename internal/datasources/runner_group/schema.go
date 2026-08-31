@@ -12,6 +12,7 @@ import (
 
 func (r *runnerGroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Reads an existing runner group, so a workflow can pin itself to the group without managing it.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.DatasourceId,
@@ -125,7 +126,8 @@ func (r *runnerGroupDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 								Computed:            true,
 							},
 							"local_workspace_dir": schema.StringAttribute{
-								Computed: true,
+								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigLocalWorkspaceDirCommon,
+								Computed:            true,
 							},
 						},
 					},

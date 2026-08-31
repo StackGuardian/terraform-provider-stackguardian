@@ -32,7 +32,13 @@ output "policy-output" {
 
 - `approvers` (List of String) List of stackguardian users
 - `description` (String) A brief description of the policy. Must be less than 256 characters.
-- `enforced_on` (List of String) List of Resource path on which this policy is to be applied on
+- `enforced_on` (List of String) What this policy is enforced on. Either organization-wide, or any combination of workflow groups, workflows and connectors.
+
+- `["*"]` — the whole organization. Used on its own, not combined with other entries.
+- `["/wfgrps/<group>"]` — a workflow group and everything inside it. No trailing slash.
+- Workflows and connectors follow the same resource-path convention and can be listed alongside workflow groups.
+
+Confirm an unfamiliar form against an existing policy before relying on it.
 - `number_of_approvals_required` (Number) Number of approvals required for a policy check to pass
 - `policies_config` (Attributes List) Policy configuration (see [below for nested schema](#nestedatt--policies_config))
 - `policy_type` (String) Type of policy created "GENERAL" or "FILTER.INSIGHT"
@@ -74,7 +80,7 @@ Read-Only:
 Read-Only:
 
 - `custom_source` (Attributes) Source configuration type and settings definition (see [below for nested schema](#nestedatt--policies_config--policy_vcs_config--custom_source))
-- `policy_template_id` (String) ID of the template from marketplace
+- `policy_template_id` (String) Policy template to use, as a path-form ID: `/policies/<name>:<revision>` for a policy created in your own organization, or `/<org>/<name>:<revision>` when qualifying it explicitly. Templates published by StackGuardian use the `stackguardian` org (e.g. `/stackguardian/checkov-best-practices:2`). At most 100 characters. Required when `use_marketplace_template` is `true`.
 - `use_marketplace_template` (Boolean) Name of the template from marketplace
 
 <a id="nestedatt--policies_config--policy_vcs_config--custom_source"></a>
@@ -82,24 +88,25 @@ Read-Only:
 
 Read-Only:
 
-- `additional_config` (String)
-- `config` (Attributes) (see [below for nested schema](#nestedatt--policies_config--policy_vcs_config--custom_source--config))
+- `additional_config` (String) Additional configuration for the policy
+- `config` (Attributes) Specific configuration settings for runtime source. (see [below for nested schema](#nestedatt--policies_config--policy_vcs_config--custom_source--config))
 - `source_config_dest_kind` (String) Kind of the source configuration destination. Valid examples include eg:- AWS_RBAC, AZURE_STATIC.
-- `source_config_kind` (String)
+- `source_config_kind` (String) Kind of policy. Options: <span style="background-color: #eff0f0; color: #e53835;">OPA_REGO</span>,
+		<span style="background-color: #eff0f0; color: #e53835;">SG_POLICY_FRAMEWORK</span>,
 
 <a id="nestedatt--policies_config--policy_vcs_config--custom_source--config"></a>
 ### Nested Schema for `policies_config.policy_vcs_config.custom_source.config`
 
 Read-Only:
 
-- `auth` (String)
-- `git_core_auto_crlf` (Boolean)
-- `git_sparse_checkout_config` (String)
-- `include_submodule` (Boolean)
-- `is_private` (Boolean)
-- `ref` (String)
-- `repo` (String)
-- `working_dir` (String)
+- `auth` (String) Authentication method for accessing the repository.
+- `git_core_auto_crlf` (Boolean) Indicates if core.autocrlf should be enabled.
+- `git_sparse_checkout_config` (String) Configuration for git sparse checkout
+- `include_submodule` (Boolean) Indicates whether to include sub-modules.
+- `is_private` (Boolean) Indicates if the repository is private.
+- `ref` (String) Reference identifier for the repository.
+- `repo` (String) Repository name or URL.
+- `working_dir` (String) Working directory for operations.
 
 
 

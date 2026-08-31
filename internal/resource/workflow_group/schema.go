@@ -15,6 +15,7 @@ import (
 // Schema defines the schema for the resource.
 func (r *workflowGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Manages a workflow group: the folder-like container that organizes workflows and stacks, and the unit that roles are usually scoped to.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.Id,

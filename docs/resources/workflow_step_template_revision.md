@@ -106,7 +106,7 @@ Optional:
 - `auth` (String, Sensitive) Authentication credentials or method for accessing the private registry or repository. (Sensitive)
 - `docker_registry_username` (String) Username for authentication with the Docker registry (if using private registries).
 - `is_private` (Boolean) Indicates whether the container registry or repository is private.
-- `local_workspace_dir` (String) Workfing directory path.
+- `local_workspace_dir` (String) Working directory path inside the workspace, relative to the repository root.
 
 
 
@@ -116,7 +116,7 @@ Optional:
 Optional:
 
 - `effective_date` (String) Effective date when this resource will be deprecated and no longer available for use.
-- `message` (String) Deprecation message
+- `message` (String) Message shown to users who reference this revision after it has been deprecated. Use it to point them at the replacement revision.
 
 
 

@@ -14,6 +14,7 @@ import (
 // Schema defines the schema for the resource.
 func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Grants roles to a user or an SSO group. The `role` and `roles` values are the `resource_name` of a `stackguardian_role` or `stackguardian_rolev4`. For SSO assignments the provider name must match the organization's SSO configuration exactly — the API does not validate it at apply time, so a mismatch silently produces a user with no permissions.",
 		Attributes: map[string]schema.Attribute{
 			"user_id": schema.StringAttribute{
 				MarkdownDescription: constants.UserId,

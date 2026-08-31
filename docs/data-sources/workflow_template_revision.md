@@ -40,43 +40,43 @@ output "workflow_template_revision_output" {
 
 ### Read-Only
 
-- `alias` (String)
-- `approvers` (List of String)
+- `alias` (String) Alias for the template revision
+- `approvers` (List of String) List of approvers for approvals during workflow execution.
 - `context_tags` (Map of String) Context tags for the revision.
-- `deployment_platform_config` (Attributes List) (see [below for nested schema](#nestedatt--deployment_platform_config))
-- `deprecation` (Attributes) (see [below for nested schema](#nestedatt--deprecation))
+- `deployment_platform_config` (Attributes List) Deployment platform configuration. (see [below for nested schema](#nestedatt--deployment_platform_config))
+- `deprecation` (Attributes) Marking a template revision for deprecation (see [below for nested schema](#nestedatt--deprecation))
 - `description` (String) A brief description of the workflow template revision. Must be less than 256 characters.
 - `environment_variables` (Attributes List) (see [below for nested schema](#nestedatt--environment_variables))
-- `input_schemas` (Attributes List) (see [below for nested schema](#nestedatt--input_schemas))
-- `is_public` (String)
+- `input_schemas` (Attributes List) JSONSchema Form representation of input JSON data (see [below for nested schema](#nestedatt--input_schemas))
+- `is_public` (String) Whether this **revision** is published and available to be referenced. Distinct from `is_public` on the parent template, which controls cross-organization sharing. Options: <span style="background-color: #eff0f0; color: #e53835;">"1"</span>, <span style="background-color: #eff0f0; color: #e53835;">"0"</span>
 - `mini_steps` (Attributes) (see [below for nested schema](#nestedatt--mini_steps))
-- `notes` (String)
-- `number_of_approvals_required` (Number)
-- `runner_constraints` (Attributes) (see [below for nested schema](#nestedatt--runner_constraints))
+- `notes` (String) Notes for the revision
+- `number_of_approvals_required` (Number) Number of approvals required.
+- `runner_constraints` (Attributes) Runner constraints to control which runner executes the workflow. (see [below for nested schema](#nestedatt--runner_constraints))
 - `runtime_source` (Attributes) (see [below for nested schema](#nestedatt--runtime_source))
-- `source_config_kind` (String)
+- `source_config_kind` (String) Source configuration kind. Options: <span style="background-color: #eff0f0; color: #e53835;">TERRAFORM</span>, <span style="background-color: #eff0f0; color: #e53835;">OPENTOFU</span>, <span style="background-color: #eff0f0; color: #e53835;">ANSIBLE_PLAYBOOK</span>, <span style="background-color: #eff0f0; color: #e53835;">HELM</span>, <span style="background-color: #eff0f0; color: #e53835;">KUBECTL</span>, <span style="background-color: #eff0f0; color: #e53835;">CLOUDFORMATION</span>, <span style="background-color: #eff0f0; color: #e53835;">CUSTOM</span>
 - `tags` (List of String) A list of tags associated with the workflow template revision. A maximum of 10 tags are allowed.
 - `terraform_config` (Attributes) (see [below for nested schema](#nestedatt--terraform_config))
-- `user_job_cpu` (Number)
-- `user_job_memory` (Number)
-- `user_schedules` (Attributes List) (see [below for nested schema](#nestedatt--user_schedules))
-- `wf_steps_config` (Attributes List) (see [below for nested schema](#nestedatt--wf_steps_config))
+- `user_job_cpu` (Number) Limits to set user job CPU.
+- `user_job_memory` (Number) Limits to set user job memory.
+- `user_schedules` (Attributes List) Configuration for scheduling runs for the workflows. (see [below for nested schema](#nestedatt--user_schedules))
+- `wf_steps_config` (Attributes List) Workflow steps configuration. Valid for custom workflow types. (see [below for nested schema](#nestedatt--wf_steps_config))
 
 <a id="nestedatt--deployment_platform_config"></a>
 ### Nested Schema for `deployment_platform_config`
 
 Read-Only:
 
-- `config` (Attributes) (see [below for nested schema](#nestedatt--deployment_platform_config--config))
-- `kind` (String)
+- `config` (Attributes) Deployment platform configuration details. (see [below for nested schema](#nestedatt--deployment_platform_config--config))
+- `kind` (String) Deployment platform kind. Options: <span style="background-color: #eff0f0; color: #e53835;">AWS_STATIC</span>, <span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC</span>, <span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_STATIC</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_OIDC</span>, <span style="background-color: #eff0f0; color: #e53835;">GCP_STATIC</span>, <span style="background-color: #eff0f0; color: #e53835;">GCP_OIDC</span>
 
 <a id="nestedatt--deployment_platform_config--config"></a>
 ### Nested Schema for `deployment_platform_config.config`
 
 Read-Only:
 
-- `integration_id` (String)
-- `profile_name` (String)
+- `integration_id` (String) Connector supplying the credentials this workflow deploys with, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/production-aws`). Reference a `stackguardian_connector` rather than typing the string.
+- `profile_name` (String) Profile name for the deployment platform.
 
 
 
@@ -85,8 +85,8 @@ Read-Only:
 
 Read-Only:
 
-- `effective_date` (String)
-- `message` (String)
+- `effective_date` (String) Effective date for after which revision will be deprecated
+- `message` (String) Message shown to users who reference this revision after it has been deprecated. Use it to point them at the replacement revision.
 
 
 <a id="nestedatt--environment_variables"></a>
@@ -94,17 +94,17 @@ Read-Only:
 
 Read-Only:
 
-- `config` (Attributes) (see [below for nested schema](#nestedatt--environment_variables--config))
-- `kind` (String)
+- `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--environment_variables--config))
+- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
 
 <a id="nestedatt--environment_variables--config"></a>
 ### Nested Schema for `environment_variables.config`
 
 Read-Only:
 
-- `secret_id` (String)
-- `text_value` (String)
-- `var_name` (String)
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
+- `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
+- `var_name` (String) Name of the variable.
 
 
 
@@ -113,10 +113,10 @@ Read-Only:
 
 Read-Only:
 
-- `encoded_data` (String)
-- `name` (String)
-- `type` (String)
-- `ui_schema_data` (String)
+- `encoded_data` (String) JSON schema for the Form in templates. The schema needs to be base64 encoded.
+- `name` (String) Name of the input schema.
+- `type` (String) Type of runner. Valid options: <span style="background-color: #eff0f0; color: #e53835;">shared</span> or <span style="background-color: #eff0f0; color: #e53835;">private</span>
+- `ui_schema_data` (String) Schema for how the JSON schema is to be visualized. The schema needs to be base64 encoded.
 
 
 <a id="nestedatt--mini_steps"></a>
@@ -124,16 +124,16 @@ Read-Only:
 
 Read-Only:
 
-- `notifications` (Attributes) (see [below for nested schema](#nestedatt--mini_steps--notifications))
-- `webhooks` (Attributes) (see [below for nested schema](#nestedatt--mini_steps--webhooks))
-- `wf_chaining` (Attributes) (see [below for nested schema](#nestedatt--mini_steps--wf_chaining))
+- `notifications` (Attributes) Configuration for notifications to be sent on workflow completion (see [below for nested schema](#nestedatt--mini_steps--notifications))
+- `webhooks` (Attributes) Configuration for webhooks to be triggered on completion. Statuses on which webhooks can be sent: <span style="background-color: #eff0f0; color: #e53835;">approval_required</span>, <span style="background-color: #eff0f0; color: #e53835;">cancelled</span>, <span style="background-color: #eff0f0; color: #e53835;">completed</span>, <span style="background-color: #eff0f0; color: #e53835;">drift_detected</span>, <span style="background-color: #eff0f0; color: #e53835;">errored</span> (see [below for nested schema](#nestedatt--mini_steps--webhooks))
+- `wf_chaining` (Attributes) Configuration for other workflows to be triggered on completion. Statuses on which workflows can be chained: <span style="background-color: #eff0f0; color: #e53835;">completed</span>, <span style="background-color: #eff0f0; color: #e53835;">errored</span> (see [below for nested schema](#nestedatt--mini_steps--wf_chaining))
 
 <a id="nestedatt--mini_steps--notifications"></a>
 ### Nested Schema for `mini_steps.notifications`
 
 Read-Only:
 
-- `email` (Attributes) (see [below for nested schema](#nestedatt--mini_steps--notifications--email))
+- `email` (Attributes) Configuration for email notifications to be sent on completion. Statuses on which notifications can be sent: <span style="background-color: #eff0f0; color: #e53835;">approval_required</span>, <span style="background-color: #eff0f0; color: #e53835;">cancelled</span>, <span style="background-color: #eff0f0; color: #e53835;">completed</span>, <span style="background-color: #eff0f0; color: #e53835;">drift_detected</span>, <span style="background-color: #eff0f0; color: #e53835;">errored</span> (see [below for nested schema](#nestedatt--mini_steps--notifications--email))
 
 <a id="nestedatt--mini_steps--notifications--email"></a>
 ### Nested Schema for `mini_steps.notifications.email`
@@ -151,7 +151,7 @@ Read-Only:
 
 Read-Only:
 
-- `recipients` (List of String)
+- `recipients` (List of String) List of emails
 
 
 <a id="nestedatt--mini_steps--notifications--email--cancelled"></a>
@@ -159,7 +159,7 @@ Read-Only:
 
 Read-Only:
 
-- `recipients` (List of String)
+- `recipients` (List of String) List of emails
 
 
 <a id="nestedatt--mini_steps--notifications--email--completed"></a>
@@ -167,7 +167,7 @@ Read-Only:
 
 Read-Only:
 
-- `recipients` (List of String)
+- `recipients` (List of String) List of emails
 
 
 <a id="nestedatt--mini_steps--notifications--email--drift_detected"></a>
@@ -175,7 +175,7 @@ Read-Only:
 
 Read-Only:
 
-- `recipients` (List of String)
+- `recipients` (List of String) List of emails
 
 
 <a id="nestedatt--mini_steps--notifications--email--errored"></a>
@@ -183,7 +183,7 @@ Read-Only:
 
 Read-Only:
 
-- `recipients` (List of String)
+- `recipients` (List of String) List of emails
 
 
 
@@ -204,9 +204,9 @@ Read-Only:
 
 Read-Only:
 
-- `webhook_name` (String)
-- `webhook_secret` (String)
-- `webhook_url` (String)
+- `webhook_name` (String) Webhook name
+- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_url` (String) Webhook URL
 
 
 <a id="nestedatt--mini_steps--webhooks--cancelled"></a>
@@ -214,9 +214,9 @@ Read-Only:
 
 Read-Only:
 
-- `webhook_name` (String)
-- `webhook_secret` (String)
-- `webhook_url` (String)
+- `webhook_name` (String) Webhook name
+- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_url` (String) Webhook URL
 
 
 <a id="nestedatt--mini_steps--webhooks--completed"></a>
@@ -224,9 +224,9 @@ Read-Only:
 
 Read-Only:
 
-- `webhook_name` (String)
-- `webhook_secret` (String)
-- `webhook_url` (String)
+- `webhook_name` (String) Webhook name
+- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_url` (String) Webhook URL
 
 
 <a id="nestedatt--mini_steps--webhooks--drift_detected"></a>
@@ -234,9 +234,9 @@ Read-Only:
 
 Read-Only:
 
-- `webhook_name` (String)
-- `webhook_secret` (String)
-- `webhook_url` (String)
+- `webhook_name` (String) Webhook name
+- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_url` (String) Webhook URL
 
 
 <a id="nestedatt--mini_steps--webhooks--errored"></a>
@@ -244,9 +244,9 @@ Read-Only:
 
 Read-Only:
 
-- `webhook_name` (String)
-- `webhook_secret` (String)
-- `webhook_url` (String)
+- `webhook_name` (String) Webhook name
+- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_url` (String) Webhook URL
 
 
 
@@ -263,11 +263,11 @@ Read-Only:
 
 Read-Only:
 
-- `stack_id` (String)
-- `stack_run_payload` (String)
-- `workflow_group_id` (String)
-- `workflow_id` (String)
-- `workflow_run_payload` (String)
+- `stack_id` (String) Stack to trigger, as a bare name within `workflow_group_id`.
+- `stack_run_payload` (String) JSON string specifying overrides for the stack to be triggered
+- `workflow_group_id` (String) Workflow group containing the workflow to trigger, as a bare name. For a nested group give the full path (e.g. `platform/networking`).
+- `workflow_id` (String) Workflow to trigger, as a bare name within `workflow_group_id`.
+- `workflow_run_payload` (String) JSON string specifying overrides for the workflow to be triggered
 
 
 <a id="nestedatt--mini_steps--wf_chaining--errored"></a>
@@ -275,11 +275,11 @@ Read-Only:
 
 Read-Only:
 
-- `stack_id` (String)
-- `stack_run_payload` (String)
-- `workflow_group_id` (String)
-- `workflow_id` (String)
-- `workflow_run_payload` (String)
+- `stack_id` (String) Stack to trigger, as a bare name within `workflow_group_id`.
+- `stack_run_payload` (String) JSON string specifying overrides for the stack to be triggered
+- `workflow_group_id` (String) Workflow group containing the workflow to trigger, as a bare name. For a nested group give the full path (e.g. `platform/networking`).
+- `workflow_id` (String) Workflow to trigger, as a bare name within `workflow_group_id`.
+- `workflow_run_payload` (String) JSON string specifying overrides for the workflow to be triggered
 
 
 
@@ -289,8 +289,8 @@ Read-Only:
 
 Read-Only:
 
-- `names` (List of String)
-- `type` (String)
+- `names` (List of String) Runner groups the workflow is pinned to, given as a list of `stackguardian_runner_group` `resource_name` values. Set this when `type` is `private`; with `type = "shared"` the workflow uses StackGuardian's shared runners and this field is not applicable.
+- `type` (String) Type of runner. Valid options: <span style="background-color: #eff0f0; color: #e53835;">shared</span> or <span style="background-color: #eff0f0; color: #e53835;">private</span>
 
 
 <a id="nestedatt--runtime_source"></a>
@@ -298,22 +298,22 @@ Read-Only:
 
 Read-Only:
 
-- `config` (Attributes) (see [below for nested schema](#nestedatt--runtime_source--config))
-- `source_config_dest_kind` (String)
+- `config` (Attributes) Configuration for the runtime environment. (see [below for nested schema](#nestedatt--runtime_source--config))
+- `source_config_dest_kind` (String) VCS provider kind. Options: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GIT_OTHER</span>, <span style="background-color: #eff0f0; color: #e53835;">BITBUCKET_ORG</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS_SP</span>
 
 <a id="nestedatt--runtime_source--config"></a>
 ### Nested Schema for `runtime_source.config`
 
 Read-Only:
 
-- `auth` (String)
-- `git_core_auto_crlf` (Boolean)
-- `git_sparse_checkout_config` (String)
-- `include_sub_module` (Boolean)
-- `is_private` (Boolean)
-- `ref` (String)
-- `repo` (String)
-- `working_dir` (String)
+- `auth` (String) Connector used to clone a private repository, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/github-connector`). Required when `is_private` is `true`.
+- `git_core_auto_crlf` (Boolean) Whether to automatically handle CRLF line endings.
+- `git_sparse_checkout_config` (String) Git sparse checkout command line git cli options.
+- `include_sub_module` (Boolean) Whether to include git submodules.
+- `is_private` (Boolean) Whether the repository is private. Auth is required if the repository is private
+- `ref` (String) Git reference (branch, tag, or commit hash).
+- `repo` (String) Git repository URL.
+- `working_dir` (String) Working directory within the repository.
 
 
 
@@ -322,56 +322,56 @@ Read-Only:
 
 Read-Only:
 
-- `approval_pre_apply` (Boolean)
-- `drift_check` (Boolean)
-- `drift_cron` (String)
-- `managed_terraform_state` (Boolean)
-- `post_apply_hooks` (List of String)
-- `post_apply_wf_steps_config` (Attributes List) (see [below for nested schema](#nestedatt--terraform_config--post_apply_wf_steps_config))
-- `post_plan_hooks` (List of String)
-- `post_plan_wf_steps_config` (Attributes List) (see [below for nested schema](#nestedatt--terraform_config--post_plan_wf_steps_config))
-- `pre_apply_hooks` (List of String)
-- `pre_apply_wf_steps_config` (Attributes List) (see [below for nested schema](#nestedatt--terraform_config--pre_apply_wf_steps_config))
-- `pre_init_hooks` (List of String)
-- `pre_plan_hooks` (List of String)
-- `pre_plan_wf_steps_config` (Attributes List) (see [below for nested schema](#nestedatt--terraform_config--pre_plan_wf_steps_config))
-- `run_pre_init_hooks_on_drift` (Boolean)
-- `terraform_bin_path` (Attributes List) (see [below for nested schema](#nestedatt--terraform_config--terraform_bin_path))
-- `terraform_init_options` (String)
-- `terraform_plan_options` (String)
+- `approval_pre_apply` (Boolean) Require approval before apply.
+- `drift_check` (Boolean) Enable drift check.
+- `drift_cron` (String) Cron expression for drift check.
+- `managed_terraform_state` (Boolean) Enable stackguardian managed terraform state.
+- `post_apply_hooks` (List of String) Hooks to run after apply.
+- `post_apply_wf_steps_config` (Attributes List) Workflow steps configuration to run after apply. (see [below for nested schema](#nestedatt--terraform_config--post_apply_wf_steps_config))
+- `post_plan_hooks` (List of String) Hooks to run after plan.
+- `post_plan_wf_steps_config` (Attributes List) Workflow steps configuration to run after plan. (see [below for nested schema](#nestedatt--terraform_config--post_plan_wf_steps_config))
+- `pre_apply_hooks` (List of String) Hooks to run before apply.
+- `pre_apply_wf_steps_config` (Attributes List) Workflow steps configuration to run before apply. (see [below for nested schema](#nestedatt--terraform_config--pre_apply_wf_steps_config))
+- `pre_init_hooks` (List of String) Hooks to run before init.
+- `pre_plan_hooks` (List of String) Hooks to run before plan.
+- `pre_plan_wf_steps_config` (Attributes List) Workflow steps configuration to run before plan. (see [below for nested schema](#nestedatt--terraform_config--pre_plan_wf_steps_config))
+- `run_pre_init_hooks_on_drift` (Boolean) Run pre-init hooks on drift detection.
+- `terraform_bin_path` (Attributes List) Mount points for terraform binary. (see [below for nested schema](#nestedatt--terraform_config--terraform_bin_path))
+- `terraform_init_options` (String) Additional options for terraform init.
+- `terraform_plan_options` (String) Additional options for terraform plan.
 - `terraform_version` (String) Terraform/OpenTofu version, returned in the bare form (e.g. `1.5.7`). The engine prefix the API stores (`TERRAFORM-` / `OPENTOFU-`) is stripped so the value can be referenced directly into a `stackguardian_workflow_from_template` resource without producing a perpetual diff.
-- `timeout` (Number)
+- `timeout` (Number) Timeout for terraform operations in seconds.
 
 <a id="nestedatt--terraform_config--post_apply_wf_steps_config"></a>
 ### Nested Schema for `terraform_config.post_apply_wf_steps_config`
 
 Read-Only:
 
-- `approval` (Boolean)
-- `cmd_override` (String)
+- `approval` (Boolean) Enable approval for the workflow step.
+- `cmd_override` (String) Override command for the step.
 - `environment_variables` (Attributes List) (see [below for nested schema](#nestedatt--terraform_config--post_apply_wf_steps_config--environment_variables))
 - `mount_points` (Attributes List) (see [below for nested schema](#nestedatt--terraform_config--post_apply_wf_steps_config--mount_points))
-- `name` (String)
-- `timeout` (Number)
-- `wf_step_input_data` (Attributes) (see [below for nested schema](#nestedatt--terraform_config--post_apply_wf_steps_config--wf_step_input_data))
-- `wf_step_template_id` (String)
+- `name` (String) Step name.
+- `timeout` (Number) Workflow step execution timeout in seconds.
+- `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--terraform_config--post_apply_wf_steps_config--wf_step_input_data))
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 <a id="nestedatt--terraform_config--post_apply_wf_steps_config--environment_variables"></a>
 ### Nested Schema for `terraform_config.post_apply_wf_steps_config.environment_variables`
 
 Read-Only:
 
-- `config` (Attributes) (see [below for nested schema](#nestedatt--terraform_config--post_apply_wf_steps_config--environment_variables--config))
-- `kind` (String)
+- `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--terraform_config--post_apply_wf_steps_config--environment_variables--config))
+- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
 
 <a id="nestedatt--terraform_config--post_apply_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `terraform_config.post_apply_wf_steps_config.environment_variables.config`
 
 Read-Only:
 
-- `secret_id` (String)
-- `text_value` (String)
-- `var_name` (String)
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
+- `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
+- `var_name` (String) Name of the variable.
 
 
 
@@ -380,9 +380,9 @@ Read-Only:
 
 Read-Only:
 
-- `read_only` (Boolean)
-- `source` (String)
-- `target` (String)
+- `read_only` (Boolean) If the directory is to be mounted as read only or not
+- `source` (String) Source path for mount point.
+- `target` (String) Target path for mount point.
 
 
 <a id="nestedatt--terraform_config--post_apply_wf_steps_config--wf_step_input_data"></a>
@@ -390,8 +390,8 @@ Read-Only:
 
 Read-Only:
 
-- `data` (String)
-- `schema_type` (String)
+- `data` (String) Input data (JSON).
+- `schema_type` (String) Schema type for the input data. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>
 
 
 
@@ -400,31 +400,31 @@ Read-Only:
 
 Read-Only:
 
-- `approval` (Boolean)
-- `cmd_override` (String)
+- `approval` (Boolean) Enable approval for the workflow step.
+- `cmd_override` (String) Override command for the step.
 - `environment_variables` (Attributes List) (see [below for nested schema](#nestedatt--terraform_config--post_plan_wf_steps_config--environment_variables))
 - `mount_points` (Attributes List) (see [below for nested schema](#nestedatt--terraform_config--post_plan_wf_steps_config--mount_points))
-- `name` (String)
-- `timeout` (Number)
-- `wf_step_input_data` (Attributes) (see [below for nested schema](#nestedatt--terraform_config--post_plan_wf_steps_config--wf_step_input_data))
-- `wf_step_template_id` (String)
+- `name` (String) Step name.
+- `timeout` (Number) Workflow step execution timeout in seconds.
+- `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--terraform_config--post_plan_wf_steps_config--wf_step_input_data))
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 <a id="nestedatt--terraform_config--post_plan_wf_steps_config--environment_variables"></a>
 ### Nested Schema for `terraform_config.post_plan_wf_steps_config.environment_variables`
 
 Read-Only:
 
-- `config` (Attributes) (see [below for nested schema](#nestedatt--terraform_config--post_plan_wf_steps_config--environment_variables--config))
-- `kind` (String)
+- `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--terraform_config--post_plan_wf_steps_config--environment_variables--config))
+- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
 
 <a id="nestedatt--terraform_config--post_plan_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `terraform_config.post_plan_wf_steps_config.environment_variables.config`
 
 Read-Only:
 
-- `secret_id` (String)
-- `text_value` (String)
-- `var_name` (String)
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
+- `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
+- `var_name` (String) Name of the variable.
 
 
 
@@ -433,9 +433,9 @@ Read-Only:
 
 Read-Only:
 
-- `read_only` (Boolean)
-- `source` (String)
-- `target` (String)
+- `read_only` (Boolean) If the directory is to be mounted as read only or not
+- `source` (String) Source path for mount point.
+- `target` (String) Target path for mount point.
 
 
 <a id="nestedatt--terraform_config--post_plan_wf_steps_config--wf_step_input_data"></a>
@@ -443,8 +443,8 @@ Read-Only:
 
 Read-Only:
 
-- `data` (String)
-- `schema_type` (String)
+- `data` (String) Input data (JSON).
+- `schema_type` (String) Schema type for the input data. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>
 
 
 
@@ -453,31 +453,31 @@ Read-Only:
 
 Read-Only:
 
-- `approval` (Boolean)
-- `cmd_override` (String)
+- `approval` (Boolean) Enable approval for the workflow step.
+- `cmd_override` (String) Override command for the step.
 - `environment_variables` (Attributes List) (see [below for nested schema](#nestedatt--terraform_config--pre_apply_wf_steps_config--environment_variables))
 - `mount_points` (Attributes List) (see [below for nested schema](#nestedatt--terraform_config--pre_apply_wf_steps_config--mount_points))
-- `name` (String)
-- `timeout` (Number)
-- `wf_step_input_data` (Attributes) (see [below for nested schema](#nestedatt--terraform_config--pre_apply_wf_steps_config--wf_step_input_data))
-- `wf_step_template_id` (String)
+- `name` (String) Step name.
+- `timeout` (Number) Workflow step execution timeout in seconds.
+- `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--terraform_config--pre_apply_wf_steps_config--wf_step_input_data))
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 <a id="nestedatt--terraform_config--pre_apply_wf_steps_config--environment_variables"></a>
 ### Nested Schema for `terraform_config.pre_apply_wf_steps_config.environment_variables`
 
 Read-Only:
 
-- `config` (Attributes) (see [below for nested schema](#nestedatt--terraform_config--pre_apply_wf_steps_config--environment_variables--config))
-- `kind` (String)
+- `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--terraform_config--pre_apply_wf_steps_config--environment_variables--config))
+- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
 
 <a id="nestedatt--terraform_config--pre_apply_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `terraform_config.pre_apply_wf_steps_config.environment_variables.config`
 
 Read-Only:
 
-- `secret_id` (String)
-- `text_value` (String)
-- `var_name` (String)
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
+- `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
+- `var_name` (String) Name of the variable.
 
 
 
@@ -486,9 +486,9 @@ Read-Only:
 
 Read-Only:
 
-- `read_only` (Boolean)
-- `source` (String)
-- `target` (String)
+- `read_only` (Boolean) If the directory is to be mounted as read only or not
+- `source` (String) Source path for mount point.
+- `target` (String) Target path for mount point.
 
 
 <a id="nestedatt--terraform_config--pre_apply_wf_steps_config--wf_step_input_data"></a>
@@ -496,8 +496,8 @@ Read-Only:
 
 Read-Only:
 
-- `data` (String)
-- `schema_type` (String)
+- `data` (String) Input data (JSON).
+- `schema_type` (String) Schema type for the input data. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>
 
 
 
@@ -506,31 +506,31 @@ Read-Only:
 
 Read-Only:
 
-- `approval` (Boolean)
-- `cmd_override` (String)
+- `approval` (Boolean) Enable approval for the workflow step.
+- `cmd_override` (String) Override command for the step.
 - `environment_variables` (Attributes List) (see [below for nested schema](#nestedatt--terraform_config--pre_plan_wf_steps_config--environment_variables))
 - `mount_points` (Attributes List) (see [below for nested schema](#nestedatt--terraform_config--pre_plan_wf_steps_config--mount_points))
-- `name` (String)
-- `timeout` (Number)
-- `wf_step_input_data` (Attributes) (see [below for nested schema](#nestedatt--terraform_config--pre_plan_wf_steps_config--wf_step_input_data))
-- `wf_step_template_id` (String)
+- `name` (String) Step name.
+- `timeout` (Number) Workflow step execution timeout in seconds.
+- `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--terraform_config--pre_plan_wf_steps_config--wf_step_input_data))
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 <a id="nestedatt--terraform_config--pre_plan_wf_steps_config--environment_variables"></a>
 ### Nested Schema for `terraform_config.pre_plan_wf_steps_config.environment_variables`
 
 Read-Only:
 
-- `config` (Attributes) (see [below for nested schema](#nestedatt--terraform_config--pre_plan_wf_steps_config--environment_variables--config))
-- `kind` (String)
+- `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--terraform_config--pre_plan_wf_steps_config--environment_variables--config))
+- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
 
 <a id="nestedatt--terraform_config--pre_plan_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `terraform_config.pre_plan_wf_steps_config.environment_variables.config`
 
 Read-Only:
 
-- `secret_id` (String)
-- `text_value` (String)
-- `var_name` (String)
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
+- `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
+- `var_name` (String) Name of the variable.
 
 
 
@@ -539,9 +539,9 @@ Read-Only:
 
 Read-Only:
 
-- `read_only` (Boolean)
-- `source` (String)
-- `target` (String)
+- `read_only` (Boolean) If the directory is to be mounted as read only or not
+- `source` (String) Source path for mount point.
+- `target` (String) Target path for mount point.
 
 
 <a id="nestedatt--terraform_config--pre_plan_wf_steps_config--wf_step_input_data"></a>
@@ -549,8 +549,8 @@ Read-Only:
 
 Read-Only:
 
-- `data` (String)
-- `schema_type` (String)
+- `data` (String) Input data (JSON).
+- `schema_type` (String) Schema type for the input data. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>
 
 
 
@@ -559,9 +559,9 @@ Read-Only:
 
 Read-Only:
 
-- `read_only` (Boolean)
-- `source` (String)
-- `target` (String)
+- `read_only` (Boolean) If the directory is to be mounted as read only or not
+- `source` (String) Source path for mount point.
+- `target` (String) Target path for mount point.
 
 
 
@@ -570,10 +570,10 @@ Read-Only:
 
 Read-Only:
 
-- `cron` (String)
-- `desc` (String)
-- `name` (String)
-- `state` (String)
+- `cron` (String) Cron expression defining the schedule. Use [AWS cron](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-scheduled-rule-pattern.html) expression format.
+- `desc` (String) Description of the schedule.
+- `name` (String) Name of the schedule.
+- `state` (String) State of the schedule. Options: <span style="background-color: #eff0f0; color: #e53835;">ENABLED</span>, <span style="background-color: #eff0f0; color: #e53835;">DISABLED</span>
 
 
 <a id="nestedatt--wf_steps_config"></a>
@@ -581,31 +581,31 @@ Read-Only:
 
 Read-Only:
 
-- `approval` (Boolean)
-- `cmd_override` (String)
+- `approval` (Boolean) Enable approval for the workflow step.
+- `cmd_override` (String) Override command for the step.
 - `environment_variables` (Attributes List) (see [below for nested schema](#nestedatt--wf_steps_config--environment_variables))
 - `mount_points` (Attributes List) (see [below for nested schema](#nestedatt--wf_steps_config--mount_points))
-- `name` (String)
-- `timeout` (Number)
-- `wf_step_input_data` (Attributes) (see [below for nested schema](#nestedatt--wf_steps_config--wf_step_input_data))
-- `wf_step_template_id` (String)
+- `name` (String) Step name.
+- `timeout` (Number) Workflow step execution timeout in seconds.
+- `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--wf_steps_config--wf_step_input_data))
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 <a id="nestedatt--wf_steps_config--environment_variables"></a>
 ### Nested Schema for `wf_steps_config.environment_variables`
 
 Read-Only:
 
-- `config` (Attributes) (see [below for nested schema](#nestedatt--wf_steps_config--environment_variables--config))
-- `kind` (String)
+- `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--wf_steps_config--environment_variables--config))
+- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
 
 <a id="nestedatt--wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `wf_steps_config.environment_variables.config`
 
 Read-Only:
 
-- `secret_id` (String)
-- `text_value` (String)
-- `var_name` (String)
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
+- `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
+- `var_name` (String) Name of the variable.
 
 
 
@@ -614,9 +614,9 @@ Read-Only:
 
 Read-Only:
 
-- `read_only` (Boolean)
-- `source` (String)
-- `target` (String)
+- `read_only` (Boolean) If the directory is to be mounted as read only or not
+- `source` (String) Source path for mount point.
+- `target` (String) Target path for mount point.
 
 
 <a id="nestedatt--wf_steps_config--wf_step_input_data"></a>
@@ -624,8 +624,8 @@ Read-Only:
 
 Read-Only:
 
-- `data` (String)
-- `schema_type` (String)
+- `data` (String) Input data (JSON).
+- `schema_type` (String) Schema type for the input data. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>
 
 
 

@@ -15,6 +15,7 @@ import (
 // Schema defines the schema for the resource.
 func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Manages a connector: the stored credential StackGuardian uses to reach an external system such as a cloud provider, a version control system, or a container registry.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.Id,

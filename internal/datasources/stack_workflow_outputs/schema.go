@@ -12,6 +12,7 @@ import (
 // Schema defines the schema for the data source.
 func (d *stackWorkflowOutputsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Reads the outputs of a single workflow inside a stack, rather than the stack's outputs as a whole.",
 		Attributes: map[string]schema.Attribute{
 			"stack": schema.StringAttribute{
 				MarkdownDescription: constants.StackguardianStack,

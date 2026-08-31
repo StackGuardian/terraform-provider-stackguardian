@@ -15,7 +15,7 @@ import (
 // Schema defines the schema for the resource.
 func (r *stackTemplateResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "> **Note:** This resource is currently in **BETA**. Features and behavior may change.\n\nManages a stack template resource.",
+		MarkdownDescription: "Manages a stack template: a collection of workflow templates that together describe one complete infrastructure unit.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.Id,

@@ -12,7 +12,7 @@ import (
 // Schema defines the schema for the data source.
 func (d *workflowStepTemplateRevisionDatasource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Use this data source to read a workflow step template revision.",
+		MarkdownDescription: "> **Note:** This data source is currently in **BETA**. Features and behavior may change.\n\nReads a specific revision of a workflow step template.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.WorkflowStepTemplateRevisionId,

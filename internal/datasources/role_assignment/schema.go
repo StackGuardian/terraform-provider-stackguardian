@@ -12,6 +12,7 @@ import (
 // Schema defines the schema for the resource.
 func (r *roleAssignmentDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Reads an existing role assignment, including the roles granted to the user or SSO group.",
 		Attributes: map[string]schema.Attribute{
 			"user_id": schema.StringAttribute{
 				MarkdownDescription: constants.UserId,

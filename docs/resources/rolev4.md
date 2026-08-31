@@ -59,7 +59,7 @@ resource "stackguardian_rolev4" "example_role" {
 
 ### Read-Only
 
-- `doc_version` (String)
+- `doc_version` (String) Version of the permission document format. Always `V4` for this resource; it is what distinguishes it from `stackguardian_role`, which uses V3 semantics.
 
 <a id="nestedatt--allowed_permissions"></a>
 ### Nested Schema for `allowed_permissions`
@@ -70,7 +70,7 @@ Required:
 
 Optional:
 
-- `paths` (Map of List of String) A map of resource paths to which this permission is scoped.
+- `paths` (Map of List of String) Values substituted into the placeholders in the permission key, scoping it to specific resources. Keys are the placeholder names used in that permission (e.g. `<wfGrp>`) and values are **bare resource names**, not paths — `["frontend"]`, not `["/wfgrps/frontend"]`. For a nested workflow group use its full path, `platform/networking`.
 
 
 

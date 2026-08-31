@@ -4,11 +4,11 @@ package constants
 const (
 	TemplateRevisionAlias                    string = "Alias for the template revision"
 	TemplateRevisionNotes                    string = "Notes for the revision"
-	TemplateRevisionIsPublic                 string = `Whether a revision is published to be used. Options: <span style="background-color: #eff0f0; color: #e53835;">"1"</span>, <span style="background-color: #eff0f0; color: #e53835;">"0"</span>`
+	TemplateRevisionIsPublic                 string = `Whether this **revision** is published and available to be referenced. Distinct from ` + "`is_public`" + ` on the parent template, which controls cross-organization sharing. Options: <span style="background-color: #eff0f0; color: #e53835;">"1"</span>, <span style="background-color: #eff0f0; color: #e53835;">"0"</span>`
 	TemplateRevisionDeprecation              string = "Marking a template revision for deprecation"
 	TemplateRevisionDeprecationEffectiveDate string = "Effective date for after which revision will be deprecated"
-	TemplateRevisionDeprecationMessage       string = "Deprecation message"
-	DeprecationMessage                       string = "Deprecation message"
+	TemplateRevisionDeprecationMessage       string = "Message shown to users who reference this revision after it has been deprecated. Use it to point them at the replacement revision."
+	DeprecationMessage                       string = "Message shown to users who reference this revision after it has been deprecated. Use it to point them at the replacement revision."
 )
 
 // Common attributes shared between workflow template and revision
@@ -21,13 +21,13 @@ const (
 const (
 	WorkflowTemplateName       = "Name of the workflow template."
 	WorkflowTemplateOwnerOrg   = "Organization the template belongs to"
-	WorkflowTemplateIsPublic   = `Make template available to other organisations. Available values: <span style="background-color: #eff0f0; color: #e53835;">"0"</span> or <span style="background-color: #eff0f0; color: #e53835;">"1"</span>`
+	WorkflowTemplateIsPublic   = `Whether this **template** is shared with other organizations. Distinct from ` + "`is_public`" + ` on a revision, which controls whether that revision is published for use. Available values: <span style="background-color: #eff0f0; color: #e53835;">"0"</span> or <span style="background-color: #eff0f0; color: #e53835;">"1"</span>`
 	WorkflowTemplateSharedOrgs = "List of organizations the template is shared with."
 )
 
 // Workflow Template Revision attributes
 const (
-	WorkflowTemplateRevisionTemplateId   = "Resource ID of the parent workflow template."
+	WorkflowTemplateRevisionTemplateId   = "Parent workflow template, as its bare `template_name` (e.g. `my-terraform-template`) — not a path. Reference the `stackguardian_workflow_template` resource rather than typing it."
 	WorkflowTemplateRevisionInputSchemas = "JSONSchema Form representation of input JSON data"
 )
 
@@ -36,7 +36,7 @@ const (
 	RuntimeSource                       = "Runtime source configuration for the %s."
 	RuntimeSourceDestKind               = `VCS provider kind. Options: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GIT_OTHER</span>, <span style="background-color: #eff0f0; color: #e53835;">BITBUCKET_ORG</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS_SP</span>`
 	RuntimeSourceConfig                 = "Configuration for the runtime environment."
-	RuntimeSourceConfigAuth             = "Connector id to access private git repository. Example: `/integrations/<integration-id>`"
+	RuntimeSourceConfigAuth             = "Connector used to clone a private repository, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/github-connector`). Required when `is_private` is `true`."
 	RuntimeSourceConfigGitCoreCRLF      = "Whether to automatically handle CRLF line endings."
 	RuntimeSourceConfigGitSparse        = "Git sparse checkout command line git cli options."
 	RuntimeSourceConfigIncludeSubmodule = "Whether to include git submodules."
@@ -48,8 +48,13 @@ const (
 
 // VCS Triggers attributes
 const (
-	VCSTriggers                         = `VCS trigger configuration for the workflow. Only supported when ` + "`source_config_dest_kind`" + ` is <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, or <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>. **Requires** ` + "`vcs_config.iac_vcs_config.custom_source.config.is_private`" + ` to be ` + "`true`" + ` and ` + "`vcs_config.iac_vcs_config.custom_source.config.auth`" + ` to be set with a valid connector ID.`
-	VCSTriggersType                     = `The VCS platform type. Determines which webhook integration is used. Supported values: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>,`
+	VCSTriggers     = `VCS trigger configuration for the workflow. Only supported when ` + "`source_config_dest_kind`" + ` is <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, or <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>. **Requires** ` + "`vcs_config.iac_vcs_config.custom_source.config.is_private`" + ` to be ` + "`true`" + ` and ` + "`vcs_config.iac_vcs_config.custom_source.config.auth`" + ` to be set with a valid connector ID.`
+	VCSTriggersType = `The VCS platform type. Determines which webhook integration is used. Supported values: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>,`
+	// TemplateVCSTriggers documents the `vcs_triggers` block on `stackguardian_workflow_template`.
+	// It is deliberately separate from VCSTriggers above: a workflow template has no `vcs_config`
+	// attribute (it uses `runtime_source`), and its only trigger creates a new *template revision*
+	// on tag push rather than starting a workflow run.
+	TemplateVCSTriggers                 = `VCS trigger configuration for the template. On a tag push, StackGuardian creates a new ` + "`stackguardian_workflow_template_revision`" + ` from the tagged commit — it does not start a workflow run. The repository is taken from ` + "`runtime_source`" + `.`
 	VCSTriggersCreateTag                = "Trigger configuration on tag creation in VCS"
 	VCSTriggersCreateTagRevision        = "Create new revision on tag creation"
 	VCSTriggersCreateTagRevisionEnabled = "Whether to create revision when tag is created."
@@ -67,6 +72,7 @@ const (
 	VCSTriggersPullRequestOpened   = "Actions to trigger on StackGuardian when a pull request is opened. Supported action key: `createWfRun`. Only evaluated when `all_pull_requests.createWfRun.enabled` is `false` or absent. When `createWfRun.enabled` is `true`, a workflow run is created if the PR's target branch equals `tracked_branch`. The triggered run always executes `plan`, regardless of `plan_only` or `approval_pre_apply`."
 	VCSTriggersPullRequestModified = "Actions to trigger on StackGuardian when new commits are pushed to an open pull request. Supported action key: `createWfRun`. Only evaluated when `all_pull_requests.createWfRun.enabled` is `false` or absent. When `createWfRun.enabled` is `true`, a workflow run is created if the PR's target branch equals `tracked_branch`. The triggered run always executes `plan`, regardless of `plan_only` or `approval_pre_apply`."
 	VCSTriggersCreateTagAction     = "Actions to trigger on StackGuardian when a git tag is created. Supported action key: `createWfRun`. When `createWfRun.enabled` is `true`, a workflow run is created with the tag set as the VCS ref. The Terraform action follows `plan_only` / `approval_pre_apply` — unlike pull request events, tag events are not hardcoded to `plan`."
+	VCSTriggersActionEnabled       = "Whether this trigger action is active. When `false` the event is received but no workflow run is created."
 	VCSTriggersPush                = "Actions to trigger on StackGuardian on a push event. Supported action key: `createWfRun`. When `createWfRun.enabled` is `true`, a workflow run is created only when the pushed branch equals `tracked_branch`. The Terraform action is `plan` if `plan_only` is `true`, `apply` with a manual approval gate if `approval_pre_apply` is `true`, or `apply` by default."
 )
 
@@ -74,7 +80,7 @@ const (
 const (
 	EnvVarConfig          = "Configuration for the environment variable."
 	EnvVarConfigVarName   = "Name of the variable."
-	EnvVarConfigSecretId  = `ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>`
+	EnvVarConfigSecretId  = "Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`."
 	EnvVarConfigTextValue = `Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>`
 	EnvVarKind            = `Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>`
 )
@@ -97,17 +103,17 @@ const (
 	MiniStepsWebhookURL                = "Webhook URL"
 	MiniStepsWebhookSecret             = "Secret to be sent with API request to webhook url"
 	MiniStepsWorkflowChaining          = `Configuration for other workflows to be triggered on completion. Statuses on which workflows can be chained: <span style="background-color: #eff0f0; color: #e53835;">completed</span>, <span style="background-color: #eff0f0; color: #e53835;">errored</span>`
-	MiniStepsWfChainingWorkflowGroupId = "Workflow group id for the workflow."
-	MiniStepsWfChainingStackId         = "Stack id for the stack to be triggered."
+	MiniStepsWfChainingWorkflowGroupId = "Workflow group containing the workflow to trigger, as a bare name. For a nested group give the full path (e.g. `platform/networking`)."
+	MiniStepsWfChainingStackId         = "Stack to trigger, as a bare name within `workflow_group_id`."
 	MiniStepsWfChainingStackPayload    = "JSON string specifying overrides for the stack to be triggered"
-	MiniStepsWfChainingWorkflowId      = "Workflow id for the workflow to be triggered"
+	MiniStepsWfChainingWorkflowId      = "Workflow to trigger, as a bare name within `workflow_group_id`."
 	MiniStepsWfChainingWorkflowPayload = "JSON string specifying overrides for the workflow to be triggered"
 )
 
 // Runner Constraints attributes
 const (
 	RunnerConstraintsType  = `Type of runner. Valid options: <span style="background-color: #eff0f0; color: #e53835;">shared</span> or <span style="background-color: #eff0f0; color: #e53835;">private</span>`
-	RunnerConstraintsNames = "Id of the runner group. Allowed only if type is external."
+	RunnerConstraintsNames = "Runner groups the workflow is pinned to, given as a list of `stackguardian_runner_group` `resource_name` values. Set this when `type` is `private`; with `type = \"shared\"` the workflow uses StackGuardian's shared runners and this field is not applicable."
 )
 
 // User Schedules attributes
@@ -122,7 +128,7 @@ const (
 const (
 	DeploymentPlatformKind          = `Deployment platform kind. Options: <span style="background-color: #eff0f0; color: #e53835;">AWS_STATIC</span>, <span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC</span>, <span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_STATIC</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_OIDC</span>, <span style="background-color: #eff0f0; color: #e53835;">GCP_STATIC</span>, <span style="background-color: #eff0f0; color: #e53835;">GCP_OIDC</span>`
 	DeploymentPlatformConfigDetails = "Deployment platform configuration details."
-	DeploymentPlatformIntegrationId = "Integration ID for the deployment platform."
+	DeploymentPlatformIntegrationId = "Connector supplying the credentials this workflow deploys with, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/production-aws`). Reference a `stackguardian_connector` rather than typing the string."
 	DeploymentPlatformProfileName   = "Profile name for the deployment platform."
 )
 
@@ -135,17 +141,17 @@ const (
 
 // Workflow Steps Config attributes
 const (
-	WfStepName                = "Step name."
-	WfStepEnvVars             = "Environment variables for the workflow steps."
-	WfStepApproval            = "Enable approval for the workflow step."
-	WfStepTimeout             = "Workflow step execution timeout in seconds."
-	WfStepCmdOverride         = "Override command for the step."
-	WfStepMountPoints         = "Mount points for the step."
-	WfStepTemplateId          = "Workflow step template ID."
+	WfStepName                        = "Step name."
+	WfStepEnvVars                     = "Environment variables for the workflow steps."
+	WfStepApproval                    = "Enable approval for the workflow step."
+	WfStepTimeout                     = "Workflow step execution timeout in seconds."
+	WfStepCmdOverride                 = "Override command for the step."
+	WfStepMountPoints                 = "Mount points for the step."
+	WfStepTemplateId                  = "Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`."
 	TerraformWfStepTemplateRevisionId = "Fully-qualified workflow step template revision id pinned for this terraform config (e.g. \"/<org>/<name>:<rev>\")."
-	WfStepInputData           = "Workflow step input data (JSON string)"
-	WfStepInputDataSchemaType = `Schema type for the input data. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>`
-	WfStepInputDataData       = "Input data (JSON)."
+	WfStepInputData                   = "Workflow step input data (JSON string)"
+	WfStepInputDataSchemaType         = `Schema type for the input data. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>`
+	WfStepInputDataData               = "Input data (JSON)."
 )
 
 // Terraform Config attributes
