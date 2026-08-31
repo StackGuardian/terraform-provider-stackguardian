@@ -51,10 +51,7 @@ output "workflow_step_template_revision_info" {
 - `long_description` (String) A brief description of the workflow step template revision. Must be less than 256 characters.
 - `notes` (String) Notes or changelog information for this revision.
 - `runtime_source` (Attributes) Runtime source configuration for the revision. (see [below for nested schema](#nestedatt--runtime_source))
-- `source_config_kind` (String) Source configuration kind that defines how the template is deployed. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">DOCKER_IMAGE</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">GIT_REPO</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">S3</span>
+- `source_config_kind` (String) Where the step's runnable definition comes from. `DOCKER_IMAGE` — a container image, pulled from the registry described by `runtime_source`.
 - `tags` (List of String) A list of tags associated with the revision. A maximum of 10 tags are allowed.
 - `template_id` (String) ID of the parent workflow step template.
 - `template_type` (String) Type of the template. Valid values:
@@ -79,10 +76,7 @@ Read-Only:
 
 - `additional_config` (Map of String) Additional configuration settings for the runtime source as key-value pairs.
 - `config` (Attributes) Specific configuration settings for the runtime source. (see [below for nested schema](#nestedatt--runtime_source--config))
-- `source_config_dest_kind` (String) Destination kind for the runtime source configuration. Examples:
-<span style="background-color: #eff0f0; color: #e53835;">CONTAINER_REGISTRY</span>,
-<span style="background-color: #eff0f0; color: #e53835;">GIT</span>,
-<span style="background-color: #eff0f0; color: #e53835;">S3</span>
+- `source_config_dest_kind` (String) Where the step image is hosted. `CONTAINER_REGISTRY` — a Docker-compatible registry; set `config.docker_image` to the image reference, plus `config.auth` and `config.is_private` when the registry needs credentials.
 
 <a id="nestedatt--runtime_source--config"></a>
 ### Nested Schema for `runtime_source.config`

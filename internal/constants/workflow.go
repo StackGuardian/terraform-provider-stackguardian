@@ -6,7 +6,7 @@ const (
 	// WorkflowFromTemplateWorkflowGroupId is workflow_group_id for the workflow_from_template
 	// resource, where it is immutable (changing it forces recreation).
 	WorkflowFromTemplateWorkflowGroupId = "ID of the parent workflow group. Immutable — changing this forces the workflow to be recreated (destroy and create), as the platform has no operation to move a workflow between groups."
-	WorkflowType                        = "What this workflow runs. <ul><li>`TERRAFORM` / `OPENTOFU` — Terraform or OpenTofu configuration.</li><li>`ANSIBLE_PLAYBOOK` — an Ansible playbook.</li><li>`HELM` — a Helm chart.</li><li>`KUBECTL` — Kubernetes manifests applied with kubectl.</li><li>`CLOUDFORMATION` — an AWS CloudFormation stack.</li><li>`CUSTOM` — anything else, typically a public repository run with your own steps.</li></ul>"
+	WorkflowType                        = "How this workflow is executed. <ul><li>`TERRAFORM` — run with Terraform.</li><li>`OPENTOFU` — run with OpenTofu.</li><li>`CUSTOM` — run the steps in `wf_steps_config` yourself, rather than a built-in engine. Templates of other kinds (Helm, Ansible, Kubectl, CloudFormation) run as `CUSTOM` workflows.</li></ul>This is a smaller set than a template's `source_config_kind`, which describes what the template contains rather than how the workflow runs."
 	WorkflowRunnerConstraints           = "Runner constraints to control which runner executes the workflow."
 	WorkflowVcsConfig                   = "VCS configuration for the workflow."
 	WorkflowIacVcsConfig                = "IaC VCS configuration for the workflow."
