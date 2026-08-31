@@ -168,11 +168,20 @@ Optional:
 
 Required:
 
+- `config` (Attributes) Deployment platform configuration details. (see [below for nested schema](#nestedatt--actions--order--parameters--deployment_platform_config--config))
 - `kind` (String) Deployment platform kind. Options: <span style="background-color: #eff0f0; color: #e53835;">AWS_STATIC</span>, <span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC</span>, <span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_STATIC</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_OIDC</span>, <span style="background-color: #eff0f0; color: #e53835;">GCP_STATIC</span>, <span style="background-color: #eff0f0; color: #e53835;">GCP_OIDC</span>
+
+<a id="nestedatt--actions--order--parameters--deployment_platform_config--config"></a>
+### Nested Schema for `actions.order.parameters.deployment_platform_config.config`
+
+Required:
+
+- `integration_id` (String) Integration ID for the deployment platform.
 
 Optional:
 
-- `config` (String) Deployment platform configuration details. (JSON string)
+- `profile_name` (String) Profile name for the deployment platform.
+
 
 
 <a id="nestedatt--actions--order--parameters--environment_variables"></a>
@@ -289,14 +298,12 @@ Optional:
 Required:
 
 - `id` (String) UUID identifying the workflow within the stack template.
-- `template_id` (String) ID of the workflow template that this workflow is based on.
 
 Optional:
 
 - `approvers` (List of String) List of approvers.
 - `deployment_platform_config` (Attributes List) Deployment platform configuration. (see [below for nested schema](#nestedatt--workflows_config--workflows--deployment_platform_config))
 - `environment_variables` (Attributes List) Environment variables for the workflow. (see [below for nested schema](#nestedatt--workflows_config--workflows--environment_variables))
-- `iac_input_data` (Attributes) Top-level IaC input data for this workflow, used when the workflow is instantiated from a workflow template (`template_id`). (see [below for nested schema](#nestedatt--workflows_config--workflows--iac_input_data))
 - `input_schemas` (Attributes List) Input schema definitions for this workflow. (see [below for nested schema](#nestedatt--workflows_config--workflows--input_schemas))
 - `mini_steps` (Attributes) Actions that are required to be performed once workflow execution is complete (see [below for nested schema](#nestedatt--workflows_config--workflows--mini_steps))
 - `number_of_approvals_required` (Number) Number of approvals required.
@@ -314,11 +321,20 @@ Optional:
 
 Required:
 
+- `config` (Attributes) Deployment platform configuration details. (see [below for nested schema](#nestedatt--workflows_config--workflows--deployment_platform_config--config))
 - `kind` (String) Deployment platform kind. Options: <span style="background-color: #eff0f0; color: #e53835;">AWS_STATIC</span>, <span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC</span>, <span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_STATIC</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_OIDC</span>, <span style="background-color: #eff0f0; color: #e53835;">GCP_STATIC</span>, <span style="background-color: #eff0f0; color: #e53835;">GCP_OIDC</span>
+
+<a id="nestedatt--workflows_config--workflows--deployment_platform_config--config"></a>
+### Nested Schema for `workflows_config.workflows.deployment_platform_config.config`
+
+Required:
+
+- `integration_id` (String) Integration ID for the deployment platform.
 
 Optional:
 
-- `config` (String) Deployment platform configuration details. (JSON string)
+- `profile_name` (String) Profile name for the deployment platform.
+
 
 
 <a id="nestedatt--workflows_config--workflows--environment_variables"></a>
@@ -343,18 +359,6 @@ Optional:
 
 
 
-<a id="nestedatt--workflows_config--workflows--iac_input_data"></a>
-### Nested Schema for `workflows_config.workflows.iac_input_data`
-
-Required:
-
-- `schema_type` (String) Schema type for the input data (e.g. RAW_JSON).
-
-Optional:
-
-- `data` (String) Input data as a JSON string.
-
-
 <a id="nestedatt--workflows_config--workflows--input_schemas"></a>
 ### Nested Schema for `workflows_config.workflows.input_schemas`
 
@@ -364,10 +368,7 @@ Required:
 
 Optional:
 
-- `description` (String)
 - `encoded_data` (String) Base64-encoded schema data.
-- `id` (String)
-- `is_committed` (Boolean)
 - `name` (String)
 - `ui_schema_data` (String)
 

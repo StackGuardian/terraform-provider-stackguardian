@@ -746,7 +746,12 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									},
 									NestedObject: schema.NestedAttributeObject{
 										Attributes: map[string]schema.Attribute{
-											"name":  schema.StringAttribute{Optional: true},
+											"name": schema.StringAttribute{
+												Computed: true,
+												PlanModifiers: []planmodifier.String{
+													stringplanmodifier.UseStateForUnknown(),
+												},
+											},
 											"desc":  schema.StringAttribute{Optional: true},
 											"cron":  schema.StringAttribute{Required: true},
 											"state": schema.StringAttribute{Required: true},

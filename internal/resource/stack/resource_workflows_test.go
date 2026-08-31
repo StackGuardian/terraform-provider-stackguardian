@@ -342,3 +342,249 @@ func TestAccStack_WorkflowsConfigRoundTrip(t *testing.T) {
 		},
 	})
 }
+
+// TestAccStack_WorkflowsConfigUpdate verifies that changing per-workflow
+// values on an ALREADY-EXISTING stack actually applies — approvers,
+// input_schemas, user_schedules, context_tags, runner_constraints, and
+// mini_steps all round-tripped at create in TestAccStack_WorkflowsConfigRoundTrip,
+// but were never re-verified after a real update to a different value. Step 3
+// clears every override back to unset and checks the ones with a known-empty
+// flatten default (tags/approvers/input_schemas/user_schedules/context_tags)
+// settle to empty rather than erroring or keeping a stale value — exercising
+// that path on a genuine update, not just a fresh create.
+func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
+	wfGrpName := "tf-provider-stack-wfupd-wfgrp"
+	wfTemplateName := "tf-provider-stack-wfupd-wftmpl"
+	stackTemplateName := "tf-provider-stack-wfupd-stmpl"
+	id := "tf-provider-stack-wfupd"
+
+	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+
+	initialConfig := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id        = %q
+        tags      = ["v1"]
+        approvers = ["alice@example.com"]
+
+        input_schemas = [
+          { type = "FORM_JSONSCHEMA" }
+        ]
+
+        user_schedules = [
+          { cron = "0 8 ? * MON *", state = "ENABLED" }
+        ]
+
+        context_tags = {
+          env = "dev"
+        }
+
+        runner_constraints = {
+          type  = "private"
+          names = ["runner-1"]
+        }
+
+        mini_steps = {
+          webhooks = {
+            completed = [
+              { webhook_name = "on-completed", webhook_url = "https://example.com/hook" }
+            ]
+          }
+        }
+      }
+    ]
+  }
+`, testWfSlotId)
+
+	updatedConfig := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id        = %q
+        tags      = ["v2"]
+        approvers = ["bob@example.com"]
+
+        input_schemas = [
+          { type = "RAW_JSON" }
+        ]
+
+        user_schedules = [
+          { cron = "0 9 ? * TUE *", state = "DISABLED" }
+        ]
+
+        context_tags = {
+          env = "prod"
+        }
+
+        runner_constraints = {
+          type  = "private"
+          names = ["runner-2"]
+        }
+
+        mini_steps = {
+          webhooks = {
+            completed = [
+              { webhook_name = "on-completed-v2", webhook_url = "https://example.com/hook-v2" }
+            ]
+          }
+        }
+      }
+    ]
+  }
+`, testWfSlotId)
+
+	// Explicit empty values, not omission: removing an attribute from config
+	// entirely is indistinguishable, at plan time, from never having set it —
+	// UseStateForUnknown then just carries the prior (Step 2) value forward
+	// with no diff, so omitting these here would silently keep testing Step
+	// 2's values instead of exercising a real clear. An explicit [] / {} is a
+	// known, non-null config value, so it plans as a genuine change — same
+	// pattern as TestAccWorkflowUsingTemplate_ExplicitEmptySuppressesTemplateDefault.
+	clearedConfig := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id             = %q
+        tags           = []
+        approvers      = []
+        input_schemas  = []
+        user_schedules = []
+        context_tags   = {}
+      }
+    ]
+  }
+`, testWfSlotId)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, initialConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.tags.0", "v1"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.approvers.0", "alice@example.com"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.input_schemas.0.type", "FORM_JSONSCHEMA"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.0.cron", "0 8 ? * MON *"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.0.state", "ENABLED"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.context_tags.env", "dev"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.runner_constraints.names.0", "runner-1"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.mini_steps.webhooks.completed.0.webhook_name", "on-completed"),
+				),
+			},
+			{
+				// Update: every value above changes to a different one on the
+				// SAME stack — verifies the change actually applies, not just
+				// that the initial create round trips.
+				Config: testAccStackConfig(wfGrpName, revision, id, updatedConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.tags.0", "v2"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.approvers.0", "bob@example.com"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.input_schemas.0.type", "RAW_JSON"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.0.cron", "0 9 ? * TUE *"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.0.state", "DISABLED"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.context_tags.env", "prod"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.runner_constraints.names.0", "runner-2"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.mini_steps.webhooks.completed.0.webhook_name", "on-completed-v2"),
+				),
+			},
+			{
+				// Clear every override back to unset — the template supplies no
+				// default for any of these, so the known-empty ones must settle
+				// to empty rather than error or keep the prior step's value.
+				Config: testAccStackConfig(wfGrpName, revision, id, clearedConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.tags.#", "0"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.approvers.#", "0"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.input_schemas.#", "0"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.#", "0"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.context_tags.%", "0"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccStack_WorkflowsConfigAddWorkflowSlot verifies that adding a second
+// entry to workflows_config.workflows[] on an already-existing stack applies
+// correctly — the existing slot's data must be undisturbed, and the new slot
+// must appear with its own values — then that removing it again shrinks the
+// list back down cleanly. setupStackTemplateChainNoActions wires two workflow
+// slots (testWfSlotId, secondWfSlotId) on the template so both are available
+// to declare; this is the one workflows_config scenario no other test covers:
+// the workflows list itself changing shape via update, not just values within
+// an already-declared slot.
+func TestAccStack_WorkflowsConfigAddWorkflowSlot(t *testing.T) {
+	wfGrpName := "tf-provider-stack-wfadd-wfgrp"
+	wfTemplateName := "tf-provider-stack-wfadd-wftmpl"
+	stackTemplateName := "tf-provider-stack-wfadd-stmpl"
+	id := "tf-provider-stack-wfadd"
+
+	t.Cleanup(func() {
+		logCleanupErr(t, fmt.Sprintf("delete workflow group %q", wfGrpName), deleteWorkflowGroupFixture(wfGrpName))
+	})
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil && !is409(err) {
+		t.Fatalf("TestAccStack_WorkflowsConfigAddWorkflowSlot: create workflow group %q: %s", wfGrpName, err)
+	}
+	workflowTemplateID := setupStackWorkflowTemplate(t, wfTemplateName)
+	revision := setupStackTemplateChainNoActions(t, stackTemplateName, workflowTemplateID)
+	t.Cleanup(func() { deleteStackFixture(wfGrpName, id) })
+
+	oneSlot := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      { id = %q, tags = ["first"] }
+    ]
+  }
+`, testWfSlotId)
+
+	twoSlots := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      { id = %q, tags = ["first"] },
+      { id = %q, tags = ["second"] }
+    ]
+  }
+`, testWfSlotId, secondWfSlotId)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, oneSlot),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.#", "1"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", testWfSlotId),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.tags.0", "first"),
+				),
+			},
+			{
+				// Add a second slot — the first slot's data must be undisturbed,
+				// and the new slot must appear with its own values.
+				Config: testAccStackConfig(wfGrpName, revision, id, twoSlots),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.#", "2"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.tags.0", "first"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.1.id", secondWfSlotId),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.1.tags.0", "second"),
+				),
+			},
+			{
+				// Remove the second slot again — must shrink back to one cleanly.
+				Config: testAccStackConfig(wfGrpName, revision, id, oneSlot),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.#", "1"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", testWfSlotId),
+				),
+			},
+		},
+	})
+}
