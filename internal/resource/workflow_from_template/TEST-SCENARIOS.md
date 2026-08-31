@@ -36,12 +36,20 @@
 | `..._WithWfStepTemplateRevisionId` | `terraform_config.wf_step_template_revision_id` set in config + updated. |
 | `..._WfStepRevisionInheritedFromTemplate` | `wf_step_template_revision_id` inherited from template; explicit `""` suppresses inheritance. |
 
+### Lifecycle / replacement
+
+| Test | Scenario covered |
+| --- | --- |
+| `..._WorkflowGroupRequiresReplace` | Changing `workflow_group_id` forces destroy+create — the platform has no operation to move a workflow between groups. |
+| `..._ManualDeleteRecreates` | A workflow deleted out of band is detected as gone on refresh and recreated on the next apply, rather than erroring. |
+
 ### Empty-value / suppression semantics
 
 | Test | Scenario covered |
 | --- | --- |
 | `..._EmptyAllowBlankFalse` | Empty values on `allow_blank=false` fields handled across create/update/refresh. |
 | `..._ExplicitEmptySuppressesTemplateDefault` | An explicit empty list/dict suppresses a template default (vs. null → inherit). |
+| `..._ExplicitEmptyIacInputData` | An explicit empty `iac_input_data.data` (`"{}"`) clears a template's `FORM_JSONSCHEMA` defaults instead of inheriting them; the omit case still inherits, and the cleared state round-trips to a clean plan. |
 
 ### Drift
 

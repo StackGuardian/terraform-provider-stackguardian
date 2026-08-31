@@ -38,12 +38,16 @@ resource "stackguardian_workflow_template" "example" {
   tags               = ["terraform", "production"]
 }
 
-# Example 1: Basic workflow template revision
+# Example 1: Basic workflow template revision.
+# user_job_cpu and user_job_memory are required -- they size the container that
+# runs the workflow. Memory is in MiB.
 resource "stackguardian_workflow_template_revision" "basic" {
   template_id        = stackguardian_workflow_template.example.id
   alias              = "v1"
   source_config_kind = "TERRAFORM"
   is_public          = "0"
+  user_job_cpu       = 1
+  user_job_memory    = 2048
   tags               = ["terraform", "revision"]
 }
 

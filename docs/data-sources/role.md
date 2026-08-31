@@ -14,12 +14,15 @@ Reads an existing role and its permission set, for use in a `stackguardian_role_
 ## Example Usage
 
 ```terraform
-data "stackguardian_role" "example" {
-  resource_name = "role-name"
+# Look up a role defined elsewhere in the organization, then grant it to a user.
+data "stackguardian_role" "developer" {
+  resource_name = "developer"
 }
 
-output "demo-role-output" {
-  value = data.stackguardian_role.example.description
+resource "stackguardian_role_assignment" "example" {
+  user_id    = "user@example.com"
+  entity_type = "EMAIL"
+  role       = data.stackguardian_role.developer.resource_name
 }
 ```
 

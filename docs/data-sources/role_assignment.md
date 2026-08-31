@@ -14,12 +14,20 @@ Reads an existing role assignment, including the roles granted to the user or SS
 ## Example Usage
 
 ```terraform
+# Inspect an existing role assignment -- useful for auditing which roles a user holds
+# before changing them.
 data "stackguardian_role_assignment" "example" {
-  user_id = "user-id"
+  user_id = "user@example.com"
 }
 
-output "role-assignment-output" {
-  value = data.stackguardian_role_assignment.example.entity_type
+output "assigned_roles" {
+  description = "Roles currently granted to this user."
+  value       = data.stackguardian_role_assignment.example.roles
+}
+
+output "entity_type" {
+  description = "Whether the assignment targets an email, an SSO user, or an SSO group."
+  value       = data.stackguardian_role_assignment.example.entity_type
 }
 ```
 
