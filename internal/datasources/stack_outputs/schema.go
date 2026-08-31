@@ -12,6 +12,7 @@ import (
 // Schema defines the schema for the data source.
 func (d *stackOutputsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Reads the outputs produced by a stack's most recent run, so other Terraform resources can consume values that StackGuardian produced.",
 		Attributes: map[string]schema.Attribute{
 			"stack": schema.StringAttribute{
 				MarkdownDescription: constants.StackguardianStack,

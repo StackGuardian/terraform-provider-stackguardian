@@ -65,7 +65,7 @@ output "workflow_step_template_revision_info" {
 Read-Only:
 
 - `effective_date` (String) Effective date when this resource will be deprecated and no longer available for use.
-- `message` (String) Deprecation message
+- `message` (String) Message shown to users who reference this revision after it has been deprecated. Use it to point them at the replacement revision.
 
 
 <a id="nestedatt--runtime_source"></a>
@@ -89,7 +89,7 @@ Read-Only:
 - `docker_image` (String) Docker image URI to be used for template execution. Example: `ubuntu:latest`, `myregistry.azurecr.io/myapp:v1.0`
 - `docker_registry_username` (String) Username for authentication with the Docker registry (if using private registries).
 - `is_private` (Boolean) Indicates whether the container registry or repository is private.
-- `local_workspace_dir` (String) Workfing directory path.
+- `local_workspace_dir` (String) Working directory path inside the workspace, relative to the repository root.
 
 
 

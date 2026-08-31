@@ -39,6 +39,7 @@ const (
 	- <span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC <a href="https://docs.stackguardian.io/docs/connectors/csp/aws/#roles-or-rbac-recommended"><span class="fa fa-external-link"></span></span></a>
 		- role_arn
 		- external_id
+		- duration_seconds
 	- <span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC <a href="https://docs.stackguardian.io/docs/connectors/csp/aws/#using-oidc-identity-provider"><span class="fa fa-external-link"></span></span></a>
 		- role_arn
 	- <span style="background-color: #eff0f0; color: #e53835;">GCP_STATIC <a href="https://docs.stackguardian.io/docs/connectors/csp/gcp/#using-service-account"><span class="fa fa-external-link"></span></span></a>
@@ -116,7 +117,7 @@ const (
 const (
 	AllowedPermissions      = "A map of permissions assigned to the role."
 	AllowedPermissionsName  = "The name of the permission."
-	AllowedPermissionsPaths = "A map of resource paths to which this permission is scoped."
+	AllowedPermissionsPaths = "Values substituted into the placeholders in the permission key, scoping it to specific resources. Keys are the placeholder names used in that permission (e.g. `<wfGrp>`) and values are **bare resource names**, not paths — `[\"frontend\"]`, not `[\"/wfgrps/frontend\"]`. For a nested workflow group use its full path, `platform/networking`."
 )
 
 // Role Assignment
@@ -136,7 +137,7 @@ const (
 const (
 	Approvers                 = "List of stackguardian users"
 	NumberOfApprovalsRequired = "Number of approvals required for a policy check to pass"
-	EnforcedOn                = "List of Resource path on which this policy is to be applied on"
+	EnforcedOn                = "What this policy is enforced on. Either organization-wide, or any combination of workflow groups, workflows and connectors.\n\n- `[\"*\"]` — the whole organization. Used on its own, not combined with other entries.\n- `[\"/wfgrps/<group>\"]` — a workflow group and everything inside it. No trailing slash.\n- Workflows and connectors follow the same resource-path convention and can be listed alongside workflow groups.\n\nConfirm an unfamiliar form against an existing policy before relying on it."
 	PolicyType                = "Type of policy created \"GENERAL\" or \"FILTER.INSIGHT\""
 
 	PolicyConfig       = "Policy configuration"
@@ -158,7 +159,7 @@ const (
 
 	PolicyVCSConfig                    = "Configuration to import policy from version control"
 	PolicyVCSConfigMarketplaceTemplate = "Name of the template from marketplace"
-	PolicyVCSConfigTemplateId          = "ID of the template from marketplace"
+	PolicyVCSConfigTemplateId          = "Policy template to use, as a path-form ID: `/policies/<name>:<revision>` for a policy created in your own organization, or `/<org>/<name>:<revision>` when qualifying it explicitly. Templates published by StackGuardian use the `stackguardian` org (e.g. `/stackguardian/checkov-best-practices:2`). At most 100 characters. Required when `use_marketplace_template` is `true`."
 
 	PolicyVCSConfigCustomSource                     = DiscoverySettingsBenchmarksRuntimeSource
 	PolicyVCSConfigCustomSourceSourceConfigDestKind = DiscoverySettingsBenchmarksRuntimeSourceSourceConfigDestKind
@@ -173,6 +174,7 @@ const (
 	PolicyVCSConfigCustomSourceWorkingDir              = DiscoverySettingsBenchmarksRuntimeSourceConfigWorkingDir
 	PolicyVCSConfigCustomSourceRepo                    = DiscoverySettingsBenchmarksRuntimeSourceConfigRepo
 	PolicyVCSConfigCustomSourceIsPrivate               = DiscoverySettingsBenchmarksRuntimeSourceConfigIsPrivate
+	PolicyVCSConfigCustomSourceIncludeSubmodule        = DiscoverySettingsBenchmarksRuntimeSourceConfigIncludeSubModule
 
 	PolicyVCSConfigAdditionalConfig = "Additional configuration for the policy"
 )
@@ -207,12 +209,12 @@ const (
 	- <span style="background-color: #eff0f0; color: #e53835;">aws_s3</span>
 	- <span style="background-color: #eff0f0; color: #e53835;">azure_blob_storage</span>
 `
-	AzureBlobStorageAccountName = "Account of your azure blob storage"
-	AzureBlobStorageAccessKey   = "Access key for you blob storage account"
-	S3BucketName                = "S3 buckget name"
+	AzureBlobStorageAccountName = "Name of your Azure Blob Storage account."
+	AzureBlobStorageAccessKey   = "Access key for your Azure Blob Storage account."
+	S3BucketName                = "Name of the S3 bucket used to store runner logs."
 	AWSRegion                   = "AWS region where the bucket is placed"
 	Auth                        = "Authentication required by the runner to access the backend storage. Required only for type \"aws_s3\""
-	IntegrationId               = "SG Connector Id. Required only for type \"aws_s3\" eg: /integrations/test-connector"
+	IntegrationId               = "Connector the runner authenticates to the storage backend with, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/runner-log-storage`). Required only when `type` is `aws_s3`."
 	Deprecation                 = "Deprecation information for this resource. Revision can only be deprecated once it is published."
 	DeprecationEffectiveDate    = "Effective date when this resource will be deprecated and no longer available for use."
 )
@@ -226,7 +228,7 @@ const (
 	WfMiniSteps                = "Actions that are required to be performed once workflow execution is complete"
 	WfUserSchedules            = "Configuration for scheduling runs for the workflows."
 	WfStepsConfig              = "Workflow steps configuration. Valid for custom workflow types."
-	WfEnvironmentVariables     = "Environment variables for worklfow in workflow runs."
+	WfEnvironmentVariables     = "Environment variables made available to the workflow during its runs."
 	WfDeploymentPlatformConfig = "Deployment platform configuration."
 )
 

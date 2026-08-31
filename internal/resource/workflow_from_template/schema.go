@@ -23,7 +23,7 @@ var nonEmptyString = []validator.String{stringvalidator.LengthAtLeast(1)}
 
 func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a workflow resource that is created from a workflow template.",
+		MarkdownDescription: "Manages a workflow created from a workflow template revision. The provider fetches the revision named by `vcs_config.iac_vcs_config.iac_template_id`, merges it with the configuration you declare, and stores the fully-resolved result in state — so any attribute you leave out is inherited from the template, and any attribute you set wins.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.Id,
@@ -33,7 +33,7 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 				},
 			},
 			"resource_name": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "workflow_from_template"),
+				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "workflow"),
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -51,7 +51,7 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 				},
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow_from_template"),
+				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow"),
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -139,7 +139,7 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 				},
 			},
 			"tags": schema.ListAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow_from_template"),
+				MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow"),
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
@@ -182,7 +182,7 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 				},
 			},
 			"context_tags": schema.MapAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.ContextTags, "workflow_from_template"),
+				MarkdownDescription: fmt.Sprintf(constants.ContextTags, "workflow"),
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
@@ -233,7 +233,7 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 						Required:            true,
 						Attributes: map[string]schema.Attribute{
 							"iac_template_id": schema.StringAttribute{
-								MarkdownDescription: "The ID of the workflow template to use for this workflow.",
+								MarkdownDescription: constants.WorkflowIacTemplateId,
 								Required:            true,
 								Validators:          nonEmptyString,
 							},

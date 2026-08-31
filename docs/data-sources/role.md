@@ -40,6 +40,6 @@ output "demo-role-output" {
 Read-Only:
 
 - `name` (String) The name of the permission.
-- `paths` (Map of List of String) A map of resource paths to which this permission is scoped.
+- `paths` (Map of List of String) Values substituted into the placeholders in the permission key, scoping it to specific resources. Keys are the placeholder names used in that permission (e.g. `<wfGrp>`) and values are **bare resource names**, not paths — `["frontend"]`, not `["/wfgrps/frontend"]`. For a nested workflow group use its full path, `platform/networking`.
 
 

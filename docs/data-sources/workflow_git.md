@@ -40,15 +40,15 @@ output "workflow_git_repo" {
 ### Read-Only
 
 - `approvers` (List of String) List of approvers for approvals during workflow execution.
-- `context_tags` (Map of String) Context tags for workflow_git
+- `context_tags` (Map of String) Context tags for workflow
 - `deployment_platform_config` (Attributes List) Deployment platform configuration. (see [below for nested schema](#nestedatt--deployment_platform_config))
-- `description` (String) A brief description of the workflow_git. Must be less than 256 characters.
-- `environment_variables` (Attributes List) Environment variables for worklfow in workflow runs. (see [below for nested schema](#nestedatt--environment_variables))
+- `description` (String) A brief description of the workflow. Must be less than 256 characters.
+- `environment_variables` (Attributes List) Environment variables made available to the workflow during its runs. (see [below for nested schema](#nestedatt--environment_variables))
 - `mini_steps` (Attributes) Actions that are required to be performed once workflow execution is complete (see [below for nested schema](#nestedatt--mini_steps))
 - `number_of_approvals_required` (Number) Number of approvals required.
-- `resource_name` (String) Name of the workflow_git. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
+- `resource_name` (String) Name of the workflow. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
 - `runner_constraints` (Attributes) Runner constraints to control which runner executes the workflow. (see [below for nested schema](#nestedatt--runner_constraints))
-- `tags` (List of String) A list of tags associated with the workflow_git. A maximum of 10 tags are allowed.
+- `tags` (List of String) A list of tags associated with the workflow. A maximum of 10 tags are allowed.
 - `terraform_config` (Attributes) Terraform configuration. Valid only for terraform type template (see [below for nested schema](#nestedatt--terraform_config))
 - `user_job_cpu` (Number) Limits to set user job CPU.
 - `user_job_memory` (Number) Limits to set user job memory.
@@ -71,7 +71,7 @@ Read-Only:
 
 Read-Only:
 
-- `integration_id` (String) Integration ID for the deployment platform.
+- `integration_id` (String) Connector supplying the credentials this workflow deploys with, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/production-aws`). Reference a `stackguardian_connector` rather than typing the string.
 - `profile_name` (String) Profile name for the deployment platform.
 
 
@@ -89,7 +89,7 @@ Read-Only:
 
 Read-Only:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
 - `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 - `var_name` (String) Name of the variable.
 
@@ -239,10 +239,10 @@ Read-Only:
 
 Read-Only:
 
-- `stack_id` (String) Stack id for the stack to be triggered.
+- `stack_id` (String) Stack to trigger, as a bare name within `workflow_group_id`.
 - `stack_run_payload` (String) JSON string specifying overrides for the stack to be triggered
-- `workflow_group_id` (String) Workflow group id for the workflow.
-- `workflow_id` (String) Workflow id for the workflow to be triggered
+- `workflow_group_id` (String) Workflow group containing the workflow to trigger, as a bare name. For a nested group give the full path (e.g. `platform/networking`).
+- `workflow_id` (String) Workflow to trigger, as a bare name within `workflow_group_id`.
 - `workflow_run_payload` (String) JSON string specifying overrides for the workflow to be triggered
 
 
@@ -251,10 +251,10 @@ Read-Only:
 
 Read-Only:
 
-- `stack_id` (String) Stack id for the stack to be triggered.
+- `stack_id` (String) Stack to trigger, as a bare name within `workflow_group_id`.
 - `stack_run_payload` (String) JSON string specifying overrides for the stack to be triggered
-- `workflow_group_id` (String) Workflow group id for the workflow.
-- `workflow_id` (String) Workflow id for the workflow to be triggered
+- `workflow_group_id` (String) Workflow group containing the workflow to trigger, as a bare name. For a nested group give the full path (e.g. `platform/networking`).
+- `workflow_id` (String) Workflow to trigger, as a bare name within `workflow_group_id`.
 - `workflow_run_payload` (String) JSON string specifying overrides for the workflow to be triggered
 
 
@@ -265,7 +265,7 @@ Read-Only:
 
 Read-Only:
 
-- `names` (List of String) Id of the runner group. Allowed only if type is external.
+- `names` (List of String) Runner groups the workflow is pinned to, given as a list of `stackguardian_runner_group` `resource_name` values. Set this when `type` is `private`; with `type = "shared"` the workflow uses StackGuardian's shared runners and this field is not applicable.
 - `type` (String) Type of runner. Valid options: <span style="background-color: #eff0f0; color: #e53835;">shared</span> or <span style="background-color: #eff0f0; color: #e53835;">private</span>
 
 
@@ -308,7 +308,7 @@ Read-Only:
 - `name` (String) Step name.
 - `timeout` (Number) Workflow step execution timeout in seconds.
 - `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--terraform_config--post_apply_wf_steps_config--wf_step_input_data))
-- `wf_step_template_id` (String) Workflow step template ID.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 <a id="nestedatt--terraform_config--post_apply_wf_steps_config--environment_variables"></a>
 ### Nested Schema for `terraform_config.post_apply_wf_steps_config.environment_variables`
@@ -323,7 +323,7 @@ Read-Only:
 
 Read-Only:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
 - `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 - `var_name` (String) Name of the variable.
 
@@ -361,7 +361,7 @@ Read-Only:
 - `name` (String) Step name.
 - `timeout` (Number) Workflow step execution timeout in seconds.
 - `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--terraform_config--post_plan_wf_steps_config--wf_step_input_data))
-- `wf_step_template_id` (String) Workflow step template ID.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 <a id="nestedatt--terraform_config--post_plan_wf_steps_config--environment_variables"></a>
 ### Nested Schema for `terraform_config.post_plan_wf_steps_config.environment_variables`
@@ -376,7 +376,7 @@ Read-Only:
 
 Read-Only:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
 - `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 - `var_name` (String) Name of the variable.
 
@@ -414,7 +414,7 @@ Read-Only:
 - `name` (String) Step name.
 - `timeout` (Number) Workflow step execution timeout in seconds.
 - `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--terraform_config--pre_apply_wf_steps_config--wf_step_input_data))
-- `wf_step_template_id` (String) Workflow step template ID.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 <a id="nestedatt--terraform_config--pre_apply_wf_steps_config--environment_variables"></a>
 ### Nested Schema for `terraform_config.pre_apply_wf_steps_config.environment_variables`
@@ -429,7 +429,7 @@ Read-Only:
 
 Read-Only:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
 - `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 - `var_name` (String) Name of the variable.
 
@@ -467,7 +467,7 @@ Read-Only:
 - `name` (String) Step name.
 - `timeout` (Number) Workflow step execution timeout in seconds.
 - `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--terraform_config--pre_plan_wf_steps_config--wf_step_input_data))
-- `wf_step_template_id` (String) Workflow step template ID.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 <a id="nestedatt--terraform_config--pre_plan_wf_steps_config--environment_variables"></a>
 ### Nested Schema for `terraform_config.pre_plan_wf_steps_config.environment_variables`
@@ -482,7 +482,7 @@ Read-Only:
 
 Read-Only:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
 - `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 - `var_name` (String) Name of the variable.
 
@@ -568,7 +568,7 @@ Read-Only:
 
 Read-Only:
 
-- `auth` (String, Sensitive) Connector id to access private git repository. Example: `/integrations/<integration-id>`
+- `auth` (String, Sensitive) Connector used to clone a private repository, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/github-connector`). Required when `is_private` is `true`.
 - `git_core_auto_crlf` (Boolean) Whether to automatically handle CRLF line endings.
 - `git_sparse_checkout_config` (String) Git sparse checkout command line git cli options.
 - `include_sub_module` (Boolean) Whether to include git submodules.
@@ -603,7 +603,7 @@ Read-Only:
 
 Read-Only:
 
-- `enabled` (Boolean)
+- `enabled` (Boolean) Whether this trigger action is active. When `false` the event is received but no workflow run is created.
 
 
 <a id="nestedatt--vcs_triggers--create_tag"></a>
@@ -611,7 +611,7 @@ Read-Only:
 
 Read-Only:
 
-- `enabled` (Boolean)
+- `enabled` (Boolean) Whether this trigger action is active. When `false` the event is received but no workflow run is created.
 
 
 <a id="nestedatt--vcs_triggers--pull_request_modified"></a>
@@ -619,7 +619,7 @@ Read-Only:
 
 Read-Only:
 
-- `enabled` (Boolean)
+- `enabled` (Boolean) Whether this trigger action is active. When `false` the event is received but no workflow run is created.
 
 
 <a id="nestedatt--vcs_triggers--pull_request_opened"></a>
@@ -627,7 +627,7 @@ Read-Only:
 
 Read-Only:
 
-- `enabled` (Boolean)
+- `enabled` (Boolean) Whether this trigger action is active. When `false` the event is received but no workflow run is created.
 
 
 <a id="nestedatt--vcs_triggers--push"></a>
@@ -635,7 +635,7 @@ Read-Only:
 
 Read-Only:
 
-- `enabled` (Boolean)
+- `enabled` (Boolean) Whether this trigger action is active. When `false` the event is received but no workflow run is created.
 
 
 
@@ -651,7 +651,7 @@ Read-Only:
 - `name` (String) Step name.
 - `timeout` (Number) Workflow step execution timeout in seconds.
 - `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--wf_steps_config--wf_step_input_data))
-- `wf_step_template_id` (String) Workflow step template ID.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 <a id="nestedatt--wf_steps_config--environment_variables"></a>
 ### Nested Schema for `wf_steps_config.environment_variables`
@@ -666,7 +666,7 @@ Read-Only:
 
 Read-Only:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
 - `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 - `var_name` (String) Name of the variable.
 

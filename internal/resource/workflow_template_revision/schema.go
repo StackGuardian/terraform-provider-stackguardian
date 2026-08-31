@@ -348,7 +348,7 @@ var wfStepsConfig = schema.NestedAttributeObject{
 // Schema defines the schema for the resource.
 func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a workflow template revision resource.",
+		MarkdownDescription: "Manages a versioned revision of a `stackguardian_workflow_template` — the IaC source, input schema and execution settings that workflows inherit.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.Id,

@@ -14,6 +14,7 @@ import (
 
 func (d *runnerGroupTokenDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Reads a registration token for a runner group. Use it to register a self-hosted runner with the group. The token is sensitive — treat any output containing it accordingly.",
 		Attributes: map[string]schema.Attribute{
 			"runner_group_id": schema.StringAttribute{
 				MarkdownDescription: constants.RunnerGroupId,

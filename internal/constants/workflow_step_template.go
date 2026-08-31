@@ -24,7 +24,7 @@ const (
 
 	WorkflowStepTemplateRuntimeSourceConfigDockerRegistryUsernameCommon = "Username for authentication with the Docker registry (if using private registries)."
 
-	WorkflowStepTemplateRuntimeSourceConfigLocalWorkspaceDirCommon = "Workfing directory path."
+	WorkflowStepTemplateRuntimeSourceConfigLocalWorkspaceDirCommon = "Working directory path inside the workspace, relative to the repository root."
 )
 
 // Workflow Step Template Resource documentation

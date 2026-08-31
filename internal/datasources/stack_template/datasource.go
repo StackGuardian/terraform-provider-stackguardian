@@ -52,7 +52,7 @@ func (d *stackTemplateDataSource) Configure(_ context.Context, req datasource.Co
 
 func (d *stackTemplateDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "> **Note:** This data source is currently in **BETA**. Features and behavior may change.\n\nUse this data source to read a stack template.",
+		MarkdownDescription: "> **Note:** This data source is currently in **BETA**. Features and behavior may change.\n\nReads an existing stack template. The template is a container only — use `stackguardian_stack_template_revision` to read the workflows and configuration it holds.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.DatasourceId,

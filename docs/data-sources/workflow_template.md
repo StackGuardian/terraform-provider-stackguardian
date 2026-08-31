@@ -39,7 +39,7 @@ output "workflow_template_output" {
 - `owner_org` (String) Organization the template belongs to.
 - `runtime_source` (Attributes) Runtime source configuration for the template. (see [below for nested schema](#nestedatt--runtime_source))
 - `shared_orgs_list` (List of String) List of organizations the template is shared with.
-- `source_config_kind` (String)
+- `source_config_kind` (String) Source configuration kind. Options: <span style="background-color: #eff0f0; color: #e53835;">TERRAFORM</span>, <span style="background-color: #eff0f0; color: #e53835;">OPENTOFU</span>, <span style="background-color: #eff0f0; color: #e53835;">ANSIBLE_PLAYBOOK</span>, <span style="background-color: #eff0f0; color: #e53835;">HELM</span>, <span style="background-color: #eff0f0; color: #e53835;">KUBECTL</span>, <span style="background-color: #eff0f0; color: #e53835;">CLOUDFORMATION</span>, <span style="background-color: #eff0f0; color: #e53835;">CUSTOM</span>
 - `tags` (List of String) A list of tags associated with the workflow template. A maximum of 10 tags are allowed.
 - `template_name` (String) Name of the workflow template.
 - `template_type` (String) Type of the template.
@@ -50,22 +50,22 @@ output "workflow_template_output" {
 
 Read-Only:
 
-- `config` (Attributes) (see [below for nested schema](#nestedatt--runtime_source--config))
-- `source_config_dest_kind` (String)
+- `config` (Attributes) Configuration for the runtime environment. (see [below for nested schema](#nestedatt--runtime_source--config))
+- `source_config_dest_kind` (String) VCS provider kind. Options: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GIT_OTHER</span>, <span style="background-color: #eff0f0; color: #e53835;">BITBUCKET_ORG</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS_SP</span>
 
 <a id="nestedatt--runtime_source--config"></a>
 ### Nested Schema for `runtime_source.config`
 
 Read-Only:
 
-- `auth` (String, Sensitive)
-- `git_core_auto_crlf` (Boolean)
-- `git_sparse_checkout_config` (String)
-- `include_sub_module` (Boolean)
-- `is_private` (Boolean)
-- `ref` (String)
-- `repo` (String)
-- `working_dir` (String)
+- `auth` (String, Sensitive) Connector used to clone a private repository, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/github-connector`). Required when `is_private` is `true`.
+- `git_core_auto_crlf` (Boolean) Whether to automatically handle CRLF line endings.
+- `git_sparse_checkout_config` (String) Git sparse checkout command line git cli options.
+- `include_sub_module` (Boolean) Whether to include git submodules.
+- `is_private` (Boolean) Whether the repository is private. Auth is required if the repository is private
+- `ref` (String) Git reference (branch, tag, or commit hash).
+- `repo` (String) Git repository URL.
+- `working_dir` (String) Working directory within the repository.
 
 
 
@@ -74,22 +74,22 @@ Read-Only:
 
 Read-Only:
 
-- `create_tag` (Attributes) (see [below for nested schema](#nestedatt--vcs_triggers--create_tag))
-- `type` (String)
+- `create_tag` (Attributes) Trigger configuration on tag creation in VCS (see [below for nested schema](#nestedatt--vcs_triggers--create_tag))
+- `type` (String) The VCS platform type. Determines which webhook integration is used. Supported values: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>,
 
 <a id="nestedatt--vcs_triggers--create_tag"></a>
 ### Nested Schema for `vcs_triggers.create_tag`
 
 Read-Only:
 
-- `create_revision` (Attributes) (see [below for nested schema](#nestedatt--vcs_triggers--create_tag--create_revision))
+- `create_revision` (Attributes) Create new revision on tag creation (see [below for nested schema](#nestedatt--vcs_triggers--create_tag--create_revision))
 
 <a id="nestedatt--vcs_triggers--create_tag--create_revision"></a>
 ### Nested Schema for `vcs_triggers.create_tag.create_revision`
 
 Read-Only:
 
-- `enabled` (Boolean)
+- `enabled` (Boolean) Whether to create revision when tag is created.
 
 
 

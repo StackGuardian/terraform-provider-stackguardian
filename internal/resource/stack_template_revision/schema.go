@@ -187,7 +187,7 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 		Required:            true,
 	},
 	"template_id": schema.StringAttribute{
-		MarkdownDescription: "ID of the workflow template that this workflow is based on.",
+		MarkdownDescription: constants.WorkflowIacTemplateId,
 		Required:            true,
 	},
 	"resource_name": schema.StringAttribute{
@@ -326,7 +326,7 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 						Optional:            true,
 					},
 					"iac_template_id": schema.StringAttribute{
-						MarkdownDescription: "ID of the IaC template from the marketplace.",
+						MarkdownDescription: constants.WorkflowIacTemplateId,
 						Optional:            true,
 					},
 					"custom_source": schema.SingleNestedAttribute{
@@ -342,29 +342,37 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 								Optional:            true,
 								Attributes: map[string]schema.Attribute{
 									"is_private": schema.BoolAttribute{
-										Optional: true,
+										MarkdownDescription: constants.RuntimeSourceConfigIsPrivate,
+										Optional:            true,
 									},
 									"auth": schema.StringAttribute{
-										Optional:  true,
-										Sensitive: true,
+										MarkdownDescription: constants.RuntimeSourceConfigAuth,
+										Optional:            true,
+										Sensitive:           true,
 									},
 									"working_dir": schema.StringAttribute{
-										Optional: true,
+										MarkdownDescription: constants.RuntimeSourceConfigWorkingDir,
+										Optional:            true,
 									},
 									"git_sparse_checkout_config": schema.StringAttribute{
-										Optional: true,
+										MarkdownDescription: constants.RuntimeSourceConfigGitSparse,
+										Optional:            true,
 									},
 									"git_core_auto_crlf": schema.BoolAttribute{
-										Optional: true,
+										MarkdownDescription: constants.RuntimeSourceConfigGitCoreCRLF,
+										Optional:            true,
 									},
 									"ref": schema.StringAttribute{
-										Optional: true,
+										MarkdownDescription: constants.RuntimeSourceConfigRef,
+										Optional:            true,
 									},
 									"repo": schema.StringAttribute{
-										Optional: true,
+										MarkdownDescription: constants.RuntimeSourceConfigRepo,
+										Optional:            true,
 									},
 									"include_sub_module": schema.BoolAttribute{
-										Optional: true,
+										MarkdownDescription: constants.RuntimeSourceConfigIncludeSubmodule,
+										Optional:            true,
 									},
 								},
 							},
@@ -377,10 +385,12 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 				Optional:            true,
 				Attributes: map[string]schema.Attribute{
 					"schema_id": schema.StringAttribute{
-						Optional: true,
+						MarkdownDescription: constants.WorkflowIacInputDataSchemaId,
+						Optional:            true,
 					},
 					"schema_type": schema.StringAttribute{
-						Required: true,
+						MarkdownDescription: constants.WorkflowIacInputDataSchemaType,
+						Required:            true,
 					},
 					"data": schema.StringAttribute{
 						MarkdownDescription: "Input data as a JSON string.",
@@ -412,10 +422,12 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
 				"name": schema.StringAttribute{
-					Optional: true,
+					MarkdownDescription: constants.UserScheduleName,
+					Optional:            true,
 				},
 				"desc": schema.StringAttribute{
-					Optional: true,
+					MarkdownDescription: constants.UserScheduleDesc,
+					Optional:            true,
 				},
 				"cron": schema.StringAttribute{
 					MarkdownDescription: constants.UserScheduleCron,
@@ -466,14 +478,17 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
 				"id": schema.StringAttribute{
-					Computed: true,
-					Optional: true,
+					MarkdownDescription: constants.Id,
+					Computed:            true,
+					Optional:            true,
 				},
 				"name": schema.StringAttribute{
-					Optional: true,
+					MarkdownDescription: constants.InputSchemaName,
+					Optional:            true,
 				},
 				"description": schema.StringAttribute{
-					Optional: true,
+					MarkdownDescription: fmt.Sprintf(constants.Description, "workflow"),
+					Optional:            true,
 				},
 				"type": schema.StringAttribute{
 					MarkdownDescription: "Schema type (e.g. FORM_JSONSCHEMA).",
@@ -484,7 +499,8 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 					Optional:            true,
 				},
 				"ui_schema_data": schema.StringAttribute{
-					Optional: true,
+					MarkdownDescription: constants.InputSchemaUISchemaData,
+					Optional:            true,
 				},
 				"is_committed": schema.BoolAttribute{
 					Optional: true,
@@ -526,8 +542,8 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 				},
 			},
 			"wf_chaining": schema.SingleNestedAttribute{
-				Optional:            true,
 				MarkdownDescription: constants.MiniStepsWorkflowChaining,
+				Optional:            true,
 				Attributes: map[string]schema.Attribute{
 					"completed": ministepsWorkflowChaining,
 					"errored":   ministepsWorkflowChaining,
@@ -601,6 +617,7 @@ var actionOrderAttrs = map[string]schema.Attribute{
 // Schema defines the schema for the resource.
 func (r *stackTemplateRevisionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Manages a versioned revision of a `stackguardian_stack_template` — the ordered workflows, inputs and configuration a stack is actually created from.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.StackTemplateRevisionId,

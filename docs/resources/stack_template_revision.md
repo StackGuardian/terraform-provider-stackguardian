@@ -192,7 +192,7 @@ Required:
 
 Optional:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
 - `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 
 
@@ -211,7 +211,7 @@ Read-Only:
 Required:
 
 - `name` (String) Step name.
-- `wf_step_template_id` (String) Workflow step template ID.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 Optional:
 
@@ -239,7 +239,7 @@ Required:
 
 Optional:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
 - `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 
 
@@ -289,7 +289,14 @@ Optional:
 Required:
 
 - `id` (String) UUID identifying the workflow within the stack template.
-- `template_id` (String) ID of the workflow template that this workflow is based on.
+- `template_id` (String) Workflow template revision this workflow is created from. Two forms are accepted:
+
+- `<template-name>:<revision>` — a template in your own organization (e.g. `my-terraform-template:1`).
+- `/<org>/<template-name>:<revision>` — a template owned by another organization. Use this for templates shared with you, and for StackGuardian marketplace templates, which are owned by the `stackguardian` org (e.g. `/stackguardian/terraform:11`).
+
+A bare id without the leading `/<org>/` is resolved against your own organization.
+
+Use `:latest` in place of a revision number to always track the most recently published revision (e.g. `my-terraform-template:latest`). Pin an explicit revision when you need the workflow to stay put.
 
 Optional:
 
@@ -338,7 +345,7 @@ Required:
 
 Optional:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
 - `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 
 
@@ -364,12 +371,12 @@ Required:
 
 Optional:
 
-- `description` (String)
+- `description` (String) A brief description of the workflow. Must be less than 256 characters.
 - `encoded_data` (String) Base64-encoded schema data.
-- `id` (String)
+- `id` (String) ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>
 - `is_committed` (Boolean)
-- `name` (String)
-- `ui_schema_data` (String)
+- `name` (String) Name of the input schema.
+- `ui_schema_data` (String) Schema for how the JSON schema is to be visualized. The schema needs to be base64 encoded.
 
 
 <a id="nestedatt--workflows_config--workflows--mini_steps"></a>
@@ -531,13 +538,13 @@ Optional:
 
 Required:
 
-- `workflow_group_id` (String) Workflow group id for the workflow.
+- `workflow_group_id` (String) Workflow group containing the workflow to trigger, as a bare name. For a nested group give the full path (e.g. `platform/networking`).
 
 Optional:
 
-- `stack_id` (String) Stack id for the stack to be triggered.
+- `stack_id` (String) Stack to trigger, as a bare name within `workflow_group_id`.
 - `stack_run_payload` (String) JSON string specifying overrides for the stack to be triggered
-- `workflow_id` (String) Workflow id for the workflow to be triggered
+- `workflow_id` (String) Workflow to trigger, as a bare name within `workflow_group_id`.
 - `workflow_run_payload` (String) JSON string specifying overrides for the workflow to be triggered
 
 
@@ -546,13 +553,13 @@ Optional:
 
 Required:
 
-- `workflow_group_id` (String) Workflow group id for the workflow.
+- `workflow_group_id` (String) Workflow group containing the workflow to trigger, as a bare name. For a nested group give the full path (e.g. `platform/networking`).
 
 Optional:
 
-- `stack_id` (String) Stack id for the stack to be triggered.
+- `stack_id` (String) Stack to trigger, as a bare name within `workflow_group_id`.
 - `stack_run_payload` (String) JSON string specifying overrides for the stack to be triggered
-- `workflow_id` (String) Workflow id for the workflow to be triggered
+- `workflow_id` (String) Workflow to trigger, as a bare name within `workflow_group_id`.
 - `workflow_run_payload` (String) JSON string specifying overrides for the workflow to be triggered
 
 
@@ -567,7 +574,7 @@ Required:
 
 Optional:
 
-- `names` (List of String) Id of the runner group. Allowed only if type is external.
+- `names` (List of String) Runner groups the workflow is pinned to, given as a list of `stackguardian_runner_group` `resource_name` values. Set this when `type` is `private`; with `type = "shared"` the workflow uses StackGuardian's shared runners and this field is not applicable.
 
 
 <a id="nestedatt--workflows_config--workflows--terraform_config"></a>
@@ -601,7 +608,7 @@ Optional:
 Required:
 
 - `name` (String) Step name.
-- `wf_step_template_id` (String) Workflow step template ID.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 Optional:
 
@@ -629,7 +636,7 @@ Required:
 
 Optional:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
 - `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 
 
@@ -660,7 +667,7 @@ Optional:
 Required:
 
 - `name` (String) Step name.
-- `wf_step_template_id` (String) Workflow step template ID.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 Optional:
 
@@ -688,7 +695,7 @@ Required:
 
 Optional:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
 - `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 
 
@@ -719,7 +726,7 @@ Optional:
 Required:
 
 - `name` (String) Step name.
-- `wf_step_template_id` (String) Workflow step template ID.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 Optional:
 
@@ -747,7 +754,7 @@ Required:
 
 Optional:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
 - `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 
 
@@ -778,7 +785,7 @@ Optional:
 Required:
 
 - `name` (String) Step name.
-- `wf_step_template_id` (String) Workflow step template ID.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 Optional:
 
@@ -806,7 +813,7 @@ Required:
 
 Optional:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
 - `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 
 
@@ -852,8 +859,8 @@ Required:
 
 Optional:
 
-- `desc` (String)
-- `name` (String)
+- `desc` (String) Description of the schedule.
+- `name` (String) Name of the schedule.
 
 
 <a id="nestedatt--workflows_config--workflows--vcs_config"></a>
@@ -869,12 +876,12 @@ Optional:
 
 Required:
 
-- `schema_type` (String)
+- `schema_type` (String) Schema type for the input data. Allowed values are `FORM_JSONSCHEMA`, `RAW_HCL`, `RAW_JSON`, `NO_CODE_JSON`, `NONE`.
 
 Optional:
 
 - `data` (String) Input data as a JSON string.
-- `schema_id` (String)
+- `schema_id` (String) Schema ID for the input data.
 
 
 <a id="nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config"></a>
@@ -883,7 +890,14 @@ Optional:
 Optional:
 
 - `custom_source` (Attributes) Custom source configuration. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source))
-- `iac_template_id` (String) ID of the IaC template from the marketplace.
+- `iac_template_id` (String) Workflow template revision this workflow is created from. Two forms are accepted:
+
+- `<template-name>:<revision>` — a template in your own organization (e.g. `my-terraform-template:1`).
+- `/<org>/<template-name>:<revision>` — a template owned by another organization. Use this for templates shared with you, and for StackGuardian marketplace templates, which are owned by the `stackguardian` org (e.g. `/stackguardian/terraform:11`).
+
+A bare id without the leading `/<org>/` is resolved against your own organization.
+
+Use `:latest` in place of a revision number to always track the most recently published revision (e.g. `my-terraform-template:latest`). Pin an explicit revision when you need the workflow to stay put.
 - `use_marketplace_template` (Boolean) Whether to use a marketplace template.
 
 <a id="nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source"></a>
@@ -902,14 +916,14 @@ Optional:
 
 Optional:
 
-- `auth` (String, Sensitive)
-- `git_core_auto_crlf` (Boolean)
-- `git_sparse_checkout_config` (String)
-- `include_sub_module` (Boolean)
-- `is_private` (Boolean)
-- `ref` (String)
-- `repo` (String)
-- `working_dir` (String)
+- `auth` (String, Sensitive) Connector used to clone a private repository, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/github-connector`). Required when `is_private` is `true`.
+- `git_core_auto_crlf` (Boolean) Whether to automatically handle CRLF line endings.
+- `git_sparse_checkout_config` (String) Git sparse checkout command line git cli options.
+- `include_sub_module` (Boolean) Whether to include git submodules.
+- `is_private` (Boolean) Whether the repository is private. Auth is required if the repository is private
+- `ref` (String) Git reference (branch, tag, or commit hash).
+- `repo` (String) Git repository URL.
+- `working_dir` (String) Working directory within the repository.
 
 
 
@@ -921,7 +935,7 @@ Optional:
 Required:
 
 - `name` (String) Step name.
-- `wf_step_template_id` (String) Workflow step template ID.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 Optional:
 
@@ -949,7 +963,7 @@ Required:
 
 Optional:
 
-- `secret_id` (String) ID of the secret (if using vault secret). Only if type is <span style="background-color: #eff0f0; color: #e53835;">SECRET_REF</span>
+- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `SECRET_VALUE`.
 - `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
 
 

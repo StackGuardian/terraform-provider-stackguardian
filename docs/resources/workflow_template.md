@@ -47,13 +47,13 @@ resource "stackguardian_workflow_template" "with_runtime" {
 ### Optional
 
 - `context_tags` (Map of String) Context tags for workflow template
-- `description` (String) A brief description of the Description for workflow template. Must be less than 256 characters.
+- `description` (String) A brief description of the workflow template. Must be less than 256 characters.
 - `id` (String) ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>
-- `is_public` (String) Make template available to other organisations. Available values: <span style="background-color: #eff0f0; color: #e53835;">"0"</span> or <span style="background-color: #eff0f0; color: #e53835;">"1"</span>
+- `is_public` (String) Whether this **template** is shared with other organizations. Distinct from `is_public` on a revision, which controls whether that revision is published for use. Available values: <span style="background-color: #eff0f0; color: #e53835;">"0"</span> or <span style="background-color: #eff0f0; color: #e53835;">"1"</span>
 - `runtime_source` (Attributes) Runtime source configuration for the template. (see [below for nested schema](#nestedatt--runtime_source))
 - `shared_orgs_list` (List of String) List of organizations the template is shared with.
-- `tags` (List of String) A list of tags associated with the Tags for workflow template. A maximum of 10 tags are allowed.
-- `vcs_triggers` (Attributes) VCS trigger configuration for the workflow. Only supported when `source_config_dest_kind` is <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, or <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>. **Requires** `vcs_config.iac_vcs_config.custom_source.config.is_private` to be `true` and `vcs_config.iac_vcs_config.custom_source.config.auth` to be set with a valid connector ID. (see [below for nested schema](#nestedatt--vcs_triggers))
+- `tags` (List of String) A list of tags associated with the workflow template. A maximum of 10 tags are allowed.
+- `vcs_triggers` (Attributes) VCS trigger configuration for the template. On a tag push, StackGuardian creates a new `stackguardian_workflow_template_revision` from the tagged commit — it does not start a workflow run. The repository is taken from `runtime_source`. (see [below for nested schema](#nestedatt--vcs_triggers))
 
 ### Read-Only
 
@@ -76,7 +76,7 @@ Required:
 
 Optional:
 
-- `auth` (String) Connector id to access private git repository. Example: `/integrations/<integration-id>`
+- `auth` (String) Connector used to clone a private repository, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/github-connector`). Required when `is_private` is `true`.
 - `git_core_auto_crlf` (Boolean) Whether to automatically handle CRLF line endings.
 - `git_sparse_checkout_config` (String) Git sparse checkout command line git cli options.
 - `include_sub_module` (Boolean) Whether to include git submodules.
