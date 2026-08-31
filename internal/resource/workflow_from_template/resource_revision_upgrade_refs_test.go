@@ -100,7 +100,7 @@ func setupTwoRevIdenticalDerivedFields(t *testing.T, name string) (rev1, rev2 st
 		}
 	}
 	mk("v1", "1.5.0")
-	mk("v2", "1.6.0") // only terraform_version differs
+	mk("v2", "1.5.7") // only terraform_version differs
 
 	for _, rev := range []string{name + ":1", name + ":2"} {
 		if _, err := client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, rev,
