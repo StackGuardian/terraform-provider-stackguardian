@@ -59,7 +59,7 @@ output "workflow_git_repo" {
 - `user_job_memory` (Number) Limits to set user job memory.
 - `user_schedules` (Attributes List) Configuration for scheduling runs for the workflows. (see [below for nested schema](#nestedatt--user_schedules))
 - `vcs_config` (Attributes) VCS configuration for the workflow. (see [below for nested schema](#nestedatt--vcs_config))
-- `vcs_triggers` (Attributes) VCS trigger configuration for the workflow. Only supported when `source_config_dest_kind` is <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, or <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>. **Requires** `vcs_config.iac_vcs_config.custom_source.config.is_private` to be `true` and `vcs_config.iac_vcs_config.custom_source.config.auth` to be set with a valid connector ID. (see [below for nested schema](#nestedatt--vcs_triggers))
+- `vcs_triggers` (Attributes) Webhook triggers for this workflow. Supported when the repository is on `GITHUB_COM`, `GITHUB_APP_CUSTOM` or `GITLAB_COM`.<br><br>**Requires** `vcs_config.iac_vcs_config.custom_source.config.is_private` to be `true` and `...config.auth` to name a `stackguardian_connector` with access — StackGuardian has to authenticate to register the webhook. See the [VCS connector docs](https://docs.stackguardian.io/docs/connectors/vcs/).`source_config_dest_kind` is <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, or <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>. **Requires** `vcs_config.iac_vcs_config.custom_source.config.is_private` to be `true` and `vcs_config.iac_vcs_config.custom_source.config.auth` to be set with a valid connector ID. (see [below for nested schema](#nestedatt--vcs_triggers))
 - `wf_steps_config` (Attributes List) Workflow steps configuration. Valid for custom workflow types. (see [below for nested schema](#nestedatt--wf_steps_config))
 - `wf_type` (String) How this workflow is executed. <ul><li>`TERRAFORM` — run with Terraform.</li><li>`OPENTOFU` — run with OpenTofu.</li><li>`CUSTOM` — run the steps in `wf_steps_config` yourself, rather than a built-in engine. Templates of other kinds (Helm, Ansible, Kubectl, CloudFormation) run as `CUSTOM` workflows.</li></ul>This is a smaller set than a template's `source_config_kind`, which describes what the template contains rather than how the workflow runs.
 
@@ -298,7 +298,7 @@ Read-Only:
 - `terraform_bin_path` (Attributes List) Mount points for terraform binary. (see [below for nested schema](#nestedatt--terraform_config--terraform_bin_path))
 - `terraform_init_options` (String) Additional options for terraform init.
 - `terraform_plan_options` (String) Additional options for terraform plan.
-- `terraform_version` (String) Terraform version to use.
+- `terraform_version` (String) Terraform or OpenTofu version, in bare form (e.g. `1.5.7`). StackGuardian stores an engine prefix (`TERRAFORM-` / `OPENTOFU-`) internally; the provider strips it, so the value can be referenced directly into another resource without producing a perpetual diff. Which engine runs is decided by `wf_type`, not by this value.
 - `timeout` (Number) Timeout for terraform operations in seconds.
 
 <a id="nestedatt--terraform_config--post_apply_wf_steps_config"></a>

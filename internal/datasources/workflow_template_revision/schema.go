@@ -208,7 +208,7 @@ var terraformConfigSchema = schema.SingleNestedAttribute{
 	Computed: true,
 	Attributes: map[string]schema.Attribute{
 		"terraform_version": schema.StringAttribute{
-			MarkdownDescription: "Terraform/OpenTofu version, returned in the bare form (e.g. `1.5.7`). The engine prefix the API stores (`TERRAFORM-` / `OPENTOFU-`) is stripped so the value can be referenced directly into a `stackguardian_workflow_from_template` resource without producing a perpetual diff.",
+			MarkdownDescription: constants.TerraformVersion,
 			Computed:            true,
 		},
 		"terraform_plan_options": schema.StringAttribute{

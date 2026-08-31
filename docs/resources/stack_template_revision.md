@@ -105,15 +105,7 @@ resource "stackguardian_stack_template_revision" "with_vcs" {
 ### Required
 
 - `parent_template_id` (String) ID of the parent stack template to create the revision under.
-- `source_config_kind` (String) Source configuration kind for the stack template. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">TERRAFORM</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">OPENTOFU</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">ANSIBLE_PLAYBOOK</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">HELM</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">KUBECTL</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">CLOUDFORMATION</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">MIXED</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">CUSTOM</span>
+- `source_config_kind` (String) What the stack contains. Use `MIXED` — a stack groups workflows built from different tools, and the tool used by each individual workflow is recorded on that workflow rather than here. The other values (`TERRAFORM`, `OPENTOFU`, `ANSIBLE_PLAYBOOK`, `HELM`, `KUBECTL`, `CLOUDFORMATION`, `CUSTOM`) belong on a `stackguardian_workflow_template`, which describes a single workflow.
 
 ### Optional
 
@@ -611,7 +603,7 @@ Optional:
 - `terraform_bin_path` (Attributes List) Mount points for terraform binary. (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config--terraform_bin_path))
 - `terraform_init_options` (String) Additional options for terraform init.
 - `terraform_plan_options` (String) Additional options for terraform plan.
-- `terraform_version` (String) Terraform version to use.
+- `terraform_version` (String) Terraform or OpenTofu version, in bare form (e.g. `1.5.7`). StackGuardian stores an engine prefix (`TERRAFORM-` / `OPENTOFU-`) internally; the provider strips it, so the value can be referenced directly into another resource without producing a perpetual diff. Which engine runs is decided by `wf_type`, not by this value.
 - `timeout` (Number) Timeout for terraform operations in seconds.
 
 <a id="nestedatt--workflows_config--workflows--terraform_config--post_apply_wf_steps_config"></a>

@@ -44,15 +44,7 @@ output "stack_template_description" {
 	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)
 - `owner_org` (String) Organization that owns the stack template.
 - `shared_orgs_list` (List of String) List of organization IDs with which this template is shared.
-- `source_config_kind` (String) Source configuration kind for the stack template. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">TERRAFORM</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">OPENTOFU</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">ANSIBLE_PLAYBOOK</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">HELM</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">KUBECTL</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">CLOUDFORMATION</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">MIXED</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">CUSTOM</span>
+- `source_config_kind` (String) What the stack contains. Use `MIXED` — a stack groups workflows built from different tools, and the tool used by each individual workflow is recorded on that workflow rather than here. The other values (`TERRAFORM`, `OPENTOFU`, `ANSIBLE_PLAYBOOK`, `HELM`, `KUBECTL`, `CLOUDFORMATION`, `CUSTOM`) belong on a `stackguardian_workflow_template`, which describes a single workflow.
 - `tags` (List of String) A list of tags associated with the stack template. A maximum of 10 tags are allowed.
 - `template_name` (String) Name of the stack template. Must be less than 100 characters.
 

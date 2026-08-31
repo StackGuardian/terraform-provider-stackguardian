@@ -80,7 +80,7 @@ Read-Only:
 Read-Only:
 
 - `create_tag` (Attributes) Trigger configuration on tag creation in VCS (see [below for nested schema](#nestedatt--vcs_triggers--create_tag))
-- `type` (String) The VCS platform type. Determines which webhook integration is used. Supported values: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>,
+- `type` (String) Which VCS platform the webhook is registered with. <ul><li>`GITHUB_COM` — github.com.</li><li>`GITHUB_APP_CUSTOM` — GitHub Enterprise, or a GitHub App you manage yourself.</li><li>`GITLAB_COM` — gitlab.com.</li></ul>Must match the provider hosting the repository in `runtime_source`.
 
 <a id="nestedatt--vcs_triggers--create_tag"></a>
 ### Nested Schema for `vcs_triggers.create_tag`
