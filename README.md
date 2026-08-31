@@ -75,7 +75,7 @@ export STACKGUARDIAN_API_URI=<uri>
 export STACKGUARDIAN_ORG_NAME=<org>
 ```
 
-Release notes for each version are in the [CHANGELOG](/CHANGELOG.md) and on the [GitHub releases page](https://github.com/StackGuardian/terraform-provider-stackguardian/releases).
+Release notes for each version are on the [GitHub releases page](https://github.com/StackGuardian/terraform-provider-stackguardian/releases).
 
 ## Contributing
 
