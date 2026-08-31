@@ -61,10 +61,7 @@ resource "stackguardian_workflow_step_template_revision" "example" {
 ### Required
 
 - `runtime_source` (Attributes) Runtime source configuration for the revision. (see [below for nested schema](#nestedatt--runtime_source))
-- `source_config_kind` (String) Source configuration kind that defines how the template is deployed. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">DOCKER_IMAGE</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">GIT_REPO</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">S3</span>
+- `source_config_kind` (String) Where the step's runnable definition comes from. `DOCKER_IMAGE` — a container image, pulled from the registry described by `runtime_source`.
 - `template_id` (String) ID of the parent workflow step template.
 
 ### Optional
@@ -94,10 +91,7 @@ resource "stackguardian_workflow_step_template_revision" "example" {
 Required:
 
 - `config` (Attributes) Specific configuration settings for the runtime source. (see [below for nested schema](#nestedatt--runtime_source--config))
-- `source_config_dest_kind` (String) Destination kind for the runtime source configuration. Examples:
-<span style="background-color: #eff0f0; color: #e53835;">CONTAINER_REGISTRY</span>,
-<span style="background-color: #eff0f0; color: #e53835;">GIT</span>,
-<span style="background-color: #eff0f0; color: #e53835;">S3</span>
+- `source_config_dest_kind` (String) Where the step image is hosted. `CONTAINER_REGISTRY` — a Docker-compatible registry; set `config.docker_image` to the image reference, plus `config.auth` and `config.is_private` when the registry needs credentials.
 
 Optional:
 

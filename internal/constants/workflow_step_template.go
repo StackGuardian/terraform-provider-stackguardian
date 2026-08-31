@@ -2,19 +2,13 @@ package constants
 
 // Workflow Step Template - Common documentation
 const (
-	WorkflowStepTemplateSourceConfigKindCommon = `Source configuration kind that defines how the template is deployed. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">DOCKER_IMAGE</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">GIT_REPO</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">S3</span>`
+	WorkflowStepTemplateSourceConfigKindCommon = "Where the step's runnable definition comes from. `DOCKER_IMAGE` — a container image, pulled from the registry described by `runtime_source`."
 
 	WorkflowStepTemplateIsPublicCommon = `Whether the workflow step template is publicly available. Valid values:
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
 	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)`
 
-	WorkflowStepTemplateRuntimeSourceDestKindCommon = "Destination kind for the runtime source configuration. Examples:" +
-		"\n<span style=\"background-color: #eff0f0; color: #e53835;\">CONTAINER_REGISTRY</span>," +
-		"\n<span style=\"background-color: #eff0f0; color: #e53835;\">GIT</span>," +
-		"\n<span style=\"background-color: #eff0f0; color: #e53835;\">S3</span>"
+	WorkflowStepTemplateRuntimeSourceDestKindCommon = "Where the step image is hosted. `CONTAINER_REGISTRY` — a Docker-compatible registry; set `config.docker_image` to the image reference, plus `config.auth` and `config.is_private` when the registry needs credentials."
 
 	WorkflowStepTemplateRuntimeSourceConfigIsPrivateCommon = "Indicates whether the container registry or repository is private."
 
@@ -33,11 +27,7 @@ const (
 
 	WorkflowStepTemplateDescription = "A brief description of the workflow step template. Must be less than 256 characters."
 
-	WorkflowStepTemplateType = `Type of the template. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">WORKFLOW_STEP</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">IAC</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">IAC_GROUP</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">IAC_POLICY</span>`
+	WorkflowStepTemplateType = "Which family of template this is. Read-only, and always `WORKFLOW_STEP` for this resource. StackGuardian uses the same field across all template types: <ul><li>`WORKFLOW_STEP` — a workflow step template, managed by `stackguardian_workflow_step_template`.</li><li>`IAC` — a workflow template, managed by `stackguardian_workflow_template`.</li><li>`IAC_GROUP` — a stack template, managed by `stackguardian_stack_template`.</li><li>`IAC_POLICY` — a policy template, referenced from `policy_vcs_config.policy_template_id`.</li></ul>"
 
 	WorkflowStepTemplateIsPublic = `Whether the workflow step template is publicly available. Valid values:
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
@@ -49,10 +39,7 @@ const (
 
 	WorkflowStepTemplateSharedOrgsList = "List of organization IDs with which this template is shared."
 
-	WorkflowStepTemplateSourceConfigKind = `Source configuration kind that defines how the template is deployed. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">DOCKER_IMAGE</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">GIT_REPO</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">S3</span>`
+	WorkflowStepTemplateSourceConfigKind = "Where the step's runnable definition comes from. `DOCKER_IMAGE` — a container image, pulled from the registry described by `runtime_source`."
 
 	WorkflowStepTemplateLatestRevision = "Latest revision number of the template."
 
@@ -60,10 +47,7 @@ const (
 
 	WorkflowStepTemplateRuntimeSource = "Runtime source configuration that defines where and how the template code is stored and executed."
 
-	WorkflowStepTemplateRuntimeSourceDestKind = "Destination kind for the runtime source configuration. Examples:" +
-		"\n<span style=\"background-color: #eff0f0; color: #e53835;\">CONTAINER_REGISTRY</span>," +
-		"\n<span style=\"background-color: #eff0f0; color: #e53835;\">GIT</span>," +
-		"\n<span style=\"background-color: #eff0f0; color: #e53835;\">S3</span>"
+	WorkflowStepTemplateRuntimeSourceDestKind = "Where the step image is hosted. `CONTAINER_REGISTRY` — a Docker-compatible registry; set `config.docker_image` to the image reference, plus `config.auth` and `config.is_private` when the registry needs credentials."
 
 	WorkflowStepTemplateRuntimeSourceAdditionalConfig = "Additional configuration settings for the runtime source as key-value pairs."
 
@@ -96,10 +80,7 @@ const (
 	<span style="background-color: #eff0f0; color: #e53835;">IAC_GROUP</span>,
 	<span style="background-color: #eff0f0; color: #e53835;">IAC_POLICY</span>`
 
-	WorkflowStepTemplateRevisionSourceConfigKind = `Source configuration kind. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">DOCKER_IMAGE</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">GIT_REPO</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">S3</span>`
+	WorkflowStepTemplateRevisionSourceConfigKind = "Where the step's runnable definition comes from. `DOCKER_IMAGE` — a container image, pulled from the registry described by `runtime_source`."
 
 	WorkflowStepTemplateRevisionIsPublic = `Whether the revision is publicly available. Valid values:
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
@@ -111,7 +92,7 @@ const (
 
 	WorkflowStepTemplateRevisionRuntimeSource = "Runtime source configuration for the revision."
 
-	WorkflowStepTemplateRevisionRuntimeSourceDestKind = "Destination kind for the runtime source configuration."
+	WorkflowStepTemplateRevisionRuntimeSourceDestKind = "Where the step image is hosted. `CONTAINER_REGISTRY` — a Docker-compatible registry; set `config.docker_image` to the image reference, plus `config.auth` and `config.is_private` when the registry needs credentials."
 
 	WorkflowStepTemplateRevisionRuntimeSourceAdditionalConfig = "Additional configuration settings for the runtime source as key-value pairs."
 

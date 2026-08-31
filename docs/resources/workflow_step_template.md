@@ -47,10 +47,7 @@ resource "stackguardian_workflow_step_template" "example" {
 ### Required
 
 - `runtime_source` (Attributes) Runtime source configuration that defines where and how the template code is stored and executed. (see [below for nested schema](#nestedatt--runtime_source))
-- `source_config_kind` (String) Source configuration kind that defines how the template is deployed. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">DOCKER_IMAGE</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">GIT_REPO</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">S3</span>
+- `source_config_kind` (String) Where the step's runnable definition comes from. `DOCKER_IMAGE` — a container image, pulled from the registry described by `runtime_source`.
 - `template_name` (String) Name of the workflow step template. Must be less than 100 characters.
 
 ### Optional
@@ -68,11 +65,7 @@ resource "stackguardian_workflow_step_template" "example" {
 
 - `latest_revision` (Number) Latest revision number of the template.
 - `next_revision` (Number) Next revision number that will be used for the template.
-- `template_type` (String) Type of the template. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">WORKFLOW_STEP</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">IAC</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">IAC_GROUP</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">IAC_POLICY</span>
+- `template_type` (String) Which family of template this is. Read-only, and always `WORKFLOW_STEP` for this resource. StackGuardian uses the same field across all template types: <ul><li>`WORKFLOW_STEP` — a workflow step template, managed by `stackguardian_workflow_step_template`.</li><li>`IAC` — a workflow template, managed by `stackguardian_workflow_template`.</li><li>`IAC_GROUP` — a stack template, managed by `stackguardian_stack_template`.</li><li>`IAC_POLICY` — a policy template, referenced from `policy_vcs_config.policy_template_id`.</li></ul>
 
 <a id="nestedatt--runtime_source"></a>
 ### Nested Schema for `runtime_source`
@@ -84,10 +77,7 @@ Required:
 Optional:
 
 - `additional_config` (Map of String) Additional configuration settings for the runtime source as key-value pairs.
-- `source_config_dest_kind` (String) Destination kind for the runtime source configuration. Examples:
-<span style="background-color: #eff0f0; color: #e53835;">CONTAINER_REGISTRY</span>,
-<span style="background-color: #eff0f0; color: #e53835;">GIT</span>,
-<span style="background-color: #eff0f0; color: #e53835;">S3</span>
+- `source_config_dest_kind` (String) Where the step image is hosted. `CONTAINER_REGISTRY` — a Docker-compatible registry; set `config.docker_image` to the image reference, plus `config.auth` and `config.is_private` when the registry needs credentials.
 
 <a id="nestedatt--runtime_source--config"></a>
 ### Nested Schema for `runtime_source.config`
