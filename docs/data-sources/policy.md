@@ -14,12 +14,18 @@ Reads an existing policy, including its evaluation configuration and the resourc
 ## Example Usage
 
 ```terraform
-data "stackguardian_policy" "example-policy" {
-  resource_name = "example-policy"
+# Read an existing policy to check how it is configured and where it is enforced.
+data "stackguardian_policy" "example" {
+  resource_name = "require-tags"
 }
 
-output "policy-output" {
-  value = data.stackguardian_policy.example-policy.description
+output "policy_enforced_on" {
+  description = "Resource paths this policy applies to."
+  value       = data.stackguardian_policy.example.enforced_on
+}
+
+output "policy_type" {
+  value = data.stackguardian_policy.example.policy_type
 }
 ```
 

@@ -1,3 +1,5 @@
+# Read a specific revision of a workflow step template, so a workflow can reference a known
+# version in its `wf_steps_config`. The revision id is `<step-template-id>:<revision>`.
 data "stackguardian_workflow_step_template_revision" "example" {
   id = "12345678901234567890:1"
 }
