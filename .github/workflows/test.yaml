@@ -74,4 +74,5 @@ jobs:
           set -eu -x;
           make tools-install;
           make docs-validate;
+          make docs-check;
         shell: bash

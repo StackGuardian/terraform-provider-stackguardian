@@ -46,7 +46,13 @@ docs-generate:
 		--provider-name stackguardian --website-source-dir docs-templates
 
 docs-validate:
-	tfplugindocs validate
+	tfplugindocs validate --provider-name stackguardian
+
+# Fails if docs/ is not what docs-templates/ + the current schemas generate.
+# Without this, a schema change silently leaves the published docs stale.
+docs-check: docs-generate
+	@git diff --exit-code -- docs/ \
+		|| { echo ""; echo "ERROR: docs/ is out of date. Run 'make docs-generate' and commit the result."; exit 1; }
 
 tools-install:
 	cd tools; go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
