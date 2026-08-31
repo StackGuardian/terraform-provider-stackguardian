@@ -13,10 +13,16 @@ description: |-
 
 ## Scoping a policy
 
-`enforced_on` takes resource paths, so a policy can apply to a whole workflow group or to a
-single workflow. Those are the same paths used by a `stackguardian_role`'s
-`allowed_permissions`, so a policy can be scoped to exactly the part of the organization a team
-already owns.
+`enforced_on` decides where the policy applies: `["*"]` for the whole organization, or any
+combination of workflow groups, workflows and connectors — a workflow group is `/wfgrps/<group>`,
+with no trailing slash.
+
+Note this is **not** the same form a `stackguardian_role` uses in `allowed_permissions`, which
+takes bare resource names. See
+[Resource IDs](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ResourceIDs).
+
+Scope and approval settings apply only to `policy_type = "GENERAL"`. A `FILTER.INSIGHT` policy
+filters Insight findings rather than gating a run, so it takes neither.
 
 ## Where the policy body comes from
 

@@ -167,7 +167,7 @@ var dsWorkflowInStackAttrs = map[string]schema.Attribute{
 		Computed:            true,
 	},
 	"wf_type": schema.StringAttribute{
-		MarkdownDescription: `Workflow type. Valid values: TERRAFORM, OPENTOFU, CUSTOM`,
+		MarkdownDescription: constants.WorkflowType,
 		Computed:            true,
 	},
 	"wf_steps_config": schema.ListNestedAttribute{

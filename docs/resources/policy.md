@@ -13,10 +13,16 @@ Manages a policy: a guardrail evaluated during workflow runs, which can block or
 
 ## Scoping a policy
 
-`enforced_on` takes resource paths, so a policy can apply to a whole workflow group or to a
-single workflow. Those are the same paths used by a `stackguardian_role`'s
-`allowed_permissions`, so a policy can be scoped to exactly the part of the organization a team
-already owns.
+`enforced_on` decides where the policy applies: `["*"]` for the whole organization, or any
+combination of workflow groups, workflows and connectors — a workflow group is `/wfgrps/<group>`,
+with no trailing slash.
+
+Note this is **not** the same form a `stackguardian_role` uses in `allowed_permissions`, which
+takes bare resource names. See
+[Resource IDs](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ResourceIDs).
+
+Scope and approval settings apply only to `policy_type = "GENERAL"`. A `FILTER.INSIGHT` policy
+filters Insight findings rather than gating a run, so it takes neither.
 
 ## Where the policy body comes from
 
@@ -91,20 +97,14 @@ resource "stackguardian_policy" "example-policy" {
 
 ### Required
 
-- `policy_type` (String) Type of policy created "GENERAL" or "FILTER.INSIGHT"
+- `policy_type` (String) What kind of policy this is. <ul><li>`GENERAL` — the standard policy, evaluated during workflow and stack runs. `enforced_on`, `approvers` and `number_of_approvals_required` apply only to this type.</li><li>`FILTER.INSIGHT` — a filter over Insight findings. It excludes findings that match its definition from the Insight dashboard rather than gating a run, so it takes no scope and no approval settings.</li></ul>
 - `resource_name` (String) Name of the policy. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
 
 ### Optional
 
 - `approvers` (List of String) List of stackguardian users
 - `description` (String) A brief description of the policy. Must be less than 256 characters.
-- `enforced_on` (List of String) What this policy is enforced on. Either organization-wide, or any combination of workflow groups, workflows and connectors.
-
-- `["*"]` — the whole organization. Used on its own, not combined with other entries.
-- `["/wfgrps/<group>"]` — a workflow group and everything inside it. No trailing slash.
-- Workflows and connectors follow the same resource-path convention and can be listed alongside workflow groups.
-
-Confirm an unfamiliar form against an existing policy before relying on it.
+- `enforced_on` (List of String) What this policy is enforced on — either organization-wide, or any combination of workflow groups, workflows and connectors. <ul><li>`["*"]` — the whole organization. Used on its own, not combined with other entries.</li><li>`["/wfgrps/&lt;group&gt;"]` — a workflow group and everything inside it. No trailing slash.</li><li>Workflows and connectors follow the same resource-path convention and can be listed alongside workflow groups.</li></ul>Confirm an unfamiliar form against an existing policy before relying on it.
 - `id` (String) ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>
 - `number_of_approvals_required` (Number) Number of approvals required for a policy check to pass
 - `policies_config` (Attributes List) Policy configuration (see [below for nested schema](#nestedatt--policies_config))
@@ -119,14 +119,8 @@ Required:
 
 Optional:
 
-- `on_fail` (String) Specifies the action to be performed on failure. Options: <span style="background-color: #eff0f0; color: #e53835;">FAIL</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">WARN</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">PASS</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">APPROVAL_REQUIRED</span>
-- `on_pass` (String) Specifies the action to be performed on pass. Options: <span style="background-color: #eff0f0; color: #e53835;">FAIL</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">WARN</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">PASS</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">APPROVAL_REQUIRED</span>
+- `on_fail` (String) Action taken when the policy evaluation **fails**. <ul><li>`FAIL` — stop the run.</li><li>`WARN` — record a warning and let the run continue.</li><li>`PASS` — treat the failure as acceptable and continue.</li><li>`APPROVAL_REQUIRED` — hold the run until an approver signs off.</li></ul>
+- `on_pass` (String) Action taken when the policy evaluation **passes**. Same values as `on_fail`: <ul><li>`PASS` — continue, the usual choice.</li><li>`WARN` — continue but record a warning.</li><li>`APPROVAL_REQUIRED` — hold the run for approval even though the policy passed.</li><li>`FAIL` — stop the run even though the policy passed.</li></ul>
 - `policy_input_data` (Attributes) Policy definition (see [below for nested schema](#nestedatt--policies_config--policy_input_data))
 - `policy_vcs_config` (Attributes) Configuration to import policy from version control (see [below for nested schema](#nestedatt--policies_config--policy_vcs_config))
 - `skip` (Boolean) Enable or disable the policy check
@@ -137,10 +131,7 @@ Optional:
 Required:
 
 - `data` (String) Policy body
-- `schema_type` (String) Specifies the schema type of the policy. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">RAW_JSON</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">TIRITH_JSON</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">NONE</span>
+- `schema_type` (String) How the policy body in `data` is formatted. `FORM_JSONSCHEMA` is a StackGuardian NoCode form; `data` holds the values that form collects.
 
 
 <a id="nestedatt--policies_config--policy_vcs_config"></a>
@@ -167,7 +158,7 @@ Optional:
 
 - `additional_config` (String) Additional configuration for the policy
 - `config` (Attributes) Specific configuration settings for runtime source. (see [below for nested schema](#nestedatt--policies_config--policy_vcs_config--custom_source--config))
-- `source_config_dest_kind` (String) Kind of the source configuration destination. Valid examples include eg:- AWS_RBAC, AZURE_STATIC.
+- `source_config_dest_kind` (String) Which cloud the discovery run targets, matching the `kind` of the connector it uses — for example `AWS_RBAC` or `AZURE_STATIC`. Note this attribute name is also used for VCS providers elsewhere in the schema; the accepted values differ by context.
 
 <a id="nestedatt--policies_config--policy_vcs_config--custom_source--config"></a>
 ### Nested Schema for `policies_config.policy_vcs_config.custom_source.config`
