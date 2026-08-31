@@ -14,8 +14,8 @@ import (
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	"github.com/StackGuardian/sg-sdk-go/core"
 	sgoption "github.com/StackGuardian/sg-sdk-go/option"
-	"github.com/StackGuardian/sg-sdk-go/workflowsteptemplate"
 	sgworkflows "github.com/StackGuardian/sg-sdk-go/workflows"
+	"github.com/StackGuardian/sg-sdk-go/workflowsteptemplate"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
@@ -194,7 +194,7 @@ func addSecondRevision(t *testing.T, templateID string) string {
 
 	alias := "v2"
 	envTextValue := "rev2-value"
-	tmplTfVersion := "1.6.0"
+	tmplTfVersion := "1.5.7"
 	_, err := client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(
 		context.TODO(), org, templateID,
 		&workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
@@ -837,10 +837,10 @@ func TestAccWorkflowUsingTemplate_WithTerraformConfig(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("1.6.0")),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("1.5.7")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_version", "1.6.0"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_version", "1.5.7"),
 				),
 			},
 		},
@@ -897,17 +897,17 @@ func TestAccWorkflowUsingTemplate_NormalUpdate(t *testing.T) {
 			},
 			{
 				// Update every attribute at once.
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("second", "1.6.0", "tag-b", "prod")),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("second", "1.5.7", "tag-b", "prod")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "description", "second"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_version", "1.6.0"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_version", "1.5.7"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "tags.0", "tag-b"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "context_tags.env", "prod"),
 				),
 			},
 			{
 				// Re-apply identical config: must be a stable no-op.
-				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("second", "1.6.0", "tag-b", "prod")),
+				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("second", "1.5.7", "tag-b", "prod")),
 				PlanOnly: true,
 			},
 		},
@@ -1040,7 +1040,7 @@ func TestAccWorkflowUsingTemplate_ExplicitEmptySuppressesTemplateDefault(t *test
 			{
 				// Create on rev1: explicit [] wins over rev1's TMPL_VAR default → zero env vars.
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", rev1, suppressConfig),
-				Check: resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "environment_variables.#", "0"),
+				Check:  resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "environment_variables.#", "0"),
 			},
 			{
 				// Explicit empty must round-trip stably (not re-inherit the template default).

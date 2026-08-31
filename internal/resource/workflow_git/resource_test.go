@@ -180,11 +180,11 @@ func TestAccWorkflowGit_WithTerraformConfig(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccWorkflowGit(wfGrpName, id, "TERRAFORM", config("1.6.0")),
+				Config: testAccWorkflowGit(wfGrpName, id, "TERRAFORM", config("1.5.7")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "workflow_group_id", wfGrpName),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
-					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "terraform_config.terraform_version", "1.6.0"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "terraform_config.terraform_version", "1.5.7"),
 				),
 			},
 		},
