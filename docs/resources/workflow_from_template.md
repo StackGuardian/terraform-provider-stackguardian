@@ -88,7 +88,7 @@ resource "stackguardian_workflow_from_template" "example" {
 
 - `id` (String) ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>
 - `vcs_config` (Attributes) VCS configuration for the workflow. (see [below for nested schema](#nestedatt--vcs_config))
-- `wf_type` (String) Type of workflow. Options: <span style="background-color: #eff0f0; color: #e53835;">TERRAFORM</span>, <span style="background-color: #eff0f0; color: #e53835;">OPENTOFU</span>, <span style="background-color: #eff0f0; color: #e53835;">ANSIBLE_PLAYBOOK</span>, <span style="background-color: #eff0f0; color: #e53835;">HELM</span>, <span style="background-color: #eff0f0; color: #e53835;">KUBECTL</span>, <span style="background-color: #eff0f0; color: #e53835;">CLOUDFORMATION</span>, <span style="background-color: #eff0f0; color: #e53835;">CUSTOM</span>
+- `wf_type` (String) What this workflow runs. <ul><li>`TERRAFORM` / `OPENTOFU` — Terraform or OpenTofu configuration.</li><li>`ANSIBLE_PLAYBOOK` — an Ansible playbook.</li><li>`HELM` — a Helm chart.</li><li>`KUBECTL` — Kubernetes manifests applied with kubectl.</li><li>`CLOUDFORMATION` — an AWS CloudFormation stack.</li><li>`CUSTOM` — anything else, typically a public repository run with your own steps.</li></ul>
 - `workflow_group_id` (String) ID of the parent workflow group. Immutable — changing this forces the workflow to be recreated (destroy and create), as the platform has no operation to move a workflow between groups.
 
 ### Optional
@@ -125,14 +125,7 @@ Optional:
 
 Required:
 
-- `iac_template_id` (String) Workflow template revision this workflow is created from. Two forms are accepted:
-
-- `<template-name>:<revision>` — a template in your own organization (e.g. `my-terraform-template:1`).
-- `/<org>/<template-name>:<revision>` — a template owned by another organization. Use this for templates shared with you, and for StackGuardian marketplace templates, which are owned by the `stackguardian` org (e.g. `/stackguardian/terraform:11`).
-
-A bare id without the leading `/<org>/` is resolved against your own organization.
-
-Use `:latest` in place of a revision number to always track the most recently published revision (e.g. `my-terraform-template:latest`). Pin an explicit revision when you need the workflow to stay put.
+- `iac_template_id` (String) Workflow template revision this workflow is created from. <ul><li>`&lt;template-name&gt;:&lt;revision&gt;` — a template in your own organization.</li><li>`/&lt;org&gt;/&lt;template-name&gt;:&lt;revision&gt;` — a template owned by another organization: one shared with you, or published publicly. StackGuardian's own templates use the `stackguardian` org, for example `/stackguardian/terraform:11`.</li></ul>A bare id is resolved against your own organization. Use `:latest` in place of a revision number to track the most recently published revision; pin an explicit revision when the workflow must not move.
 
 
 <a id="nestedatt--vcs_config--iac_input_data"></a>
@@ -142,7 +135,7 @@ Optional:
 
 - `data` (String) Input data as a JSON string.
 - `schema_id` (String) Schema ID for the input data.
-- `schema_type` (String) Schema type for the input data. Allowed values are `FORM_JSONSCHEMA`, `RAW_HCL`, `RAW_JSON`, `NO_CODE_JSON`, `NONE`.
+- `schema_type` (String) How the value in `data` is formatted. <ul><li>`FORM_JSONSCHEMA` — a StackGuardian NoCode form; `data` holds the values that form collects.</li><li>`RAW_HCL` — HCL-formatted input, as you would write in a `.tfvars` file.</li><li>`RAW_JSON` — the same input expressed as JSON.</li><li>`NONE` — the workflow takes no inputs.</li></ul>
 
 
 
@@ -152,7 +145,7 @@ Optional:
 Required:
 
 - `config` (Attributes) Deployment platform configuration details. (see [below for nested schema](#nestedatt--deployment_platform_config--config))
-- `kind` (String) Deployment platform kind. Options: <span style="background-color: #eff0f0; color: #e53835;">AWS_STATIC</span>, <span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC</span>, <span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_STATIC</span>, <span style="background-color: #eff0f0; color: #e53835;">AZURE_OIDC</span>, <span style="background-color: #eff0f0; color: #e53835;">GCP_STATIC</span>, <span style="background-color: #eff0f0; color: #e53835;">GCP_OIDC</span>
+- `kind` (String) Which cloud this workflow deploys to and how it authenticates. Must match the `kind` of the connector named in `integration_id`. <ul><li>`AWS_STATIC` — AWS with a static access key pair.</li><li>`AWS_RBAC` — AWS by assuming an IAM role. Preferred over static keys.</li><li>`AWS_OIDC` — AWS through an OIDC identity provider, with no stored credentials.</li><li>`AZURE_STATIC` — Azure with a service principal and client secret.</li><li>`AZURE_OIDC` — Azure through workload identity federation.</li><li>`GCP_STATIC` — GCP with a service account key file.</li><li>`GCP_OIDC` — GCP through workload identity federation.</li></ul>See the [cloud connector docs](https://docs.stackguardian.io/docs/connectors/csp/).
 
 <a id="nestedatt--deployment_platform_config--config"></a>
 ### Nested Schema for `deployment_platform_config.config`
@@ -173,7 +166,7 @@ Optional:
 Required:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--environment_variables--config))
-- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
+- `kind` (String) Where the variable's value comes from. <ul><li>`PLAIN_TEXT` — the value is written inline in `config.text_value`. Visible in configuration and state, so do not use it for credentials.</li><li>`SECRET_VALUE` — the value is read at run time from the secret named by `config.secret_id`, so it never appears in your configuration or state.</li></ul>
 
 <a id="nestedatt--environment_variables--config"></a>
 ### Nested Schema for `environment_variables.config`
@@ -438,7 +431,7 @@ Optional:
 Required:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--terraform_config--post_apply_wf_steps_config--environment_variables--config))
-- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
+- `kind` (String) Where the variable's value comes from. <ul><li>`PLAIN_TEXT` — the value is written inline in `config.text_value`. Visible in configuration and state, so do not use it for credentials.</li><li>`SECRET_VALUE` — the value is read at run time from the secret named by `config.secret_id`, so it never appears in your configuration or state.</li></ul>
 
 <a id="nestedatt--terraform_config--post_apply_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `terraform_config.post_apply_wf_steps_config.environment_variables.config`
@@ -473,7 +466,7 @@ Optional:
 Optional:
 
 - `data` (String) Input data (JSON).
-- `schema_type` (String) Schema type for the input data. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>
+- `schema_type` (String) How the value in `data` is formatted. `FORM_JSONSCHEMA` is a StackGuardian NoCode form; `data` holds the values that form collects.
 
 
 
@@ -500,7 +493,7 @@ Optional:
 Required:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--terraform_config--post_plan_wf_steps_config--environment_variables--config))
-- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
+- `kind` (String) Where the variable's value comes from. <ul><li>`PLAIN_TEXT` — the value is written inline in `config.text_value`. Visible in configuration and state, so do not use it for credentials.</li><li>`SECRET_VALUE` — the value is read at run time from the secret named by `config.secret_id`, so it never appears in your configuration or state.</li></ul>
 
 <a id="nestedatt--terraform_config--post_plan_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `terraform_config.post_plan_wf_steps_config.environment_variables.config`
@@ -535,7 +528,7 @@ Optional:
 Optional:
 
 - `data` (String) Input data (JSON).
-- `schema_type` (String) Schema type for the input data. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>
+- `schema_type` (String) How the value in `data` is formatted. `FORM_JSONSCHEMA` is a StackGuardian NoCode form; `data` holds the values that form collects.
 
 
 
@@ -562,7 +555,7 @@ Optional:
 Required:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--terraform_config--pre_apply_wf_steps_config--environment_variables--config))
-- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
+- `kind` (String) Where the variable's value comes from. <ul><li>`PLAIN_TEXT` — the value is written inline in `config.text_value`. Visible in configuration and state, so do not use it for credentials.</li><li>`SECRET_VALUE` — the value is read at run time from the secret named by `config.secret_id`, so it never appears in your configuration or state.</li></ul>
 
 <a id="nestedatt--terraform_config--pre_apply_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `terraform_config.pre_apply_wf_steps_config.environment_variables.config`
@@ -597,7 +590,7 @@ Optional:
 Optional:
 
 - `data` (String) Input data (JSON).
-- `schema_type` (String) Schema type for the input data. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>
+- `schema_type` (String) How the value in `data` is formatted. `FORM_JSONSCHEMA` is a StackGuardian NoCode form; `data` holds the values that form collects.
 
 
 
@@ -624,7 +617,7 @@ Optional:
 Required:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--terraform_config--pre_plan_wf_steps_config--environment_variables--config))
-- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
+- `kind` (String) Where the variable's value comes from. <ul><li>`PLAIN_TEXT` — the value is written inline in `config.text_value`. Visible in configuration and state, so do not use it for credentials.</li><li>`SECRET_VALUE` — the value is read at run time from the secret named by `config.secret_id`, so it never appears in your configuration or state.</li></ul>
 
 <a id="nestedatt--terraform_config--pre_plan_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `terraform_config.pre_plan_wf_steps_config.environment_variables.config`
@@ -659,7 +652,7 @@ Optional:
 Optional:
 
 - `data` (String) Input data (JSON).
-- `schema_type` (String) Schema type for the input data. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>
+- `schema_type` (String) How the value in `data` is formatted. `FORM_JSONSCHEMA` is a StackGuardian NoCode form; `data` holds the values that form collects.
 
 
 
@@ -717,7 +710,7 @@ Optional:
 Required:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--wf_steps_config--environment_variables--config))
-- `kind` (String) Kind of the environment variable. Options: <span style="background-color: #eff0f0; color: #e53835;">PLAIN_TEXT</span>, <span style="background-color: #eff0f0; color: #e53835;">SECRET_VALUE</span>
+- `kind` (String) Where the variable's value comes from. <ul><li>`PLAIN_TEXT` — the value is written inline in `config.text_value`. Visible in configuration and state, so do not use it for credentials.</li><li>`SECRET_VALUE` — the value is read at run time from the secret named by `config.secret_id`, so it never appears in your configuration or state.</li></ul>
 
 <a id="nestedatt--wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `wf_steps_config.environment_variables.config`
@@ -752,7 +745,7 @@ Optional:
 Optional:
 
 - `data` (String) Input data (JSON).
-- `schema_type` (String) Schema type for the input data. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>
+- `schema_type` (String) How the value in `data` is formatted. `FORM_JSONSCHEMA` is a StackGuardian NoCode form; `data` holds the values that form collects.
 
 
 

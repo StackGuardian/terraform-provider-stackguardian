@@ -92,7 +92,7 @@ const (
 	DiscoverySettingsBenchmarksLabel       = "Label associated with the discovery."
 
 	DiscoverySettingsBenchmarksRuntimeSource                     = "Source configuration type and settings definition"
-	DiscoverySettingsBenchmarksRuntimeSourceSourceConfigDestKind = "Kind of the source configuration destination. Valid examples include eg:- AWS_RBAC, AZURE_STATIC."
+	DiscoverySettingsBenchmarksRuntimeSourceSourceConfigDestKind = "Which cloud the discovery run targets, matching the `kind` of the connector it uses — for example `AWS_RBAC` or `AZURE_STATIC`. Note this attribute name is also used for VCS providers elsewhere in the schema; the accepted values differ by context."
 
 	DiscoverySettingsBenchmarksRuntimeSourceConfig                 = "Specific configuration settings for runtime source."
 	DiscoverySettingsBenchmarksRuntimeSourceConfigIncludeSubModule = "Indicates whether to include sub-modules."
@@ -137,25 +137,16 @@ const (
 const (
 	Approvers                 = "List of stackguardian users"
 	NumberOfApprovalsRequired = "Number of approvals required for a policy check to pass"
-	EnforcedOn                = "What this policy is enforced on. Either organization-wide, or any combination of workflow groups, workflows and connectors.\n\n- `[\"*\"]` — the whole organization. Used on its own, not combined with other entries.\n- `[\"/wfgrps/<group>\"]` — a workflow group and everything inside it. No trailing slash.\n- Workflows and connectors follow the same resource-path convention and can be listed alongside workflow groups.\n\nConfirm an unfamiliar form against an existing policy before relying on it."
-	PolicyType                = "Type of policy created \"GENERAL\" or \"FILTER.INSIGHT\""
+	EnforcedOn                = "What this policy is enforced on — either organization-wide, or any combination of workflow groups, workflows and connectors. <ul><li>`[\"*\"]` — the whole organization. Used on its own, not combined with other entries.</li><li>`[\"/wfgrps/&lt;group&gt;\"]` — a workflow group and everything inside it. No trailing slash.</li><li>Workflows and connectors follow the same resource-path convention and can be listed alongside workflow groups.</li></ul>Confirm an unfamiliar form against an existing policy before relying on it."
+	PolicyType                = "What kind of policy this is. <ul><li>`GENERAL` — the standard policy, evaluated during workflow and stack runs. `enforced_on`, `approvers` and `number_of_approvals_required` apply only to this type.</li><li>`FILTER.INSIGHT` — a filter over Insight findings. It excludes findings that match its definition from the Insight dashboard rather than gating a run, so it takes no scope and no approval settings.</li></ul>"
 
-	PolicyConfig       = "Policy configuration"
-	PolicyConfigSkip   = "Enable or disable the policy check"
-	PolicyConfigOnFail = `Specifies the action to be performed on failure. Options: <span style="background-color: #eff0f0; color: #e53835;">FAIL</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">WARN</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">PASS</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">APPROVAL_REQUIRED</span>`
-	PolicyConfigOnPass = `Specifies the action to be performed on pass. Options: <span style="background-color: #eff0f0; color: #e53835;">FAIL</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">WARN</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">PASS</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">APPROVAL_REQUIRED</span>`
+	PolicyConfig                    = "Policy configuration"
+	PolicyConfigSkip                = "Enable or disable the policy check"
+	PolicyConfigOnFail              = "Action taken when the policy evaluation **fails**. <ul><li>`FAIL` — stop the run.</li><li>`WARN` — record a warning and let the run continue.</li><li>`PASS` — treat the failure as acceptable and continue.</li><li>`APPROVAL_REQUIRED` — hold the run until an approver signs off.</li></ul>"
+	PolicyConfigOnPass              = "Action taken when the policy evaluation **passes**. Same values as `on_fail`: <ul><li>`PASS` — continue, the usual choice.</li><li>`WARN` — continue but record a warning.</li><li>`APPROVAL_REQUIRED` — hold the run for approval even though the policy passed.</li><li>`FAIL` — stop the run even though the policy passed.</li></ul>"
 	PolicyConfigInputData           = "Policy definition"
-	PolicyConfigInputDataSchemaType = `Specifies the schema type of the policy. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">RAW_JSON</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">TIRITH_JSON</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">NONE</span>`
-	PolicyConfigInputDataData = "Policy body"
+	PolicyConfigInputDataSchemaType = "How the policy body in `data` is formatted. `FORM_JSONSCHEMA` is a StackGuardian NoCode form; `data` holds the values that form collects."
+	PolicyConfigInputDataData       = "Policy body"
 
 	PolicyVCSConfig                    = "Configuration to import policy from version control"
 	PolicyVCSConfigMarketplaceTemplate = "Name of the template from marketplace"

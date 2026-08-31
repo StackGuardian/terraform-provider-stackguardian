@@ -231,7 +231,7 @@ Optional:
 Optional:
 
 - `config` (Attributes) Specific configuration settings for runtime source. (see [below for nested schema](#nestedatt--discovery_settings--benchmarks--runtime_source--config))
-- `source_config_dest_kind` (String) Kind of the source configuration destination. Valid examples include eg:- AWS_RBAC, AZURE_STATIC.
+- `source_config_dest_kind` (String) Which cloud the discovery run targets, matching the `kind` of the connector it uses — for example `AWS_RBAC` or `AZURE_STATIC`. Note this attribute name is also used for VCS providers elsewhere in the schema; the accepted values differ by context.
 
 <a id="nestedatt--discovery_settings--benchmarks--runtime_source--config"></a>
 ### Nested Schema for `discovery_settings.benchmarks.runtime_source.config`
