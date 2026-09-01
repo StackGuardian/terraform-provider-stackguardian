@@ -496,13 +496,11 @@ func TestAccStack_Import(t *testing.T) {
 
 // --- Remaining cases (not yet implemented) ---
 //
-// Covered, split across resource_root_test.go / resource_attrs_test.go /
+// Covered, split across resource_root_test.go /
 // resource_actions_test.go / resource_workflows_test.go:
 //   - id RequiresReplace; template_group_id round trip + re-resolution on
 //     revision change; Read removes state on 404; Delete treats 404 as
 //     success (resource.go's isStackNotFound, added alongside its test).
-//   - environment_variables round trip (set + omitted).
-//   - deployment_platform_config: invalid kind diagnostic.
 //   - workflows_config.workflows[]: minimal entry + Optional+Computed guard
 //     regression; invalid wf_type/parallel_execution diagnostics;
 //     three-way terraform_config precedence merge; vcs_config.iac_vcs_config
@@ -515,13 +513,9 @@ func TestAccStack_Import(t *testing.T) {
 //     TestAccStack_ActionsDuplicateKey); custom_actions nested round trip
 //     (terraform_action, environment_variables, dependencies) + removal on
 //     update; template-inherited actions land in default_actions.
-//   - Stack-level mini_steps and user_schedules[].inputs round trip.
 //
 // Deferred — each needs infrastructure or live-API knowledge this session
 // doesn't have:
-//   - deployment_platform_config valid kind+config round trip and
-//     profile_name UseStateForUnknown: needs a real integration_id (a
-//     connector/integration fixture, not set up anywhere in this package).
 //   - wf_steps_config round trip (top-level, per-workflow, and inside
 //     actions[].order[].parameters), and custom_actions'
 //     deployment_platform_config: both need wf_step_template_id /

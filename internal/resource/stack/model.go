@@ -21,20 +21,16 @@ import (
 // ---------------------------------------------------------------------------
 
 type StackResourceModel struct {
-	Id                       types.String `tfsdk:"id"`
-	WorkflowGroupId          types.String `tfsdk:"workflow_group_id"`
-	ResourceName             types.String `tfsdk:"resource_name"`
-	Description              types.String `tfsdk:"description"`
-	Tags                     types.List   `tfsdk:"tags"`
-	EnvironmentVariables     types.List   `tfsdk:"environment_variables"`
-	DeploymentPlatformConfig types.List   `tfsdk:"deployment_platform_config"`
-	DefaultActions           types.Map    `tfsdk:"default_actions"`
-	CustomActions            types.Map    `tfsdk:"custom_actions"`
-	TemplateGroupId          types.String `tfsdk:"template_group_id"`
-	WorkflowsConfig          types.Object `tfsdk:"workflows_config"`
-	UserSchedules            types.List   `tfsdk:"user_schedules"`
-	ContextTags              types.Map    `tfsdk:"context_tags"`
-	MiniSteps                types.Object `tfsdk:"mini_steps"`
+	Id              types.String `tfsdk:"id"`
+	WorkflowGroupId types.String `tfsdk:"workflow_group_id"`
+	ResourceName    types.String `tfsdk:"resource_name"`
+	Description     types.String `tfsdk:"description"`
+	Tags            types.List   `tfsdk:"tags"`
+	DefaultActions  types.Map    `tfsdk:"default_actions"`
+	CustomActions   types.Map    `tfsdk:"custom_actions"`
+	TemplateGroupId types.String `tfsdk:"template_group_id"`
+	WorkflowsConfig types.Object `tfsdk:"workflows_config"`
+	ContextTags     types.Map    `tfsdk:"context_tags"`
 }
 
 // ---------------------------------------------------------------------------
@@ -229,39 +225,6 @@ func (RunnerConstraintsModel) AttributeTypes() map[string]attr.Type {
 // ---------------------------------------------------------------------------
 // User schedules
 // ---------------------------------------------------------------------------
-
-// StackActionInputsModel is the "inputs" payload for a top-level stack user
-// schedule. It corresponds to the SDK's StackAction, which is just an action
-// type identifier (not the richer {action, resource_name} shape).
-type StackActionInputsModel struct {
-	ActionType types.String `tfsdk:"action_type"`
-}
-
-func (StackActionInputsModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"action_type": types.StringType,
-	}
-}
-
-// UserSchedulesModel represents a top-level stack user schedule
-// (sgsdkgo.StackUserSchedules), which carries a required Inputs payload.
-type UserSchedulesModel struct {
-	Name   types.String `tfsdk:"name"`
-	Desc   types.String `tfsdk:"desc"`
-	Cron   types.String `tfsdk:"cron"`
-	State  types.String `tfsdk:"state"`
-	Inputs types.Object `tfsdk:"inputs"`
-}
-
-func (UserSchedulesModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"name":   types.StringType,
-		"desc":   types.StringType,
-		"cron":   types.StringType,
-		"state":  types.StringType,
-		"inputs": types.ObjectType{AttrTypes: StackActionInputsModel{}.AttributeTypes()},
-	}
-}
 
 // WfUserSchedulesModel represents a per-workflow user schedule
 // (sgsdkgo.UserSchedules), which has no Inputs field.
@@ -1363,71 +1326,6 @@ func flattenWfUserSchedules(ctx context.Context, us []*sgsdkgo.UserSchedules) (t
 		return nullList, nil
 	}
 	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: WfUserSchedulesModel{}.AttributeTypes()}, models)
-	if diags.HasError() {
-		return nullList, diags
-	}
-	return list, nil
-}
-
-// expandUserSchedules converts the stack-level user_schedules list to
-// []*sgsdkgo.StackUserSchedules, including the Inputs (StackAction) payload.
-func expandUserSchedules(ctx context.Context, list types.List) ([]*sgsdkgo.StackUserSchedules, diag.Diagnostics) {
-	if list.IsNull() || list.IsUnknown() {
-		return nil, nil
-	}
-	var models []UserSchedulesModel
-	if diags := list.ElementsAs(ctx, &models, false); diags.HasError() {
-		return nil, diags
-	}
-	result := make([]*sgsdkgo.StackUserSchedules, len(models))
-	for i, m := range models {
-		var inputsModel StackActionInputsModel
-		if diags := m.Inputs.As(ctx, &inputsModel, basetypes.ObjectAsOptions{}); diags.HasError() {
-			return nil, diags
-		}
-		// name is Computed-only — server-assigned, never sent.
-		result[i] = &sgsdkgo.StackUserSchedules{
-			Desc:   m.Desc.ValueStringPointer(),
-			Cron:   m.Cron.ValueString(),
-			State:  sgsdkgo.StateEnum(m.State.ValueString()),
-			Inputs: &sgsdkgo.StackAction{ActionType: inputsModel.ActionType.ValueString()},
-		}
-	}
-	return result, nil
-}
-
-func flattenUserSchedules(ctx context.Context, us []*sgsdkgo.StackUserSchedules) (types.List, diag.Diagnostics) {
-	nullList := types.ListNull(types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()})
-	if len(us) == 0 {
-		return nullList, nil
-	}
-	models := make([]UserSchedulesModel, 0, len(us))
-	for _, s := range us {
-		if s == nil {
-			continue
-		}
-		inputsObj := types.ObjectNull(StackActionInputsModel{}.AttributeTypes())
-		if s.Inputs != nil {
-			obj, diags := types.ObjectValueFrom(ctx, StackActionInputsModel{}.AttributeTypes(), StackActionInputsModel{
-				ActionType: flatteners.String(s.Inputs.ActionType),
-			})
-			if diags.HasError() {
-				return nullList, diags
-			}
-			inputsObj = obj
-		}
-		models = append(models, UserSchedulesModel{
-			Name:   flatteners.StringPtr(s.Name),
-			Desc:   flatteners.StringPtr(s.Desc),
-			Cron:   flatteners.String(s.Cron),
-			State:  flatteners.String(string(s.State)),
-			Inputs: inputsObj,
-		})
-	}
-	if len(models) == 0 {
-		return nullList, nil
-	}
-	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()}, models)
 	if diags.HasError() {
 		return nullList, diags
 	}
@@ -3124,26 +3022,6 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context, orgName string, tpl
 		apiModel.Tags = tpl.Tags
 	}
 
-	// No template counterpart exists for environment_variables.
-	if !m.EnvironmentVariables.IsUnknown() && !m.EnvironmentVariables.IsNull() {
-		envVars, envDiags := expandEnvironmentVariables(ctx, m.EnvironmentVariables)
-		diags.Append(envDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		apiModel.EnvironmentVariables = envVars
-	}
-
-	// No template counterpart exists for deployment_platform_config.
-	if !m.DeploymentPlatformConfig.IsUnknown() && !m.DeploymentPlatformConfig.IsNull() {
-		dpc, dpcDiags := expandDeploymentPlatformConfig(ctx, m.DeploymentPlatformConfig)
-		diags.Append(dpcDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		apiModel.DeploymentPlatformConfig = dpc
-	}
-
 	if !m.TemplateGroupId.IsUnknown() && !m.TemplateGroupId.IsNull() {
 		prefixed := fmt.Sprintf("/%s/%s", orgName, m.TemplateGroupId.ValueString())
 		apiModel.TemplateGroupId = &prefixed
@@ -3173,16 +3051,6 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context, orgName string, tpl
 		apiModel.WorkflowsConfig = wfc
 	}
 
-	// No template counterpart exists for user_schedules.
-	if !m.UserSchedules.IsUnknown() && !m.UserSchedules.IsNull() {
-		userSchedules, usDiags := expandUserSchedules(ctx, m.UserSchedules)
-		diags.Append(usDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		apiModel.UserSchedules = userSchedules
-	}
-
 	if !m.ContextTags.IsUnknown() && !m.ContextTags.IsNull() {
 		contextTags, ctDiags := expandContextTags(ctx, m.ContextTags)
 		diags.Append(ctDiags...)
@@ -3192,16 +3060,6 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context, orgName string, tpl
 		apiModel.ContextTags = contextTags
 	} else if tpl != nil {
 		apiModel.ContextTags = contextTagsFromTemplate(tpl.ContextTags)
-	}
-
-	// No template counterpart exists for mini_steps.
-	if !m.MiniSteps.IsUnknown() && !m.MiniSteps.IsNull() {
-		miniSteps, msDiags := expandMiniSteps(ctx, m.MiniSteps)
-		diags.Append(msDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		apiModel.MiniSteps = miniSteps
 	}
 
 	return apiModel, diags
@@ -3251,38 +3109,6 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 		apiModel.Tags = sgsdkgo.Optional(tpl.Tags)
 	}
 
-	// No template counterpart exists for environment_variables.
-	if !m.EnvironmentVariables.IsUnknown() && !m.EnvironmentVariables.IsNull() {
-		envVars, envDiags := expandEnvironmentVariables(ctx, m.EnvironmentVariables)
-		diags.Append(envDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		if envVars != nil {
-			apiModel.EnvironmentVariables = sgsdkgo.Optional(envVars)
-		} else {
-			apiModel.EnvironmentVariables = sgsdkgo.Null[[]*sgsdkgo.EnvVars]()
-		}
-	} else if m.EnvironmentVariables.IsNull() {
-		apiModel.EnvironmentVariables = sgsdkgo.Null[[]*sgsdkgo.EnvVars]()
-	}
-
-	// No template counterpart exists for deployment_platform_config.
-	if !m.DeploymentPlatformConfig.IsUnknown() && !m.DeploymentPlatformConfig.IsNull() {
-		dpc, dpcDiags := expandDeploymentPlatformConfig(ctx, m.DeploymentPlatformConfig)
-		diags.Append(dpcDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		if dpc != nil {
-			apiModel.DeploymentPlatformConfig = sgsdkgo.Optional(dpc)
-		} else {
-			apiModel.DeploymentPlatformConfig = sgsdkgo.Null[[]*sgsdkgo.DeploymentPlatformConfig]()
-		}
-	} else if m.DeploymentPlatformConfig.IsNull() {
-		apiModel.DeploymentPlatformConfig = sgsdkgo.Null[[]*sgsdkgo.DeploymentPlatformConfig]()
-	}
-
 	if !m.TemplateGroupId.IsUnknown() && !m.TemplateGroupId.IsNull() {
 		apiModel.TemplateGroupId = sgsdkgo.Optional(fmt.Sprintf("/%s/%s", orgName, m.TemplateGroupId.ValueString()))
 	} else if m.TemplateGroupId.IsNull() {
@@ -3327,22 +3153,6 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 		apiModel.WorkflowsConfig = sgsdkgo.Null[sgsdkgo.StackWorkflowsConfig]()
 	}
 
-	// No template counterpart exists for user_schedules.
-	if !m.UserSchedules.IsUnknown() && !m.UserSchedules.IsNull() {
-		userSchedules, usDiags := expandUserSchedules(ctx, m.UserSchedules)
-		diags.Append(usDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		if userSchedules != nil {
-			apiModel.UserSchedules = sgsdkgo.Optional(userSchedules)
-		} else {
-			apiModel.UserSchedules = sgsdkgo.Null[[]*sgsdkgo.StackUserSchedules]()
-		}
-	} else if m.UserSchedules.IsNull() {
-		apiModel.UserSchedules = sgsdkgo.Null[[]*sgsdkgo.StackUserSchedules]()
-	}
-
 	if !m.ContextTags.IsUnknown() && !m.ContextTags.IsNull() {
 		contextTags, ctDiags := expandContextTags(ctx, m.ContextTags)
 		diags.Append(ctDiags...)
@@ -3358,22 +3168,6 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 		apiModel.ContextTags = sgsdkgo.Null[map[string]*string]()
 	} else if tpl != nil && tpl.ContextTags != nil {
 		apiModel.ContextTags = sgsdkgo.Optional(contextTagsFromTemplate(tpl.ContextTags))
-	}
-
-	// No template counterpart exists for mini_steps.
-	if !m.MiniSteps.IsUnknown() && !m.MiniSteps.IsNull() {
-		miniSteps, msDiags := expandMiniSteps(ctx, m.MiniSteps)
-		diags.Append(msDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		if miniSteps != nil {
-			apiModel.MiniSteps = sgsdkgo.Optional(*miniSteps)
-		} else {
-			apiModel.MiniSteps = sgsdkgo.Null[sgsdkgo.MiniStepsSchema]()
-		}
-	} else if m.MiniSteps.IsNull() {
-		apiModel.MiniSteps = sgsdkgo.Null[sgsdkgo.MiniStepsSchema]()
 	}
 
 	return apiModel, diags
@@ -3602,20 +3396,6 @@ func BuildAPIModelToStackModel(ctx context.Context, orgName string, apiResponse 
 		stackModel.Tags = types.ListValueMust(types.StringType, []attr.Value{})
 	}
 
-	envVarsList, diagsEnv := flattenEnvironmentVariables(ctx, apiResponse.EnvironmentVariables)
-	diags.Append(diagsEnv...)
-	if diags.HasError() {
-		return nil, diags
-	}
-	stackModel.EnvironmentVariables = envVarsList
-
-	dpcList, diagsDpc := flattenDeploymentPlatformConfig(ctx, apiResponse.DeploymentPlatformConfig)
-	diags.Append(diagsDpc...)
-	if diags.HasError() {
-		return nil, diags
-	}
-	stackModel.DeploymentPlatformConfig = knownEmptyListIfNull(dpcList, types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()})
-
 	defaultActions, customActions, diagsAct := flattenActionsMap(ctx, translateActionsOrderKeys(apiResponse.Actions, apiResponse.WorkflowRelationsMap), false)
 	diags.Append(diagsAct...)
 	if diags.HasError() {
@@ -3631,26 +3411,12 @@ func BuildAPIModelToStackModel(ctx context.Context, orgName string, apiResponse 
 	}
 	stackModel.WorkflowsConfig = wfcObj
 
-	usList, diagsUs := flattenUserSchedules(ctx, apiResponse.UserSchedules)
-	diags.Append(diagsUs...)
-	if diags.HasError() {
-		return nil, diags
-	}
-	stackModel.UserSchedules = usList
-
 	ctMap, diagsCt := flattenContextTags(ctx, apiResponse.ContextTags)
 	diags.Append(diagsCt...)
 	if diags.HasError() {
 		return nil, diags
 	}
 	stackModel.ContextTags = knownEmptyMapIfNull(ctMap, types.StringType)
-
-	msObj, diagsMs := flattenMiniSteps(ctx, apiResponse.MiniSteps)
-	diags.Append(diagsMs...)
-	if diags.HasError() {
-		return nil, diags
-	}
-	stackModel.MiniSteps = msObj
 
 	return stackModel, diags
 }
