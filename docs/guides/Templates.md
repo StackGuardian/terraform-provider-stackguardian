@@ -53,7 +53,7 @@ resource "stackguardian_workflow_from_template" "example" {
   }
 
   terraform_config = {
-    terraform_version = "1.5.0"
+    terraform_version = "1.5.7"
   }
 }
 ```

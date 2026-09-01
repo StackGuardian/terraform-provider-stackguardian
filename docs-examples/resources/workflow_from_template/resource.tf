@@ -32,7 +32,7 @@ resource "stackguardian_workflow_from_template" "example" {
   # Declared attributes win over the template default; omitted ones are inherited --
   # including after the revision is upgraded.
   terraform_config = {
-    terraform_version = "1.5.0"
+    terraform_version = "1.5.7"
   }
 
   depends_on = [stackguardian_workflow_template_revision.v1]
