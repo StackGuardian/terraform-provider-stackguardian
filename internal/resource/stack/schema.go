@@ -482,24 +482,6 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 					listplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"environment_variables": schema.ListNestedAttribute{
-				MarkdownDescription: "Environment variables for the stack.",
-				Optional:            true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: envVarsAttrs,
-				},
-			},
-			"deployment_platform_config": schema.ListNestedAttribute{
-				MarkdownDescription: "Deployment platform configuration.",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
-				},
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: deploymentPlatformConfigAttrs,
-				},
-			},
 			"default_actions": schema.MapNestedAttribute{
 				MarkdownDescription: "Actions define the sequence in which the workflows in the Stack are executed. This reflects the full set of actions on the stack (built-in and custom); use `custom_actions` to author your own.",
 				Computed:            true,
@@ -829,33 +811,6 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 					},
 				},
 			},
-			"user_schedules": schema.ListNestedAttribute{
-				MarkdownDescription: "User-defined schedules for the stack.",
-				Optional:            true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"name": schema.StringAttribute{
-							Computed: true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
-							},
-						},
-						"desc":  schema.StringAttribute{Optional: true},
-						"cron":  schema.StringAttribute{Required: true},
-						"state": schema.StringAttribute{Required: true},
-						"inputs": schema.SingleNestedAttribute{
-							MarkdownDescription: "Action to run on this schedule.",
-							Required:            true,
-							Attributes: map[string]schema.Attribute{
-								"action_type": schema.StringAttribute{
-									MarkdownDescription: "The action to trigger for this schedule.",
-									Required:            true,
-								},
-							},
-						},
-					},
-				},
-			},
 			"context_tags": schema.MapAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.ContextTags, "stack"),
 				ElementType:         types.StringType,
@@ -863,44 +818,6 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Computed:            true,
 				PlanModifiers: []planmodifier.Map{
 					mapplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"mini_steps": schema.SingleNestedAttribute{
-				MarkdownDescription: "Mini steps configuration for the stack.",
-				Optional:            true,
-				Attributes: map[string]schema.Attribute{
-					"notifications": schema.SingleNestedAttribute{
-						Optional: true,
-						Attributes: map[string]schema.Attribute{
-							"email": schema.SingleNestedAttribute{
-								Optional: true,
-								Attributes: map[string]schema.Attribute{
-									"approval_required": ministepsNotificationRecipients,
-									"cancelled":         ministepsNotificationRecipients,
-									"completed":         ministepsNotificationRecipients,
-									"drift_detected":    ministepsNotificationRecipients,
-									"errored":           ministepsNotificationRecipients,
-								},
-							},
-						},
-					},
-					"webhooks": schema.SingleNestedAttribute{
-						Optional: true,
-						Attributes: map[string]schema.Attribute{
-							"approval_required": ministepsWebhooks,
-							"cancelled":         ministepsWebhooks,
-							"completed":         ministepsWebhooks,
-							"drift_detected":    ministepsWebhooks,
-							"errored":           ministepsWebhooks,
-						},
-					},
-					"wf_chaining": schema.SingleNestedAttribute{
-						Optional: true,
-						Attributes: map[string]schema.Attribute{
-							"completed": ministepsWorkflowChaining,
-							"errored":   ministepsWorkflowChaining,
-						},
-					},
 				},
 			},
 		},
