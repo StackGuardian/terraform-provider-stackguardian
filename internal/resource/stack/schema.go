@@ -525,7 +525,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"id": schema.StringAttribute{
-									MarkdownDescription: "UUID of the workflow slot as defined in the stack template. Required so the provider can match this entry against the stack template revision's workflows_config for merging.",
+									MarkdownDescription: "UUID of the workflow slot as defined in the stack template.",
 									Required:            true,
 								},
 								"resource_name": schema.StringAttribute{
