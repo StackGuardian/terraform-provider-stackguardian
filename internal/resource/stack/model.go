@@ -290,26 +290,6 @@ func (VcsConfigModel) AttributeTypes() map[string]attr.Type {
 }
 
 // ---------------------------------------------------------------------------
-// Input schemas (for workflows_config workflows)
-// ---------------------------------------------------------------------------
-
-type StackInputSchemaModel struct {
-	Name         types.String `tfsdk:"name"`
-	Type         types.String `tfsdk:"type"`
-	EncodedData  types.String `tfsdk:"encoded_data"`
-	UiSchemaData types.String `tfsdk:"ui_schema_data"`
-}
-
-func (StackInputSchemaModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"name":           types.StringType,
-		"type":           types.StringType,
-		"encoded_data":   types.StringType,
-		"ui_schema_data": types.StringType,
-	}
-}
-
-// ---------------------------------------------------------------------------
 // MiniSteps (shared shape for the stack-level and per-workflow mini_steps)
 // ---------------------------------------------------------------------------
 
@@ -443,9 +423,7 @@ type WorkflowInStackModel struct {
 	TerraformConfig           types.Object `tfsdk:"terraform_config"`
 	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
 	DeploymentPlatformConfig  types.List   `tfsdk:"deployment_platform_config"`
-	TemplateId                types.String `tfsdk:"template_id"`
 	VcsConfig                 types.Object `tfsdk:"vcs_config"`
-	InputSchemas              types.List   `tfsdk:"input_schemas"`
 	Approvers                 types.List   `tfsdk:"approvers"`
 	NumberOfApprovalsRequired types.Int64  `tfsdk:"number_of_approvals_required"`
 	UserJobCpu                types.Int64  `tfsdk:"user_job_cpu"`
@@ -468,9 +446,7 @@ func (WorkflowInStackModel) AttributeTypes() map[string]attr.Type {
 		"terraform_config":             types.ObjectType{AttrTypes: TerraformConfigModel{}.AttributeTypes()},
 		"environment_variables":        types.ListType{ElemType: types.ObjectType{AttrTypes: EnvironmentVariableModel{}.AttributeTypes()}},
 		"deployment_platform_config":   types.ListType{ElemType: types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()}},
-		"template_id":                  types.StringType,
 		"vcs_config":                   types.ObjectType{AttrTypes: VcsConfigModel{}.AttributeTypes()},
-		"input_schemas":                types.ListType{ElemType: types.ObjectType{AttrTypes: StackInputSchemaModel{}.AttributeTypes()}},
 		"approvers":                    types.ListType{ElemType: types.StringType},
 		"number_of_approvals_required": types.Int64Type,
 		"user_job_cpu":                 types.Int64Type,
@@ -1230,53 +1206,6 @@ func flattenVcsConfig(ctx context.Context, vc *sgsdkgo.VcsConfig) (types.Object,
 	return obj, nil
 }
 
-func expandInputSchemas(ctx context.Context, list types.List) ([]*sgsdkgo.InputSchemas, diag.Diagnostics) {
-	if list.IsNull() || list.IsUnknown() {
-		return nil, nil
-	}
-	var models []StackInputSchemaModel
-	if diags := list.ElementsAs(ctx, &models, false); diags.HasError() {
-		return nil, diags
-	}
-	result := make([]*sgsdkgo.InputSchemas, len(models))
-	for i, ism := range models {
-		result[i] = &sgsdkgo.InputSchemas{
-			Name:         ism.Name.ValueStringPointer(),
-			Type:         sgsdkgo.InputSchemasTypeEnum(ism.Type.ValueString()),
-			EncodedData:  ism.EncodedData.ValueStringPointer(),
-			UiSchemaData: ism.UiSchemaData.ValueStringPointer(),
-		}
-	}
-	return result, nil
-}
-
-func flattenInputSchemas(ctx context.Context, items []*sgsdkgo.InputSchemas) (types.List, diag.Diagnostics) {
-	nullList := types.ListNull(types.ObjectType{AttrTypes: StackInputSchemaModel{}.AttributeTypes()})
-	if len(items) == 0 {
-		return nullList, nil
-	}
-	models := make([]StackInputSchemaModel, 0, len(items))
-	for _, is := range items {
-		if is == nil {
-			continue
-		}
-		models = append(models, StackInputSchemaModel{
-			Name:         flatteners.StringPtr(is.Name),
-			Type:         flatteners.String(string(is.Type)),
-			EncodedData:  flatteners.StringPtr(is.EncodedData),
-			UiSchemaData: flatteners.StringPtr(is.UiSchemaData),
-		})
-	}
-	if len(models) == 0 {
-		return nullList, nil
-	}
-	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: StackInputSchemaModel{}.AttributeTypes()}, models)
-	if diags.HasError() {
-		return nullList, diags
-	}
-	return list, nil
-}
-
 // expandWfUserSchedules converts a per-workflow user_schedules list to
 // []*sgsdkgo.UserSchedules (no Inputs field, unlike the stack-level schedules).
 func expandWfUserSchedules(ctx context.Context, list types.List) ([]*sgsdkgo.UserSchedules, diag.Diagnostics) {
@@ -1861,19 +1790,6 @@ func envVarsPtrSliceFromValues(vals []sgsdkgo.EnvVars) []*sgsdkgo.EnvVars {
 	return result
 }
 
-// inputSchemasPtrSliceFromValues converts a value slice to the pointer slice
-// StackWorkflowsConfigWorkflow expects.
-func inputSchemasPtrSliceFromValues(vals []sgsdkgo.InputSchemas) []*sgsdkgo.InputSchemas {
-	if len(vals) == 0 {
-		return nil
-	}
-	result := make([]*sgsdkgo.InputSchemas, len(vals))
-	for i := range vals {
-		result[i] = &vals[i]
-	}
-	return result
-}
-
 // deploymentPlatformConfigFromWorkflowTemplate adapts the workflow template
 // revision's own DeploymentPlatformConfig type (workflowtemplaterevisions
 // package) to the root SDK type StackWorkflowsConfigWorkflow expects — these
@@ -1949,9 +1865,6 @@ func mergeWorkflowWithStackTemplateOverride(wf *sgsdkgo.StackWorkflowsConfigWork
 	if wf.ResourceName == nil {
 		wf.ResourceName = stackTplWf.ResourceName
 	}
-	if wf.TemplateId == nil {
-		wf.TemplateId = stackTplWf.TemplateId
-	}
 	if wf.WfType == nil {
 		wf.WfType = stackTplWf.WfType
 	}
@@ -1988,9 +1901,6 @@ func mergeWorkflowWithStackTemplateOverride(wf *sgsdkgo.StackWorkflowsConfigWork
 	}
 	if wf.UserJobMemory == nil {
 		wf.UserJobMemory = stackTplWf.UserJobMemory
-	}
-	if wf.InputSchemas == nil && len(stackTplWf.InputSchemas) > 0 {
-		wf.InputSchemas = &stackTplWf.InputSchemas
 	}
 
 	// iac_vcs_config is never user-settable on the stack resource (Computed-only) —
@@ -2062,11 +1972,6 @@ func mergeWorkflowWithWorkflowTemplateDefaults(wf *sgsdkgo.StackWorkflowsConfigW
 			wf.EnvironmentVariables = &envVars
 		}
 	}
-	if wf.InputSchemas == nil {
-		if schemas := inputSchemasPtrSliceFromValues(workflowTpl.InputSchemas); len(schemas) > 0 {
-			wf.InputSchemas = &schemas
-		}
-	}
 	if wf.DeploymentPlatformConfig == nil {
 		if dpc := deploymentPlatformConfigFromWorkflowTemplate(workflowTpl.DeploymentPlatformConfig); len(dpc) > 0 {
 			wf.DeploymentPlatformConfig = &dpc
@@ -2117,8 +2022,8 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 			// entry against the stack template revision's workflows_config below.
 			Id: wm.Id.ValueStringPointer(),
 		}
-		// resource_name/description/template_id/number_of_approvals_required/
-		// user_job_cpu/user_job_memory are all Optional+Computed: ValueStringPointer()/
+		// resource_name/description/number_of_approvals_required/user_job_cpu/
+		// user_job_memory are all Optional+Computed: ValueStringPointer()/
 		// ValueInt64Pointer() return &""/&0 for unknown, which would send spurious empty/zero
 		// values on create whenever the user hasn't set them. Only set when known.
 		if !wm.ResourceName.IsNull() && !wm.ResourceName.IsUnknown() {
@@ -2126,9 +2031,6 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 		}
 		if !wm.Description.IsNull() && !wm.Description.IsUnknown() {
 			wf.Description = wm.Description.ValueStringPointer()
-		}
-		if !wm.TemplateId.IsNull() && !wm.TemplateId.IsUnknown() {
-			wf.TemplateId = wm.TemplateId.ValueStringPointer()
 		}
 		if !wm.NumberOfApprovalsRequired.IsNull() && !wm.NumberOfApprovalsRequired.IsUnknown() {
 			wf.NumberOfApprovalsRequired = expanders.IntPtr(wm.NumberOfApprovalsRequired.ValueInt64Pointer())
@@ -2195,13 +2097,6 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 				return nil, diags
 			}
 			wf.VcsConfig = vcs
-		}
-		if !wm.InputSchemas.IsNull() && !wm.InputSchemas.IsUnknown() {
-			schemas, diags := expandInputSchemas(ctx, wm.InputSchemas)
-			if diags.HasError() {
-				return nil, diags
-			}
-			wf.InputSchemas = &schemas
 		}
 		if !wm.Approvers.IsNull() && !wm.Approvers.IsUnknown() {
 			approvers, diags := expanders.StringList(ctx, wm.Approvers)
@@ -2292,11 +2187,6 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 		if diags.HasError() {
 			return nullObj, diags
 		}
-		inputSchemas, diags := flattenInputSchemas(ctx, deref(wf.InputSchemas))
-		if diags.HasError() {
-			return nullObj, diags
-		}
-		inputSchemas = knownEmptyListIfNull(inputSchemas, types.ObjectType{AttrTypes: StackInputSchemaModel{}.AttributeTypes()})
 		us, diags := flattenWfUserSchedules(ctx, deref(wf.UserSchedules))
 		if diags.HasError() {
 			return nullObj, diags
@@ -2364,9 +2254,7 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 			TerraformConfig:          tcObj,
 			EnvironmentVariables:     envVars,
 			DeploymentPlatformConfig: dpcs,
-			TemplateId:               flatteners.StringPtr(wf.TemplateId),
 			VcsConfig:                vcs,
-			InputSchemas:             inputSchemas,
 			Approvers:                approversList,
 			// Int64PtrDefault (0, not null) — matches workflow_from_template's
 			// documented platform behavior: the API assigns 0 when nothing resolves

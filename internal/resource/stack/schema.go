@@ -598,14 +598,6 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 										Attributes: deploymentPlatformConfigAttrs,
 									},
 								},
-								"template_id": schema.StringAttribute{
-									MarkdownDescription: "ID of the workflow template that this workflow is based on.",
-									Optional:            true,
-									Computed:            true,
-									PlanModifiers: []planmodifier.String{
-										stringplanmodifier.UseStateForUnknown(),
-									},
-								},
 								"vcs_config": schema.SingleNestedAttribute{
 									MarkdownDescription: "VCS (version control) configuration for the workflow.",
 									Optional:            true,
@@ -645,32 +637,6 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 													MarkdownDescription: "Input data as a JSON string.",
 													Optional:            true,
 												},
-											},
-										},
-									},
-								},
-								"input_schemas": schema.ListNestedAttribute{
-									MarkdownDescription: "Input schema definitions for this workflow.",
-									Optional:            true,
-									Computed:            true,
-									PlanModifiers: []planmodifier.List{
-										listplanmodifier.UseStateForUnknown(),
-									},
-									NestedObject: schema.NestedAttributeObject{
-										Attributes: map[string]schema.Attribute{
-											"name": schema.StringAttribute{
-												Optional: true,
-											},
-											"type": schema.StringAttribute{
-												MarkdownDescription: "Schema type (e.g. FORM_JSONSCHEMA).",
-												Required:            true,
-											},
-											"encoded_data": schema.StringAttribute{
-												MarkdownDescription: "Base64-encoded schema data.",
-												Optional:            true,
-											},
-											"ui_schema_data": schema.StringAttribute{
-												Optional: true,
 											},
 										},
 									},
