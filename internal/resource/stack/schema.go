@@ -364,9 +364,8 @@ var terraformConfigAttrs = map[string]schema.Attribute{
 	},
 }
 
-// actionsAttrs defines the schema attributes for a single action value, shared
-// between the "default_actions" (computed, server-reflected) and "custom_actions"
-// (user-authored) top-level attributes — both describe the same shape.
+// actionsAttrs defines the schema attributes for a single action value inside
+// the "actions" top-level attribute.
 var actionsAttrs = map[string]schema.Attribute{
 	"name": schema.StringAttribute{
 		MarkdownDescription: "Name of the action.",
@@ -482,18 +481,8 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 					listplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"default_actions": schema.MapNestedAttribute{
-				MarkdownDescription: "Actions define the sequence in which the workflows in the Stack are executed. This reflects the full set of actions on the stack (built-in and custom); use `custom_actions` to author your own.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.Map{
-					mapplanmodifier.UseStateForUnknown(),
-				},
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: actionsAttrs,
-				},
-			},
-			"custom_actions": schema.MapNestedAttribute{
-				MarkdownDescription: "User-authored actions to add to the stack. Same shape as `default_actions`. Computed because the API returns one merged actions map with no \"is custom\" marker other than Default=false, so this is re-derived from the server response on every read.",
+			"actions": schema.MapNestedAttribute{
+				MarkdownDescription: "Actions define the sequence in which the workflows in the Stack are executed. Optional+Computed: when left unset, inherits the actions resolved from the stack template revision (its own actions verbatim, or a generated apply/plan/destroy set — see the template revision docs); when set, this value is used as-is instead of the template's.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Map{
