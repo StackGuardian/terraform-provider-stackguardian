@@ -504,9 +504,8 @@ func TestAccStack_Import(t *testing.T) {
 //   - workflows_config.workflows[]: minimal entry + Optional+Computed guard
 //     regression; invalid wf_type/parallel_execution diagnostics;
 //     three-way terraform_config precedence merge; vcs_config.iac_vcs_config
-//     Computed-only rejection; input_schemas id guard, approvers,
-//     user_schedules, context_tags, runner_constraints, mini_steps round
-//     trip.
+//     Computed-only rejection; approvers, user_schedules, context_tags,
+//     runner_constraints, mini_steps round trip.
 //   - actions: template fallback when unset (generated apply/plan/destroy,
 //     and verbatim template Actions), wholesale override once the user
 //     declares actions (see TestAccStack_ActionsGeneratedFromTemplate);

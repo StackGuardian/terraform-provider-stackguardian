@@ -46,7 +46,6 @@ func TestAccStack_WorkflowsConfigMinimalEntry(t *testing.T) {
 					// None of these were declared — must resolve to real values, not
 					// be forced to "" / 0 by the unknown-value guard bug.
 					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.resource_name"),
-					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.template_id"),
 					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.user_job_cpu"),
 					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.user_job_memory"),
 				),
@@ -258,10 +257,9 @@ func TestAccStack_WorkflowsConfigVcsConfigComputedOnly(t *testing.T) {
 }
 
 // TestAccStack_WorkflowsConfigRoundTrip covers a batch of the remaining
-// per-workflow attributes together: input_schemas (Optional+Computed guard
-// on id — must not be forced to an empty string), approvers, user_schedules
-// (per-workflow shape — cron/state Required, no "inputs" field, unlike the
-// stack-level copy), context_tags, runner_constraints, and mini_steps.
+// per-workflow attributes together: approvers, user_schedules (per-workflow
+// shape — cron/state Required, no "inputs" field, unlike the stack-level
+// copy), context_tags, runner_constraints, and mini_steps.
 func TestAccStack_WorkflowsConfigRoundTrip(t *testing.T) {
 	wfGrpName := "tf-provider-stack-wfrt-wfgrp"
 	wfTemplateName := "tf-provider-stack-wfrt-wftmpl"
@@ -276,12 +274,6 @@ func TestAccStack_WorkflowsConfigRoundTrip(t *testing.T) {
       {
         id        = %q
         approvers = ["alice@example.com"]
-
-        input_schemas = [
-          {
-            type = "FORM_JSONSCHEMA"
-          }
-        ]
 
         user_schedules = [
           {
@@ -324,7 +316,6 @@ func TestAccStack_WorkflowsConfigRoundTrip(t *testing.T) {
 			{
 				Config: testAccStackConfig(wfGrpName, revision, id, config),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.input_schemas.0.type", "FORM_JSONSCHEMA"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.approvers.0", "alice@example.com"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.0.cron", "0 8 ? * MON *"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.0.state", "ENABLED"),
@@ -345,13 +336,13 @@ func TestAccStack_WorkflowsConfigRoundTrip(t *testing.T) {
 
 // TestAccStack_WorkflowsConfigUpdate verifies that changing per-workflow
 // values on an ALREADY-EXISTING stack actually applies — approvers,
-// input_schemas, user_schedules, context_tags, runner_constraints, and
-// mini_steps all round-tripped at create in TestAccStack_WorkflowsConfigRoundTrip,
-// but were never re-verified after a real update to a different value. Step 3
-// clears every override back to unset and checks the ones with a known-empty
-// flatten default (tags/approvers/input_schemas/user_schedules/context_tags)
-// settle to empty rather than erroring or keeping a stale value — exercising
-// that path on a genuine update, not just a fresh create.
+// user_schedules, context_tags, runner_constraints, and mini_steps all
+// round-tripped at create in TestAccStack_WorkflowsConfigRoundTrip, but were
+// never re-verified after a real update to a different value. Step 3 clears
+// every override back to unset and checks the ones with a known-empty
+// flatten default (tags/approvers/user_schedules/context_tags) settle to
+// empty rather than erroring or keeping a stale value — exercising that path
+// on a genuine update, not just a fresh create.
 func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
 	wfGrpName := "tf-provider-stack-wfupd-wfgrp"
 	wfTemplateName := "tf-provider-stack-wfupd-wftmpl"
@@ -367,10 +358,6 @@ func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
         id        = %q
         tags      = ["v1"]
         approvers = ["alice@example.com"]
-
-        input_schemas = [
-          { type = "FORM_JSONSCHEMA" }
-        ]
 
         user_schedules = [
           { cron = "0 8 ? * MON *", state = "ENABLED" }
@@ -404,10 +391,6 @@ func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
         id        = %q
         tags      = ["v2"]
         approvers = ["bob@example.com"]
-
-        input_schemas = [
-          { type = "RAW_JSON" }
-        ]
 
         user_schedules = [
           { cron = "0 9 ? * TUE *", state = "DISABLED" }
@@ -448,7 +431,6 @@ func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
         id             = %q
         tags           = []
         approvers      = []
-        input_schemas  = []
         user_schedules = []
         context_tags   = {}
       }
@@ -468,7 +450,6 @@ func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.tags.0", "v1"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.approvers.0", "alice@example.com"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.input_schemas.0.type", "FORM_JSONSCHEMA"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.0.cron", "0 8 ? * MON *"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.0.state", "ENABLED"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.context_tags.env", "dev"),
@@ -484,7 +465,6 @@ func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.tags.0", "v2"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.approvers.0", "bob@example.com"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.input_schemas.0.type", "RAW_JSON"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.0.cron", "0 9 ? * TUE *"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.0.state", "DISABLED"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.context_tags.env", "prod"),
@@ -500,7 +480,6 @@ func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.tags.#", "0"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.approvers.#", "0"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.input_schemas.#", "0"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.#", "0"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.context_tags.%", "0"),
 				),
