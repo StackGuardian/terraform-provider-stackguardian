@@ -26,8 +26,7 @@ type StackResourceModel struct {
 	ResourceName    types.String `tfsdk:"resource_name"`
 	Description     types.String `tfsdk:"description"`
 	Tags            types.List   `tfsdk:"tags"`
-	DefaultActions  types.Map    `tfsdk:"default_actions"`
-	CustomActions   types.Map    `tfsdk:"custom_actions"`
+	Actions         types.Map    `tfsdk:"actions"`
 	TemplateGroupId types.String `tfsdk:"template_group_id"`
 	WorkflowsConfig types.Object `tfsdk:"workflows_config"`
 	ContextTags     types.Map    `tfsdk:"context_tags"`
@@ -2401,9 +2400,8 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 // Actions converters
 // ---------------------------------------------------------------------------
 
-// expandSingleActionsMap converts one Terraform actions map (either
-// default_actions or custom_actions) to API format, stamping isDefault onto
-// every action's Default field.
+// expandSingleActionsMap converts a Terraform actions map to API format,
+// stamping isDefault onto every action's Default field.
 func expandSingleActionsMap(ctx context.Context, actions types.Map, isDefault bool) (map[string]*sgsdkgo.Actions, diag.Diagnostics) {
 	if actions.IsNull() || actions.IsUnknown() {
 		return nil, nil
@@ -2526,64 +2524,16 @@ func expandSingleActionsMap(ctx context.Context, actions types.Map, isDefault bo
 	return result, nil
 }
 
-// expandActionsMap merges the Terraform default_actions and custom_actions maps
-// into the single map the SDK's Actions field expects, stamping Default=true on
-// entries from defaultActions and Default=false on entries from customActions.
-// An action key present in both is a config error, since it's ambiguous which
-// Default value should win. Any action the stack template revision (tpl)
-// resolves to — its own Actions verbatim, or a freshly generated set — that
-// isn't already covered by defaultActions/customActions is filled in as a
-// lowest-precedence default; see generateStackActions.
-func expandActionsMap(ctx context.Context, defaultActions, customActions types.Map, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) (map[string]*sgsdkgo.Actions, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	defaults, d := expandSingleActionsMap(ctx, defaultActions, true)
-	diags.Append(d...)
-	if diags.HasError() {
-		return nil, diags
+// expandActionsMap resolves the stack's actions: if the user declared actions
+// in config, that map is expanded and used as-is (Default=false stamped on
+// every entry — user-authored). Otherwise it falls back to whatever the stack
+// template revision (tpl) resolves to — its own Actions verbatim, or a freshly
+// generated apply/plan/destroy set; see generateStackActions.
+func expandActionsMap(ctx context.Context, actions types.Map, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) (map[string]*sgsdkgo.Actions, diag.Diagnostics) {
+	if !actions.IsNull() && !actions.IsUnknown() {
+		return expandSingleActionsMap(ctx, actions, false)
 	}
-	customs, d := expandSingleActionsMap(ctx, customActions, false)
-	diags.Append(d...)
-	if diags.HasError() {
-		return nil, diags
-	}
-
-	result := make(map[string]*sgsdkgo.Actions, len(defaults)+len(customs))
-	for k, v := range defaults {
-		result[k] = v
-	}
-	for k, v := range customs {
-		if _, exists := result[k]; exists {
-			diags.Append(diag.NewErrorDiagnostic(
-				"Duplicate action key",
-				"Action \""+k+"\" is defined in both default_actions and custom_actions; it must only appear in one.",
-			))
-			continue
-		}
-		result[k] = v
-	}
-	if diags.HasError() {
-		return nil, diags
-	}
-
-	isDefault := true
-	for k, v := range generateStackActions(tpl, workflowTemplates) {
-		if _, exists := result[k]; exists || v == nil {
-			continue
-		}
-		// Force Default=true on a shallow copy: an action resolved from the
-		// template is always a default action for the stack, regardless of
-		// what Default flag it carries. custom_actions is exclusively
-		// user-authored, so these entries never count as custom.
-		action := *v
-		action.Default = &isDefault
-		result[k] = &action
-	}
-	if len(result) == 0 {
-		return nil, diags
-	}
-
-	return result, diags
+	return generateStackActions(tpl, workflowTemplates), nil
 }
 
 // generateStackActions resolves the stack template revision's Actions,
@@ -2760,20 +2710,13 @@ func translateDependencyIds(ao *sgsdkgo.ActionOrder, reverse map[string]string) 
 }
 
 // flattenActionsMap converts the API actions map to Terraform format,
-// including the order/parameters/dependencies structure. Actions with
-// Default == true are split into defaultActions; everything else goes into
-// customActions — unless forceDefault is set, in which case every action goes
-// into defaultActions regardless of its own Default flag. forceDefault is for
-// flattening a stack TEMPLATE's actions: custom_actions is exclusively
-// user-authored on the stack itself, so nothing from a template — even an
-// action the template itself marked non-default — may ever land there.
-func flattenActionsMap(ctx context.Context, actions map[string]*sgsdkgo.Actions, forceDefault bool) (defaultActions types.Map, customActions types.Map, diags diag.Diagnostics) {
+// including the order/parameters/dependencies structure.
+func flattenActionsMap(ctx context.Context, actions map[string]*sgsdkgo.Actions) (types.Map, diag.Diagnostics) {
 	mapNull := types.MapNull(types.ObjectType{AttrTypes: ActionsModel{}.AttributeTypes()})
 	if actions == nil {
-		return mapNull, mapNull, nil
+		return mapNull, nil
 	}
-	defaultElements := make(map[string]attr.Value)
-	customElements := make(map[string]attr.Value)
+	elements := make(map[string]attr.Value)
 	for k, a := range actions {
 		if a == nil {
 			continue
@@ -2793,21 +2736,21 @@ func flattenActionsMap(ctx context.Context, actions map[string]*sgsdkgo.Actions,
 						tam := TerraformActionModel{Action: flatteners.String(string(*p.TerraformAction.Action))}
 						obj, d := types.ObjectValueFrom(ctx, TerraformActionModel{}.AttributeTypes(), tam)
 						if d.HasError() {
-							return mapNull, mapNull, d
+							return mapNull, d
 						}
 						taObj = obj
 					}
 					dpcList, d := flattenDeploymentPlatformConfig(ctx, p.DeploymentPlatformConfig)
 					if d.HasError() {
-						return mapNull, mapNull, d
+						return mapNull, d
 					}
 					wfStepsList, d := flattenWfStepsConfig(ctx, p.WfStepsConfig)
 					if d.HasError() {
-						return mapNull, mapNull, d
+						return mapNull, d
 					}
 					envList, d := flattenEnvironmentVariables(ctx, p.EnvironmentVariables)
 					if d.HasError() {
-						return mapNull, mapNull, d
+						return mapNull, d
 					}
 					pm := StackActionParametersModel{
 						TerraformAction:          taObj,
@@ -2817,7 +2760,7 @@ func flattenActionsMap(ctx context.Context, actions map[string]*sgsdkgo.Actions,
 					}
 					obj, d := types.ObjectValueFrom(ctx, StackActionParametersModel{}.AttributeTypes(), pm)
 					if d.HasError() {
-						return mapNull, mapNull, d
+						return mapNull, d
 					}
 					paramsObj = obj
 				}
@@ -2837,33 +2780,33 @@ func flattenActionsMap(ctx context.Context, actions map[string]*sgsdkgo.Actions,
 							condM := ActionDependencyConditionModel{LatestStatus: flatteners.String(dep.Condition.LatestStatus)}
 							obj, d := types.ObjectValueFrom(ctx, ActionDependencyConditionModel{}.AttributeTypes(), condM)
 							if d.HasError() {
-								return mapNull, mapNull, d
+								return mapNull, d
 							}
 							condObj = obj
 						}
 						dm := ActionDependencyModel{Id: flatteners.String(dep.Id), Condition: condObj}
 						depObj, d := types.ObjectValueFrom(ctx, ActionDependencyModel{}.AttributeTypes(), dm)
 						if d.HasError() {
-							return mapNull, mapNull, d
+							return mapNull, d
 						}
 						depElems = append(depElems, depObj)
 					}
 					l, d := types.ListValue(types.ObjectType{AttrTypes: ActionDependencyModel{}.AttributeTypes()}, depElems)
 					if d.HasError() {
-						return mapNull, mapNull, d
+						return mapNull, d
 					}
 					depListObj = l
 				}
 				aoM := ActionOrderModel{Parameters: paramsObj, Dependencies: depListObj}
 				aoObj, d := types.ObjectValueFrom(ctx, ActionOrderModel{}.AttributeTypes(), aoM)
 				if d.HasError() {
-					return mapNull, mapNull, d
+					return mapNull, d
 				}
 				orderElements[wfId] = aoObj
 			}
 			m, d := types.MapValue(types.ObjectType{AttrTypes: ActionOrderModel{}.AttributeTypes()}, orderElements)
 			if d.HasError() {
-				return mapNull, mapNull, d
+				return mapNull, d
 			}
 			orderObj = m
 		}
@@ -2874,23 +2817,15 @@ func flattenActionsMap(ctx context.Context, actions map[string]*sgsdkgo.Actions,
 		}
 		obj, d := types.ObjectValueFrom(ctx, ActionsModel{}.AttributeTypes(), am)
 		if d.HasError() {
-			return mapNull, mapNull, d
+			return mapNull, d
 		}
-		if forceDefault || (a.Default != nil && *a.Default) {
-			defaultElements[k] = obj
-		} else {
-			customElements[k] = obj
-		}
+		elements[k] = obj
 	}
-	defaultMap, d := types.MapValue(types.ObjectType{AttrTypes: ActionsModel{}.AttributeTypes()}, defaultElements)
+	result, d := types.MapValue(types.ObjectType{AttrTypes: ActionsModel{}.AttributeTypes()}, elements)
 	if d.HasError() {
-		return mapNull, mapNull, d
+		return mapNull, d
 	}
-	customMap, d := types.MapValue(types.ObjectType{AttrTypes: ActionsModel{}.AttributeTypes()}, customElements)
-	if d.HasError() {
-		return mapNull, mapNull, d
-	}
-	return defaultMap, customMap, nil
+	return result, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -3027,11 +2962,10 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context, orgName string, tpl
 		apiModel.TemplateGroupId = &prefixed
 	}
 
-	// default_actions and custom_actions are merged into the SDK's single Actions
-	// map, with Default set true/false based on which Terraform attribute each
-	// action came from; any template action not already covered fills in as a
-	// lowest-precedence default.
-	actions, actionDiags := expandActionsMap(ctx, m.DefaultActions, m.CustomActions, tpl, workflowTemplates)
+	// actions falls back to the stack template revision's own value (verbatim,
+	// or freshly generated) when the user leaves the attribute unset; see
+	// expandActionsMap.
+	actions, actionDiags := expandActionsMap(ctx, m.Actions, tpl, workflowTemplates)
 	diags.Append(actionDiags...)
 	if diags.HasError() {
 		return nil, diags
@@ -3115,19 +3049,26 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 		apiModel.TemplateGroupId = sgsdkgo.Null[string]()
 	}
 
-	// default_actions and custom_actions are merged into the SDK's single Actions
-	// map, with Default set true/false based on which Terraform attribute each
-	// action came from; any template action not already covered fills in as a
-	// lowest-precedence default.
-	actions, actionDiags := expandActionsMap(ctx, m.DefaultActions, m.CustomActions, tpl, workflowTemplates)
-	diags.Append(actionDiags...)
-	if diags.HasError() {
-		return nil, diags
-	}
-	if actions != nil {
-		apiModel.Actions = sgsdkgo.Optional(actions)
-	} else if m.DefaultActions.IsNull() || m.CustomActions.IsNull() {
+	// actions falls back to the stack template revision's own value when
+	// unset; see expandActionsMap. An explicit null clears it — never
+	// inherits, even with a template present.
+	if !m.Actions.IsUnknown() && !m.Actions.IsNull() {
+		actions, actionDiags := expandSingleActionsMap(ctx, m.Actions, false)
+		diags.Append(actionDiags...)
+		if diags.HasError() {
+			return nil, diags
+		}
+		if actions != nil {
+			apiModel.Actions = sgsdkgo.Optional(actions)
+		} else {
+			apiModel.Actions = sgsdkgo.Null[map[string]*sgsdkgo.Actions]()
+		}
+	} else if m.Actions.IsNull() {
 		apiModel.Actions = sgsdkgo.Null[map[string]*sgsdkgo.Actions]()
+	} else if tpl != nil {
+		if generated := generateStackActions(tpl, workflowTemplates); generated != nil {
+			apiModel.Actions = sgsdkgo.Optional(generated)
+		}
 	}
 
 	// workflows_config resolves per-slot from up to three layers — see
@@ -3173,18 +3114,20 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 	return apiModel, diags
 }
 
-// validateCustomActionsAgainstRevision errors when a custom_actions entry's
+// validateActionsAgainstRevision errors when a user-declared actions entry's
 // order key or dependency id references a workflow slot that no longer
-// exists on the new stack template revision tpl. Once template_group_id
-// changes, generateStackActions rebuilds default_actions from tpl's own
-// workflow list automatically, but custom_actions is user-authored and can't
+// exists on the new stack template revision tpl. actions left unset in
+// config gets rebuilt from tpl's own workflow list automatically (see
+// reResolveOnRevisionChange), but a value the user explicitly declared can't
 // be silently rewritten — a dangling reference must be caught here rather
 // than surfacing as an opaque API error. Ids also present in the stack's own
 // workflows_config.workflows are exempt: those are user-declared slots that
-// may have no template backing at all.
-func validateCustomActionsAgainstRevision(ctx context.Context, customActions types.Map, workflowsConfig types.Object, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel) diag.Diagnostics {
+// may have no template backing at all. actions is expected to be the CONFIG
+// value (not plan) — the check only applies when the user actually declared
+// it for this apply.
+func validateActionsAgainstRevision(ctx context.Context, actions types.Map, workflowsConfig types.Object, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel) diag.Diagnostics {
 	var diags diag.Diagnostics
-	if customActions.IsNull() || customActions.IsUnknown() {
+	if actions.IsNull() || actions.IsUnknown() {
 		return diags
 	}
 
@@ -3210,20 +3153,20 @@ func validateCustomActionsAgainstRevision(ctx context.Context, customActions typ
 		}
 	}
 
-	customs, d := expandSingleActionsMap(ctx, customActions, false)
+	declared, d := expandSingleActionsMap(ctx, actions, false)
 	diags.Append(d...)
 	if diags.HasError() {
 		return diags
 	}
-	for actionKey, a := range customs {
+	for actionKey, a := range declared {
 		if a == nil {
 			continue
 		}
 		for orderKey, ao := range a.Order {
 			if !valid[orderKey] {
 				diags.AddError(
-					"custom_actions references a removed workflow",
-					fmt.Sprintf("custom_actions[%q].order references workflow %q, which no longer exists on the new stack template revision. Update custom_actions to remove it before changing template_group_id.", actionKey, orderKey),
+					"actions references a removed workflow",
+					fmt.Sprintf("actions[%q].order references workflow %q, which no longer exists on the new stack template revision. Update actions to remove it before changing template_group_id.", actionKey, orderKey),
 				)
 			}
 			if ao == nil {
@@ -3232,8 +3175,8 @@ func validateCustomActionsAgainstRevision(ctx context.Context, customActions typ
 			for _, dep := range ao.Dependencies {
 				if dep != nil && !valid[dep.Id] {
 					diags.AddError(
-						"custom_actions references a removed workflow",
-						fmt.Sprintf("custom_actions[%q].order[%q].dependencies references workflow %q, which no longer exists on the new stack template revision. Update custom_actions to remove it before changing template_group_id.", actionKey, orderKey, dep.Id),
+						"actions references a removed workflow",
+						fmt.Sprintf("actions[%q].order[%q].dependencies references workflow %q, which no longer exists on the new stack template revision. Update actions to remove it before changing template_group_id.", actionKey, orderKey, dep.Id),
 					)
 				}
 			}
@@ -3245,13 +3188,12 @@ func validateCustomActionsAgainstRevision(ctx context.Context, customActions typ
 // reResolveOnRevisionChange re-resolves the template-derived fields the user
 // left unset against the NEW stack template revision tpl, used by ModifyPlan
 // on a template_group_id change. Values are computed via the same flatteners
-// the Read path (BuildAPIModelToStackModel) uses, so plan == apply.
-// default_actions is always re-resolved — it's Computed-only, so it's always
-// "user-unset" by definition. custom_actions and the scalar fields are only
-// re-resolved when the user left them unset in config. Fields with no
-// template counterpart (resource_name, environment_variables,
-// deployment_platform_config, user_schedules, mini_steps) and
-// workflows_config are untouched.
+// the Read path (BuildAPIModelToStackModel) uses, so plan == apply. actions
+// and the scalar fields are only re-resolved when the user left them unset in
+// config — a value the user declared is validated instead, see
+// validateActionsAgainstRevision. Fields with no template counterpart
+// (resource_name, environment_variables, deployment_platform_config,
+// user_schedules, mini_steps) and workflows_config are untouched.
 func reResolveOnRevisionChange(ctx context.Context, plan *StackResourceModel, config StackResourceModel, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
@@ -3281,34 +3223,32 @@ func reResolveOnRevisionChange(ctx context.Context, plan *StackResourceModel, co
 		plan.ContextTags = knownEmptyMapIfNull(ctMap, types.StringType)
 	}
 
-	// forceDefault=true: custom_actions is exclusively user-authored on the
-	// stack, so it's never touched here — everything the template resolves to
-	// counts as a default action for the stack, regardless of what Default
-	// flag it carries. generateStackActions(tpl, nil) is passed a nil
-	// workflowTemplates since ModifyPlan never calls resolveWorkflowTemplates
-	// — safe (and exactly accurate) whenever tpl.Actions is already populated,
-	// since that path (step 1: verbatim copy) never consults
-	// workflowTemplates at all; see actionsNeedGeneration below for the case
-	// where it doesn't.
-	defaultActions, _, d := flattenActionsMap(ctx, generateStackActions(tpl, nil), true)
-	diags.Append(d...)
-	if diags.HasError() {
-		return diags
-	}
-	plan.DefaultActions = defaultActions
+	if config.Actions.IsNull() {
+		// generateStackActions(tpl, nil) is passed a nil workflowTemplates since
+		// ModifyPlan never calls resolveWorkflowTemplates — safe (and exactly
+		// accurate) whenever tpl.Actions is already populated, since that path
+		// (step 1: verbatim copy) never consults workflowTemplates at all; see
+		// actionsNeedGeneration below for the case where it doesn't.
+		actions, d := flattenActionsMap(ctx, generateStackActions(tpl, nil))
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
+		}
+		plan.Actions = knownEmptyMapIfNull(actions, types.ObjectType{AttrTypes: ActionsModel{}.AttributeTypes()})
 
-	// When tpl.Actions is empty, ToUpdateAPIModel's actual expandActionsMap
-	// call generates a fresh apply/plan/destroy set AND blanks parameters for
-	// non-Terraform workflow types (generateStackActions step 3) — a
-	// classification that needs workflowTemplates, which this function has no
-	// way to resolve. A known plan.DefaultActions value that then doesn't
-	// match what apply actually returns is exactly what Terraform's "Provider
-	// produced inconsistent result after apply" guards against, so mark it
-	// unknown instead whenever that's a possibility — deferring to apply-time
-	// truth is always safe, since Terraform's consistency check only applies
-	// to values that were known in the plan.
-	if actionsNeedGeneration(tpl) {
-		plan.DefaultActions = types.MapUnknown(types.ObjectType{AttrTypes: ActionsModel{}.AttributeTypes()})
+		// When tpl.Actions is empty, ToUpdateAPIModel's actual expandActionsMap
+		// call generates a fresh apply/plan/destroy set AND blanks parameters for
+		// non-Terraform workflow types (generateStackActions step 3) — a
+		// classification that needs workflowTemplates, which this function has no
+		// way to resolve. A known plan.Actions value that then doesn't match what
+		// apply actually returns is exactly what Terraform's "Provider produced
+		// inconsistent result after apply" guards against, so mark it unknown
+		// instead whenever that's a possibility — deferring to apply-time truth is
+		// always safe, since Terraform's consistency check only applies to values
+		// that were known in the plan.
+		if actionsNeedGeneration(tpl) {
+			plan.Actions = types.MapUnknown(types.ObjectType{AttrTypes: ActionsModel{}.AttributeTypes()})
+		}
 	}
 
 	return diags
@@ -3396,13 +3336,12 @@ func BuildAPIModelToStackModel(ctx context.Context, orgName string, apiResponse 
 		stackModel.Tags = types.ListValueMust(types.StringType, []attr.Value{})
 	}
 
-	defaultActions, customActions, diagsAct := flattenActionsMap(ctx, translateActionsOrderKeys(apiResponse.Actions, apiResponse.WorkflowRelationsMap), false)
+	actions, diagsAct := flattenActionsMap(ctx, translateActionsOrderKeys(apiResponse.Actions, apiResponse.WorkflowRelationsMap))
 	diags.Append(diagsAct...)
 	if diags.HasError() {
 		return nil, diags
 	}
-	stackModel.DefaultActions = defaultActions
-	stackModel.CustomActions = customActions
+	stackModel.Actions = knownEmptyMapIfNull(actions, types.ObjectType{AttrTypes: ActionsModel{}.AttributeTypes()})
 
 	wfcObj, diagsWfc := flattenWorkflowsConfig(ctx, apiResponse.WorkflowsConfig)
 	diags.Append(diagsWfc...)

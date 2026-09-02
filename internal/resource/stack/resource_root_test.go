@@ -149,11 +149,10 @@ func TestAccStack_IdRequiresReplace(t *testing.T) {
 // default_actions_generation_doc.txt) applies for both, and no generation
 // ever happens on this path. reResolveOnRevisionChange only needs
 // actionsNeedGeneration(tpl) to correctly recognize that (tpl.Actions
-// non-empty) and keep plan.DefaultActions known instead of forcing it
-// unknown; if it got that wrong the whole step would fail with that
-// harness-level error rather than any assertion below even running. Step 2
-// succeeding at all, with default_actions reflecting revision2's own
-// apply/plan verbatim, is the proof.
+// non-empty) and keep plan.Actions known instead of forcing it unknown; if it
+// got that wrong the whole step would fail with that harness-level error
+// rather than any assertion below even running. Step 2 succeeding at all,
+// with actions reflecting revision2's own apply/plan verbatim, is the proof.
 func TestAccStack_TemplateGroupIdReResolution(t *testing.T) {
 	wfGrpName := "tf-provider-stack-tmplswitch-wfgrp"
 	wfTemplateName := "tf-provider-stack-tmplswitch-wftmpl"
@@ -183,8 +182,8 @@ func TestAccStack_TemplateGroupIdReResolution(t *testing.T) {
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "template_group_id", revision2),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "description", "revision two description"),
 					// revision2's own Actions, copied verbatim (no generation).
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.apply.name", "apply"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.plan.name", "plan"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.apply.name", "apply"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.plan.name", "plan"),
 				),
 			},
 		},

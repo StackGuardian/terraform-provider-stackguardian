@@ -15,289 +15,15 @@ import (
 )
 
 // secondWfSlotId is a second workflow slot UUID, distinct from testWfSlotId,
-// used only by TestAccStack_GeneratedDefaultActions to exercise the
+// used only by TestAccStack_ActionsGeneratedFromTemplate to exercise the
 // dependency chaining across more than one workflow.
 const secondWfSlotId = "3f7c9e2a-5b1d-4e6f-8a2c-9d4b6e1f0a3c"
-
-// TestAccStack_DefaultActionsComputedOnly verifies default_actions cannot be
-// set directly in config (it's Computed-only, reflecting the server's merged
-// actions map — custom_actions is the user-authored counterpart). Terraform
-// itself rejects this at plan time before any provider code runs.
-func TestAccStack_DefaultActionsComputedOnly(t *testing.T) {
-	wfGrpName := "tf-provider-stack-defactcomp-wfgrp"
-	wfTemplateName := "tf-provider-stack-defactcomp-wftmpl"
-	stackTemplateName := "tf-provider-stack-defactcomp-stmpl"
-	id := "tf-provider-stack-defactcomp"
-
-	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
-		Steps: []resource.TestStep{
-			{
-				Config: testAccStackConfig(wfGrpName, revision, id, `
-  default_actions = {
-    apply = {
-      name = "apply"
-    }
-  }
-`),
-				ExpectError: regexp.MustCompile("Invalid Configuration for Read-Only Attribute"),
-			},
-		},
-	})
-}
-
-// TestAccStack_ActionsDuplicateKey verifies that an action key present in
-// both default_actions and custom_actions produces the "Duplicate action
-// key" diagnostic instead of one silently overwriting the other.
-//
-// default_actions can't be set directly in config (see
-// TestAccStack_DefaultActionsComputedOnly), but it becomes a real, known
-// value on the plan when template_group_id changes — reResolveOnRevisionChange
-// (ModifyPlan) resolves it from the NEW revision's own Actions unconditionally,
-// since default_actions has no config counterpart to check. Switching
-// template_group_id to a revision whose template defines "apply", while
-// custom_actions ALSO declares "apply", collides.
-func TestAccStack_ActionsDuplicateKey(t *testing.T) {
-	wfGrpName := "tf-provider-stack-actdupe-wfgrp"
-	wfTemplateName := "tf-provider-stack-actdupe-wftmpl"
-	stackTemplateName := "tf-provider-stack-actdupe-stmpl"
-	id := "tf-provider-stack-actdupe"
-
-	revision1 := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
-	revision2 := setupSecondStackTemplateRevision(t, stackTemplateName, wfTemplateName, "revision two", nil)
-
-	collidingCustomActions := fmt.Sprintf(`
-  custom_actions = {
-    apply = {
-      name = "apply"
-      order = {
-        %[1]q = {
-          parameters = {
-            terraform_action = {
-              action = "apply"
-            }
-          }
-        }
-      }
-    }
-  }
-`, testWfSlotId)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
-		Steps: []resource.TestStep{
-			{
-				Config: testAccStackConfig(wfGrpName, revision1, id, ""),
-			},
-			{
-				Config:      testAccStackConfig(wfGrpName, revision2, id, collidingCustomActions),
-				ExpectError: regexp.MustCompile("Duplicate action key"),
-			},
-		},
-	})
-}
-
-// TestAccStack_CustomActionsRevisionRemovedWorkflow verifies that switching
-// template_group_id to a revision that dropped a workflow slot custom_actions
-// still references is rejected at plan time (validateCustomActionsAgainstRevision),
-// rather than sending a dangling reference the API would reject with a less
-// actionable error. revision1 (setupStackTemplateChainNoActions) wires
-// testWfSlotId and secondWfSlotId; revision2 (setupSecondStackTemplateRevision)
-// only re-declares testWfSlotId, so secondWfSlotId is the removed workflow.
-func TestAccStack_CustomActionsRevisionRemovedWorkflow(t *testing.T) {
-	wfGrpName := "tf-provider-stack-actrmwf-wfgrp"
-	wfTemplateName := "tf-provider-stack-actrmwf-wftmpl"
-	stackTemplateName := "tf-provider-stack-actrmwf-stmpl"
-	id := "tf-provider-stack-actrmwf"
-
-	t.Cleanup(func() {
-		logCleanupErr(t, fmt.Sprintf("delete workflow group %q", wfGrpName), deleteWorkflowGroupFixture(wfGrpName))
-	})
-	if err := createWorkflowGroupFixture(wfGrpName); err != nil && !is409(err) {
-		t.Fatalf("TestAccStack_CustomActionsRevisionRemovedWorkflow: create workflow group %q: %s", wfGrpName, err)
-	}
-	workflowTemplateID := setupStackWorkflowTemplate(t, wfTemplateName)
-	revision1 := setupStackTemplateChainNoActions(t, stackTemplateName, workflowTemplateID)
-	revision2 := setupSecondStackTemplateRevision(t, stackTemplateName, workflowTemplateID, "revision two", nil)
-	t.Cleanup(func() { deleteStackFixture(wfGrpName, id) })
-
-	referencesSecondSlot := fmt.Sprintf(`
-  custom_actions = {
-    notify = {
-      name = "notify"
-      order = {
-        %[1]q = {
-          parameters = {
-            terraform_action = {
-              action = "apply"
-            }
-          }
-        }
-      }
-    }
-  }
-`, secondWfSlotId)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
-		Steps: []resource.TestStep{
-			{
-				Config: testAccStackConfig(wfGrpName, revision1, id, referencesSecondSlot),
-				Check:  resource.TestCheckResourceAttr("stackguardian_stack.test", "custom_actions.notify.name", "notify"),
-			},
-			{
-				// revision2 dropped secondWfSlotId — custom_actions still
-				// references it, so the switch must be rejected.
-				Config:      testAccStackConfig(wfGrpName, revision2, id, referencesSecondSlot),
-				ExpectError: regexp.MustCompile("custom_actions references a removed workflow"),
-			},
-		},
-	})
-}
-
-// TestAccStack_CustomActionsRoundTrip covers custom_actions' nested shape —
-// order[].parameters.terraform_action.action, order[].parameters.
-// environment_variables, and order[].dependencies (id, condition.
-// latest_status) — round tripping stably, and that removing an action from
-// custom_actions on update actually drops it from the merged payload rather
-// than leaving it orphaned. Also confirms an action the template defines but
-// custom_actions doesn't override ("plan") lands in default_actions with
-// Default=true, per expandActionsMap's template-fallback behavior.
-//
-// deployment_platform_config and wf_steps_config inside order[].parameters
-// aren't covered here — both need a real integration_id / workflow step
-// template fixture this test doesn't set up.
-func TestAccStack_CustomActionsRoundTrip(t *testing.T) {
-	wfGrpName := "tf-provider-stack-actrt-wfgrp"
-	wfTemplateName := "tf-provider-stack-actrt-wftmpl"
-	stackTemplateName := "tf-provider-stack-actrt-stmpl"
-	id := "tf-provider-stack-actrt"
-
-	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
-
-	withDestroy := fmt.Sprintf(`
-  custom_actions = {
-    apply = {
-      name        = "apply"
-      description = "Custom apply action"
-      order = {
-        %[1]q = {
-          parameters = {
-            terraform_action = {
-              action = "apply"
-            }
-            environment_variables = [
-              {
-                kind = "PLAIN_TEXT"
-                config = {
-                  var_name   = "ACTION_VAR"
-                  text_value = "action-value"
-                }
-              }
-            ]
-          }
-        }
-      }
-    }
-    destroy = {
-      name = "destroy"
-      order = {
-        %[1]q = {
-          parameters = {
-            terraform_action = {
-              action = "destroy"
-            }
-          }
-          dependencies = [
-            {
-              id = %[1]q
-              condition = {
-                latest_status = "COMPLETED"
-              }
-            }
-          ]
-        }
-      }
-    }
-  }
-`, testWfSlotId)
-
-	withoutDestroy := fmt.Sprintf(`
-  custom_actions = {
-    apply = {
-      name = "apply"
-      order = {
-        %[1]q = {
-          parameters = {
-            terraform_action = {
-              action = "apply"
-            }
-          }
-        }
-      }
-    }
-  }
-`, testWfSlotId)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
-		Steps: []resource.TestStep{
-			{
-				Config: testAccStackConfig(wfGrpName, revision, id, withDestroy),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "custom_actions.apply.name", "apply"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "custom_actions.apply.description", "Custom apply action"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("custom_actions.apply.order.%s.parameters.terraform_action.action", testWfSlotId), "apply"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("custom_actions.apply.order.%s.parameters.environment_variables.0.config.var_name", testWfSlotId), "ACTION_VAR"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "custom_actions.destroy.name", "destroy"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("custom_actions.destroy.order.%s.dependencies.0.id", testWfSlotId), testWfSlotId),
-					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("custom_actions.destroy.order.%s.dependencies.0.condition.latest_status", testWfSlotId), "COMPLETED"),
-					// "plan" isn't in custom_actions — inherited from the template as a
-					// default action instead.
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.plan.name", "plan"),
-				),
-			},
-			{
-				// Round trips with no diff.
-				Config:   testAccStackConfig(wfGrpName, revision, id, withDestroy),
-				PlanOnly: true,
-			},
-			{
-				// Remove "destroy" — must actually disappear, not linger.
-				Config: testAccStackConfig(wfGrpName, revision, id, withoutDestroy),
-				Check:  resource.TestCheckNoResourceAttr("stackguardian_stack.test", "custom_actions.destroy"),
-			},
-		},
-	})
-}
 
 // setupStackTemplateChainNoActions creates and publishes a stack template +
 // revision :1 via the SDK, like setupStackTemplateChain, but wires TWO
 // workflow slots (testWfSlotId, secondWfSlotId — both pointing at the same
 // workflow template) instead of one, and defines no Actions of its own at
-// all. Used only by TestAccStack_GeneratedDefaultActions, which needs a
+// all. Used only by TestAccStack_ActionsGeneratedFromTemplate, which needs a
 // template that supplies neither apply/plan/destroy NOR a dependency chain to
 // inherit, so the only source for them is the provider's own generation
 // (generateStackActions), and needs a second workflow to prove that
@@ -397,17 +123,23 @@ func setupStackTemplateChainNoActions(t *testing.T, stackTemplateID, workflowTem
 	return revisionID
 }
 
-// TestAccStack_GeneratedDefaultActions verifies generateStackActions against
-// default_actions_generation_doc.txt's exact algorithm: when the stack
-// template revision defines no Actions of its own, apply/plan/destroy are
-// synthesized from the revision's OWN WorkflowsConfig.workflows list — never
-// the stack's own workflows_config, which this algorithm doesn't consult at
-// all (setupStackTemplateChainNoActions wires two slots on the template,
+// TestAccStack_ActionsGeneratedFromTemplate verifies that leaving "actions"
+// unset in config falls back to the stack template revision's own value —
+// here, a freshly generated apply/plan/destroy set following
+// default_actions_generation_doc.txt's exact algorithm, since
+// setupStackTemplateChainNoActions defines no Actions of its own
+// (setupStackTemplateChainNoActions wires two slots on the template,
 // testWfSlotId then secondWfSlotId, and the stack in this test declares no
-// workflows_config of its own). Order map keys are the bare template slot ids
-// (StackTemplateRevisionWorkflow.Id) — not the workflow's own post-creation
-// resource id, since at create time that doesn't exist yet.
-func TestAccStack_GeneratedDefaultActions(t *testing.T) {
+// workflows_config of its own — generation never consults it). Order map keys
+// are the bare template slot ids (StackTemplateRevisionWorkflow.Id) — not the
+// workflow's own post-creation resource id, since at create time that
+// doesn't exist yet.
+//
+// It also verifies that once the user DOES declare "actions" in config, that
+// value wholesale replaces the generated set — expandActionsMap is an
+// override, not a per-key merge, so plan/destroy (not redeclared) disappear
+// rather than staying inherited alongside the user's own "apply".
+func TestAccStack_ActionsGeneratedFromTemplate(t *testing.T) {
 	wfGrpName := "tf-provider-stack-gendef-wfgrp"
 	wfTemplateName := "tf-provider-stack-gendef-wftmpl"
 	stackTemplateName := "tf-provider-stack-gendef-stmpl"
@@ -417,54 +149,16 @@ func TestAccStack_GeneratedDefaultActions(t *testing.T) {
 		logCleanupErr(t, fmt.Sprintf("delete workflow group %q", wfGrpName), deleteWorkflowGroupFixture(wfGrpName))
 	})
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil && !is409(err) {
-		t.Fatalf("TestAccStack_GeneratedDefaultActions: create workflow group %q: %s", wfGrpName, err)
+		t.Fatalf("TestAccStack_ActionsGeneratedFromTemplate: create workflow group %q: %s", wfGrpName, err)
 	}
 	workflowTemplateID := setupStackWorkflowTemplate(t, wfTemplateName)
 	revision := setupStackTemplateChainNoActions(t, stackTemplateName, workflowTemplateID)
 	t.Cleanup(func() { deleteStackFixture(wfGrpName, id) })
 
-	// custom_actions only declares an unrelated "notify" action — apply/plan/
-	// destroy come from neither custom_actions nor the template (which has
-	// none), so they must be generated. Its own order key is unrelated to
-	// generation and keys by the slot id like everything else here.
-	withNotifyOnly := fmt.Sprintf(`
-  custom_actions = {
-    notify = {
-      name = "notify"
-      order = {
-        %[1]q = {
-          parameters = {
-            terraform_action = {
-              action = "apply"
-            }
-          }
-        }
-      }
-    }
-  }
-`, testWfSlotId)
-
-	// Step 2: custom_actions now ALSO declares "apply" itself — proving
-	// generation is RE-EVALUATED on Update (ToUpdateAPIModel), not left stuck
-	// with the create-time result: "apply" must move out of default_actions
-	// (generated) into custom_actions (user-authored), while plan/destroy
-	// remain generated. Since generateStackActions's source (the template's
-	// WorkflowsConfig.workflows) never changes, this is the only thing that
-	// CAN change generation's outcome between create and update here.
-	withNotifyAndApply := fmt.Sprintf(`
-  custom_actions = {
-    notify = {
-      name = "notify"
-      order = {
-        %[1]q = {
-          parameters = {
-            terraform_action = {
-              action = "apply"
-            }
-          }
-        }
-      }
-    }
+	// actions declared explicitly — replaces the generated set entirely, not
+	// just its "apply" key.
+	withActionsOverride := fmt.Sprintf(`
+  actions = {
     apply = {
       name = "apply"
       order = {
@@ -488,65 +182,248 @@ func TestAccStack_GeneratedDefaultActions(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccStackConfig(wfGrpName, revision, id, withNotifyOnly),
+				// actions left unset — generated apply/plan/destroy, matching
+				// default_actions.json's shape.
+				Config: testAccStackConfig(wfGrpName, revision, id, ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// custom_actions survives untouched.
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "custom_actions.notify.name", "notify"),
-
-					// Generated apply/plan/destroy, matching default_actions.json's shape.
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.apply.name", "Create"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.apply.description", "use this action to create resources in the stack"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.plan.name", "Plan"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.plan.description", "use this action to plan resources in the stack"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.destroy.name", "Destroy"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.destroy.description", "use this action to destroy resources in the stack"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.apply.name", "Create"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.apply.description", "use this action to create resources in the stack"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.plan.name", "Plan"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.plan.description", "use this action to plan resources in the stack"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.destroy.name", "Destroy"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.destroy.description", "use this action to destroy resources in the stack"),
 
 					// apply/plan chain in the template's own declaration order:
 					// testWfSlotId first (no dependencies), secondWfSlotId depends on it.
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("default_actions.apply.order.%s.dependencies.#", testWfSlotId), "0"),
+						fmt.Sprintf("actions.apply.order.%s.dependencies.#", testWfSlotId), "0"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("default_actions.apply.order.%s.dependencies.0.id", secondWfSlotId), testWfSlotId),
+						fmt.Sprintf("actions.apply.order.%s.dependencies.0.id", secondWfSlotId), testWfSlotId),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("default_actions.apply.order.%s.dependencies.0.condition.latest_status", secondWfSlotId), "COMPLETED"),
+						fmt.Sprintf("actions.apply.order.%s.dependencies.0.condition.latest_status", secondWfSlotId), "COMPLETED"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("default_actions.apply.order.%s.parameters.terraform_action.action", testWfSlotId), "apply"),
+						fmt.Sprintf("actions.apply.order.%s.parameters.terraform_action.action", testWfSlotId), "apply"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("default_actions.plan.order.%s.parameters.terraform_action.action", testWfSlotId), "plan"),
+						fmt.Sprintf("actions.plan.order.%s.parameters.terraform_action.action", testWfSlotId), "plan"),
 
 					// destroy chains in REVERSE: secondWfSlotId first (no dependencies),
 					// testWfSlotId depends on it.
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("default_actions.destroy.order.%s.dependencies.#", secondWfSlotId), "0"),
+						fmt.Sprintf("actions.destroy.order.%s.dependencies.#", secondWfSlotId), "0"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("default_actions.destroy.order.%s.dependencies.0.id", testWfSlotId), secondWfSlotId),
+						fmt.Sprintf("actions.destroy.order.%s.dependencies.0.id", testWfSlotId), secondWfSlotId),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("default_actions.destroy.order.%s.parameters.terraform_action.action", secondWfSlotId), "destroy"),
+						fmt.Sprintf("actions.destroy.order.%s.parameters.terraform_action.action", secondWfSlotId), "destroy"),
 				),
 			},
 			{
 				// Round trips with no diff.
-				Config:   testAccStackConfig(wfGrpName, revision, id, withNotifyOnly),
+				Config:   testAccStackConfig(wfGrpName, revision, id, ""),
 				PlanOnly: true,
 			},
 			{
-				// Update: custom_actions now covers "apply" itself.
-				Config: testAccStackConfig(wfGrpName, revision, id, withNotifyAndApply),
+				// User now declares actions explicitly — the whole generated set is
+				// replaced, not merged key-by-key: plan/destroy must vanish since
+				// they weren't redeclared.
+				Config: testAccStackConfig(wfGrpName, revision, id, withActionsOverride),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// "apply" moved to custom_actions (user-authored, Default=false)...
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "custom_actions.apply.name", "apply"),
-					// ...and is no longer in default_actions.
-					resource.TestCheckNoResourceAttr("stackguardian_stack.test", "default_actions.apply"),
-					// plan/destroy are still generated (the template still defines
-					// neither, and custom_actions still doesn't cover them).
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.plan.name", "Plan"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "default_actions.destroy.name", "Destroy"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.apply.name", "apply"),
+					resource.TestCheckNoResourceAttr("stackguardian_stack.test", "actions.plan"),
+					resource.TestCheckNoResourceAttr("stackguardian_stack.test", "actions.destroy"),
 				),
 			},
 			{
 				// And the post-update state round trips with no diff.
-				Config:   testAccStackConfig(wfGrpName, revision, id, withNotifyAndApply),
+				Config:   testAccStackConfig(wfGrpName, revision, id, withActionsOverride),
 				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccStack_ActionsRevisionRemovedWorkflow verifies that switching
+// template_group_id to a revision that dropped a workflow slot the user's own
+// actions still references is rejected at plan time
+// (validateActionsAgainstRevision), rather than sending a dangling reference
+// the API would reject with a less actionable error. revision1
+// (setupStackTemplateChainNoActions) wires testWfSlotId and secondWfSlotId;
+// revision2 (setupSecondStackTemplateRevision) only re-declares testWfSlotId,
+// so secondWfSlotId is the removed workflow.
+func TestAccStack_ActionsRevisionRemovedWorkflow(t *testing.T) {
+	wfGrpName := "tf-provider-stack-actrmwf-wfgrp"
+	wfTemplateName := "tf-provider-stack-actrmwf-wftmpl"
+	stackTemplateName := "tf-provider-stack-actrmwf-stmpl"
+	id := "tf-provider-stack-actrmwf"
+
+	t.Cleanup(func() {
+		logCleanupErr(t, fmt.Sprintf("delete workflow group %q", wfGrpName), deleteWorkflowGroupFixture(wfGrpName))
+	})
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil && !is409(err) {
+		t.Fatalf("TestAccStack_ActionsRevisionRemovedWorkflow: create workflow group %q: %s", wfGrpName, err)
+	}
+	workflowTemplateID := setupStackWorkflowTemplate(t, wfTemplateName)
+	revision1 := setupStackTemplateChainNoActions(t, stackTemplateName, workflowTemplateID)
+	revision2 := setupSecondStackTemplateRevision(t, stackTemplateName, workflowTemplateID, "revision two", nil)
+	t.Cleanup(func() { deleteStackFixture(wfGrpName, id) })
+
+	referencesSecondSlot := fmt.Sprintf(`
+  actions = {
+    notify = {
+      name = "notify"
+      order = {
+        %[1]q = {
+          parameters = {
+            terraform_action = {
+              action = "apply"
+            }
+          }
+        }
+      }
+    }
+  }
+`, secondWfSlotId)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision1, id, referencesSecondSlot),
+				Check:  resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.notify.name", "notify"),
+			},
+			{
+				// revision2 dropped secondWfSlotId — actions still references it, so
+				// the switch must be rejected.
+				Config:      testAccStackConfig(wfGrpName, revision2, id, referencesSecondSlot),
+				ExpectError: regexp.MustCompile("actions references a removed workflow"),
+			},
+		},
+	})
+}
+
+// TestAccStack_ActionsRoundTrip covers actions' nested shape —
+// order[].parameters.terraform_action.action, order[].parameters.
+// environment_variables, and order[].dependencies (id, condition.
+// latest_status) — round tripping stably, and that removing an action from
+// actions on update actually drops it from the payload rather than leaving it
+// orphaned. It also confirms the override is total: setupStackDependencyChain's
+// template defines its own "apply"/"plan" Actions, but since this test
+// declares "actions" explicitly, none of the template's own actions (e.g.
+// "plan") are merged in — only what the resource itself declares exists.
+//
+// deployment_platform_config and wf_steps_config inside order[].parameters
+// aren't covered here — both need a real integration_id / workflow step
+// template fixture this test doesn't set up.
+func TestAccStack_ActionsRoundTrip(t *testing.T) {
+	wfGrpName := "tf-provider-stack-actrt-wfgrp"
+	wfTemplateName := "tf-provider-stack-actrt-wftmpl"
+	stackTemplateName := "tf-provider-stack-actrt-stmpl"
+	id := "tf-provider-stack-actrt"
+
+	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+
+	withDestroy := fmt.Sprintf(`
+  actions = {
+    apply = {
+      name        = "apply"
+      description = "Custom apply action"
+      order = {
+        %[1]q = {
+          parameters = {
+            terraform_action = {
+              action = "apply"
+            }
+            environment_variables = [
+              {
+                kind = "PLAIN_TEXT"
+                config = {
+                  var_name   = "ACTION_VAR"
+                  text_value = "action-value"
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+    destroy = {
+      name = "destroy"
+      order = {
+        %[1]q = {
+          parameters = {
+            terraform_action = {
+              action = "destroy"
+            }
+          }
+          dependencies = [
+            {
+              id = %[1]q
+              condition = {
+                latest_status = "COMPLETED"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+`, testWfSlotId)
+
+	withoutDestroy := fmt.Sprintf(`
+  actions = {
+    apply = {
+      name = "apply"
+      order = {
+        %[1]q = {
+          parameters = {
+            terraform_action = {
+              action = "apply"
+            }
+          }
+        }
+      }
+    }
+  }
+`, testWfSlotId)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, withDestroy),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.apply.name", "apply"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.apply.description", "Custom apply action"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test",
+						fmt.Sprintf("actions.apply.order.%s.parameters.terraform_action.action", testWfSlotId), "apply"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test",
+						fmt.Sprintf("actions.apply.order.%s.parameters.environment_variables.0.config.var_name", testWfSlotId), "ACTION_VAR"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.destroy.name", "destroy"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test",
+						fmt.Sprintf("actions.destroy.order.%s.dependencies.0.id", testWfSlotId), testWfSlotId),
+					resource.TestCheckResourceAttr("stackguardian_stack.test",
+						fmt.Sprintf("actions.destroy.order.%s.dependencies.0.condition.latest_status", testWfSlotId), "COMPLETED"),
+					// The template's own "plan" action is NOT inherited — actions is
+					// declared, so it wholesale replaces the template's value.
+					resource.TestCheckNoResourceAttr("stackguardian_stack.test", "actions.plan"),
+				),
+			},
+			{
+				// Round trips with no diff.
+				Config:   testAccStackConfig(wfGrpName, revision, id, withDestroy),
+				PlanOnly: true,
+			},
+			{
+				// Remove "destroy" — must actually disappear, not linger.
+				Config: testAccStackConfig(wfGrpName, revision, id, withoutDestroy),
+				Check:  resource.TestCheckNoResourceAttr("stackguardian_stack.test", "actions.destroy"),
 			},
 		},
 	})
