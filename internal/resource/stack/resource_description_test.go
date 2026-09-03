@@ -75,21 +75,21 @@ func TestAccStack_Description_Resolution(t *testing.T) {
 	})
 }
 
-// TestAccStack_Description_ClearedWhenTemplateHasNone covers scenario 4 above: start on a
-// revision WITH a description (description left unset in config, so it resolves from the
-// template), then switch template_group_id to a revision with NO description of its own —
-// description must re-resolve to "", not stay stuck on the old revision's value.
+// TestAccStack_Description_ClearedWhenTemplateHasNone — REVISION SWITCH test.
+// Purpose: description is left unset in config, so it starts resolved from a template revision
+// that HAS a description; template_group_id then moves to a revision with NONE. description
+// must re-resolve to "" on the new revision, not stay stuck on the old one's value (scenario 4
+// in TestAccStack_Description_Resolution's doc comment above).
 //
-// Regression test for the ToUpdateAPIModel / reResolveOnRevisionChange coupling:
-// reResolveOnRevisionChange must ALWAYS re-derive description fresh from the new revision when
-// the user left it unset — landing on a known "" (via knownEmptyStringIfNull) when the new
-// revision has none, never an actual null and never the stale old value. ToUpdateAPIModel's
-// known-non-null branch then sends that "" as a real, explicit clear. If reResolveOnRevisionChange
-// regressed to producing an actual null instead (e.g. by reverting to plain flatteners.StringPtr
-// without the knownEmptyStringIfNull wrapper), this step would fail with "Provider produced
-// inconsistent result after apply" instead of the assertion below ever running, since
-// ToUpdateAPIModel would then omit the field (leaving the old value in place) while the plan had
-// predicted null.
+// Mechanism this guards: reResolveOnRevisionChange must ALWAYS re-derive description fresh from
+// the new revision when the user left it unset — landing on a known "" (via
+// knownEmptyStringIfNull) when the new revision has none, never an actual null and never the
+// stale old value. ToUpdateAPIModel's known-non-null branch then sends that "" as a real,
+// explicit clear. If reResolveOnRevisionChange regressed to producing an actual null instead
+// (e.g. by reverting to plain flatteners.StringPtr without the knownEmptyStringIfNull wrapper),
+// this step would fail with "Provider produced inconsistent result after apply" instead of the
+// assertion below ever running, since ToUpdateAPIModel would then omit the field (leaving the
+// old value in place) while the plan had predicted null.
 func TestAccStack_Description_ClearedWhenTemplateHasNone(t *testing.T) {
 	wfGrpName := "tf-provider-stack-descclr-wfgrp"
 	wfTemplateName := "tf-provider-stack-descclr-wftmpl"
