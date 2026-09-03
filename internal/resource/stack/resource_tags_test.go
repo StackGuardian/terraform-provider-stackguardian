@@ -82,17 +82,17 @@ func TestAccStack_Tags_Resolution(t *testing.T) {
 	})
 }
 
-// TestAccStack_Tags_ClearedWhenTemplateHasNone covers scenario 4 above: start on a revision
-// WITH tags (tags left unset in config, so they resolve from the template), then switch
-// template_group_id to a revision with NO tags of its own — tags must re-resolve to [], not
-// stay stuck on the old revision's value.
+// TestAccStack_Tags_ClearedWhenTemplateHasNone — REVISION SWITCH test.
+// Purpose: tags is left unset in config, so it starts resolved from a template revision that
+// HAS tags; template_group_id then moves to a revision with NONE. tags must re-resolve to []
+// on the new revision, not stay stuck on the old one's value (scenario 4 in
+// TestAccStack_Tags_Resolution's doc comment above).
 //
-// Regression test for the ToUpdateAPIModel / reResolveOnRevisionChange coupling — same failure
-// mode as TestAccStack_Description_ClearedWhenTemplateHasNone, but for tags:
-// reResolveOnRevisionChange must ALWAYS re-derive tags fresh from the new revision when the user
-// left them unset, landing on a known-empty [] when the new revision has none, so
-// ToUpdateAPIModel's known-non-null branch sends that [] as a real, explicit clear rather than
-// leaving the old tags in place.
+// Mechanism this guards: reResolveOnRevisionChange must ALWAYS re-derive tags fresh from the
+// new revision when the user left them unset, landing on a known-empty [] when the new revision
+// has none, so ToUpdateAPIModel's known-non-null branch sends that [] as a real, explicit clear
+// rather than leaving the old tags in place. Same failure mode as
+// TestAccStack_Description_ClearedWhenTemplateHasNone.
 func TestAccStack_Tags_ClearedWhenTemplateHasNone(t *testing.T) {
 	wfGrpName := "tf-provider-stack-tagsclr-wfgrp"
 	wfTemplateName := "tf-provider-stack-tagsclr-wftmpl"
