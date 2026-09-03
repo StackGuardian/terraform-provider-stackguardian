@@ -157,23 +157,20 @@ func TestAccStack_IdRequiresReplace(t *testing.T) {
 	})
 }
 
-// TestAccStack_TemplateGroupIdReResolution verifies that changing
-// template_group_id to a different stack template revision re-resolves the
-// Optional+Computed fields the user left unset (description here) against
-// the NEW revision, rather than carrying the old revision's value forward
-// via UseStateForUnknown (see ModifyPlan/reResolveOnRevisionChange).
+// TestAccStack_TemplateGroupIdReResolution — REVISION SWITCH test.
+// Purpose: description and actions are left unset in config, so both start resolved from
+// revision1; template_group_id then moves to revision2, which defines its OWN description and
+// actions. Both fields must re-resolve to revision2's values, not stay stuck on revision1's (see
+// ModifyPlan/reResolveOnRevisionChange).
 //
-// It also regression-tests actions across that same transition: revision1
-// and revision2 both define their own apply/plan Actions verbatim (see
-// setupStackTemplateChain/setupSecondStackTemplateRevision), so
-// reResolveOnRevisionChange's actions block (which only re-resolves when the
-// NEW revision has its own Actions — see expandActionsMap for why the
-// provider never synthesizes a fresh action set) picks up revision2's set
-// directly. Step 2's actions assertions confirm that. There is no
-// "switching to a revision with no actions of its own" case to test
-// separately — the API rejects publishing a stack template revision with an
-// empty Actions map, so every revision a stack can reference always has at
-// least one action (see resource_actions_test.go's "actions resolution
+// Mechanism this guards, for actions specifically: revision1 and revision2 both define their
+// own apply/plan Actions verbatim (see setupStackTemplateChain/setupSecondStackTemplateRevision),
+// so reResolveOnRevisionChange's actions block (which only re-resolves when the NEW revision has
+// its own Actions — see expandActionsMap for why the provider never synthesizes a fresh action
+// set) picks up revision2's set directly. Step 2's actions assertions confirm that. There is no
+// "switching to a revision with no actions of its own" case to test separately — the API rejects
+// publishing a stack template revision with an empty Actions map, so every revision a stack can
+// reference always has at least one action (see resource_actions_test.go's "actions resolution
 // rules" comment).
 func TestAccStack_TemplateGroupIdReResolution(t *testing.T) {
 	wfGrpName := "tf-provider-stack-tmplswitch-wfgrp"

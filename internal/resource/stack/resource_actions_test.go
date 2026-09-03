@@ -266,14 +266,15 @@ func TestAccStack_ActionsGeneratedFromTemplate(t *testing.T) {
 	})
 }
 
-// TestAccStack_ActionsRevisionRemovedWorkflow verifies that switching
-// template_group_id to a revision that dropped a workflow slot the user's own
-// actions still references is rejected at plan time
-// (validateActionsAgainstRevision), rather than sending a dangling reference
-// the API would reject with a less actionable error. revision1
-// (setupStackTemplateChainNoActions) wires testWfSlotId and secondWfSlotId;
-// revision2 (setupSecondStackTemplateRevision) only re-declares testWfSlotId,
-// so secondWfSlotId is the removed workflow.
+// TestAccStack_ActionsRevisionRemovedWorkflow — REVISION SWITCH test.
+// Purpose: template_group_id moves to a revision that dropped a workflow slot the user's own
+// actions still references. That switch must be rejected at plan time
+// (validateActionsAgainstRevision), rather than sending a dangling reference the API would
+// reject with a less actionable error.
+//
+// Setup: revision1 (setupStackTemplateChainNoActions) wires testWfSlotId and secondWfSlotId;
+// revision2 (setupSecondStackTemplateRevision) only re-declares testWfSlotId, so secondWfSlotId
+// is the removed workflow.
 func TestAccStack_ActionsRevisionRemovedWorkflow(t *testing.T) {
 	wfGrpName := "tf-provider-stack-actrmwf-wfgrp"
 	wfTemplateName := "tf-provider-stack-actrmwf-wftmpl"
