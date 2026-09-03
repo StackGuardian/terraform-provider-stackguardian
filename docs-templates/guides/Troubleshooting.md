@@ -97,7 +97,7 @@ created. Remove them in your VCS provider or in the StackGuardian UI.
 It is only evaluated when `file_triggers_enabled = true`, and file-based filtering is only valid
 for `GITLAB_COM`.
 
-## Access control
+## Access management
 
 ### A user authenticates but has no permissions
 
@@ -108,7 +108,7 @@ The API does not validate it, so a mismatch applies cleanly and produces exactly
 
 `stackguardian_role` combines every permission path with every other path. Use
 `stackguardian_rolev4`, which maps paths one to one. See
-[Access Control](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/AccessControl).
+[Access Management](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/AccessManagement).
 
 ### A role grants nothing, and the permission path looks right
 

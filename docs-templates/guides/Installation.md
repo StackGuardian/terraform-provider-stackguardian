@@ -61,7 +61,7 @@ difference matters for what the provider is allowed to do:
 
 For CI, prefer an **organization key** scoped to a role that covers only what the pipeline needs —
 it does not break when a person's own permissions change, or when they leave. See
-[Access Control](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/AccessControl)
+[Access Management](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/AccessManagement)
 for how roles are scoped.
 
 ### Regions

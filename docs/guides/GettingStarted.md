@@ -139,7 +139,7 @@ config = {
 - [Object Model](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ObjectModel) — how everything fits together.
 - [Resource IDs](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ResourceIDs) — why some values look like `/integrations/my-connector`.
 - [Templates](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Templates) — when several workflows should share one definition.
-- [Access Control](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/AccessControl) — granting your team access to what you just built.
+- [Access Management](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/AccessManagement) — granting your team access to what you just built.
 - [Importing Resources](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ImportingResources) — bringing existing StackGuardian objects under Terraform.
 
 A complete, runnable version of this configuration is in

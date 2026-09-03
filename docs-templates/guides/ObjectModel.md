@@ -27,7 +27,7 @@ Organization
 ├── Runner Group .................. stackguardian_runner_group
 │                                  self-hosted runners + log storage
 │
-└── Access control
+└── Access management
     ├── Role .................... stackguardian_rolev4 (or stackguardian_role)
     ├── Role Assignment ......... stackguardian_role_assignment
     └── Policy .................. stackguardian_policy
@@ -93,7 +93,7 @@ Both hold multiple workflows, but they mean different things:
 
 Reach for a stack when the workflows depend on each other; a workflow group when they don't.
 
-## Access control
+## Access management
 
 A **role** is a set of API permissions, scoped by substituting bare resource names — usually
 workflow group names — into the placeholders in each permission. A role does nothing until a
@@ -103,7 +103,7 @@ A **policy** is separate: it evaluates during workflow runs and can block or fla
 scoped by `enforced_on`: `["*"]` for the whole organization, or any combination of workflow
 groups, workflows and connectors — a different value form again from a role's bare names.
 
-See [Access Control](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/AccessControl).
+See [Access Management](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/AccessManagement) for roles, and [Policies](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Policies) for policies.
 
 ## Reading values back out
 
