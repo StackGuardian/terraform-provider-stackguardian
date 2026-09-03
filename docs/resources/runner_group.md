@@ -9,6 +9,10 @@ description: |-
 
 # stackguardian_runner_group (Resource)
 
+<!-- docs-revamp-banner:start -->
+~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
+<!-- docs-revamp-banner:end -->
+
 Manages a runner group: a pool of self-hosted runners together with the storage backend their run logs are written to.
 
 ## Running workflows on this group

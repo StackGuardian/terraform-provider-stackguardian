@@ -9,6 +9,10 @@ description: |-
 
 # stackguardian_policy (Resource)
 
+<!-- docs-revamp-banner:start -->
+~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
+<!-- docs-revamp-banner:end -->
+
 Manages a policy: a guardrail evaluated during workflow runs, which can block or flag a run that violates it.
 
 ## Scoping a policy

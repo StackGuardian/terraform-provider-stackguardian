@@ -9,6 +9,10 @@ description: |-
 
 # stackguardian_stack_template (Resource)
 
+<!-- docs-revamp-banner:start -->
+~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
+<!-- docs-revamp-banner:end -->
+
 Manages a stack template: a collection of workflow templates that together describe one complete infrastructure unit.
 
 ## Templates and revisions

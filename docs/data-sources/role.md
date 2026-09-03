@@ -9,6 +9,10 @@ description: |-
 
 # stackguardian_role (Data Source)
 
+<!-- docs-revamp-banner:start -->
+~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
+<!-- docs-revamp-banner:end -->
+
 Reads an existing role and its permission set, for use in a `stackguardian_role_assignment`.
 
 ## Example Usage

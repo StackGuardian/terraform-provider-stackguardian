@@ -9,6 +9,10 @@ description: |-
 
 # stackguardian_workflow_outputs (Data Source)
 
+<!-- docs-revamp-banner:start -->
+~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
+<!-- docs-revamp-banner:end -->
+
 Reads the outputs produced by a workflow's most recent run, so other Terraform resources can consume values that StackGuardian produced.
 
 ## Example Usage

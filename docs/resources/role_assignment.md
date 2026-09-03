@@ -9,6 +9,10 @@ description: |-
 
 # stackguardian_role_assignment (Resource)
 
+<!-- docs-revamp-banner:start -->
+~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
+<!-- docs-revamp-banner:end -->
+
 Grants roles to a user or an SSO group. The `role` and `roles` values are the `resource_name` of a `stackguardian_role` or `stackguardian_rolev4`. For SSO assignments the provider name must match the organization's SSO configuration exactly — the API does not validate it at apply time, so a mismatch silently produces a user with no permissions.
 
 ## Example Usage

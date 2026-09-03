@@ -1,0 +1,17 @@
+# Blank issues are disabled so that /issues/new redirects to the template chooser.
+# The docs banner on every registry page links to /issues/new?template=documentation.yml,
+# which deep-links past the chooser straight to the documentation form.
+blank_issues_enabled: false
+
+contact_links:
+  - name: 📚 Provider documentation
+    url: https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs
+    about: Reference for every resource and data source, plus guides.
+
+  - name: 🧭 Troubleshooting guide
+    url: https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Troubleshooting
+    about: Common errors and surprising behaviour — check here before filing a bug.
+
+  - name: 💬 Feedback and discussion
+    url: https://github.com/StackGuardian/feedback/discussions/8
+    about: Product feedback and open-ended questions, rather than a specific defect.

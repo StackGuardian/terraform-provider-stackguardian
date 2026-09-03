@@ -9,6 +9,10 @@ description: |-
 
 # stackguardian_rolev4 (Resource)
 
+<!-- docs-revamp-banner:start -->
+~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
+<!-- docs-revamp-banner:end -->
+
 Manages a role using the V4 permission document. Prefer this resource over `stackguardian_role` for new configurations: `stackguardian_role` expands permissions by combining every path with every other path, whereas `stackguardian_rolev4` maps paths one to one, which is almost always what you want. Roles are granted to users through a `stackguardian_role_assignment`.
 
 ## Example Usage
