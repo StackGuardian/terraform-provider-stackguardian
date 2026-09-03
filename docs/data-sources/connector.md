@@ -9,6 +9,10 @@ description: |-
 
 # stackguardian_connector (Data Source)
 
+<!-- docs-revamp-banner:start -->
+~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
+<!-- docs-revamp-banner:end -->
+
 Reads an existing connector, so a workflow or runner group can reference its ID without the connector being managed by this configuration.
 
 ## Example Usage

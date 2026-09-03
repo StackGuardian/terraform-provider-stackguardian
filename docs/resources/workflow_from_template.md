@@ -9,6 +9,10 @@ description: |-
 
 # stackguardian_workflow_from_template (Resource)
 
+<!-- docs-revamp-banner:start -->
+~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
+<!-- docs-revamp-banner:end -->
+
 Manages a workflow created from a workflow template revision. The provider fetches the revision named by `vcs_config.iac_vcs_config.iac_template_id`, merges it with the configuration you declare, and stores the fully-resolved result in state — so any attribute you leave out is inherited from the template, and any attribute you set wins.
 
 The fully-resolved result is stored on the real attributes, so `terraform plan` compares

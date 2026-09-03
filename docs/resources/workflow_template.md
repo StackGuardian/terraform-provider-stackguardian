@@ -9,6 +9,10 @@ description: |-
 
 # stackguardian_workflow_template (Resource)
 
+<!-- docs-revamp-banner:start -->
+~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
+<!-- docs-revamp-banner:end -->
+
 Manages a workflow template: the reusable definition a workflow is created from.
 
 ## Templates and revisions

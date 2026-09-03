@@ -9,6 +9,10 @@ description: |-
 
 # stackguardian_workflow_template_revision (Resource)
 
+<!-- docs-revamp-banner:start -->
+~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
+<!-- docs-revamp-banner:end -->
+
 Manages a versioned revision of a `stackguardian_workflow_template` — the IaC source, input schema and execution settings that workflows inherit.
 
 ## Revisions

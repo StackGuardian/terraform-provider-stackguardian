@@ -10,6 +10,10 @@ description: |-
 
 # stackguardian_workflow_step_template (Data Source)
 
+<!-- docs-revamp-banner:start -->
+~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
+<!-- docs-revamp-banner:end -->
+
 > **Note:** This data source is currently in **BETA**. Features and behavior may change.
 
 Reads an existing workflow step template. The template is a container only — use `stackguardian_workflow_step_template_revision` to read a runnable definition.

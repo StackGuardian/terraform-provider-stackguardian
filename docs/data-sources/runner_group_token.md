@@ -9,6 +9,10 @@ description: |-
 
 # stackguardian_runner_group_token (Data Source)
 
+<!-- docs-revamp-banner:start -->
+~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
+<!-- docs-revamp-banner:end -->
+
 Reads a registration token for a runner group. Use it to register a self-hosted runner with the group. The token is sensitive — treat any output containing it accordingly.
 
 ## Example Usage

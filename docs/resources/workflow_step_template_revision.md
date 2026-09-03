@@ -9,6 +9,10 @@ description: |-
 
 # stackguardian_workflow_step_template_revision (Resource)
 
+<!-- docs-revamp-banner:start -->
+~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
+<!-- docs-revamp-banner:end -->
+
 Manages a versioned revision of a `stackguardian_workflow_step_template`: the container image or source, the inputs the step accepts, and how it executes.
 
 ## Revisions

@@ -9,6 +9,10 @@ description: |-
 
 # stackguardian_connector (Resource)
 
+<!-- docs-revamp-banner:start -->
+~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
+<!-- docs-revamp-banner:end -->
+
 Manages a connector: the stored credential StackGuardian uses to reach an external system such as a cloud provider, a version control system, or a container registry.
 
 ## Referencing a connector

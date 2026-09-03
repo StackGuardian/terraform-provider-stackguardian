@@ -10,6 +10,10 @@ description: |-
 
 # stackguardian_role (Resource)
 
+<!-- docs-revamp-banner:start -->
+~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
+<!-- docs-revamp-banner:end -->
+
 Manages a role: a named set of API permissions that is granted to users through a `stackguardian_role_assignment`. Permission paths typically reference workflow groups, which is how a role is scoped to part of the organization.
 
 ~> **Deprecated.** Use `stackguardian_rolev4` instead. This resource expands permissions by combining every path with every other path; `stackguardian_rolev4` maps paths one to one.

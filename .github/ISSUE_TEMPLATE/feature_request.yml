@@ -1,0 +1,47 @@
+name: ✨ Feature request
+description: A missing resource, data source, attribute, or behaviour.
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What's missing?
+      options:
+        - A whole resource
+        - A whole data source
+        - An attribute on an existing resource or data source
+        - A behaviour change on something that already exists
+    validations:
+      required: true
+
+  - type: input
+    id: name
+    attributes:
+      label: What would it be called?
+      placeholder: stackguardian_stack, or policies_config.severity
+    validations:
+      required: true
+
+  - type: input
+    id: api
+    attributes:
+      label: Which StackGuardian API does it map to? (optional)
+      description: An endpoint or docs link helps a lot, if you know it.
+      placeholder: POST /api/v1/orgs/<org>/stacks/
+
+  - type: textarea
+    id: usecase
+    attributes:
+      label: What are you trying to do?
+      description: |
+        The problem you are solving matters more than the proposed API — it often points
+        at a better fit with what already exists.
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: How would the configuration look? (optional)
+      render: terraform

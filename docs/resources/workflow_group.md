@@ -9,6 +9,10 @@ description: |-
 
 # stackguardian_workflow_group (Resource)
 
+<!-- docs-revamp-banner:start -->
+~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
+<!-- docs-revamp-banner:end -->
+
 Manages a workflow group: the folder-like container that organizes workflows and stacks, and the unit that roles are usually scoped to.
 
 ## Nested workflow groups
