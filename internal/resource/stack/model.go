@@ -7,7 +7,6 @@ import (
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	"github.com/StackGuardian/sg-sdk-go/stacktemplaterevisions"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
-	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/expanders"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/flatteners"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -2412,123 +2411,21 @@ func expandSingleActionsMap(ctx context.Context, actions types.Map, isDefault bo
 	return result, nil
 }
 
-// expandActionsMap resolves the stack's actions: if the user declared actions
-// in config, that map is expanded and used as-is (Default=false stamped on
-// every entry — user-authored). Otherwise it falls back to whatever the stack
-// template revision (tpl) resolves to — its own Actions verbatim, or a freshly
-// generated apply/plan/destroy set; see generateStackActions.
-func expandActionsMap(ctx context.Context, actions types.Map, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) (map[string]*sgsdkgo.Actions, diag.Diagnostics) {
+// expandActionsMap resolves actions: the user's own declared value always
+// wins (Default=false stamped on every entry — user-authored); otherwise the
+// template's own Actions are used verbatim if it has any; otherwise nil
+// (omit) — the API applies its own default when actions is absent from the
+// request, on both Create and Update, so there is nothing for the provider
+// to synthesize here. See TestAccStack_ActionsGeneratedFromTemplate for the
+// Create-time default.
+func expandActionsMap(ctx context.Context, actions types.Map, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel) (map[string]*sgsdkgo.Actions, diag.Diagnostics) {
 	if !actions.IsNull() && !actions.IsUnknown() {
 		return expandSingleActionsMap(ctx, actions, false)
 	}
-	return generateStackActions(tpl, workflowTemplates), nil
-}
-
-// generateStackActions resolves the stack template revision's Actions,
-// following the platform's own create-flow algorithm exactly (see
-// default_actions_generation_doc.txt):
-//
-//  1. If the revision already defines its own Actions, they're used verbatim
-//     — nothing is generated.
-//  2. Otherwise, generate exactly three actions (apply/plan/destroy) from the
-//     revision's own WorkflowsConfig.workflows list, in declaration order —
-//     never the stack's own workflows_config, which this algorithm doesn't
-//     consult at all. apply/plan chain forward through that list; destroy
-//     chains backward. Each entry depends on the previous one visited in its
-//     own chain's direction (a COMPLETED-status dependency); the first
-//     workflow visited in a given direction has none. Order map keys are the
-//     workflow slot id (StackTemplateRevisionWorkflow.Id) — bare, no prefix,
-//     since at create time the workflow doesn't have its own resource id yet.
-//  3. Post-process: for any workflow slot whose referenced workflow template
-//     resolves to a non-Terraform source_config_kind (HELM, KUBECTL,
-//     ANSIBLE_PLAYBOOK, CUSTOM, or CLOUDFORMATION), its parameters are
-//     cleared to empty in all three actions — dependencies stay untouched.
-//     terraform apply/plan/destroy has no meaning for those step types.
-//
-// workflowTemplates is keyed by workflow slot id (see resolveWorkflowTemplates
-// in resource.go) — nil is safe (every slot is then treated as Terraform-typed
-// for step 3, since there's nothing to classify it by) but only accurate when
-// tpl.Actions is already populated (step 1 doesn't need workflowTemplates at
-// all); see reResolveOnRevisionChange's use of that fact.
-func generateStackActions(tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) map[string]*sgsdkgo.Actions {
-	if tpl == nil {
-		return nil
+	if tpl != nil && len(tpl.Actions) > 0 {
+		return tpl.Actions, nil
 	}
-	if len(tpl.Actions) > 0 {
-		return tpl.Actions
-	}
-	if tpl.WorkflowsConfig == nil || len(tpl.WorkflowsConfig.Workflows) == 0 {
-		return nil
-	}
-
-	ids := make([]string, 0, len(tpl.WorkflowsConfig.Workflows))
-	nonTerraformIds := make(map[string]bool)
-	for _, w := range tpl.WorkflowsConfig.Workflows {
-		if w == nil || w.Id == nil {
-			continue
-		}
-		ids = append(ids, *w.Id)
-		if wt := workflowTemplates[*w.Id]; wt != nil && wt.SourceConfigKind != nil {
-			switch *wt.SourceConfigKind {
-			case workflowtemplates.WorkflowTemplateSourceConfigKindHelm,
-				workflowtemplates.WorkflowTemplateSourceConfigKindKubectl,
-				workflowtemplates.WorkflowTemplateSourceConfigKindAnsiblePlaybook,
-				workflowtemplates.WorkflowTemplateSourceConfigKindCustom,
-				workflowtemplates.WorkflowTemplateSourceConfigKindCloudformation:
-				nonTerraformIds[*w.Id] = true
-			}
-		}
-	}
-	if len(ids) == 0 {
-		return nil
-	}
-	reversedIds := make([]string, len(ids))
-	for i, wfId := range ids {
-		reversedIds[len(ids)-1-i] = wfId
-	}
-
-	chain := func(action sgsdkgo.ActionEnum, order []string) map[string]*sgsdkgo.ActionOrder {
-		result := make(map[string]*sgsdkgo.ActionOrder, len(order))
-		for i, wfId := range order {
-			var deps []*sgsdkgo.ActionDependency
-			if i > 0 {
-				deps = []*sgsdkgo.ActionDependency{
-					{
-						Id:        order[i-1],
-						Condition: &sgsdkgo.ActionDependencyCondition{LatestStatus: "COMPLETED"},
-					},
-				}
-			}
-			a := action
-			result[wfId] = &sgsdkgo.ActionOrder{
-				Parameters:   &sgsdkgo.StackActionParameters{TerraformAction: &sgsdkgo.TerraformAction{Action: &a}},
-				Dependencies: deps,
-			}
-		}
-		return result
-	}
-
-	isDefault := true
-	applyDesc := "use this action to create resources in the stack"
-	planDesc := "use this action to plan resources in the stack"
-	destroyDesc := "use this action to destroy resources in the stack"
-	actions := map[string]*sgsdkgo.Actions{
-		"apply":   {Name: "Create", Description: &applyDesc, Default: &isDefault, Order: chain(sgsdkgo.ActionEnumApply, ids)},
-		"plan":    {Name: "Plan", Description: &planDesc, Default: &isDefault, Order: chain(sgsdkgo.ActionEnumPlan, ids)},
-		"destroy": {Name: "Destroy", Description: &destroyDesc, Default: &isDefault, Order: chain(sgsdkgo.ActionEnumDestroy, reversedIds)},
-	}
-
-	// Post-process: blank parameters for non-Terraform workflow types across
-	// all three actions; dependencies stay as chained above.
-	for wfId := range nonTerraformIds {
-		for _, action := range actions {
-			if entry := action.Order[wfId]; entry != nil {
-				entry.Parameters = &sgsdkgo.StackActionParameters{}
-			}
-		}
-	}
-
-	return actions
+	return nil, nil
 }
 
 // translateActionsOrderKeys rewrites action order map keys AND dependency ids
@@ -2754,6 +2651,15 @@ func knownEmptyMapIfNull(in types.Map, elemType attr.Type) types.Map {
 	return in
 }
 
+// knownEmptyStringIfNull returns a known "" when in is null, otherwise
+// returns in unchanged. Same rationale as knownEmptyListIfNull.
+func knownEmptyStringIfNull(in types.String) types.String {
+	if in.IsNull() {
+		return types.StringValue("")
+	}
+	return in
+}
+
 // knownEmptyObjectIfNull returns a known object with all-null attributes (of
 // attrTypes) when in is null, otherwise returns in unchanged. Same rationale as
 // knownEmptyListIfNull.
@@ -2850,10 +2756,9 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context, orgName string, tpl
 		apiModel.TemplateGroupId = &prefixed
 	}
 
-	// actions falls back to the stack template revision's own value (verbatim,
-	// or freshly generated) when the user leaves the attribute unset; see
-	// expandActionsMap.
-	actions, actionDiags := expandActionsMap(ctx, m.Actions, tpl, workflowTemplates)
+	// actions falls back to the stack template revision's own value verbatim
+	// when the user leaves the attribute unset; see expandActionsMap.
+	actions, actionDiags := expandActionsMap(ctx, m.Actions, tpl)
 	diags.Append(actionDiags...)
 	if diags.HasError() {
 		return nil, diags
@@ -2890,26 +2795,31 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context, orgName string, tpl
 // ToUpdateAPIModel converts the plan into an Update payload. orgName prefixes
 // template_group_id to the wire format the API expects — see ToAPIModel. tpl
 // is the stack template revision resolved from template_group_id (nil if
-// unset) — description/tags/context_tags/actions fall back to the template's
-// value when the field is unknown (no prior state and no config value). A
-// field the user explicitly nulled out still clears via sgsdkgo.Null, even
-// with a template present — explicit null always means "clear it", not
-// "inherit".
+// unset). For description/tags/actions/context_tags/workflows_config: a
+// known, non-null plan value is always sent as-is; otherwise (unknown, or the
+// rare literal-null plan value reResolveOnRevisionChange can produce) it
+// falls back to the template's value when tpl has one. If neither the plan
+// nor the template has a value, the corresponding apiModel field is left nil
+// so the struct tag's omitempty drops it from the PATCH — the API leaves the
+// field's existing value untouched. This code never sends sgsdkgo.Null: these
+// attributes are Optional+Computed with UseStateForUnknown, so a plan value
+// only becomes null via deliberate re-resolution, never real user intent (an
+// HCL config can't distinguish "omitted" from "explicitly null" for these
+// fields). Clearing one of these fields requires sending an explicit empty
+// value ("", [], {}), which is a known non-null plan value and already takes
+// the first branch below.
 func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName string, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) (*sgsdkgo.PatchedStack, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	apiModel := &sgsdkgo.PatchedStack{}
 
-	// No template counterpart exists for resource_name.
+	// No template counterpart exists for resource_name — known non-null wins,
+	// otherwise omitted (never an explicit null-clear; see doc comment above).
 	if !m.ResourceName.IsUnknown() && !m.ResourceName.IsNull() {
 		apiModel.ResourceName = sgsdkgo.Optional(m.ResourceName.ValueString())
-	} else if m.ResourceName.IsNull() {
-		apiModel.ResourceName = sgsdkgo.Null[string]()
 	}
 
 	if !m.Description.IsUnknown() && !m.Description.IsNull() {
 		apiModel.Description = sgsdkgo.Optional(m.Description.ValueString())
-	} else if m.Description.IsNull() {
-		apiModel.Description = sgsdkgo.Null[string]()
 	} else if tpl != nil && tpl.LongDescription != nil {
 		apiModel.Description = sgsdkgo.Optional(*tpl.LongDescription)
 	}
@@ -2920,66 +2830,58 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 		if diags.HasError() {
 			return nil, diags
 		}
-		if tags != nil {
-			apiModel.Tags = sgsdkgo.Optional(tags)
-		} else {
-			apiModel.Tags = sgsdkgo.Null[[]string]()
-		}
-	} else if m.Tags.IsNull() {
-		apiModel.Tags = sgsdkgo.Null[[]string]()
+		// tags is always non-nil here — expanders.StringList initializes to
+		// []string{} before ElementsAs — so there's no nil case to guard.
+		apiModel.Tags = sgsdkgo.Optional(tags)
 	} else if tpl != nil && tpl.Tags != nil {
 		apiModel.Tags = sgsdkgo.Optional(tpl.Tags)
 	}
 
+	// template_group_id is Required — never null/unknown at apply time, so
+	// there's no fallback case to handle here.
 	if !m.TemplateGroupId.IsUnknown() && !m.TemplateGroupId.IsNull() {
 		apiModel.TemplateGroupId = sgsdkgo.Optional(fmt.Sprintf("/%s/%s", orgName, m.TemplateGroupId.ValueString()))
-	} else if m.TemplateGroupId.IsNull() {
-		apiModel.TemplateGroupId = sgsdkgo.Null[string]()
 	}
 
-	// actions falls back to the stack template revision's own value when
-	// unset; see expandActionsMap. An explicit null clears it — never
-	// inherits, even with a template present.
-	if !m.Actions.IsUnknown() && !m.Actions.IsNull() {
-		actions, actionDiags := expandSingleActionsMap(ctx, m.Actions, false)
-		diags.Append(actionDiags...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		if actions != nil {
-			apiModel.Actions = sgsdkgo.Optional(actions)
-		} else {
-			apiModel.Actions = sgsdkgo.Null[map[string]*sgsdkgo.Actions]()
-		}
-	} else if m.Actions.IsNull() {
-		apiModel.Actions = sgsdkgo.Null[map[string]*sgsdkgo.Actions]()
-	} else if tpl != nil {
-		if generated := generateStackActions(tpl, workflowTemplates); generated != nil {
-			apiModel.Actions = sgsdkgo.Optional(generated)
-		}
+	// actions: the user's own declared value always wins; otherwise falls
+	// back to the template's own value verbatim; otherwise omitted so the
+	// API's already-established value (from Create, or from a prior Update)
+	// is left untouched. See expandActionsMap.
+	actions, actionDiags := expandActionsMap(ctx, m.Actions, tpl)
+	diags.Append(actionDiags...)
+	if diags.HasError() {
+		return nil, diags
+	}
+	if actions != nil {
+		apiModel.Actions = sgsdkgo.Optional(actions)
 	}
 
 	// workflows_config resolves per-slot from up to three layers — see
-	// expandWorkflowsConfig. updateWorkflowsFromConfig is a query param (not
-	// part of the request body) telling the API to propagate this resolved
-	// WorkflowsConfig down to the actual live workflow resources; it's only
-	// set when we're actually sending workflow config data, not on an
-	// explicit clear.
+	// expandWorkflowsConfig; that nested resolution already treats "unset" as
+	// "inherit through the template layers" with no explicit-null concept, so
+	// there's no tpl fallback to add here — only workflows_config itself
+	// (never its nested per-workflow fields) can be entirely unset. No
+	// explicit null is ever sent; when there's nothing to send, the field is
+	// simply omitted. updateWorkflowsFromConfig is a query param (not part of
+	// the request body) telling the API to propagate this resolved
+	// WorkflowsConfig down to the actual live workflow resources — only set
+	// when we're actually sending workflow config data.
 	if !m.WorkflowsConfig.IsUnknown() && !m.WorkflowsConfig.IsNull() {
 		wfc, wfcDiags := expandWorkflowsConfig(ctx, m.WorkflowsConfig, tpl, workflowTemplates)
 		diags.Append(wfcDiags...)
 		if diags.HasError() {
 			return nil, diags
 		}
+		// wfc is always non-nil here (expandWorkflowsConfig only returns nil
+		// when its input is null/unknown, which is excluded by the outer
+		// condition, or alongside a non-nil diags that already returns above)
+		// — this guard is kept anyway since *wfc below would otherwise panic
+		// if that invariant were ever broken by a future change.
 		if wfc != nil {
 			apiModel.WorkflowsConfig = sgsdkgo.Optional(*wfc)
 			sync := true
 			apiModel.UpdateWorkflowsFromConfig = &sync
-		} else {
-			apiModel.WorkflowsConfig = sgsdkgo.Null[sgsdkgo.StackWorkflowsConfig]()
 		}
-	} else if m.WorkflowsConfig.IsNull() {
-		apiModel.WorkflowsConfig = sgsdkgo.Null[sgsdkgo.StackWorkflowsConfig]()
 	}
 
 	if !m.ContextTags.IsUnknown() && !m.ContextTags.IsNull() {
@@ -2988,13 +2890,8 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 		if diags.HasError() {
 			return nil, diags
 		}
-		if contextTags != nil {
-			apiModel.ContextTags = sgsdkgo.Optional(contextTags)
-		} else {
-			apiModel.ContextTags = sgsdkgo.Null[map[string]*string]()
-		}
-	} else if m.ContextTags.IsNull() {
-		apiModel.ContextTags = sgsdkgo.Null[map[string]*string]()
+		// contextTags is always non-nil here — same reasoning as tags above.
+		apiModel.ContextTags = sgsdkgo.Optional(contextTags)
 	} else if tpl != nil && tpl.ContextTags != nil {
 		apiModel.ContextTags = sgsdkgo.Optional(contextTagsFromTemplate(tpl.ContextTags))
 	}
@@ -3076,30 +2973,42 @@ func validateActionsAgainstRevision(ctx context.Context, actions types.Map, work
 // reResolveOnRevisionChange re-resolves the template-derived fields the user
 // left unset against the NEW stack template revision tpl, used by ModifyPlan
 // on a template_group_id change. Values are computed via the same flatteners
-// the Read path (BuildAPIModelToStackModel) uses, so plan == apply. actions
-// and the scalar fields are only re-resolved when the user left them unset in
-// config — a value the user declared is validated instead, see
-// validateActionsAgainstRevision. Fields with no template counterpart
-// (resource_name, environment_variables, deployment_platform_config,
-// user_schedules, mini_steps) and workflows_config are untouched.
+// the Read path (BuildAPIModelToStackModel) uses, so plan == apply.
+// description/tags/context_tags are ALWAYS re-derived fresh from tpl when the
+// user left them unset — never left stuck on the OLD revision's value — and
+// land on a known-empty default ("", [], {}) rather than an actual null when
+// the new revision has nothing, so ToUpdateAPIModel's known-non-null branch
+// always fires and sends a real clear. actions is the one exception: it is
+// only re-resolved when the new revision defines its own actions verbatim;
+// when it doesn't, plan.Actions is deliberately left untouched, because
+// expandActionsMap (see ToUpdateAPIModel) treats that carried-forward known
+// value the same as a real declaration and re-sends it verbatim — the
+// accurate prediction for what apply will do is "unchanged", not empty and
+// not unknown, since the provider no longer synthesizes a fresh action set
+// (see expandActionsMap's own doc comment). A value the user declared is
+// validated instead, see validateActionsAgainstRevision. Fields with no
+// template counterpart (resource_name, environment_variables,
+// deployment_platform_config, user_schedules, mini_steps) and workflows_config
+// are untouched.
 func reResolveOnRevisionChange(ctx context.Context, plan *StackResourceModel, config StackResourceModel, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	if config.Description.IsNull() {
-		plan.Description = flatteners.StringPtr(tpl.LongDescription)
+		// StringPtr matches BuildAPIModelToStackModel's own Read flattener
+		// for this field (byte-for-byte plan == apply); knownEmptyStringIfNull
+		// then coalesces "template has none" to a known "" rather than an
+		// actual null — see ToUpdateAPIModel's doc comment for why a literal
+		// null plan value must never happen for this field.
+		plan.Description = knownEmptyStringIfNull(flatteners.StringPtr(tpl.LongDescription))
 	}
 
 	if config.Tags.IsNull() {
-		if tpl.Tags != nil {
-			tagsList, d := flatteners.ListOfStringToTerraformList(tpl.Tags)
-			diags.Append(d...)
-			if diags.HasError() {
-				return diags
-			}
-			plan.Tags = knownEmptyListIfNull(tagsList, types.StringType)
-		} else {
-			plan.Tags = types.ListValueMust(types.StringType, []attr.Value{})
+		tagsList, d := flatteners.ListOfStringToTerraformList(tpl.Tags)
+		diags.Append(d...)
+		if diags.HasError() {
+			return diags
 		}
+		plan.Tags = knownEmptyListIfNull(tagsList, types.StringType)
 	}
 
 	if config.ContextTags.IsNull() {
@@ -3111,42 +3020,22 @@ func reResolveOnRevisionChange(ctx context.Context, plan *StackResourceModel, co
 		plan.ContextTags = knownEmptyMapIfNull(ctMap, types.StringType)
 	}
 
-	if config.Actions.IsNull() {
-		// generateStackActions(tpl, nil) is passed a nil workflowTemplates since
-		// ModifyPlan never calls resolveWorkflowTemplates — safe (and exactly
-		// accurate) whenever tpl.Actions is already populated, since that path
-		// (step 1: verbatim copy) never consults workflowTemplates at all; see
-		// actionsNeedGeneration below for the case where it doesn't.
-		actions, d := flattenActionsMap(ctx, generateStackActions(tpl, nil))
+	// Only re-resolve when the new revision defines its own actions verbatim
+	// — mirrors ToUpdateAPIModel, which never synthesizes a fresh action set
+	// on Update (see expandActionsMap). When tpl.Actions is empty,
+	// plan.Actions is left untouched (the carried-forward prior value),
+	// matching what apply will actually do (send nothing, and the API leaves
+	// the existing value as-is).
+	if config.Actions.IsNull() && len(tpl.Actions) > 0 {
+		actions, d := flattenActionsMap(ctx, tpl.Actions)
 		diags.Append(d...)
 		if diags.HasError() {
 			return diags
 		}
 		plan.Actions = knownEmptyMapIfNull(actions, types.ObjectType{AttrTypes: ActionsModel{}.AttributeTypes()})
-
-		// When tpl.Actions is empty, ToUpdateAPIModel's actual expandActionsMap
-		// call generates a fresh apply/plan/destroy set AND blanks parameters for
-		// non-Terraform workflow types (generateStackActions step 3) — a
-		// classification that needs workflowTemplates, which this function has no
-		// way to resolve. A known plan.Actions value that then doesn't match what
-		// apply actually returns is exactly what Terraform's "Provider produced
-		// inconsistent result after apply" guards against, so mark it unknown
-		// instead whenever that's a possibility — deferring to apply-time truth is
-		// always safe, since Terraform's consistency check only applies to values
-		// that were known in the plan.
-		if actionsNeedGeneration(tpl) {
-			plan.Actions = types.MapUnknown(types.ObjectType{AttrTypes: ActionsModel{}.AttributeTypes()})
-		}
 	}
 
 	return diags
-}
-
-// actionsNeedGeneration reports whether generateStackActions would need to
-// synthesize a fresh apply/plan/destroy set (tpl.Actions is empty) rather
-// than just copying tpl.Actions verbatim.
-func actionsNeedGeneration(tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel) bool {
-	return tpl == nil || len(tpl.Actions) == 0
 }
 
 // reResolveWorkflowsConfigOnRevisionChange re-derives workflows_config's
