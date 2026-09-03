@@ -135,7 +135,7 @@ const (
 
 // Policy
 const (
-	Approvers                 = "List of stackguardian users"
+	Approvers                 = "StackGuardian users who can approve a held run, as fully qualified user IDs rather than bare email addresses: `<user-pool-id>/local/<email>`. Read an existing policy with the `stackguardian_policy` data source to see the prefix your organization uses. Applies only to `policy_type = \"GENERAL\"`."
 	NumberOfApprovalsRequired = "Number of approvals required for a policy check to pass"
 	EnforcedOn                = "What this policy is enforced on — either organization-wide, or any combination of workflow groups, workflows and connectors. <ul><li>`[\"*\"]` — the whole organization. Used on its own, not combined with other entries.</li><li>`[\"/wfgrps/&lt;group&gt;\"]` — a workflow group and everything inside it. No trailing slash.</li><li>Workflows and connectors follow the same resource-path convention and can be listed alongside workflow groups.</li></ul>Confirm an unfamiliar form against an existing policy before relying on it."
 	PolicyType                = "What kind of policy this is. <ul><li>`GENERAL` — the standard policy, evaluated during workflow and stack runs. `enforced_on`, `approvers` and `number_of_approvals_required` apply only to this type.</li><li>`FILTER.INSIGHT` — a filter over Insight findings. It excludes findings that match its definition from the Insight dashboard rather than gating a run, so it takes no scope and no approval settings.</li></ul>"
@@ -145,7 +145,7 @@ const (
 	PolicyConfigOnFail              = "Action taken when the policy evaluation **fails**. <ul><li>`FAIL` — stop the run.</li><li>`WARN` — record a warning and let the run continue.</li><li>`PASS` — treat the failure as acceptable and continue.</li><li>`APPROVAL_REQUIRED` — hold the run until an approver signs off.</li></ul>"
 	PolicyConfigOnPass              = "Action taken when the policy evaluation **passes**. Same values as `on_fail`: <ul><li>`PASS` — continue, the usual choice.</li><li>`WARN` — continue but record a warning.</li><li>`APPROVAL_REQUIRED` — hold the run for approval even though the policy passed.</li><li>`FAIL` — stop the run even though the policy passed.</li></ul>"
 	PolicyConfigInputData           = "Policy definition"
-	PolicyConfigInputDataSchemaType = "How the policy body in `data` is formatted. `FORM_JSONSCHEMA` is a StackGuardian NoCode form; `data` holds the values that form collects."
+	PolicyConfigInputDataSchemaType = "How the policy body in `data` is formatted. <ul><li>`TIRITH_JSON` — a StackGuardian policy-framework definition. This is what a policy written inline uses, alongside a `policy_vcs_config` of `SG_POLICY_FRAMEWORK` / `INLINE`, and what the platform returns when you read one back.</li><li>`FORM_JSONSCHEMA` — a StackGuardian NoCode form; `data` holds the values that form collects.</li><li>`RAW_JSON` — accepted, but an inline policy body is stored as `TIRITH_JSON`, so prefer that to avoid a permanent diff between configuration and state.</li><li>`NONE` — the policy takes no input data.</li></ul>"
 	PolicyConfigInputDataData       = "Policy body"
 
 	PolicyVCSConfig                    = "Configuration to import policy from version control"
