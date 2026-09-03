@@ -59,12 +59,12 @@ func TestAccStack_WorkflowsConfigMinimalEntry(t *testing.T) {
 	})
 }
 
-// TestAccStack_WorkflowsConfigRevisionReResolution verifies
-// reResolveWorkflowsConfigOnRevisionChange: a per-workflow field the stack
-// leaves unset (number_of_approvals_required) must pick up a value the new
-// revision provides that the old one didn't (step 2), and must go back to
-// empty when a later revision drops it again (step 3) — rather than the
-// value getting stuck at whatever UseStateForUnknown last carried forward.
+// TestAccStack_WorkflowsConfigRevisionReResolution — REVISION SWITCH test.
+// Purpose: a per-workflow field the stack leaves unset (number_of_approvals_required) must
+// pick up a value the new revision provides that the old one didn't (revision1 -> revision2,
+// step 2), and must go back to empty when a later revision drops it again (revision2 ->
+// revision1, step 3) — rather than the value getting stuck at whatever UseStateForUnknown last
+// carried forward (see reResolveWorkflowsConfigOnRevisionChange).
 func TestAccStack_WorkflowsConfigRevisionReResolution(t *testing.T) {
 	wfGrpName := "tf-provider-stack-wfrevre-wfgrp"
 	wfTemplateName := "tf-provider-stack-wfrevre-wftmpl"
@@ -163,7 +163,9 @@ func TestAccStack_WorkflowsConfigInvalidEnums(t *testing.T) {
 // terraform_config unset on the stack entry, so it must resolve to the
 // middle layer's 1.5.7 (not the bottom layer's 1.5.0). Step 2 declares
 // terraform_version directly on the stack entry, which must win over both
-// lower layers.
+// lower layers — 1.5.5 is used rather than something above 1.5.7 since the
+// API no longer supports Terraform versions past that; precedence here
+// doesn't depend on numeric ordering, only on which layer declared a value.
 func TestAccStack_WorkflowsConfigPrecedenceMerge(t *testing.T) {
 	wfGrpName := "tf-provider-stack-wfmerge-wfgrp"
 	wfTemplateName := "tf-provider-stack-wfmerge-wftmpl"
@@ -186,7 +188,7 @@ func TestAccStack_WorkflowsConfigPrecedenceMerge(t *testing.T) {
       {
         id = %q
         terraform_config = {
-          terraform_version = "1.6.0"
+          terraform_version = "1.5.5"
         }
       }
     ]
@@ -208,7 +210,7 @@ func TestAccStack_WorkflowsConfigPrecedenceMerge(t *testing.T) {
 			{
 				Config: testAccStackConfig(wfGrpName, revision, id, overrideConfig),
 				Check: resource.TestCheckResourceAttr(
-					"stackguardian_stack.test", "workflows_config.workflows.0.terraform_config.terraform_version", "1.6.0"),
+					"stackguardian_stack.test", "workflows_config.workflows.0.terraform_config.terraform_version", "1.5.5"),
 			},
 		},
 	})

@@ -1218,8 +1218,16 @@ func expandWfUserSchedules(ctx context.Context, list types.List) ([]*sgsdkgo.Use
 	result := make([]*sgsdkgo.UserSchedules, len(models))
 	for i, m := range models {
 		state := sgsdkgo.StateEnum(m.State.ValueString())
-		// name is Computed-only — server-assigned, never sent.
+		// name is Computed-only, but sent unconditionally like
+		// workflow_from_template's UserSchedulesModel.ToAPIModel() does: on
+		// create m.Name is Unknown (fresh list element, no prior state), so
+		// ValueStringPointer() sends "" — harmless, the server assigns its own
+		// name regardless. On update m.Name already holds the server-assigned
+		// value (UseStateForUnknown carried it forward), and the API needs it
+		// to identify the existing schedule entry rather than treating the
+		// update as a fresh one.
 		result[i] = &sgsdkgo.UserSchedules{
+			Name:  m.Name.ValueStringPointer(),
 			Desc:  m.Desc.ValueStringPointer(),
 			Cron:  m.Cron.ValueStringPointer(),
 			State: &state,
@@ -3045,14 +3053,34 @@ func reResolveOnRevisionChange(ctx context.Context, plan *StackResourceModel, co
 // the PLAN value — so if plan still carries the OLD revision's merged values
 // forward (UseStateForUnknown, since config left them unset), apply would
 // silently send stale data instead of re-deriving from the new revision.
-// Every per-workflow field now has a template counterpart in one of the two
+// Most per-workflow fields have a template counterpart in one of the two
 // merge layers, so a plain re-expand against config (using the NEW tpl/
-// workflowTemplates) is sufficient — nothing needs to be preserved from prior
-// state.
+// workflowTemplates) is sufficient for them. runner_constraints is the
+// exception: its SDK field exists on both template layers, but neither is
+// ever actually authored with a value there in practice — it's assigned by
+// the server at workflow-creation time, not derived from any template. Re-
+// deriving it the same way as everything else would always produce nil,
+// silently wiping out the server-assigned value on every revision change —
+// so it's preserved from the plan's current (already-resolved) value instead
+// whenever the fresh re-expand comes back empty.
 func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackResourceModel, config StackResourceModel, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	if config.WorkflowsConfig.IsNull() || config.WorkflowsConfig.IsUnknown() {
+		return diags
+	}
+
+	// While creating a workflow, if runner_constraints isn't provided the platform assigns it a
+	// default value — neither the stack template nor the workflow template ever actually
+	// declares one. So when upgrading the revision, if the new revision also doesn't have one,
+	// we need to preserve the value received when the stack (and therefore the workflow) was
+	// created, rather than let the fresh re-expand below reset it to nil: since it never comes
+	// from a template, re-deriving it the same way as every other field here would silently wipe
+	// out that server-assigned value on every revision change, even though the plan already
+	// carries it forward correctly via UseStateForUnknown.
+	priorRunnerConstraints, d := runnerConstraintsBySlotId(ctx, plan.WorkflowsConfig)
+	diags.Append(d...)
+	if diags.HasError() {
 		return diags
 	}
 
@@ -3065,6 +3093,15 @@ func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackRe
 		return diags
 	}
 
+	for _, wf := range fresh.Workflows {
+		if wf == nil || wf.Id == nil || wf.RunnerConstraints != nil {
+			continue
+		}
+		if rc, ok := priorRunnerConstraints[*wf.Id]; ok {
+			wf.RunnerConstraints = rc
+		}
+	}
+
 	wfcObj, d := flattenWorkflowsConfig(ctx, fresh)
 	diags.Append(d...)
 	if diags.HasError() {
@@ -3073,6 +3110,46 @@ func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackRe
 	plan.WorkflowsConfig = wfcObj
 
 	return diags
+}
+
+// runnerConstraintsBySlotId extracts each workflow slot's currently-resolved
+// runner_constraints (user-declared, or carried forward via UseStateForUnknown
+// from a server-assigned default) from a workflows_config object, keyed by
+// slot id. Used by reResolveWorkflowsConfigOnRevisionChange to preserve a
+// value that has no genuine template source across a revision change.
+func runnerConstraintsBySlotId(ctx context.Context, workflowsConfig types.Object) (map[string]*sgsdkgo.RunnerConstraints, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	result := make(map[string]*sgsdkgo.RunnerConstraints)
+	if workflowsConfig.IsNull() || workflowsConfig.IsUnknown() {
+		return result, diags
+	}
+	var wfc WorkflowsConfigModel
+	if d := workflowsConfig.As(ctx, &wfc, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); d.HasError() {
+		diags.Append(d...)
+		return result, diags
+	}
+	if wfc.Workflows.IsNull() || wfc.Workflows.IsUnknown() {
+		return result, diags
+	}
+	var wfModels []WorkflowInStackModel
+	if d := wfc.Workflows.ElementsAs(ctx, &wfModels, false); d.HasError() {
+		diags.Append(d...)
+		return result, diags
+	}
+	for _, wm := range wfModels {
+		if wm.Id.IsNull() || wm.Id.IsUnknown() {
+			continue
+		}
+		rc, d := expandRunnerConstraints(ctx, wm.RunnerConstraints)
+		diags.Append(d...)
+		if diags.HasError() {
+			return result, diags
+		}
+		if rc != nil {
+			result[wm.Id.ValueString()] = rc
+		}
+	}
+	return result, diags
 }
 
 // BuildAPIModelToStackModel converts the API response into a StackResourceModel.
