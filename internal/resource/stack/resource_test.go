@@ -222,15 +222,17 @@ func setupStackWorkflowTemplate(t *testing.T, templateID string) string {
 	return templateID
 }
 
-// setupStackTemplateChain creates and publishes a stack template + revision
-// :1 via the SDK, with workflows_config wiring testWfSlotId to
-// workflowTemplateID. Registers cleanup. Returns the bare revision id
-// ("<name>:1") for use as a stack's template_group_id, which is stored bare
-// in state and only gets the "/<org>/" wire prefix on send (see ToAPIModel).
-// Publishes directly with no staged unpublished step — a stack can't
-// reference an unpublished revision, but publishing itself has no such
-// restriction.
-func setupStackTemplateChain(t *testing.T, stackTemplateID, workflowTemplateID string) string {
+// setupStackTemplateChainWithFields is setupStackTemplateChain's general
+// form: it additionally sets description/tags/contextTags on the revision
+// when the corresponding argument is non-nil/non-empty. Used by the
+// per-attribute resolution-scenario tests (resource_description_test.go,
+// resource_tags_test.go, resource_context_tags_test.go) to produce a
+// template revision that DOES supply a value for the one attribute under
+// test. setupStackTemplateChain itself is unchanged (still the zero-value
+// case) and just delegates here. Publishes directly with no staged
+// unpublished step — a stack can't reference an unpublished revision, but
+// publishing itself has no such restriction.
+func setupStackTemplateChainWithFields(t *testing.T, stackTemplateID, workflowTemplateID string, description *string, tags []string, contextTags map[string]string) string {
 	t.Helper()
 	client := getClient()
 	revisionID := fmt.Sprintf("%s:1", stackTemplateID)
@@ -254,7 +256,7 @@ func setupStackTemplateChain(t *testing.T, stackTemplateID, workflowTemplateID s
 		},
 	)
 	if err != nil && !is409(err) {
-		t.Fatalf("setupStackTemplateChain: create stack template %q: %s", stackTemplateID, err)
+		t.Fatalf("setupStackTemplateChainWithFields: create stack template %q: %s", stackTemplateID, err)
 	}
 
 	// template_id/iac_template_id must be fully org-qualified on the wire;
@@ -280,6 +282,9 @@ func setupStackTemplateChain(t *testing.T, stackTemplateID, workflowTemplateID s
 			SourceConfigKind: &sourceConfigKind,
 			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
 			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			LongDescription:  description,
+			Tags:             tags,
+			ContextTags:      contextTags,
 			WorkflowsConfig: &stacktemplaterevisions.StackTemplateRevisionWorkflowsConfig{
 				Workflows: []*stacktemplaterevisions.StackTemplateRevisionWorkflow{
 					{
@@ -324,7 +329,7 @@ func setupStackTemplateChain(t *testing.T, stackTemplateID, workflowTemplateID s
 		},
 	)
 	if err != nil && !is409(err) {
-		t.Fatalf("setupStackTemplateChain: create revision for %q: %s", stackTemplateID, err)
+		t.Fatalf("setupStackTemplateChainWithFields: create revision for %q: %s", stackTemplateID, err)
 	}
 
 	_, err = client.StackTemplateRevisions.UpdateStackTemplateRevision(
@@ -334,7 +339,7 @@ func setupStackTemplateChain(t *testing.T, stackTemplateID, workflowTemplateID s
 		},
 	)
 	if err != nil {
-		t.Fatalf("setupStackTemplateChain: publish revision %q: %s", revisionID, err)
+		t.Fatalf("setupStackTemplateChainWithFields: publish revision %q: %s", revisionID, err)
 	}
 
 	_, err = client.StackTemplates.UpdateStackTemplate(
@@ -344,10 +349,21 @@ func setupStackTemplateChain(t *testing.T, stackTemplateID, workflowTemplateID s
 		},
 	)
 	if err != nil {
-		t.Fatalf("setupStackTemplateChain: publish template %q: %s", stackTemplateID, err)
+		t.Fatalf("setupStackTemplateChainWithFields: publish template %q: %s", stackTemplateID, err)
 	}
 
 	return revisionID
+}
+
+// setupStackTemplateChain creates and publishes a stack template + revision
+// :1 via the SDK, with workflows_config wiring testWfSlotId to
+// workflowTemplateID, and none of description/tags/contextTags set. Returns
+// the bare revision id ("<name>:1") for use as a stack's template_group_id,
+// which is stored bare in state and only gets the "/<org>/" wire prefix on
+// send (see ToAPIModel).
+func setupStackTemplateChain(t *testing.T, stackTemplateID, workflowTemplateID string) string {
+	t.Helper()
+	return setupStackTemplateChainWithFields(t, stackTemplateID, workflowTemplateID, nil, nil, nil)
 }
 
 // setupStackDependencyChain creates the full SDK-fixture prerequisite chain

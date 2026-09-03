@@ -1766,6 +1766,77 @@ func TestAccWorkflowUsingTemplate_DriftDetection(t *testing.T) {
 	})
 }
 
+// TestAccWorkflowUsingTemplate_DriftDetectionOnTemplateDefault verifies drift detection for
+// an attribute the user never declares in config at all: its value on create comes purely
+// from the template default (mirroring TestAccWorkflowUsingTemplate_TemplateDefaultsResolved)
+// and is persisted into state as such. An out-of-band change to that attribute must still be
+// caught as drift on the next plan, exactly as for a user-declared attribute (see
+// TestAccWorkflowUsingTemplate_DriftDetection).
+func TestAccWorkflowUsingTemplate_DriftDetectionOnTemplateDefault(t *testing.T) {
+	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-drift-default") + ":1"
+	wfGrpName := "tf-provider-wf-template-drift-default-wfgrp"
+	id := "tf-provider-wf-template-drift-default"
+
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
+		t.Errorf("failed to create workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(wfGrpName)
+	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
+
+	// The user declares nothing beyond the template reference. environment_variables is
+	// entirely template-resolved (TMPL_VAR/tmpl-value, from setupWorkflowTemplate).
+	config := ``
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Never declared by the user; resolved from the template on create and
+					// persisted into state as a real (non-null) value.
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "environment_variables.0.config.var_name", "TMPL_VAR"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "environment_variables.0.config.text_value", "tmpl-value"),
+				),
+			},
+			{
+				// Mutate the template-resolved environment_variables out-of-band, then run a
+				// refresh-only step. Even though the user's own config never mentions this
+				// attribute, state holds a concrete value for it, so the refresh must detect
+				// the drift and the resulting plan must be non-empty. (RefreshState cannot be
+				// combined with Config, so this step intentionally omits Config.)
+				PreConfig: func() {
+					client := getClient()
+					_, err := client.Workflows.UpdateWorkflow(
+						context.TODO(), org, id, wfGrpName,
+						sgworkflows.UpgradeModeEnumPreserveSettings.Ptr(),
+						&sgworkflows.PatchedWorkflow{
+							EnvironmentVariables: sgsdkgo.Optional([]*sgsdkgo.EnvVars{
+								{
+									Kind: sgsdkgo.EnvVarsKindEnumPlainText,
+									Config: &sgsdkgo.EnvVarConfig{
+										VarName:   "TMPL_VAR",
+										TextValue: sgsdkgo.String("changed-out-of-band"),
+									},
+								},
+							}),
+						},
+					)
+					if err != nil {
+						t.Fatalf("drift setup: out-of-band update failed: %s", err)
+					}
+				},
+				RefreshState:       true,
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
+
 // TestAccWorkflowUsingTemplate_RevisionUpgrade verifies that changing iac_template_id to a
 // new revision re-resolves the unset (Computed) fields against the NEW revision, while
 // fields the user declared in config are preserved. rev1 has env var TMPL_VAR; rev2 has

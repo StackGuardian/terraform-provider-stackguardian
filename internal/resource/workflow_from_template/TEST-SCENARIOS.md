@@ -48,6 +48,7 @@
 | Test | Scenario covered |
 | --- | --- |
 | `..._DriftDetection` | An out-of-band change (e.g. dev portal) is detected as a non-empty plan on refresh. |
+| `..._DriftDetectionOnTemplateDefault` | Same, for an attribute the user never declares in config: its value is resolved purely from the template on create and persisted to state, and an out-of-band change to it is still detected as drift. |
 | `..._DriftCronDroppedWhenCheckFalse` | `drift_cron` is dropped whenever `drift_check` is false (coupling), stored as `""` in state. |
 
 ### Revision upgrade (`iac_template_id` → new revision)

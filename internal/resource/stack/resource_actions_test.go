@@ -25,11 +25,11 @@ const secondWfSlotId = "3f7c9e2a-5b1d-4e6f-8a2c-9d4b6e1f0a3c"
 // workflow template) instead of one, and defines no Actions of its own at
 // all. Used only by TestAccStack_ActionsGeneratedFromTemplate, which needs a
 // template that supplies neither apply/plan/destroy NOR a dependency chain to
-// inherit, so the only source for them is the provider's own generation
-// (generateStackActions), and needs a second workflow to prove that
-// generation actually chains multiple workflows rather than only handling
-// the trivial single-workflow case. Registers cleanup. Returns the bare
-// revision id ("<name>:1").
+// inherit, so the only source for them is the API's own create-time default
+// (the provider no longer synthesizes one itself — see expandActionsMap),
+// and needs a second workflow to prove that default actually chains multiple
+// workflows rather than only handling the trivial single-workflow case.
+// Registers cleanup. Returns the bare revision id ("<name>:1").
 func setupStackTemplateChainNoActions(t *testing.T, stackTemplateID, workflowTemplateID string) string {
 	t.Helper()
 	client := getClient()
@@ -93,7 +93,7 @@ func setupStackTemplateChainNoActions(t *testing.T, stackTemplateID, workflowTem
 				},
 			},
 			// Deliberately no Actions — the template supplies none of its own, so
-			// apply/plan/destroy can only come from the provider's own generation.
+			// apply/plan/destroy can only come from the API's own create-time default.
 		},
 	)
 	if err != nil && !is409(err) {
@@ -124,19 +124,28 @@ func setupStackTemplateChainNoActions(t *testing.T, stackTemplateID, workflowTem
 }
 
 // TestAccStack_ActionsGeneratedFromTemplate verifies that leaving "actions"
-// unset in config falls back to the stack template revision's own value —
-// here, a freshly generated apply/plan/destroy set following
-// default_actions_generation_doc.txt's exact algorithm, since
-// setupStackTemplateChainNoActions defines no Actions of its own
-// (setupStackTemplateChainNoActions wires two slots on the template,
-// testWfSlotId then secondWfSlotId, and the stack in this test declares no
-// workflows_config of its own — generation never consults it). Order map keys
-// are the bare template slot ids (StackTemplateRevisionWorkflow.Id) — not the
-// workflow's own post-creation resource id, since at create time that
-// doesn't exist yet.
+// unset in config, with a template that supplies no Actions of its own
+// either (setupStackTemplateChainNoActions), resolves to the API's own
+// create-time default apply/plan/destroy set — expandActionsMap omits
+// "actions" from the request entirely in that case (see its doc comment:
+// neither the resource nor the template has a value, so there's nothing to
+// send, and the provider does not synthesize one itself), so this set is
+// entirely the platform's own doing, not provider logic. The specific
+// values asserted below (names, descriptions, dependency chaining across
+// setupStackTemplateChainNoActions's two workflow slots) are therefore a
+// live contract with the API, not something client-side code produces —
+// see the project plan's note that this is the highest-risk test to re-run
+// after that removal, since these assertions now exercise real API
+// behavior for the first time rather than a deleted client-side replica.
+// What IS still provider logic and exercised here: translateActionsOrderKeys
+// (slot-uuid <-> real workflow-id substitution) and flattenActionsMap's full
+// nested mapping (dependencies, conditions, terraform_action) on the
+// round-trip Read below. Order map keys are the bare template slot ids
+// (StackTemplateRevisionWorkflow.Id) — not the workflow's own post-creation
+// resource id, since at create time that doesn't exist yet.
 //
 // It also verifies that once the user DOES declare "actions" in config, that
-// value wholesale replaces the generated set — expandActionsMap is an
+// value wholesale replaces the API's default set — expandActionsMap is an
 // override, not a per-key merge, so plan/destroy (not redeclared) disappear
 // rather than staying inherited alongside the user's own "apply".
 func TestAccStack_ActionsGeneratedFromTemplate(t *testing.T) {
@@ -220,6 +229,22 @@ func TestAccStack_ActionsGeneratedFromTemplate(t *testing.T) {
 				// Round trips with no diff.
 				Config:   testAccStackConfig(wfGrpName, revision, id, ""),
 				PlanOnly: true,
+			},
+			{
+				// An unrelated update (description) — actions still left unset. The
+				// API-generated default from the first step must persist through
+				// this update, not be dropped or regenerated: the carried-forward
+				// plan value is known and non-null, so expandActionsMap treats it as
+				// a real declaration and re-sends it verbatim (see reResolveOnRevisionChange's
+				// doc comment in model.go for why "unchanged" is the correct
+				// prediction here).
+				Config: testAccStackConfig(wfGrpName, revision, id, `description = "updated after create"`),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "description", "updated after create"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.apply.name", "Create"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.plan.name", "Plan"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.destroy.name", "Destroy"),
+				),
 			},
 			{
 				// User now declares actions explicitly — the whole generated set is
@@ -313,7 +338,6 @@ func TestAccStack_ActionsRevisionRemovedWorkflow(t *testing.T) {
 // template defines its own "apply"/"plan" Actions, but since this test
 // declares "actions" explicitly, none of the template's own actions (e.g.
 // "plan") are merged in — only what the resource itself declares exists.
-//
 // deployment_platform_config and wf_steps_config inside order[].parameters
 // aren't covered here — both need a real integration_id / workflow step
 // template fixture this test doesn't set up.
@@ -428,3 +452,59 @@ func TestAccStack_ActionsRoundTrip(t *testing.T) {
 		},
 	})
 }
+
+// TestAccStack_ActionsRejectsEmpty verifies actions = {} (a known, explicitly empty map — not
+// the same as leaving the attribute unset) is rejected at plan time by the schema's
+// mapvalidator.SizeAtLeast(1) on "actions" (schema.go), rather than reaching the API and
+// surfacing its own less actionable "Stack actions are empty" error.
+func TestAccStack_ActionsRejectsEmpty(t *testing.T) {
+	wfGrpName := "tf-provider-stack-actempty-wfgrp"
+	wfTemplateName := "tf-provider-stack-actempty-wftmpl"
+	stackTemplateName := "tf-provider-stack-actempty-stmpl"
+	id := "tf-provider-stack-actempty"
+
+	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccStackConfig(wfGrpName, revision, id, `actions = {}`),
+				ExpectError: regexp.MustCompile(`map must contain at least 1 elements`),
+			},
+		},
+	})
+}
+
+// actions resolution rules (source material for docs-templates/resources/stack.md.tmpl):
+//
+//  1. Declaring actions in the resource config always wins — it wholesale
+//     replaces whatever the stack template revision itself defines, not a
+//     per-key merge (see TestAccStack_ActionsRoundTrip).
+//  2. Leaving actions unset resolves it from the stack template revision's
+//     own actions verbatim, if the revision has any — both at create time
+//     (TestAccStack_TemplateGroupIdReResolution's Step 1, resource_root_test.go)
+//     and across a revision change (that same test's Step 2).
+//  3. An explicit empty value (actions = {}) is rejected at plan time by a
+//     schema validator (mapvalidator.SizeAtLeast(1) on "actions", schema.go)
+//     — a stack must always have at least one action, matching the API's own
+//     requirement for stack template revisions ("Stack actions are empty").
+//     This only fires for a known, explicitly-empty map — leaving the
+//     attribute unset is unaffected (rule 2 above still applies) — see
+//     TestAccStack_ActionsRejectsEmpty.
+//  4. If neither the resource nor the template supplies actions, the API
+//     applies its own default at create time (TestAccStack_ActionsGeneratedFromTemplate) —
+//     the provider does not synthesize one itself — and that default persists
+//     through later updates that don't touch actions, rather than being
+//     dropped or regenerated (TestAccStack_ActionsGeneratedFromTemplate's
+//     unrelated-update step).
+//
+// There is no "leaving actions unset, then switching to a revision with none
+// of its own" scenario tested here: it's unreachable. The API rejects
+// publishing a stack template revision with an empty Actions map ("Stack
+// actions are empty"), so every revision a stack can actually reference
+// always has at least one action.

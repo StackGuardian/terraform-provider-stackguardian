@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
+	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -14,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -482,11 +484,14 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 			},
 			"actions": schema.MapNestedAttribute{
-				MarkdownDescription: "Actions define the sequence in which the workflows in the Stack are executed. Optional+Computed: when left unset, inherits the actions resolved from the stack template revision (its own actions verbatim, or a generated apply/plan/destroy set — see the template revision docs); when set, this value is used as-is instead of the template's.",
+				MarkdownDescription: "Actions define the sequence in which the workflows in the Stack are executed. Optional+Computed: when left unset, inherits the actions resolved from the stack template revision (its own actions verbatim, or a generated apply/plan/destroy set — see the template revision docs); when set, this value is used as-is instead of the template's. Must have at least one entry if set — an empty map is rejected, matching the API's own requirement that a stack always have at least one action.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Map{
 					mapplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.Map{
+					mapvalidator.SizeAtLeast(1),
 				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: actionsAttrs,
