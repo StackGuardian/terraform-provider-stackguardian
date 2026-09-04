@@ -5,7 +5,7 @@
 Terraform provider for the StackGuardian Orchestrator platform. Built with the [Terraform Plugin Framework v1](https://developer.hashicorp.com/terraform/plugin/framework).
 
 **Module:** `github.com/StackGuardian/terraform-provider-stackguardian`
-**Go version:** 1.21.4
+**Go version:** 1.26.7
 **SDK:** `github.com/StackGuardian/sg-sdk-go` look for replace if in go.mod and use that path for the sdk
 
 ---
