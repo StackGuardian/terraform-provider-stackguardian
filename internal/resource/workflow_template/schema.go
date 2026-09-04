@@ -81,7 +81,7 @@ func WorkflowTemplateRuntimeSourceConfig() map[string]schema.Attribute {
 // Schema defines the schema for the resource.
 func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a workflow template resource.",
+		MarkdownDescription: "Manages a workflow template: the reusable definition a workflow is created from.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.Id,
@@ -113,7 +113,7 @@ func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRe
 				},
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Description, "Description for workflow template"),
+				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow template"),
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -121,7 +121,7 @@ func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRe
 				},
 			},
 			"tags": schema.ListAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Tags, "Tags for workflow template"),
+				MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow template"),
 				ElementType:         types.StringType,
 				Optional:            true,
 			},
@@ -153,7 +153,7 @@ func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRe
 				},
 			},
 			"vcs_triggers": schema.SingleNestedAttribute{
-				MarkdownDescription: constants.VCSTriggers,
+				MarkdownDescription: constants.TemplateVCSTriggers,
 				Optional:            true,
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{

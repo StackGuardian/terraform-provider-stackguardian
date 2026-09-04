@@ -21,7 +21,7 @@ var nonEmptyString = []validator.String{stringvalidator.LengthAtLeast(1)}
 
 func (r *workflowGitResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a git-based workflow resource in a workflow group.",
+		MarkdownDescription: "Manages a workflow defined directly from a git repository, without going through a workflow template. Workflows live inside a `stackguardian_workflow_group`.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.Id,
@@ -31,7 +31,7 @@ func (r *workflowGitResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"resource_name": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "workflow_git"),
+				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "workflow"),
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -44,7 +44,7 @@ func (r *workflowGitResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Validators:          nonEmptyString,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow_git"),
+				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow"),
 				Optional:            true,
 				Validators:          nonEmptyString,
 			},
@@ -121,7 +121,7 @@ func (r *workflowGitResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"tags": schema.ListAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow_git"),
+				MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow"),
 				ElementType:         types.StringType,
 				Optional:            true,
 			},
@@ -156,7 +156,7 @@ func (r *workflowGitResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"context_tags": schema.MapAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.ContextTags, "workflow_git"),
+				MarkdownDescription: fmt.Sprintf(constants.ContextTags, "workflow"),
 				ElementType:         types.StringType,
 				Optional:            true,
 			},
@@ -619,7 +619,8 @@ func vcsTriggerActionNestedObject() schema.NestedAttributeObject {
 	return schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
 			"enabled": schema.BoolAttribute{
-				Required: true,
+				MarkdownDescription: constants.VCSTriggersActionEnabled,
+				Required:            true,
 			},
 		},
 	}

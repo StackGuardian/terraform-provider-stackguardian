@@ -42,7 +42,19 @@ resource "stackguardian_workflow_group" "example" {
 
 ## Documentation
 
-The full list of supported resources and data sources, with documentation for each, is available on the [Terraform Registry](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs).
+Reference for every resource and data source, plus guides, is on the
+[Terraform Registry](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs).
+
+Start here:
+
+- [Getting Started](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/GettingStarted) — a working deployment, one resource at a time
+- [Object Model](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ObjectModel) — how workflow groups, templates, connectors and roles relate
+- [Resource IDs](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ResourceIDs) — the path-form IDs StackGuardian uses
+- [Importing Existing Resources](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ImportingResources) — import ID formats
+- [Troubleshooting](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Troubleshooting)
+
+Documentation is generated: attribute text comes from `MarkdownDescription` in the schemas, page
+prose from `docs-templates/`. Edit those and run `make docs-generate` — never edit `docs/` directly.
 
 ## Examples
 

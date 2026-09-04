@@ -2,15 +2,7 @@ package constants
 
 // Stack Template - Common documentation
 const (
-	StackTemplateSourceConfigKindCommon = `Source configuration kind for the stack template. Valid values:
-	<span style="background-color: #eff0f0; color: #e53835;">TERRAFORM</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">OPENTOFU</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">ANSIBLE_PLAYBOOK</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">HELM</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">KUBECTL</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">CLOUDFORMATION</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">MIXED</span>,
-	<span style="background-color: #eff0f0; color: #e53835;">CUSTOM</span>`
+	StackTemplateSourceConfigKindCommon = "What the stack contains. Use `MIXED` — a stack groups workflows built from different tools, and the tool used by each individual workflow is recorded on that workflow rather than here. The other values (`TERRAFORM`, `OPENTOFU`, `ANSIBLE_PLAYBOOK`, `HELM`, `KUBECTL`, `CLOUDFORMATION`, `CUSTOM`) belong on a `stackguardian_workflow_template`, which describes a single workflow."
 
 	StackTemplateIsPublicCommon = `Whether the stack template is publicly available. Valid values:
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),

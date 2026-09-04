@@ -167,7 +167,7 @@ var dsWorkflowInStackAttrs = map[string]schema.Attribute{
 		Computed:            true,
 	},
 	"wf_type": schema.StringAttribute{
-		MarkdownDescription: `Workflow type. Valid values: TERRAFORM, OPENTOFU, CUSTOM`,
+		MarkdownDescription: constants.WorkflowType,
 		Computed:            true,
 	},
 	"wf_steps_config": schema.ListNestedAttribute{
@@ -290,7 +290,7 @@ var dsWorkflowInStackAttrs = map[string]schema.Attribute{
 						Computed:            true,
 					},
 					"iac_template_id": schema.StringAttribute{
-						MarkdownDescription: "ID of the IaC template from the marketplace.",
+						MarkdownDescription: constants.WorkflowIacTemplateId,
 						Computed:            true,
 					},
 					"custom_source": schema.SingleNestedAttribute{
@@ -306,29 +306,37 @@ var dsWorkflowInStackAttrs = map[string]schema.Attribute{
 								Computed:            true,
 								Attributes: map[string]schema.Attribute{
 									"is_private": schema.BoolAttribute{
-										Computed: true,
+										MarkdownDescription: constants.RuntimeSourceConfigIsPrivate,
+										Computed:            true,
 									},
 									"auth": schema.StringAttribute{
-										Computed:  true,
-										Sensitive: true,
+										MarkdownDescription: constants.RuntimeSourceConfigAuth,
+										Computed:            true,
+										Sensitive:           true,
 									},
 									"working_dir": schema.StringAttribute{
-										Computed: true,
+										MarkdownDescription: constants.RuntimeSourceConfigWorkingDir,
+										Computed:            true,
 									},
 									"git_sparse_checkout_config": schema.StringAttribute{
-										Computed: true,
+										MarkdownDescription: constants.RuntimeSourceConfigGitSparse,
+										Computed:            true,
 									},
 									"git_core_auto_crlf": schema.BoolAttribute{
-										Computed: true,
+										MarkdownDescription: constants.RuntimeSourceConfigGitCoreCRLF,
+										Computed:            true,
 									},
 									"ref": schema.StringAttribute{
-										Computed: true,
+										MarkdownDescription: constants.RuntimeSourceConfigRef,
+										Computed:            true,
 									},
 									"repo": schema.StringAttribute{
-										Computed: true,
+										MarkdownDescription: constants.RuntimeSourceConfigRepo,
+										Computed:            true,
 									},
 									"include_sub_module": schema.BoolAttribute{
-										Computed: true,
+										MarkdownDescription: constants.RuntimeSourceConfigIncludeSubmodule,
+										Computed:            true,
 									},
 								},
 							},
@@ -341,10 +349,12 @@ var dsWorkflowInStackAttrs = map[string]schema.Attribute{
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"schema_id": schema.StringAttribute{
-						Computed: true,
+						MarkdownDescription: constants.WorkflowIacInputDataSchemaId,
+						Computed:            true,
 					},
 					"schema_type": schema.StringAttribute{
-						Computed: true,
+						MarkdownDescription: constants.WorkflowIacInputDataSchemaType,
+						Computed:            true,
 					},
 					"data": schema.StringAttribute{
 						MarkdownDescription: "Input data as a JSON string.",
@@ -360,10 +370,12 @@ var dsWorkflowInStackAttrs = map[string]schema.Attribute{
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
 				"name": schema.StringAttribute{
-					Computed: true,
+					MarkdownDescription: constants.UserScheduleName,
+					Computed:            true,
 				},
 				"desc": schema.StringAttribute{
-					Computed: true,
+					MarkdownDescription: constants.UserScheduleDesc,
+					Computed:            true,
 				},
 				"cron": schema.StringAttribute{
 					MarkdownDescription: constants.UserScheduleCron,
@@ -468,7 +480,7 @@ var dsActionOrderAttrs = map[string]schema.Attribute{
 
 func (d *stackTemplateRevisionDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "> **Note:** This data source is currently in **BETA**. Features and behavior may change.\n\nUse this data source to read a stack template revision.",
+		MarkdownDescription: "> **Note:** This data source is currently in **BETA**. Features and behavior may change.\n\nReads a specific revision of a stack template, including its ordered workflows and their configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.DatasourceId,

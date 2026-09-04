@@ -39,6 +39,7 @@ const (
 	- <span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC <a href="https://docs.stackguardian.io/docs/connectors/csp/aws/#roles-or-rbac-recommended"><span class="fa fa-external-link"></span></span></a>
 		- role_arn
 		- external_id
+		- duration_seconds
 	- <span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC <a href="https://docs.stackguardian.io/docs/connectors/csp/aws/#using-oidc-identity-provider"><span class="fa fa-external-link"></span></span></a>
 		- role_arn
 	- <span style="background-color: #eff0f0; color: #e53835;">GCP_STATIC <a href="https://docs.stackguardian.io/docs/connectors/csp/gcp/#using-service-account"><span class="fa fa-external-link"></span></span></a>
@@ -91,7 +92,7 @@ const (
 	DiscoverySettingsBenchmarksLabel       = "Label associated with the discovery."
 
 	DiscoverySettingsBenchmarksRuntimeSource                     = "Source configuration type and settings definition"
-	DiscoverySettingsBenchmarksRuntimeSourceSourceConfigDestKind = "Kind of the source configuration destination. Valid examples include eg:- AWS_RBAC, AZURE_STATIC."
+	DiscoverySettingsBenchmarksRuntimeSourceSourceConfigDestKind = "Which cloud the discovery run targets, matching the `kind` of the connector it uses — for example `AWS_RBAC` or `AZURE_STATIC`. Note this attribute name is also used for VCS providers elsewhere in the schema; the accepted values differ by context."
 
 	DiscoverySettingsBenchmarksRuntimeSourceConfig                 = "Specific configuration settings for runtime source."
 	DiscoverySettingsBenchmarksRuntimeSourceConfigIncludeSubModule = "Indicates whether to include sub-modules."
@@ -116,7 +117,7 @@ const (
 const (
 	AllowedPermissions      = "A map of permissions assigned to the role."
 	AllowedPermissionsName  = "The name of the permission."
-	AllowedPermissionsPaths = "A map of resource paths to which this permission is scoped."
+	AllowedPermissionsPaths = "Values substituted into the placeholders in the permission key, scoping it to specific resources. Keys are the placeholder names used in that permission (e.g. `<wfGrp>`) and values are **bare resource names**, not paths — `[\"frontend\"]`, not `[\"/wfgrps/frontend\"]`. For a nested workflow group use its full path, `platform/networking`."
 )
 
 // Role Assignment
@@ -134,31 +135,22 @@ const (
 
 // Policy
 const (
-	Approvers                 = "List of stackguardian users"
+	Approvers                 = "StackGuardian users who can approve a held run, as fully qualified user IDs rather than bare email addresses: `<user-pool-id>/local/<email>`. Read an existing policy with the `stackguardian_policy` data source to see the prefix your organization uses. Applies only to `policy_type = \"GENERAL\"`."
 	NumberOfApprovalsRequired = "Number of approvals required for a policy check to pass"
-	EnforcedOn                = "List of Resource path on which this policy is to be applied on"
-	PolicyType                = "Type of policy created \"GENERAL\" or \"FILTER.INSIGHT\""
+	EnforcedOn                = "What this policy is enforced on — either organization-wide, or any combination of workflow groups, workflows and connectors. <ul><li>`[\"*\"]` — the whole organization. Used on its own, not combined with other entries.</li><li>`[\"/wfgrps/&lt;group&gt;\"]` — a workflow group and everything inside it. No trailing slash.</li><li>Workflows and connectors follow the same resource-path convention and can be listed alongside workflow groups.</li></ul>Confirm an unfamiliar form against an existing policy before relying on it."
+	PolicyType                = "What kind of policy this is. <ul><li>`GENERAL` — the standard policy, evaluated during workflow and stack runs. `enforced_on`, `approvers` and `number_of_approvals_required` apply only to this type.</li><li>`FILTER.INSIGHT` — a filter over Insight findings. It excludes findings that match its definition from the Insight dashboard rather than gating a run, so it takes no scope and no approval settings.</li></ul>"
 
-	PolicyConfig       = "Policy configuration"
-	PolicyConfigSkip   = "Enable or disable the policy check"
-	PolicyConfigOnFail = `Specifies the action to be performed on failure. Options: <span style="background-color: #eff0f0; color: #e53835;">FAIL</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">WARN</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">PASS</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">APPROVAL_REQUIRED</span>`
-	PolicyConfigOnPass = `Specifies the action to be performed on pass. Options: <span style="background-color: #eff0f0; color: #e53835;">FAIL</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">WARN</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">PASS</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">APPROVAL_REQUIRED</span>`
+	PolicyConfig                    = "Policy configuration"
+	PolicyConfigSkip                = "Enable or disable the policy check"
+	PolicyConfigOnFail              = "Action taken when the policy evaluation **fails**. <ul><li>`FAIL` — stop the run.</li><li>`WARN` — record a warning and let the run continue.</li><li>`PASS` — treat the failure as acceptable and continue.</li><li>`APPROVAL_REQUIRED` — hold the run until an approver signs off.</li></ul>"
+	PolicyConfigOnPass              = "Action taken when the policy evaluation **passes**. Same values as `on_fail`: <ul><li>`PASS` — continue, the usual choice.</li><li>`WARN` — continue but record a warning.</li><li>`APPROVAL_REQUIRED` — hold the run for approval even though the policy passed.</li><li>`FAIL` — stop the run even though the policy passed.</li></ul>"
 	PolicyConfigInputData           = "Policy definition"
-	PolicyConfigInputDataSchemaType = `Specifies the schema type of the policy. Options: <span style="background-color: #eff0f0; color: #e53835;">FORM_JSONSCHEMA</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">RAW_JSON</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">TIRITH_JSON</span>,
-		<span style="background-color: #eff0f0; color: #e53835;">NONE</span>`
-	PolicyConfigInputDataData = "Policy body"
+	PolicyConfigInputDataSchemaType = "How the policy body in `data` is formatted. <ul><li>`TIRITH_JSON` — a StackGuardian policy-framework definition. This is what a policy written inline uses, alongside a `policy_vcs_config` of `SG_POLICY_FRAMEWORK` / `INLINE`, and what the platform returns when you read one back.</li><li>`FORM_JSONSCHEMA` — a StackGuardian NoCode form; `data` holds the values that form collects.</li><li>`RAW_JSON` — accepted, but an inline policy body is stored as `TIRITH_JSON`, so prefer that to avoid a permanent diff between configuration and state.</li><li>`NONE` — the policy takes no input data.</li></ul>"
+	PolicyConfigInputDataData       = "Policy body"
 
 	PolicyVCSConfig                    = "Configuration to import policy from version control"
 	PolicyVCSConfigMarketplaceTemplate = "Name of the template from marketplace"
-	PolicyVCSConfigTemplateId          = "ID of the template from marketplace"
+	PolicyVCSConfigTemplateId          = "Policy template to use, as a path-form ID: `/policies/<name>:<revision>` for a policy created in your own organization, or `/<org>/<name>:<revision>` when qualifying it explicitly. Templates published by StackGuardian use the `stackguardian` org (e.g. `/stackguardian/checkov-best-practices:2`). At most 100 characters. Required when `use_marketplace_template` is `true`."
 
 	PolicyVCSConfigCustomSource                     = DiscoverySettingsBenchmarksRuntimeSource
 	PolicyVCSConfigCustomSourceSourceConfigDestKind = DiscoverySettingsBenchmarksRuntimeSourceSourceConfigDestKind
@@ -173,6 +165,7 @@ const (
 	PolicyVCSConfigCustomSourceWorkingDir              = DiscoverySettingsBenchmarksRuntimeSourceConfigWorkingDir
 	PolicyVCSConfigCustomSourceRepo                    = DiscoverySettingsBenchmarksRuntimeSourceConfigRepo
 	PolicyVCSConfigCustomSourceIsPrivate               = DiscoverySettingsBenchmarksRuntimeSourceConfigIsPrivate
+	PolicyVCSConfigCustomSourceIncludeSubmodule        = DiscoverySettingsBenchmarksRuntimeSourceConfigIncludeSubModule
 
 	PolicyVCSConfigAdditionalConfig = "Additional configuration for the policy"
 )
@@ -207,12 +200,12 @@ const (
 	- <span style="background-color: #eff0f0; color: #e53835;">aws_s3</span>
 	- <span style="background-color: #eff0f0; color: #e53835;">azure_blob_storage</span>
 `
-	AzureBlobStorageAccountName = "Account of your azure blob storage"
-	AzureBlobStorageAccessKey   = "Access key for you blob storage account"
-	S3BucketName                = "S3 buckget name"
+	AzureBlobStorageAccountName = "Name of your Azure Blob Storage account."
+	AzureBlobStorageAccessKey   = "Access key for your Azure Blob Storage account."
+	S3BucketName                = "Name of the S3 bucket used to store runner logs."
 	AWSRegion                   = "AWS region where the bucket is placed"
 	Auth                        = "Authentication required by the runner to access the backend storage. Required only for type \"aws_s3\""
-	IntegrationId               = "SG Connector Id. Required only for type \"aws_s3\" eg: /integrations/test-connector"
+	IntegrationId               = "Connector the runner authenticates to the storage backend with, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/runner-log-storage`). Required only when `type` is `aws_s3`."
 	Deprecation                 = "Deprecation information for this resource. Revision can only be deprecated once it is published."
 	DeprecationEffectiveDate    = "Effective date when this resource will be deprecated and no longer available for use."
 )
@@ -226,7 +219,7 @@ const (
 	WfMiniSteps                = "Actions that are required to be performed once workflow execution is complete"
 	WfUserSchedules            = "Configuration for scheduling runs for the workflows."
 	WfStepsConfig              = "Workflow steps configuration. Valid for custom workflow types."
-	WfEnvironmentVariables     = "Environment variables for worklfow in workflow runs."
+	WfEnvironmentVariables     = "Environment variables made available to the workflow during its runs."
 	WfDeploymentPlatformConfig = "Deployment platform configuration."
 )
 

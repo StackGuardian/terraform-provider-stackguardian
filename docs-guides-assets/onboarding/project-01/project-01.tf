@@ -3,8 +3,8 @@
 terraform {
   required_providers {
     stackguardian = {
-      source  = "stackguardian/StackGuardian"
-      version = "1.0.0-rc5"
+      source  = "StackGuardian/stackguardian"
+      version = "~> 1.12"
     }
   }
 }
@@ -12,7 +12,7 @@ terraform {
 provider "stackguardian" {
   api_key  = "<YOUR-API-KEY>"                      # Replace this with your API key
   org_name = "<YOUR-ORG-NAME>"                     # Replace this with your organization name
-  api_uri  = "https://testapi.qa.stackguardian.io" # Use testapi instead of production for testing
+  api_uri  = "https://api.app.stackguardian.io" # Use https://api.us.stackguardian.io for the US region
 }
 
 

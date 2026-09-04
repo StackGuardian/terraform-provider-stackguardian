@@ -1,0 +1,47 @@
+name: 📝 Documentation issue
+description: Something in the docs is wrong, unclear, or missing.
+title: "docs: "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The provider documentation is being actively revamped, so corrections and
+        requests are both very welcome — including small ones.
+
+  - type: input
+    id: page
+    attributes:
+      label: Which page?
+      description: The registry URL, or the path under `docs/`.
+      placeholder: https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/resources/policy
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of problem is it?
+      options:
+        - Wrong — the documented behaviour does not match what the provider does
+        - Unclear — technically correct but hard to follow
+        - Missing — something is not documented at all
+        - Example does not work
+    validations:
+      required: true
+
+  - type: textarea
+    id: detail
+    attributes:
+      label: What's the problem?
+      description: |
+        Quote the passage if it is wrong, or describe what you were trying to do if
+        something is missing. If an example fails, paste the error.
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: What would be better? (optional)
+      description: A suggested wording or the missing information, if you know it.
