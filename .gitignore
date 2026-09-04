@@ -60,3 +60,5 @@ dist
 
 .vscode
 .env
+
+.idea/
