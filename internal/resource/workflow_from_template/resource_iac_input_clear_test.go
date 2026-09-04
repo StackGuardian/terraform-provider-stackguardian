@@ -77,11 +77,11 @@ func setupTemplateWithInputDefaults(t *testing.T, name string) string {
 	t.Cleanup(func() {
 		eff := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
 		msg := "cleanup"
-		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, revisionID,
+		_, _ = client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, revisionID,
 			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
 				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{EffectiveDate: &eff, Message: &msg})})
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
 	})
 	return fmt.Sprintf("/%s/%s:1", org, name)
 }

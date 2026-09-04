@@ -56,7 +56,7 @@ func (r *RoleV4Resource) Configure(_ context.Context, req resource.ConfigureRequ
 	}
 
 	r.client = provider.Client
-	r.org_name = provider.Org_name
+	r.org_name = provider.OrgName
 }
 
 func (r *RoleV4Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

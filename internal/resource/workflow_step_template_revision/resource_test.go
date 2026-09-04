@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 
@@ -13,37 +12,39 @@ import (
 	sgoption "github.com/StackGuardian/sg-sdk-go/option"
 	"github.com/StackGuardian/sg-sdk-go/workflowsteptemplaterevision"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-var stepTemplateOrg = os.Getenv("STACKGUARDIAN_ORG_NAME")
+var stepTemplateOrg = config.Get().OrgName
 
 func getStepTemplateTestClient() *sgclient.Client {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+	cfg := config.Get()
 	return sgclient.NewClient(
-		sgoption.WithApiKey(fmt.Sprintf("apikey %s", os.Getenv("STACKGUARDIAN_API_KEY"))),
-		sgoption.WithBaseURL(os.Getenv("STACKGUARDIAN_API_URI")),
+		sgoption.WithApiKey(cfg.FormatApiKey()),
+		sgoption.WithBaseURL(cfg.ApiUri),
 		sgoption.WithHTTPHeader(customHeader),
 	)
 }
 
 func deleteStepTemplateFixture(templateId string) {
 	client := getStepTemplateTestClient()
-	client.WorkflowStepTemplate.DeleteWorkflowStepTemplate(context.TODO(), stepTemplateOrg, templateId)
+	_ = client.WorkflowStepTemplate.DeleteWorkflowStepTemplate(context.TODO(), stepTemplateOrg, templateId)
 }
 
 func deleteStepTemplateRevisionFixture(revisionId string) {
 	client := getStepTemplateTestClient()
-	client.WorkflowStepTemplateRevision.DeleteWorkflowStepTemplateRevision(context.TODO(), stepTemplateOrg, revisionId, true)
+	_ = client.WorkflowStepTemplateRevision.DeleteWorkflowStepTemplateRevision(context.TODO(), stepTemplateOrg, revisionId, true)
 }
 
 func deprecateStepTemplateRevisionFixture(revisionId string) {
 	client := getStepTemplateTestClient()
 	effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
 	message := "This revision is deprecated"
-	client.WorkflowStepTemplateRevision.UpdateWorkflowStepTemplateRevision(context.TODO(), stepTemplateOrg, revisionId, &workflowsteptemplaterevision.UpdateWorkflowStepTemplateRevisionModel{
+	_, _ = client.WorkflowStepTemplateRevision.UpdateWorkflowStepTemplateRevision(context.TODO(), stepTemplateOrg, revisionId, &workflowsteptemplaterevision.UpdateWorkflowStepTemplateRevisionModel{
 		Deprecation: sgsdkgo.Optional(workflowsteptemplaterevision.Deprecation{
 			EffectiveDate: &effectiveDate,
 			Message:       &message,

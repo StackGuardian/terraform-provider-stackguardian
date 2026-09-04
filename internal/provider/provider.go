@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	sgoption "github.com/StackGuardian/sg-sdk-go/option"
+	sgconfig "github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	connectordatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/connector"
 	policydatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/policy"
@@ -140,14 +140,12 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 		return
 	}
 
-	api_uri := "https://api.app.stackguardian.io"
+	sgCfg := sgconfig.Get()
 
-	if os.Getenv("STACKGUARDIAN_API_URI") != "" {
-		api_uri = os.Getenv("STACKGUARDIAN_API_URI")
-	}
+	api_uri := sgCfg.ApiUri
 
-	org_name := os.Getenv("STACKGUARDIAN_ORG_NAME")
-	api_key := os.Getenv("STACKGUARDIAN_API_KEY")
+	org_name := sgCfg.OrgName
+	api_key := sgCfg.ApiKey
 
 	// Default values to environment variables, but override
 	// with Terraform configuration value if set.
@@ -200,7 +198,7 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 	provInfo := customTypes.ProviderInfo{
 		ApiBaseURL: api_uri,
 		ApiKey:     api_key,
-		Org_name:   org_name,
+		OrgName:    org_name,
 		Client:     client,
 	}
 	// Make the HashiCups client available during DataSource and Resource

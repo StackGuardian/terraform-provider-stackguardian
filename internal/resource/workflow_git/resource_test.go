@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 
@@ -12,19 +11,21 @@ import (
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	sgoption "github.com/StackGuardian/sg-sdk-go/option"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
+var org = config.Get().OrgName
 
 func getClient() *sgclient.Client {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
+	cfg := config.Get()
 	return sgclient.NewClient(
-		sgoption.WithApiKey(fmt.Sprintf("apikey %s", os.Getenv("STACKGUARDIAN_API_KEY"))),
-		sgoption.WithBaseURL(os.Getenv("STACKGUARDIAN_API_URI")),
+		sgoption.WithApiKey(cfg.FormatApiKey()),
+		sgoption.WithBaseURL(cfg.ApiUri),
 		sgoption.WithHTTPHeader(customHeader),
 	)
 }
@@ -47,12 +48,12 @@ func createWorkflowGroupFixture(wfGrpName string) error {
 
 func deleteWorkflowGroupFixture(wfGrpName string) {
 	client := getClient()
-	client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), org, wfGrpName)
+	_, _ = client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), org, wfGrpName)
 }
 
 func deleteWorkflowGitFixture(wfGrpName, workflowName string) {
 	client := getClient()
-	client.Workflows.DeleteWorkflow(context.TODO(), org, workflowName, wfGrpName)
+	_, _ = client.Workflows.DeleteWorkflow(context.TODO(), org, workflowName, wfGrpName)
 }
 
 func testAccWorkflowGit(wfGrpName, resourceName, wfType, additionalConfig string) string {

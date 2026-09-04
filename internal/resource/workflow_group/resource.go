@@ -55,7 +55,7 @@ func (r *workflowGroupResource) Configure(_ context.Context, req resource.Config
 	}
 
 	r.client = provider.Client
-	r.org_name = provider.Org_name
+	r.org_name = provider.OrgName
 }
 
 func (r *workflowGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

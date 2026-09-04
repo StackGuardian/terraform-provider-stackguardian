@@ -1821,6 +1821,9 @@ func ConvertMinistepsFromAPI(ctx context.Context, ministeps *workflowtemplaterev
 			return nullObject, diags
 		}
 		wfChainingModel.Errored, diags = ConvertWorkflowChainingFromAPI(ctx, ministeps.WfChaining.ERRORED)
+		if diags.HasError() {
+			return nullObject, diags
+		}
 
 		wfChainingObj, diags := types.ObjectValueFrom(ctx, MinistepsWfChainingContainerModel{}.AttributeTypes(), wfChainingModel)
 		if diags.HasError() {

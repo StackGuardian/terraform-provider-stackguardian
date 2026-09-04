@@ -54,7 +54,7 @@ The full list of supported resources and data sources, with documentation for ea
 
 Requirements:
 
-- [Go](https://go.dev/) >= 1.21
+- [Go](https://go.dev/) >= 1.26.7
 - [Terraform](https://developer.hashicorp.com/terraform/downloads) >= 0.13
 
 ```bash

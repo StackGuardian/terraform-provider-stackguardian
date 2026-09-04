@@ -47,7 +47,7 @@ func (d *stackTemplateDataSource) Configure(_ context.Context, req datasource.Co
 	}
 
 	d.client = provInfo.Client
-	d.orgName = provInfo.Org_name
+	d.orgName = provInfo.OrgName
 }
 
 func (d *stackTemplateDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {

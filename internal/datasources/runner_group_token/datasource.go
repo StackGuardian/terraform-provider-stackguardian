@@ -51,7 +51,7 @@ func (d *runnerGroupTokenDataSource) Configure(_ context.Context, req datasource
 	d.apiBaseURL = provInfo.ApiBaseURL
 	d.apiKey = provInfo.ApiKey
 	d.client = provInfo.Client
-	d.orgName = provInfo.Org_name
+	d.orgName = provInfo.OrgName
 }
 
 func (d *runnerGroupTokenDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
