@@ -96,14 +96,55 @@ Policies enforce rules at run time, independently of who has access:
 resource "stackguardian_policy" "production_guardrail" {
   resource_name = "production-guardrail"
   policy_type   = "GENERAL"
-  enforced_on   = ["/wfgrps/production/"]
+
+  # No trailing slash on a workflow group path.
+  enforced_on = ["/wfgrps/production"]
 
   policies_config = [{
     name    = "production-guardrail"
     on_fail = "FAIL"
+    on_pass = "PASS"
+
+    # A policy needs a body. Written inline, that means policy_input_data
+    # carrying the definition and a policy_vcs_config saying it is inline.
+    policy_input_data = {
+      schema_type = "TIRITH_JSON"
+      data = jsonencode({
+        meta = {
+          version           = "v1"
+          required_provider = "stackguardian/terraform_plan"
+        }
+        eval_expression = "no-public-buckets"
+        evaluators = [{
+          id          = "no-public-buckets"
+          description = "S3 buckets must not be public"
+          provider_args = {
+            operation_type               = "attribute"
+            terraform_resource_type      = "aws_s3_bucket"
+            terraform_resource_attribute = "acl"
+          }
+          condition = {
+            type            = "NotEquals"
+            value           = "public-read"
+            error_tolerance = 0
+          }
+        }]
+      })
+    }
+
+    policy_vcs_config = {
+      use_marketplace_template = false
+      custom_source = {
+        source_config_kind      = "SG_POLICY_FRAMEWORK"
+        source_config_dest_kind = "INLINE"
+      }
+    }
   }]
 }
 ```
+
+See [Policies](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Policies)
+for the other ways to supply a body, and for approval gating.
 
 ## Worked examples
 
@@ -112,7 +153,7 @@ Two complete configurations are maintained in the repository:
 | Example                                                                                                                          | Shows                                                              |
 | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | [`project-01`](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/docs-guides-assets/onboarding/project-01) | A flat team: three workflow groups, one developer role, connectors, and an import script. |
-| [`project-02`](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/docs-guides-assets/onboarding/project-02) | A hierarchical team: frontend and backend groups with separate manager and developer roles. |
+| [`project-02`](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/docs-guides-assets/onboarding/project-02) | A hierarchical team: manager and developer roles per team, differing in who may delete a workflow and release a held run. |
 
 Both use placeholder credentials and organization names — replace them before applying.
 
