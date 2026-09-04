@@ -40,7 +40,7 @@ func getAPIToken(runnerGroupID string, apiBaseUrl string, apiKey string, orgName
 	if err != nil {
 		return nil, err
 	}
-	defer reqResp.Body.Close()
+	defer func() { _ = reqResp.Body.Close() }()
 
 	reqRespBody, err := io.ReadAll(reqResp.Body)
 	if err != nil {

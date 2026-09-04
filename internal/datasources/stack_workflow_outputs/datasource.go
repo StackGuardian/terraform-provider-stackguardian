@@ -47,7 +47,7 @@ func (d *stackWorkflowOutputsDataSource) Configure(_ context.Context, req dataso
 	}
 
 	d.client = provInfo.Client
-	d.orgName = provInfo.Org_name
+	d.orgName = provInfo.OrgName
 }
 
 func (d *stackWorkflowOutputsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -75,7 +75,7 @@ func (d *stackWorkflowOutputsDataSource) Read(ctx context.Context, req datasourc
 		resp.Diagnostics.AddError("Unable to read stack workflow outputs", "")
 		return
 	}
-	defer reqResp.Body.Close()
+	defer func() { _ = reqResp.Body.Close() }()
 
 	body, err := io.ReadAll(reqResp.Body)
 	if err != nil {

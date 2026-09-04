@@ -55,7 +55,7 @@ func (r *runnerGroupResource) Configure(_ context.Context, req resource.Configur
 	}
 
 	r.client = providerInfo.Client
-	r.org_name = providerInfo.Org_name
+	r.org_name = providerInfo.OrgName
 }
 
 func (r *runnerGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

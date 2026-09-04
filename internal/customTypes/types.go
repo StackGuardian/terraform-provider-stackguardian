@@ -7,6 +7,6 @@ import (
 type ProviderInfo struct {
 	ApiBaseURL string
 	ApiKey     string
-	Org_name   string
+	OrgName    string
 	Client     *sgclient.Client
 }

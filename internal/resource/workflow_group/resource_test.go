@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
@@ -69,7 +69,7 @@ func TestAccWorkflowGroupRecreateOnExternalDelete(t *testing.T) {
 			{
 				PreConfig: func() {
 					client := acctest.SGClient()
-					_, err := client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), os.Getenv("STACKGUARDIAN_ORG_NAME"), workflowGroupName)
+					_, err := client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), config.Get().OrgName, workflowGroupName)
 					if err != nil {
 						t.Fatal(err)
 					}
