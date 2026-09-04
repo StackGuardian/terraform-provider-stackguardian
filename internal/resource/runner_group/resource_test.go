@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
@@ -15,8 +15,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-var azureStorageBackendAccessKey = os.Getenv("TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY")
-var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
+var azureStorageBackendAccessKey = config.Get().AzureStorageAccessKey
+var org = config.Get().OrgName
 
 // deleteRunnerGroupFixture is a safety-net cleanup: Terraform's own destroy step tears the
 // runner group down in the normal case. This exists so a test that fails before reaching
@@ -153,7 +153,7 @@ func TestAccRunnerGroupRecreateOnExternalDelete(t *testing.T) {
 			{
 				PreConfig: func() {
 					client := acctest.SGClient()
-					_, err := client.RunnerGroups.DeleteRunnerGroup(context.TODO(), os.Getenv("STACKGUARDIAN_ORG_NAME"), runnerGroupName)
+					_, err := client.RunnerGroups.DeleteRunnerGroup(context.TODO(), config.Get().OrgName, runnerGroupName)
 					if err != nil {
 						t.Fatal(err)
 					}

@@ -46,7 +46,7 @@ func (r *workflowGitResource) Configure(_ context.Context, req resource.Configur
 		return
 	}
 	r.client = provider.Client
-	r.org_name = provider.Org_name
+	r.org_name = provider.OrgName
 }
 
 func (r *workflowGitResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
@@ -98,7 +98,7 @@ func (r *workflowGitResource) Create(ctx context.Context, req resource.CreateReq
 
 		_, err := r.client.Workflows.CreateVcsTriggers(ctx, r.org_name, plan.WorkflowGroupId.ValueString(), id, vcsTriggerReq)
 		if err != nil {
-			r.client.Workflows.DeleteWorkflow(ctx, r.org_name, id, plan.WorkflowGroupId.ValueString())
+			_, _ = r.client.Workflows.DeleteWorkflow(ctx, r.org_name, id, plan.WorkflowGroupId.ValueString())
 			resp.Diagnostics.AddError(
 				"Error creating vcs_triggers for workflow_git",
 				"VCS trigger registration failed: "+err.Error()+". The workflow was deleted to avoid leaving orphaned resources.",

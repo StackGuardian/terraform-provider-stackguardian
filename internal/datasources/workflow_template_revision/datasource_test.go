@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 
@@ -15,11 +14,12 @@ import (
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
+var org = config.Get().OrgName
 
 // setupPopulatedRevision creates and publishes a CUSTOM template revision populated with the
 // fields a workflow_from_template user would want to read back for override/merge logic:
@@ -153,7 +153,7 @@ func setupStepTemplate(t *testing.T, name string) string {
 		t.Fatalf("create step tpl: %s", err)
 	}
 	t.Cleanup(func() {
-		client.WorkflowStepTemplate.DeleteWorkflowStepTemplate(context.TODO(), org, name)
+		_ = client.WorkflowStepTemplate.DeleteWorkflowStepTemplate(context.TODO(), org, name)
 	})
 	return fmt.Sprintf("/%s/%s:1", org, name)
 }

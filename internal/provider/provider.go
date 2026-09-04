@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	sgoption "github.com/StackGuardian/sg-sdk-go/option"
+	sgconfig "github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	connectordatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/connector"
 	policydatasource "github.com/StackGuardian/terraform-provider-stackguardian/internal/datasources/policy"
@@ -75,9 +75,9 @@ type stackguardianProvider struct {
 }
 
 type stackguardianProviderModel struct {
-	Api_key  types.String `tfsdk:"api_key"`
-	Api_uri  types.String `tfsdk:"api_uri"`
-	Org_name types.String `tfsdk:"org_name"`
+	APIKey  types.String `tfsdk:"api_key"`
+	APIUri  types.String `tfsdk:"api_uri"`
+	OrgName types.String `tfsdk:"org_name"`
 }
 
 // Metadata returns the provider type name.
@@ -92,7 +92,7 @@ func (p *stackguardianProvider) Schema(_ context.Context, _ provider.SchemaReque
 		Attributes: map[string]schema.Attribute{
 			"org_name": schema.StringAttribute{
 				Optional:            true,
-				MarkdownDescription: "Stackguardian Organization name. **Required** if not using environment variable STACKGUARDIAN_ORG_NAME",
+				MarkdownDescription: "StackGuardian Organization name. **Required** if not using environment variable STACKGUARDIAN_ORG_NAME",
 			},
 			"api_key": schema.StringAttribute{
 				Optional:            true,
@@ -107,9 +107,9 @@ func (p *stackguardianProvider) Schema(_ context.Context, _ provider.SchemaReque
 	}
 }
 
-// Configure prepares a Stackguardian API client for data sources and resources.
+// Configure prepares a StackGuardian API client for data sources and resources.
 func (p *stackguardianProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	tflog.Info(ctx, "Configuring Stackguardian client")
+	tflog.Info(ctx, "Configuring StackGuardian client")
 
 	var config stackguardianProviderModel
 	diags := req.Config.Get(ctx, &config)
@@ -118,20 +118,20 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 		return
 	}
 
-	if config.Org_name.IsUnknown() {
+	if config.OrgName.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("org_name"),
-			"Unknown Stackguardian Organization Name",
-			"The provider cannot create the Stackguardian API client as there is an unknown configuration value for the Stackguardian organization name. "+
+			"Unknown StackGuardian Organization Name",
+			"The provider cannot create the StackGuardian API client as there is an unknown configuration value for the StackGuardian organization name. "+
 				"Either set the value statically in the configuration, or use the STACKGUARDIAN_ORG_NAME environment variable.",
 		)
 	}
 
-	if config.Api_key.IsUnknown() {
+	if config.APIKey.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("api_key"),
-			"Unknown Stackguardian API Key",
-			"The provider cannot create the Stackguardian API client as there is an unknown configuration value for the Stackguardian API Key. "+
+			"Unknown StackGuardian API Key",
+			"The provider cannot create the StackGuardian API client as there is an unknown configuration value for the StackGuardian API Key. "+
 				"Either set the value statically in the configuration, or use the STACKGUARDIAN_API_URI environment variable.",
 		)
 	}
@@ -140,67 +140,61 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 		return
 	}
 
-	api_uri := "https://api.app.stackguardian.io"
+	cgf := sgconfig.Get()
 
-	if os.Getenv("STACKGUARDIAN_API_URI") != "" {
-		api_uri = os.Getenv("STACKGUARDIAN_API_URI")
+	apiURI := cgf.ApiUri
+	if !config.APIUri.IsNull() {
+		apiURI = config.APIUri.ValueString()
 	}
 
-	org_name := os.Getenv("STACKGUARDIAN_ORG_NAME")
-	api_key := os.Getenv("STACKGUARDIAN_API_KEY")
-
-	// Default values to environment variables, but override
-	// with Terraform configuration value if set.
-	if !config.Org_name.IsNull() {
-		org_name = config.Org_name.ValueString()
+	orgName := cgf.OrgName
+	if !config.OrgName.IsNull() {
+		orgName = config.OrgName.ValueString()
 	}
 
-	if !config.Api_key.IsNull() {
-		api_key = config.Api_key.ValueString()
-	}
-
-	if !config.Api_uri.IsNull() {
-		api_uri = config.Api_uri.ValueString()
+	apiKey := cgf.ApiKey
+	if !config.APIKey.IsNull() {
+		apiKey = config.APIKey.ValueString()
 	}
 
 	// If any of the expected configurations are missing, return
 	// errors with provider-specific guidance.
-	if org_name == "" {
+	if orgName == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("org_name"),
 			"Missing Organization Name",
-			"The provider cannot create the Stackguardian API client as there is an unknown configuration value for the Stackguardian organization name. "+
+			"The provider cannot create the StackGuardian API client as there is an unknown configuration value for the StackGuardian organization name. "+
 				"Either set the value statically in the configuration, or use the STACKGUARDIAN_ORG_NAME environment variable.",
 		)
 	}
-	if api_key == "" {
+	if apiKey == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("api_key"),
 			"Missing Organization Name",
-			"The provider cannot create the Stackguardian API client as there is an unknown configuration value for the Stackguardian API Key. "+
+			"The provider cannot create the StackGuardian API client as there is an unknown configuration value for the StackGuardian API Key. "+
 				"Either set the value statically in the configuration, or use the STACKGUARDIAN_API_URI environment variable.",
 		)
 	}
-	if api_uri == "" {
+	if apiURI == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("api_uri"),
 			"Missing Organization Name",
-			"The provider cannot create the Stackguardian API client as there is an unknown configuration value for the Stackguardian API URI. "+
+			"The provider cannot create the StackGuardian API client as there is an unknown configuration value for the StackGuardian API URI. "+
 				"Either set the value statically in the configuration, or use the STACKGUARDIAN_API_URI environment variable.",
 		)
 	}
 
-	api_key = "apikey " + api_key
+	apiKey = "apikey " + apiKey
 	client := sgclient.NewClient(
-		sgoption.WithApiKey(api_key),
-		sgoption.WithBaseURL(api_uri),
+		sgoption.WithApiKey(apiKey),
+		sgoption.WithBaseURL(apiURI),
 		sgoption.WithHTTPHeader(p.customHeaders),
 	)
 	//Set the values in our struct
 	provInfo := customTypes.ProviderInfo{
-		ApiBaseURL: api_uri,
-		ApiKey:     api_key,
-		Org_name:   org_name,
+		ApiBaseURL: apiURI,
+		ApiKey:     apiKey,
+		OrgName:    orgName,
 		Client:     client,
 	}
 	// Make the HashiCups client available during DataSource and Resource
@@ -209,13 +203,13 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 	resp.ResourceData = &provInfo
 
 	// Create a new client using the API key and base URL
-	tflog.Debug(ctx, fmt.Sprintf("Organization: %s", org_name))
-	tflog.Debug(ctx, fmt.Sprintf("API Key: %s", api_key))
-	tflog.Debug(ctx, fmt.Sprintf("API URI: %s", api_uri))
+	tflog.Debug(ctx, fmt.Sprintf("Organization: %s", orgName))
+	tflog.Debug(ctx, fmt.Sprintf("API Key: %s", apiKey))
+	tflog.Debug(ctx, fmt.Sprintf("API URI: %s", apiURI))
 
-	tflog.Debug(ctx, "Creating Stackguardian client")
+	tflog.Debug(ctx, "Creating StackGuardian client")
 
-	tflog.Info(ctx, "Configured Stackguardian client", map[string]any{"success": true})
+	tflog.Info(ctx, "Configured StackGuardian client", map[string]any{"success": true})
 }
 
 // DataSources defines the data sources implemented in the provider.

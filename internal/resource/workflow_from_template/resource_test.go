@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -19,18 +18,20 @@ import (
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
+var org = config.Get().OrgName
 
 func getClient() *sgclient.Client {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+	cfg := config.Get()
 	return sgclient.NewClient(
-		sgoption.WithApiKey(fmt.Sprintf("apikey %s", os.Getenv("STACKGUARDIAN_API_KEY"))),
-		sgoption.WithBaseURL(os.Getenv("STACKGUARDIAN_API_URI")),
+		sgoption.WithApiKey(cfg.FormatApiKey()),
+		sgoption.WithBaseURL(cfg.ApiUri),
 		sgoption.WithHTTPHeader(customHeader),
 	)
 }
@@ -53,12 +54,12 @@ func createWorkflowGroupFixture(wfGrpName string) error {
 
 func deleteWorkflowGroupFixture(wfGrpName string) {
 	client := getClient()
-	client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), org, wfGrpName)
+	_, _ = client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), org, wfGrpName)
 }
 
 func deleteWorkflowUsingTemplateFixture(wfGrpName, workflowName string) {
 	client := getClient()
-	client.Workflows.DeleteWorkflow(context.TODO(), org, workflowName, wfGrpName)
+	_, _ = client.Workflows.DeleteWorkflow(context.TODO(), org, workflowName, wfGrpName)
 }
 
 // setupWorkflowTemplate creates a workflow template + published revision and registers
@@ -146,6 +147,7 @@ func setupWorkflowTemplate(t *testing.T, templateID string) string {
 		},
 	)
 	if err != nil && !is409(err) {
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
 		t.Fatalf("setupWorkflowTemplate: create revision for %q: %s", templateID, err)
 	}
 
@@ -157,6 +159,8 @@ func setupWorkflowTemplate(t *testing.T, templateID string) string {
 		},
 	)
 	if err != nil {
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
 		t.Fatalf("setupWorkflowTemplate: publish revision %q: %s", revisionID, err)
 	}
 
@@ -168,8 +172,27 @@ func setupWorkflowTemplate(t *testing.T, templateID string) string {
 		},
 	)
 	if err != nil {
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
 		t.Fatalf("setupWorkflowTemplate: publish template %q: %s", templateID, err)
 	}
+
+	// 5. Register cleanup: deprecate revision → delete revision → delete template
+	t.Cleanup(func() {
+		effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
+		message := "Test cleanup"
+		_, _ = client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
+			context.TODO(), org, revisionID,
+			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
+				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{
+					EffectiveDate: &effectiveDate,
+					Message:       &message,
+				}),
+			},
+		)
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+	})
 
 	return fmt.Sprintf("/%s/%s", org, templateID)
 }
@@ -246,8 +269,24 @@ func addSecondRevision(t *testing.T, templateID string) string {
 		},
 	)
 	if err != nil {
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
 		t.Fatalf("addSecondRevision: publish revision %q: %s", revisionID, err)
 	}
+
+	t.Cleanup(func() {
+		effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
+		message := "Test cleanup"
+		_, _ = client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
+			context.TODO(), org, revisionID,
+			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
+				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{
+					EffectiveDate: &effectiveDate,
+					Message:       &message,
+				}),
+			},
+		)
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+	})
 
 	return fmt.Sprintf("/%s/%s:2", org, templateID)
 }
@@ -315,7 +354,7 @@ func setupWorkflowStepTemplate(t *testing.T, name string) string {
 	}
 
 	t.Cleanup(func() {
-		client.WorkflowStepTemplate.DeleteWorkflowStepTemplate(context.TODO(), org, name)
+		_ = client.WorkflowStepTemplate.DeleteWorkflowStepTemplate(context.TODO(), org, name)
 	})
 
 	return fmt.Sprintf("/%s/%s:1", org, name)
