@@ -63,7 +63,7 @@ resource "stackguardian_role_assignment" "alice" {
 
 Assign to SSO groups rather than individuals where you can — it keeps the Terraform
 configuration stable as people join and leave. See
-[Access Control](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/AccessControl)
+[Access Management](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/AccessManagement)
 for the SSO naming pitfall.
 
 ## 3. Add connectors

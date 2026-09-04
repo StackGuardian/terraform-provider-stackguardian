@@ -9,6 +9,10 @@ description: |-
 
 # stackguardian_stack_template_revision (Resource)
 
+<!-- docs-revamp-banner:start -->
+~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
+<!-- docs-revamp-banner:end -->
+
 Manages a versioned revision of a `stackguardian_stack_template` — the ordered workflows, inputs and configuration a stack is actually created from.
 
 ## Revisions

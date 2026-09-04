@@ -41,9 +41,12 @@ test-examples-quickstart:
 test-examples-onboarding:
 	bash docs-guides-assets/onboarding/project-test/test-onboarding.sh $(ARGS)
 
+# The banner step is temporary, for as long as the docs revamp is in progress.
+# Delete the line below and re-run to remove the banner from every page.
 docs-generate:
 	tfplugindocs generate \
 		--provider-name stackguardian --website-source-dir docs-templates
+	bash scripts/inject-docs-banner.sh
 
 docs-validate:
 	tfplugindocs validate --provider-name stackguardian

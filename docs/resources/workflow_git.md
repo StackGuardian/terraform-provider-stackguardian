@@ -9,6 +9,10 @@ description: |-
 
 # stackguardian_workflow_git (Resource)
 
+<!-- docs-revamp-banner:start -->
+~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
+<!-- docs-revamp-banner:end -->
+
 Manages a workflow defined directly from a git repository, without going through a workflow template. Workflows live inside a `stackguardian_workflow_group`.
 
 ## When to use this instead of `stackguardian_workflow_from_template`
