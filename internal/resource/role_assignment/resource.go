@@ -55,7 +55,7 @@ func (r *roleAssignmentResource) Configure(_ context.Context, req resource.Confi
 	}
 
 	r.client = providerInfo.Client
-	r.org_name = providerInfo.Org_name
+	r.org_name = providerInfo.OrgName
 }
 
 func (r *roleAssignmentResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

@@ -49,7 +49,7 @@ func (r *workflowUsingTemplateResource) Configure(_ context.Context, req resourc
 		return
 	}
 	r.client = provider.Client
-	r.org_name = provider.Org_name
+	r.org_name = provider.OrgName
 }
 
 func (r *workflowUsingTemplateResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

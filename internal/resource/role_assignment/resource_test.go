@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
@@ -138,7 +138,7 @@ func TestAccRoleAssignmentRecreateOnExternalDelete(t *testing.T) {
 			{
 				PreConfig: func() {
 					client := acctest.SGClient()
-					_, err := client.AccessManagement.DeleteUser(context.TODO(), os.Getenv("STACKGUARDIAN_ORG_NAME"), &sgsdkgo.GetorRemoveUserFromOrganization{UserId: &userId})
+					_, err := client.AccessManagement.DeleteUser(context.TODO(), config.Get().OrgName, &sgsdkgo.GetorRemoveUserFromOrganization{UserId: &userId})
 					if err != nil {
 						t.Fatal(err)
 					}

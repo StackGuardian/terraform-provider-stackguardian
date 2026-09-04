@@ -49,7 +49,7 @@ func (d *stackOutputsDataSource) Configure(_ context.Context, req datasource.Con
 	}
 
 	d.client = provInfo.Client
-	d.orgName = provInfo.Org_name
+	d.orgName = provInfo.OrgName
 }
 
 // Read refreshes the Terraform state with the latest data.

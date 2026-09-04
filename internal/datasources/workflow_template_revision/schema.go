@@ -361,7 +361,7 @@ func (d *workflowTemplateRevisionDataSource) Schema(_ context.Context, _ datasou
 					},
 				},
 			},
-			"mini_steps":          miniStepsSchema,
+			"mini_steps": miniStepsSchema,
 			"runner_constraints": schema.SingleNestedAttribute{
 				Computed: true,
 				Attributes: map[string]schema.Attribute{
@@ -416,7 +416,7 @@ func (d *workflowTemplateRevisionDataSource) Schema(_ context.Context, _ datasou
 			"user_job_memory": schema.Int64Attribute{
 				Computed: true,
 			},
-			"runtime_source":  runtimeSourceSchema,
+			"runtime_source":   runtimeSourceSchema,
 			"terraform_config": terraformConfigSchema,
 			// deployment_platform_config is a LIST in the API (and in the shared revision
 			// model, which is types.List). Declaring it as a single nested object here caused

@@ -49,7 +49,7 @@ func (r *policyResrouce) Configure(_ context.Context, req resource.ConfigureRequ
 	}
 
 	r.client = provider.Client
-	r.orgName = provider.Org_name
+	r.orgName = provider.OrgName
 }
 
 func (r *policyResrouce) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

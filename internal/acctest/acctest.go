@@ -2,11 +2,11 @@ package acctest
 
 import (
 	"net/http"
-	"os"
 	"testing"
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	sgoption "github.com/StackGuardian/sg-sdk-go/option"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	stackguardianprovider "github.com/StackGuardian/terraform-provider-stackguardian/internal/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
@@ -19,21 +19,23 @@ func ProviderFactories(customHeader http.Header) map[string]func() (tfprotov6.Pr
 }
 
 func TestAccPreCheck(t *testing.T) {
-	if v := os.Getenv("STACKGUARDIAN_API_KEY"); v == "" {
+	cfg := config.Get()
+	if cfg.ApiKey == "" {
 		t.Fatal("STACKGUARDIAN_API_KEY must be set for acceptance tests")
 	}
-	if v := os.Getenv("STACKGUARDIAN_ORG_NAME"); v == "" {
+	if cfg.OrgName == "" {
 		t.Fatal("STACKGUARDIAN_ORG_NAME must be set for acceptance tests")
 	}
-	if v := os.Getenv("STACKGUARDIAN_API_URI"); v == "" {
+	if cfg.ApiUri == "" {
 		t.Fatal("STACKGUARDIAN_API_URI must be set for acceptance tests")
 	}
 }
 
 func SGClient() *sgclient.Client {
+	cfg := config.Get()
 	client := sgclient.NewClient(
-		sgoption.WithBaseURL(os.Getenv("STACKGUARDIAN_API_URI")),
-		sgoption.WithApiKey("apikey "+os.Getenv("STACKGUARDIAN_API_KEY")),
+		sgoption.WithBaseURL(cfg.ApiUri),
+		sgoption.WithApiKey(cfg.FormatApiKey()),
 	)
 
 	return client

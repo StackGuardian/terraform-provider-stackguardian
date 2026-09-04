@@ -49,7 +49,7 @@ func (d *workflowTemplateRevisionDataSource) Configure(_ context.Context, req da
 	}
 
 	d.client = provInfo.Client
-	d.orgName = provInfo.Org_name
+	d.orgName = provInfo.OrgName
 }
 
 func (d *workflowTemplateRevisionDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

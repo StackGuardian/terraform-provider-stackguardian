@@ -47,7 +47,7 @@ func (d *stackTemplateRevisionDataSource) Configure(_ context.Context, req datas
 	}
 
 	d.client = provInfo.Client
-	d.orgName = provInfo.Org_name
+	d.orgName = provInfo.OrgName
 }
 
 // Datasource-scoped schema helpers (mirrors resource/stack_template_revision/schema.go using datasource/schema types).
