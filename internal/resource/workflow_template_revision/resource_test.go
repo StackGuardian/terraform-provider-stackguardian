@@ -83,7 +83,7 @@ func TestAccWorkflowTemplateRevision_Basic(t *testing.T) {
 
 	err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 	defer deleteWorkflowTemplateFixture(templateID)
 	defer deleteWorkflowTemplateRevisionFixture(fmt.Sprintf("%s:1", templateID))
@@ -127,7 +127,7 @@ func TestAccWorkflowTemplateRevision_WithConfig(t *testing.T) {
 
 	err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err)
 	}
 	defer deleteWorkflowTemplateFixture(templateID)
 	defer deleteWorkflowTemplateRevisionFixture(fmt.Sprintf("%s:1", templateID))
@@ -184,7 +184,7 @@ func TestAccWorkflowTemplateRevision_WithDeploymentPlatformConfig(t *testing.T) 
 
 	err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err)
 	}
 	defer deleteWorkflowTemplateFixture(templateID)
 	defer deleteWorkflowTemplateRevisionFixture(fmt.Sprintf("%s:1", templateID))
