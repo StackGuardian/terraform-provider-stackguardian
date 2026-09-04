@@ -14,7 +14,7 @@ import (
 
 func ProviderFactories(customHeader http.Header) map[string]func() (tfprotov6.ProviderServer, error) {
 	return map[string]func() (tfprotov6.ProviderServer, error){
-		"stackguardian": providerserver.NewProtocol6WithError(stackguardianprovider.New("", customHeader)()),
+		"stackguardian": providerserver.NewProtocol6WithError(stackguardianprovider.New("test", customHeader)()),
 	}
 }
 
