@@ -43,7 +43,7 @@ output "policy_type" {
 
 ### Read-Only
 
-- `approvers` (List of String) StackGuardian users who can approve a held run, as fully qualified user IDs rather than bare email addresses: `<user-pool-id>/local/<email>`. Read an existing policy with the `stackguardian_policy` data source to see the prefix your organization uses. Applies only to `policy_type = "GENERAL"`.
+- `approvers` (List of String) StackGuardian users who can approve a held run. Each entry is a user's email address, or an SSO group name to allow anyone in that group; the fully qualified form `<user-pool-id>/local/<email>` is also accepted. Read an existing policy with the `stackguardian_policy` data source to see what your organization uses. Applies only to `policy_type = "GENERAL"`.
 - `description` (String) A brief description of the policy. Must be less than 256 characters.
 - `enforced_on` (List of String) What this policy is enforced on — either organization-wide, or any combination of workflow groups, workflows and connectors. <ul><li>`["*"]` — the whole organization. Used on its own, not combined with other entries.</li><li>`["/wfgrps/&lt;group&gt;"]` — a workflow group and everything inside it. No trailing slash.</li><li>Workflows and connectors follow the same resource-path convention and can be listed alongside workflow groups.</li></ul>Confirm an unfamiliar form against an existing policy before relying on it.
 - `number_of_approvals_required` (Number) Number of approvals required for a policy check to pass

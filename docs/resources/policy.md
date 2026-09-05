@@ -127,12 +127,13 @@ resource "stackguardian_policy" "approval_on_apply" {
 
   enforced_on = ["/wfgrps/${stackguardian_workflow_group.production.resource_name}"]
 
-  # Approvers are fully qualified user IDs, not bare email addresses:
-  # "<user-pool-id>/local/<email>". Read an existing policy with the
-  # stackguardian_policy data source to see the exact prefix your organization uses.
+  # Each approver is a user's email address, or an SSO group name to allow anyone in
+  # that group. The fully qualified form "<user-pool-id>/local/<email>" is also
+  # accepted. Read an existing policy with the stackguardian_policy data source to
+  # see what your organization uses.
   approvers = [
-    "eu-central-1_EXAMPLEPOOL/local/platform-lead@example.com",
-    "eu-central-1_EXAMPLEPOOL/local/sre-oncall@example.com",
+    "platform-lead@example.com",
+    "sre-oncall@example.com",
   ]
   number_of_approvals_required = 1
 
@@ -245,7 +246,7 @@ resource "stackguardian_policy" "opa_from_git" {
 
 ### Optional
 
-- `approvers` (List of String) StackGuardian users who can approve a held run, as fully qualified user IDs rather than bare email addresses: `<user-pool-id>/local/<email>`. Read an existing policy with the `stackguardian_policy` data source to see the prefix your organization uses. Applies only to `policy_type = "GENERAL"`.
+- `approvers` (List of String) StackGuardian users who can approve a held run. Each entry is a user's email address, or an SSO group name to allow anyone in that group; the fully qualified form `<user-pool-id>/local/<email>` is also accepted. Read an existing policy with the `stackguardian_policy` data source to see what your organization uses. Applies only to `policy_type = "GENERAL"`.
 - `description` (String) A brief description of the policy. Must be less than 256 characters.
 - `enforced_on` (List of String) What this policy is enforced on — either organization-wide, or any combination of workflow groups, workflows and connectors. <ul><li>`["*"]` — the whole organization. Used on its own, not combined with other entries.</li><li>`["/wfgrps/&lt;group&gt;"]` — a workflow group and everything inside it. No trailing slash.</li><li>Workflows and connectors follow the same resource-path convention and can be listed alongside workflow groups.</li></ul>Confirm an unfamiliar form against an existing policy before relying on it.
 - `id` (String) ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>
