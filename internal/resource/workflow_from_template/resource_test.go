@@ -419,8 +419,8 @@ func setupCustomWorkflowTemplate(t *testing.T, templateID string) string {
 func TestAccWorkflowUsingTemplate_WithWfStepsConfig(t *testing.T) {
 	templateID := setupCustomWorkflowTemplate(t, "tf-provider-wf-tmpl-wfsteps") + ":1"
 	stepTemplateID := setupWorkflowStepTemplate(t, "tf-provider-wf-step-tmpl")
-	wfGrpName := "tf-provider-wf-template-wfsteps-wfgrp"
-	id := "tf-provider-wf-template-wfsteps"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-wfsteps-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-wfsteps")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -470,8 +470,8 @@ func TestAccWorkflowUsingTemplate_WithWfStepsConfig(t *testing.T) {
 func TestAccWorkflowUsingTemplate_LifecycleWfStepsConfig(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-lifecyclesteps") + ":1"
 	stepTemplateID := setupWorkflowStepTemplate(t, "tf-provider-wf-lifecycle-step-tmpl")
-	wfGrpName := "tf-provider-wf-template-lifecyclesteps-wfgrp"
-	id := "tf-provider-wf-template-lifecyclesteps"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-lifecyclesteps-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-lifecyclesteps")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -515,8 +515,8 @@ func TestAccWorkflowUsingTemplate_LifecycleWfStepsConfig(t *testing.T) {
 
 func TestAccWorkflowUsingTemplate_Basic(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-basic") + ":1"
-	wfGrpName := "tf-provider-wf-template-basic-wfgrp"
-	id := "tf-provider-wf-template-basic"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-basic-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-basic")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -584,8 +584,8 @@ func TestAccWorkflowUsingTemplate_Basic(t *testing.T) {
 
 func TestAccWorkflowUsingTemplate_WithDescription(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-desc") + ":1"
-	wfGrpName := "tf-provider-wf-template-desc-wfgrp"
-	id := "tf-provider-wf-template-desc"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-desc-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-desc")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -694,8 +694,8 @@ func setupTemplateWithWfStepRevision(t *testing.T, name, stepRev string) string 
 func TestAccWorkflowUsingTemplate_WfStepRevisionInheritedFromTemplate(t *testing.T) {
 	stepRev := setupWorkflowStepTemplate(t, "tf-provider-wf-steprev-inh") // "/<org>/<name>:1"
 	templateID := setupTemplateWithWfStepRevision(t, "tf-provider-wf-tmpl-steprev-inh", stepRev)
-	wfGrpName := "tf-provider-wf-template-steprev-inh-wfgrp"
-	id := "tf-provider-wf-template-steprev-inh"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-steprev-inh-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-steprev-inh")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -758,8 +758,8 @@ func TestAccWorkflowUsingTemplate_WithWfStepTemplateRevisionId(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-wfsteprev") + ":1"
 	step1 := setupWorkflowStepTemplate(t, "tf-provider-wf-steprev-1") // "/<org>/<name>:1"
 	step2 := setupWorkflowStepTemplate(t, "tf-provider-wf-steprev-2")
-	wfGrpName := "tf-provider-wf-template-wfsteprev-wfgrp"
-	id := "tf-provider-wf-template-wfsteprev"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-wfsteprev-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-wfsteprev")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -805,8 +805,8 @@ func TestAccWorkflowUsingTemplate_WithWfStepTemplateRevisionId(t *testing.T) {
 
 func TestAccWorkflowUsingTemplate_WithTerraformConfig(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-tfcfg") + ":1"
-	wfGrpName := "tf-provider-wf-template-tfcfg-wfgrp"
-	id := "tf-provider-wf-template-tfcfg"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-tfcfg-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-tfcfg")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -854,8 +854,8 @@ func TestAccWorkflowUsingTemplate_WithTerraformConfig(t *testing.T) {
 // prove the update settled to a stable, no-diff state.
 func TestAccWorkflowUsingTemplate_NormalUpdate(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-normalupd") + ":1"
-	wfGrpName := "tf-provider-wf-template-normalupd-wfgrp"
-	id := "tf-provider-wf-template-normalupd"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-normalupd-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-normalupd")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -922,8 +922,8 @@ func TestAccWorkflowUsingTemplate_NormalUpdate(t *testing.T) {
 // false. Also asserts the plan is stable afterward (empty round-trips consistently).
 func TestAccWorkflowUsingTemplate_EmptyAllowBlankFalse(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-emptyblank") + ":1"
-	wfGrpName := "tf-provider-wf-template-emptyblank-wfgrp"
-	id := "tf-provider-wf-template-emptyblank"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-emptyblank-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-emptyblank")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -1009,11 +1009,11 @@ func TestAccWorkflowUsingTemplate_EmptyAllowBlankFalse(t *testing.T) {
 // than inherit it. Omitting the attribute entirely (control, step 2 of a separate run is
 // covered elsewhere) would instead inherit TMPL_VAR.
 func TestAccWorkflowUsingTemplate_ExplicitEmptySuppressesTemplateDefault(t *testing.T) {
-	base := "tf-provider-wf-tmpl-emptysuppress"
+	base := acctest.ResourceName("tf-provider-wf-tmpl-emptysuppress")
 	rev1 := setupWorkflowTemplate(t, base) + ":1" // supplies TMPL_VAR
 	rev2 := addSecondRevision(t, base)            // supplies REV2_VAR
-	wfGrpName := "tf-provider-wf-template-emptysuppress-wfgrp"
-	id := "tf-provider-wf-template-emptysuppress"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-emptysuppress-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-emptysuppress")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -1074,8 +1074,8 @@ func TestAccWorkflowUsingTemplate_ExplicitEmptySuppressesTemplateDefault(t *test
 
 func TestAccWorkflowUsingTemplate_WithEnvironmentVariables(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-envvars") + ":1"
-	wfGrpName := "tf-provider-wf-template-envvars-wfgrp"
-	id := "tf-provider-wf-template-envvars"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-envvars-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-envvars")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -1130,8 +1130,8 @@ func TestAccWorkflowUsingTemplate_WithEnvironmentVariables(t *testing.T) {
 
 func TestAccWorkflowUsingTemplate_WithUserSchedules(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-schedules") + ":1"
-	wfGrpName := "tf-provider-wf-template-schedules-wfgrp"
-	id := "tf-provider-wf-template-schedules"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-schedules-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-schedules")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -1183,8 +1183,8 @@ func TestAccWorkflowUsingTemplate_WithUserSchedules(t *testing.T) {
 
 func TestAccWorkflowUsingTemplate_WithTagsAndContextTags(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-tags") + ":1"
-	wfGrpName := "tf-provider-wf-template-tags-wfgrp"
-	id := "tf-provider-wf-template-tags"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-tags-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-tags")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -1235,8 +1235,8 @@ func TestAccWorkflowUsingTemplate_WithTagsAndContextTags(t *testing.T) {
 
 func TestAccWorkflowUsingTemplate_WithApprovers(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-approvers") + ":1"
-	wfGrpName := "tf-provider-wf-template-approvers-wfgrp"
-	id := "tf-provider-wf-template-approvers"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-approvers-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-approvers")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -1283,8 +1283,8 @@ func TestAccWorkflowUsingTemplate_WithApprovers(t *testing.T) {
 
 func TestAccWorkflowUsingTemplate_WithRunnerConstraints(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-runner") + ":1"
-	wfGrpName := "tf-provider-wf-template-runner-wfgrp"
-	id := "tf-provider-wf-template-runner"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-runner-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-runner")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -1341,8 +1341,8 @@ func TestAccWorkflowUsingTemplate_WithRunnerConstraints(t *testing.T) {
 
 func TestAccWorkflowUsingTemplate_WithIacInputData(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-iac-input") + ":1"
-	wfGrpName := "tf-provider-wf-template-iac-input-wfgrp"
-	id := "tf-provider-wf-template-iac-input"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-iac-input-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-iac-input")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -1402,9 +1402,9 @@ resource "stackguardian_workflow_from_template" "test" {
 
 func TestAccWorkflowUsingTemplate_InNestedWorkflowGroup(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-nested") + ":1"
-	parentWfGrpName := "tf-provider-wf-template-nested-parent"
+	parentWfGrpName := acctest.ResourceName("tf-provider-wf-template-nested-parent")
 	childWfGrpName := parentWfGrpName + "/tf-provider-wf-template-nested-child"
-	id := "tf-provider-wf-template-nested"
+	id := acctest.ResourceName("tf-provider-wf-template-nested")
 
 	if err := createWorkflowGroupFixture(parentWfGrpName); err != nil {
 		t.Errorf("failed to create parent workflow group fixture: %s", err.Error())
@@ -1447,8 +1447,8 @@ func TestAccWorkflowUsingTemplate_InNestedWorkflowGroup(t *testing.T) {
 // top-level attributes (state mirrors the fully-merged API record).
 func TestAccWorkflowUsingTemplate_FullResolution(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-resolved") + ":1"
-	wfGrpName := "tf-provider-wf-template-resolved-wfgrp"
-	id := "tf-provider-wf-template-resolved"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-resolved-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-resolved")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -1506,8 +1506,8 @@ func TestAccWorkflowUsingTemplate_FullResolution(t *testing.T) {
 // and that a clean plan immediately after apply shows no diff.
 func TestAccWorkflowUsingTemplate_TemplateDefaultsResolved(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-defaults") + ":1"
-	wfGrpName := "tf-provider-wf-template-defaults-wfgrp"
-	id := "tf-provider-wf-template-defaults"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-defaults-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-defaults")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -1647,8 +1647,8 @@ func setupDriftEnabledTemplate(t *testing.T, templateID string) string {
 // afterward (no "inconsistent result after apply", no perpetual diff).
 func TestAccWorkflowUsingTemplate_DriftCronDroppedWhenCheckFalse(t *testing.T) {
 	templateID := setupDriftEnabledTemplate(t, "tf-provider-wf-tmpl-driftcron") + ":1"
-	wfGrpName := "tf-provider-wf-template-driftcron-wfgrp"
-	id := "tf-provider-wf-template-driftcron"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-driftcron-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-driftcron")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -1711,8 +1711,8 @@ func TestAccWorkflowUsingTemplate_DriftCronDroppedWhenCheckFalse(t *testing.T) {
 // non-empty.
 func TestAccWorkflowUsingTemplate_DriftDetection(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-drift") + ":1"
-	wfGrpName := "tf-provider-wf-template-drift-wfgrp"
-	id := "tf-provider-wf-template-drift"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-drift-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-drift")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
@@ -1773,11 +1773,11 @@ func TestAccWorkflowUsingTemplate_DriftDetection(t *testing.T) {
 // must reflect rev2's REV2_VAR (not rev1's TMPL_VAR). The user-declared description is
 // preserved across the upgrade.
 func TestAccWorkflowUsingTemplate_RevisionUpgrade(t *testing.T) {
-	base := "tf-provider-wf-tmpl-upgrade"
+	base := acctest.ResourceName("tf-provider-wf-tmpl-upgrade")
 	rev1 := setupWorkflowTemplate(t, base) + ":1"
 	rev2 := addSecondRevision(t, base)
-	wfGrpName := "tf-provider-wf-template-upgrade-wfgrp"
-	id := "tf-provider-wf-template-upgrade"
+	wfGrpName := acctest.ResourceName("tf-provider-wf-template-upgrade-wfgrp")
+	id := acctest.ResourceName("tf-provider-wf-template-upgrade")
 
 	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())

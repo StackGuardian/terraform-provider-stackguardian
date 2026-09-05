@@ -78,7 +78,7 @@ func deprecateWorkflowTemplateRevisionFixture(revisionId string) {
 }
 
 func TestAccWorkflowTemplateRevision_Basic(t *testing.T) {
-	templateID := "tf-provider-workflow-template-revision-1"
+	templateID := acctest.ResourceName("tf-provider-workflow-template-revision-1")
 	alias := "revision1"
 
 	err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
@@ -122,7 +122,7 @@ func TestAccWorkflowTemplateRevision_Basic(t *testing.T) {
 }
 
 func TestAccWorkflowTemplateRevision_WithConfig(t *testing.T) {
-	templateID := "test-workflow-template-revision"
+	templateID := acctest.ResourceName("test-workflow-template-revision")
 	alias := "revision2"
 
 	err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
@@ -179,7 +179,7 @@ resource "stackguardian_workflow_template_revision" "test" {
 }
 
 func TestAccWorkflowTemplateRevision_WithDeploymentPlatformConfig(t *testing.T) {
-	templateID := "test-workflow-template-revision-dpc"
+	templateID := acctest.ResourceName("test-workflow-template-revision-dpc")
 	alias := "revision-dpc"
 
 	err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
@@ -250,7 +250,7 @@ resource "stackguardian_workflow_template_revision" "test" {
 }
 
 func TestAccWorkflowTemplateRevision_Lifecycle(t *testing.T) {
-	templateName := "tf-provider-wf-template-lifecycle"
+	templateName := acctest.ResourceName("tf-provider-wf-template-lifecycle")
 	alias := "v1"
 
 	// Safety-net cleanup. Defers run LIFO, so registration order here is the

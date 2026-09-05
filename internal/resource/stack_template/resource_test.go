@@ -13,7 +13,7 @@ import (
 var sourceConfigKind = "TERRAFORM"
 
 func TestAccStackTemplate_Basic(t *testing.T) {
-	templateName := "tf-provider-stack-template-1"
+	templateName := acctest.ResourceName("tf-provider-stack-template-1")
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
