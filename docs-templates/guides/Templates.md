@@ -63,7 +63,7 @@ resource "stackguardian_workflow_from_template" "example" {
 | Form | Use it for |
 | --- | --- |
 | `<template-name>:<revision>` | a template in your own organization |
-| `/<org>/<template-name>:<revision>` | a template owned by another organization — one shared with you directly, or published publicly. Templates published by StackGuardian use the `stackguardian` org (`/stackguardian/terraform:11`) |
+| `/<org>/<template-name>:<revision>` | a template owned by another organization — one shared with you directly, or published publicly. Templates published by StackGuardian use the `stackguardian` org (`/stackguardian/aws-s3-demo-website:16`) |
 
 A bare id is resolved against your own organization.
 

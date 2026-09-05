@@ -57,7 +57,9 @@ docs-check: docs-generate
 	@git diff --exit-code -- docs/ \
 		|| { echo ""; echo "ERROR: docs/ is out of date. Run 'make docs-generate' and commit the result."; exit 1; }
 
-# Type-checks every documentation example against the provider schema.
+# Type-checks every documentation example against the provider schema: the files
+# under docs-examples/ and docs-guides-assets/, plus every ```terraform block
+# embedded in page and guide prose (see scripts/extract-doc-blocks.py).
 # No credentials and no API calls -- `terraform validate` only.
 docs-validate-examples:
 	bash scripts/validate-examples.sh

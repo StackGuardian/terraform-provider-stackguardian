@@ -17,6 +17,11 @@ Workflow groups are folders *and* the unit access is scoped to, so the layout de
 permission model as much as your organization. Nest with `/`:
 
 ```terraform
+resource "stackguardian_workflow_group" "frontend" {
+  resource_name = "frontend"
+  description   = "Frontend workflows, owned by the frontend team"
+}
+
 resource "stackguardian_workflow_group" "platform" {
   resource_name = "platform"
 }
