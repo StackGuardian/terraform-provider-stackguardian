@@ -68,8 +68,8 @@ resource "stackguardian_workflow_git" "test" {
 }
 
 func TestAccWorkflowGit_WithVcsConfig(t *testing.T) {
-	wfGrpName := "tf-provider-workflow-git-vcs-wfgrp"
-	id := "tf-provider-workflow-git-vcs"
+	wfGrpName := acctest.ResourceName("tf-provider-workflow-git-vcs-wfgrp")
+	id := acctest.ResourceName("tf-provider-workflow-git-vcs")
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
@@ -129,8 +129,8 @@ func TestAccWorkflowGit_WithVcsConfig(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithTerraformConfig(t *testing.T) {
-	wfGrpName := "tf-provider-workflow-git-tfconfig-wfgrp"
-	id := "tf-provider-workflow-git-tfconfig"
+	wfGrpName := acctest.ResourceName("tf-provider-workflow-git-tfconfig-wfgrp")
+	id := acctest.ResourceName("tf-provider-workflow-git-tfconfig")
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
@@ -192,8 +192,8 @@ func TestAccWorkflowGit_WithTerraformConfig(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithEnvironmentVariables(t *testing.T) {
-	wfGrpName := "tf-provider-workflow-git-envvars-wfgrp"
-	id := "tf-provider-workflow-git-envvars"
+	wfGrpName := acctest.ResourceName("tf-provider-workflow-git-envvars-wfgrp")
+	id := acctest.ResourceName("tf-provider-workflow-git-envvars")
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
@@ -259,8 +259,8 @@ func TestAccWorkflowGit_WithEnvironmentVariables(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithTagsAndContextTags(t *testing.T) {
-	wfGrpName := "tf-provider-workflow-git-tags-wfgrp"
-	id := "tf-provider-workflow-git-tags"
+	wfGrpName := acctest.ResourceName("tf-provider-workflow-git-tags-wfgrp")
+	id := acctest.ResourceName("tf-provider-workflow-git-tags")
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
@@ -322,8 +322,8 @@ func TestAccWorkflowGit_WithTagsAndContextTags(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithApprovers(t *testing.T) {
-	wfGrpName := "tf-provider-workflow-git-approvers-wfgrp"
-	id := "tf-provider-workflow-git-approvers"
+	wfGrpName := acctest.ResourceName("tf-provider-workflow-git-approvers-wfgrp")
+	id := acctest.ResourceName("tf-provider-workflow-git-approvers")
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
@@ -381,8 +381,8 @@ func TestAccWorkflowGit_WithApprovers(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithUserSchedules(t *testing.T) {
-	wfGrpName := "tf-provider-workflow-git-schedules-wfgrp"
-	id := "tf-provider-workflow-git-schedules"
+	wfGrpName := acctest.ResourceName("tf-provider-workflow-git-schedules-wfgrp")
+	id := acctest.ResourceName("tf-provider-workflow-git-schedules")
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
@@ -445,8 +445,8 @@ func TestAccWorkflowGit_WithUserSchedules(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithVcsTriggers_Push(t *testing.T) {
-	wfGrpName := "tf-provider-workflow-git-vcs-triggers-push-wfgrp"
-	id := "tf-provider-workflow-git-vcs-triggers-push"
+	wfGrpName := acctest.ResourceName("tf-provider-workflow-git-vcs-triggers-push-wfgrp")
+	id := acctest.ResourceName("tf-provider-workflow-git-vcs-triggers-push")
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
@@ -553,8 +553,8 @@ func TestAccWorkflowGit_WithVcsTriggers_Push(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithVcsTriggers_PullRequest(t *testing.T) {
-	wfGrpName := "tf-provider-workflow-git-vcs-triggers-pr-wfgrp"
-	id := "tf-provider-workflow-git-vcs-triggers-pr"
+	wfGrpName := acctest.ResourceName("tf-provider-workflow-git-vcs-triggers-pr-wfgrp")
+	id := acctest.ResourceName("tf-provider-workflow-git-vcs-triggers-pr")
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
@@ -678,8 +678,8 @@ func TestAccWorkflowGit_WithVcsTriggers_PullRequest(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithVcsTriggers_CreateTag(t *testing.T) {
-	wfGrpName := "tf-provider-workflow-git-vcs-triggers-tag-wfgrp"
-	id := "tf-provider-workflow-git-vcs-triggers-tag"
+	wfGrpName := acctest.ResourceName("tf-provider-workflow-git-vcs-triggers-tag-wfgrp")
+	id := acctest.ResourceName("tf-provider-workflow-git-vcs-triggers-tag")
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
@@ -739,9 +739,9 @@ func TestAccWorkflowGit_WithVcsTriggers_CreateTag(t *testing.T) {
 }
 
 func TestAccWorkflowGit_InNestedWorkflowGroup(t *testing.T) {
-	parentWfGrpName := "tf-provider-wfgit-nested-parent"
+	parentWfGrpName := acctest.ResourceName("tf-provider-wfgit-nested-parent")
 	childWfGrpName := parentWfGrpName + "/tf-provider-wfgit-nested-child"
-	id := "tf-provider-wfgit-nested"
+	id := acctest.ResourceName("tf-provider-wfgit-nested")
 
 	if err := createWorkflowGroupFixture(parentWfGrpName); err != nil {
 		t.Errorf("failed to create parent workflow group fixture: %s", err.Error())
@@ -791,8 +791,8 @@ func TestAccWorkflowGit_InNestedWorkflowGroup(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithIacInputData(t *testing.T) {
-	wfGrpName := "tf-provider-workflow-git-iac-input-wfgrp"
-	id := "tf-provider-workflow-git-iac-input"
+	wfGrpName := acctest.ResourceName("tf-provider-workflow-git-iac-input-wfgrp")
+	id := acctest.ResourceName("tf-provider-workflow-git-iac-input")
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
@@ -855,8 +855,8 @@ func TestAccWorkflowGit_WithIacInputData(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithRunnerConstraints(t *testing.T) {
-	wfGrpName := "tf-provider-workflow-git-runner-wfgrp"
-	id := "tf-provider-workflow-git-runner"
+	wfGrpName := acctest.ResourceName("tf-provider-workflow-git-runner-wfgrp")
+	id := acctest.ResourceName("tf-provider-workflow-git-runner")
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
@@ -932,8 +932,8 @@ func TestAccWorkflowGit_WithRunnerConstraints(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithMiniSteps_WfChaining(t *testing.T) {
-	wfGrpName := "tf-provider-workflow-git-chaining-wfgrp"
-	id := "tf-provider-workflow-git-chaining"
+	wfGrpName := acctest.ResourceName("tf-provider-workflow-git-chaining-wfgrp")
+	id := acctest.ResourceName("tf-provider-workflow-git-chaining")
 
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {

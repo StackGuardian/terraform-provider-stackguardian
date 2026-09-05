@@ -135,19 +135,21 @@ func setupTwoRevIdenticalWfStepsConfig(t *testing.T, name, stepTemplateID string
 func TestAccWorkflowUsingTemplate_WfStepsConfigRevisionUpgradeNoSpuriousDependentUpdate(t *testing.T) {
 	stepTemplateID := setupWorkflowStepTemplate(t, "tf-wfsteps-fixverify-step")
 	rev1, rev2 := setupTwoRevIdenticalWfStepsConfig(t, "tf-wfsteps-fixverify-tpl", stepTemplateID)
-	wfGrp := "tf-wfsteps-fixverify-wfgrp"
+	wfGrp := acctest.ResourceName("tf-wfsteps-fixverify-wfgrp")
+	wf1ID := acctest.ResourceName("tf-wfsteps-fixverify-1")
+	wf2ID := acctest.ResourceName("tf-wfsteps-fixverify-2")
 	if err := createWorkflowGroupFixture(wfGrp); err != nil {
 		t.Fatalf("wfgrp fixture: %s", err)
 	}
 	defer deleteWorkflowGroupFixture(wfGrp)
-	defer deleteWorkflowUsingTemplateFixture(wfGrp, "tf-wfsteps-fixverify-1")
-	defer deleteWorkflowUsingTemplateFixture(wfGrp, "tf-wfsteps-fixverify-2")
+	defer deleteWorkflowUsingTemplateFixture(wfGrp, wf1ID)
+	defer deleteWorkflowUsingTemplateFixture(wfGrp, wf2ID)
 
 	cfg := func(rev string) string {
 		return fmt.Sprintf(`
 resource "stackguardian_workflow_from_template" "test1" {
   workflow_group_id = %q
-  id                = "tf-wfsteps-fixverify-1"
+  id                = %q
   wf_type           = "CUSTOM"
   vcs_config = {
     iac_vcs_config = {
@@ -158,7 +160,7 @@ resource "stackguardian_workflow_from_template" "test1" {
 
 resource "stackguardian_workflow_from_template" "test2" {
   workflow_group_id = %q
-  id                = "tf-wfsteps-fixverify-2"
+  id                = %q
   wf_type           = "CUSTOM"
   vcs_config = {
     iac_vcs_config = {
@@ -169,7 +171,7 @@ resource "stackguardian_workflow_from_template" "test2" {
   # rev1->rev2). Must resolve concretely so this stays NoOp on test1's upgrade.
   wf_steps_config = stackguardian_workflow_from_template.test1.wf_steps_config
 }
-`, wfGrp, rev, wfGrp, rev1) // test2 always stays on rev1
+`, wfGrp, wf1ID, rev, wfGrp, wf2ID, rev1) // test2 always stays on rev1
 	}
 
 	resource.Test(t, resource.TestCase{

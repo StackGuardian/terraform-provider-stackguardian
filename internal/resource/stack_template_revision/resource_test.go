@@ -165,8 +165,8 @@ resource "stackguardian_stack_template_revision" "test" {
 // --- Tests ---
 
 func TestAccStackTemplateRevision_Basic(t *testing.T) {
-	stackTemplateID := "provider-test-stack-template-rev1"
-	wfTemplateID := "provider-test-wft-for-stack-rev1"
+	stackTemplateID := acctest.ResourceName("provider-test-stack-template-rev1")
+	wfTemplateID := acctest.ResourceName("provider-test-wft-for-stack-rev1")
 	revisionAlias := "v1"
 
 	// Register cleanup before creation so defers run even if a later create fails
@@ -222,8 +222,8 @@ func TestAccStackTemplateRevision_Basic(t *testing.T) {
 }
 
 func TestAccStackTemplateRevision_WithWorkflowsConfig(t *testing.T) {
-	stackTemplateID := "provider-test-stack-template-rev2"
-	wfTemplateID := "provider-test-wft-for-stack-rev2"
+	stackTemplateID := acctest.ResourceName("provider-test-stack-template-rev2")
+	wfTemplateID := acctest.ResourceName("provider-test-wft-for-stack-rev2")
 	revisionAlias := "v1"
 
 	// Register cleanup before creation so defers run even if a later create fails
@@ -267,8 +267,8 @@ func TestAccStackTemplateRevision_WithWorkflowsConfig(t *testing.T) {
 }
 
 func TestAccStackTemplateRevision_Lifecycle(t *testing.T) {
-	stackTemplateName := "tf-provider-stack-template-lifecycle"
-	wfTemplateName := "tf-provider-wft-lifecycle-for-stack"
+	stackTemplateName := acctest.ResourceName("tf-provider-stack-template-lifecycle")
+	wfTemplateName := acctest.ResourceName("tf-provider-wft-lifecycle-for-stack")
 	alias := "v1"
 
 	// Safety-net cleanup. Defers run LIFO, so registration order here is the

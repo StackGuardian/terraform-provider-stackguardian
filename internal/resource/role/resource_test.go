@@ -77,10 +77,10 @@ resource "stackguardian_role" "%s" {
 )
 
 func TestAccRole(t *testing.T) {
-	workflowGroupResourceName := "role-example-workflow-group"
-	workflowGroupName := "role-example-workflow-group"
-	roleResourceName := "role-example-role"
-	roleName := "role-example-role"
+	workflowGroupResourceName := acctest.ResourceName("role-example-workflow-group")
+	workflowGroupName := workflowGroupResourceName
+	roleResourceName := acctest.ResourceName("role-example-role")
+	roleName := roleResourceName
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -100,10 +100,10 @@ func TestAccRole(t *testing.T) {
 }
 
 func TestAccRoleRecreateOnExternalDelete(t *testing.T) {
-	workflowGroupResourceName := "role-example-workflow-group2"
-	workflowGroupName := "role-example-workflow-group2"
-	roleResourceName := "role-example-role2"
-	roleName := "role-example-role2"
+	workflowGroupResourceName := acctest.ResourceName("role-example-workflow-group2")
+	workflowGroupName := workflowGroupResourceName
+	roleResourceName := acctest.ResourceName("role-example-role2")
+	roleName := roleResourceName
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -154,8 +154,8 @@ resource "stackguardian_role" "%s" {
   }
 }`
 
-	roleResourceName := "role-example-role3"
-	roleName := "role-example-role3"
+	roleResourceName := acctest.ResourceName("role-example-role3")
+	roleName := roleResourceName
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -172,11 +172,14 @@ resource "stackguardian_role" "%s" {
 
 func TestAccRoleOptionalId(t *testing.T) {
 	// Test if the resource has name that is not compatible with the
-	testResource := `
+	roleID := acctest.ResourceName("role-example-role4")
+	roleIDResourceName := acctest.ResourceName("role-example-role4-resource-name")
+
+	const roleConfig = `
 resource "stackguardian_role" "role-example-role4" {
-  id = "role_example_role4"
-  resource_name = "role_example_role4_resource_name"
-  description   = "Example of terraform-provider-stackguardian for a Role"
+  id = %q
+  resource_name = %q
+  description   = %q
   tags = [
     "example-org",
   ]
@@ -190,24 +193,10 @@ resource "stackguardian_role" "role-example-role4" {
     }
   }
 }`
-	testUpdateResource := `
-resource "stackguardian_role" "role-example-role4" {
-  id = "role_example_role4"
-  resource_name = "role_example_role4_resource_name"
-  description   = "Example of terraform-provider-stackguardian for a Role updated"
-  tags = [
-    "example-org",
-  ]
-
-  # Defining allowed permissions for the role
-  allowed_permissions = {
-    # Permission for accessing a Workflow Group
-    "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" = { # Replace with your organization name
-      name = "GetWorkflowGroup",
-      paths = {}
-    }
-  }
-}`
+	testResource := fmt.Sprintf(roleConfig, roleID, roleIDResourceName,
+		"Example of terraform-provider-stackguardian for a Role")
+	testUpdateResource := fmt.Sprintf(roleConfig, roleID, roleIDResourceName,
+		"Example of terraform-provider-stackguardian for a Role updated")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -223,7 +212,7 @@ resource "stackguardian_role" "role-example-role4" {
 					statecheck.ExpectKnownValue(
 						"stackguardian_role.role-example-role4",
 						tfjsonpath.New("id"),
-						knownvalue.StringExact("role_example_role4"),
+						knownvalue.StringExact(roleID),
 					),
 				},
 			},
@@ -233,7 +222,7 @@ resource "stackguardian_role" "role-example-role4" {
 					statecheck.ExpectKnownValue(
 						"stackguardian_role.role-example-role4",
 						tfjsonpath.New("id"),
-						knownvalue.StringExact("role_example_role4"),
+						knownvalue.StringExact(roleID),
 					),
 				},
 			},
@@ -242,8 +231,8 @@ resource "stackguardian_role" "role-example-role4" {
 }
 
 func TestAccRoleWithoutAllowedPermissions(t *testing.T) {
-	roleResourceName := "role-example-role5"
-	roleName := "role-example-role5"
+	roleResourceName := acctest.ResourceName("role-example-role5")
+	roleName := roleResourceName
 
 	testResource := `
 resource "stackguardian_role" "%s" {

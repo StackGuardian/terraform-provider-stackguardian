@@ -77,12 +77,13 @@ resource "stackguardian_policy" "approval_on_apply" {
 
   enforced_on = ["/wfgrps/${stackguardian_workflow_group.production.resource_name}"]
 
-  # Approvers are fully qualified user IDs, not bare email addresses:
-  # "<user-pool-id>/local/<email>". Read an existing policy with the
-  # stackguardian_policy data source to see the exact prefix your organization uses.
+  # Each approver is a user's email address, or an SSO group name to allow anyone in
+  # that group. The fully qualified form "<user-pool-id>/local/<email>" is also
+  # accepted. Read an existing policy with the stackguardian_policy data source to
+  # see what your organization uses.
   approvers = [
-    "eu-central-1_EXAMPLEPOOL/local/platform-lead@example.com",
-    "eu-central-1_EXAMPLEPOOL/local/sre-oncall@example.com",
+    "platform-lead@example.com",
+    "sre-oncall@example.com",
   ]
   number_of_approvals_required = 1
 

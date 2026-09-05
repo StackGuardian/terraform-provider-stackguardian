@@ -30,7 +30,7 @@ resource "stackguardian_workflow_step_template" "test" {
 }
 
 func TestAccWorkflowStepTemplate_Basic(t *testing.T) {
-	name := "example-workflow-step-template1"
+	name := acctest.ResourceName("example-workflow-step-template1")
 	var testAccResource = fmt.Sprintf(`
 resource "stackguardian_workflow_step_template" "test" {
   template_name = "%s"
@@ -77,7 +77,7 @@ resource "stackguardian_workflow_step_template" "test" {
 }
 
 func TestAccWorkflowStepTemplate_WithRuntime(t *testing.T) {
-	name := "example-workflow-step-template2"
+	name := acctest.ResourceName("example-workflow-step-template2")
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")

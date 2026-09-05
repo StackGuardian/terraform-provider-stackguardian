@@ -81,7 +81,7 @@ const (
 	EnvVarConfig          = "Configuration for the environment variable."
 	EnvVarConfigVarName   = "Name of the variable."
 	EnvVarConfigSecretId  = "Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `VAULT_SECRET`."
-	EnvVarConfigTextValue = `Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>`
+	EnvVarConfigTextValue = "Value written inline. Only used when `kind` is `PLAIN_TEXT`, and visible in configuration and state, so keep credentials in a `VAULT_SECRET` variable instead. " + SecretReferenceSyntax
 	EnvVarKind            = "Where the variable's value comes from. <ul><li>`PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so do not use it for credentials.</li><li>`VAULT_SECRET` — the value is read at run time from the secret named by `config.secret_id`, so it never appears in your configuration or state.</li></ul>"
 )
 
