@@ -133,3 +133,13 @@ This keeps the ID correct through renames, and orders resource creation for you.
 Importing does **not** use path-form IDs. Almost every resource imports by bare `resource_name`;
 workflows use `<workflow_group_id>/<workflow_id>`. The full table is in
 [Importing Existing Resources](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ImportingResources).
+
+## Building this with AI
+
+<!-- AI-SKILLS:START -->
+Generating configuration from this guide? Load the **`stackguardian-resource-ids`** skill, which turns the guidance here into rules an agent can follow.
+
+**Worth knowing either way:** IDs are position-sensitive: the same value can be valid in one attribute and rejected in another, and the rejection reads as `Unauthorized` rather than a not-found.
+
+The skills live in [the provider repository](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/.claude/skills) and work with Claude Code, Cursor, Copilot, Windsurf and any agent that reads [`AGENTS.md`](https://github.com/StackGuardian/terraform-provider-stackguardian/blob/main/AGENTS.md).
+<!-- AI-SKILLS:END -->

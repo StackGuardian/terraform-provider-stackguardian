@@ -97,3 +97,13 @@ Scope by workflow group, and let the group hierarchy carry the structure:
 2. One role per level of access, scoped to those groups.
 3. Role assignments mapping people or SSO groups to roles.
 4. [Policies](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Policies) enforced on the same groups, for rules that must hold at run time.
+
+## Building this with AI
+
+<!-- AI-SKILLS:START -->
+Generating configuration from this guide? Load the **`stackguardian-access`** skill, which turns the guidance here into rules an agent can follow.
+
+**Worth knowing either way:** Permission map keys are API routes, and `paths` fills their placeholders with bare names — not `/wfgrps/...` resource paths.
+
+The skills live in [the provider repository](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/.claude/skills) and work with Claude Code, Cursor, Copilot, Windsurf and any agent that reads [`AGENTS.md`](https://github.com/StackGuardian/terraform-provider-stackguardian/blob/main/AGENTS.md).
+<!-- AI-SKILLS:END -->

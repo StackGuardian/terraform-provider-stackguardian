@@ -68,3 +68,13 @@ resource "stackguardian_workflow_group" "Simple-Workflow-Group" {
 ## Release Notes
 
 Check the release notes on github [here](https://github.com/StackGuardian/terraform-provider-stackguardian/releases).
+
+## Building this with AI
+
+<!-- AI-SKILLS:START -->
+Generating configuration from this guide? Load the **`stackguardian-provider`** skill, which turns the guidance here into rules an agent can follow.
+
+**Worth knowing either way:** Start with `stackguardian-provider`; it routes to the skill for the area in play.
+
+The skills live in [the provider repository](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/.claude/skills) and work with Claude Code, Cursor, Copilot, Windsurf and any agent that reads [`AGENTS.md`](https://github.com/StackGuardian/terraform-provider-stackguardian/blob/main/AGENTS.md).
+<!-- AI-SKILLS:END -->
