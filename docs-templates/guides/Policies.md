@@ -177,3 +177,13 @@ existing policy with the `stackguardian_policy` data source to see what your org
 
 The [`stackguardian_policy` resource page](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/resources/policy)
 carries worked examples of all three body sources, including the marketplace and git variants.
+
+## Building this with AI
+
+<!-- AI-SKILLS:START -->
+Generating configuration from this guide? Load the **`stackguardian-policies`** skill, which turns the guidance here into rules an agent can follow.
+
+**Worth knowing either way:** `approval_pre_apply` decides whether a run stops; `approvers` decides who may release it. A gate with no approvers can be released by anyone.
+
+The skills live in [the provider repository](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/.claude/skills) and work with Claude Code, Cursor, Copilot, Windsurf and any agent that reads [`AGENTS.md`](https://github.com/StackGuardian/terraform-provider-stackguardian/blob/main/AGENTS.md).
+<!-- AI-SKILLS:END -->

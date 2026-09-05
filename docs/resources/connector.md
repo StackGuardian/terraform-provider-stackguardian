@@ -272,3 +272,13 @@ import {
 ```bash
 terraform import stackguardian_connector.example-connector connector-name
 ```
+
+## Building this with AI
+
+<!-- AI-SKILLS:START -->
+Generating `stackguardian_connector` configuration with an AI assistant? Load the **`stackguardian-provider`** skill, which covers this resource's arguments and the mistakes it invites.
+
+**Worth knowing either way:** Reference a connector rather than typing its ID: `stackguardian_connector.aws.id` gives Terraform the dependency edge. A workflow's `deployment_platform_config[].kind` must match the connector's own kind.
+
+The skills live in [the provider repository](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/.claude/skills) and work with Claude Code, Cursor, Copilot, Windsurf and any agent that reads [`AGENTS.md`](https://github.com/StackGuardian/terraform-provider-stackguardian/blob/main/AGENTS.md).
+<!-- AI-SKILLS:END -->

@@ -136,3 +136,13 @@ The log contains your API key. Do not attach it to a ticket without redacting.
 If the behaviour still looks wrong, open an issue at
 [github.com/StackGuardian/terraform-provider-stackguardian/issues](https://github.com/StackGuardian/terraform-provider-stackguardian/issues)
 with the resource, the plan output, and the provider version.
+
+## Building this with AI
+
+<!-- AI-SKILLS:START -->
+Generating configuration from this guide? Load the **`stackguardian-provider`** skill, which turns the guidance here into rules an agent can follow.
+
+**Worth knowing either way:** A permanent diff usually means an attribute the platform computes is being written, or one it returns is being omitted.
+
+The skills live in [the provider repository](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/.claude/skills) and work with Claude Code, Cursor, Copilot, Windsurf and any agent that reads [`AGENTS.md`](https://github.com/StackGuardian/terraform-provider-stackguardian/blob/main/AGENTS.md).
+<!-- AI-SKILLS:END -->
