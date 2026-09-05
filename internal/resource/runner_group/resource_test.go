@@ -191,7 +191,7 @@ func TestAccConnectorOptionalId(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"stackguardian_runner_group.example-runner-group3",
 						tfjsonpath.New("id"),
-						knownvalue.StringExact("example_runner_group3"),
+						knownvalue.StringExact(optionalRunnerGroupID),
 					),
 				},
 			},
@@ -201,7 +201,7 @@ func TestAccConnectorOptionalId(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"stackguardian_runner_group.example-runner-group3",
 						tfjsonpath.New("id"),
-						knownvalue.StringExact("example_runner_group3"),
+						knownvalue.StringExact(optionalRunnerGroupID),
 					),
 				},
 			},
