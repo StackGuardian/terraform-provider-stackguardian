@@ -26,7 +26,7 @@ func deleteWorkflowTemplateFixture(id string) {
 }
 
 func TestAccWorkflowTemplate_Basic(t *testing.T) {
-	templateName := "tf-provider-workflow-template-1"
+	templateName := acctest.ResourceName("tf-provider-workflow-template-1")
 
 	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })
 
@@ -63,7 +63,7 @@ func TestAccWorkflowTemplate_Basic(t *testing.T) {
 }
 
 func TestAccWorkflowTemplate_WithRuntime(t *testing.T) {
-	templateName := "tf-provider-workflow-template-2"
+	templateName := acctest.ResourceName("tf-provider-workflow-template-2")
 
 	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })
 

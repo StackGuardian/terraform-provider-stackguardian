@@ -2,6 +2,7 @@ package connector_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"testing"
@@ -44,7 +45,7 @@ func deleteConnectorByID(id string) {
 
 const (
 	testAccResource = `resource "stackguardian_connector" "aws-cloud-connector-example" {
-  resource_name = "aws-rbac-connector"
+  resource_name = %q
   description   = "AWS Cloud Connector"
 
   settings = {
@@ -59,7 +60,7 @@ const (
 }`
 
 	testAccResourceUpdate = `resource "stackguardian_connector" "aws-cloud-connector-example" {
-  resource_name = "aws-rbac-connector"
+  resource_name = %q
   description   = "AWS Cloud Connector Update"
 
   settings = {
@@ -75,7 +76,8 @@ const (
 )
 
 func TestAccConnector(t *testing.T) {
-	t.Cleanup(func() { deleteConnectorByResourceName("aws-rbac-connector") })
+	connectorName := acctest.ResourceName("aws-rbac-connector")
+	t.Cleanup(func() { deleteConnectorByResourceName(connectorName) })
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -85,7 +87,7 @@ func TestAccConnector(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResource,
+				Config: fmt.Sprintf(testAccResource, connectorName),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"stackguardian_connector.aws-cloud-connector-example",
@@ -95,18 +97,20 @@ func TestAccConnector(t *testing.T) {
 				},
 			},
 			{
-				Config: testAccResourceUpdate,
+				Config: fmt.Sprintf(testAccResourceUpdate, connectorName),
 			},
 		},
 	})
 }
 
 func TestAccConnectorIncompatibleResourceName(t *testing.T) {
-	t.Cleanup(func() { deleteConnectorByResourceName("aws rbac connector") })
-
 	// Test if the resource has name that is not compatible with the
-	testResource := `resource "stackguardian_connector" "aws-cloud-connector-example1" {
-  resource_name = "aws rbac connector"
+	spacedName := acctest.ResourceNameRaw("aws rbac connector")
+
+	t.Cleanup(func() { deleteConnectorByResourceName(spacedName) })
+
+	testResource := fmt.Sprintf(`resource "stackguardian_connector" "aws-cloud-connector-example1" {
+  resource_name = %q
   description   = "AWS Cloud Connector"
 
   settings = {
@@ -118,9 +122,9 @@ func TestAccConnectorIncompatibleResourceName(t *testing.T) {
       duration_seconds = "3600"
     }]
   }
-}`
-	testUpdateResource := `resource "stackguardian_connector" "aws-cloud-connector-example1" {
-  resource_name = "aws rbac connector"
+}`, spacedName)
+	testUpdateResource := fmt.Sprintf(`resource "stackguardian_connector" "aws-cloud-connector-example1" {
+  resource_name = %q
   description   = "AWS Cloud Connector"
 
   settings = {
@@ -132,7 +136,7 @@ func TestAccConnectorIncompatibleResourceName(t *testing.T) {
       duration_seconds = "360"
     }]
   }
-}`
+}`, spacedName)
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -152,12 +156,15 @@ func TestAccConnectorIncompatibleResourceName(t *testing.T) {
 }
 
 func TestAccConnectorOptionalId(t *testing.T) {
-	t.Cleanup(func() { deleteConnectorByID("aws_rbac_connector2") })
-
 	// Test if the resource has name that is not compatible with the
-	testResource := `resource "stackguardian_connector" "aws-cloud-connector-example2" {
-  id = "aws_rbac_connector2"
-  resource_name = "aws rbac connector"
+	connectorID := acctest.ResourceName("aws-rbac-connector2")
+	spacedName := acctest.ResourceNameRaw("aws rbac connector")
+
+	t.Cleanup(func() { deleteConnectorByID(connectorID) })
+
+	testResource := fmt.Sprintf(`resource "stackguardian_connector" "aws-cloud-connector-example2" {
+  id = %q
+  resource_name = %q
   description   = "AWS Cloud Connector"
 
   settings = {
@@ -169,10 +176,10 @@ func TestAccConnectorOptionalId(t *testing.T) {
       duration_seconds = "3600"
     }]
   }
-}`
-	testUpdateResource := `resource "stackguardian_connector" "aws-cloud-connector-example2" {
-  id = "aws_rbac_connector2"
-  resource_name = "aws rbac connector update"
+}`, connectorID, spacedName)
+	testUpdateResource := fmt.Sprintf(`resource "stackguardian_connector" "aws-cloud-connector-example2" {
+  id = %q
+  resource_name = %q
   description   = "AWS Cloud Connector"
 
   settings = {
@@ -184,7 +191,7 @@ func TestAccConnectorOptionalId(t *testing.T) {
       duration_seconds = "360"
     }]
   }
-}`
+}`, connectorID, spacedName)
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -200,7 +207,7 @@ func TestAccConnectorOptionalId(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"stackguardian_connector.aws-cloud-connector-example2",
 						tfjsonpath.New("id"),
-						knownvalue.StringExact("aws_rbac_connector2"),
+						knownvalue.StringExact(connectorID),
 					),
 				},
 			},

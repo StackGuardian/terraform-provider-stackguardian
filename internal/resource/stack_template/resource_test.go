@@ -26,7 +26,7 @@ func deleteStackTemplateFixture(id string) {
 }
 
 func TestAccStackTemplate_Basic(t *testing.T) {
-	templateName := "tf-provider-stack-template-1"
+	templateName := acctest.ResourceName("tf-provider-stack-template-1")
 
 	t.Cleanup(func() { deleteStackTemplateFixture(templateName) })
 

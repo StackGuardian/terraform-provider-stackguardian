@@ -73,8 +73,8 @@ var (
 )
 
 func TestAccRunnerGroupAWSS3(t *testing.T) {
-	runnerGroupResourceName := "example-runner-group"
-	runnerGroupName := "example-runner-group"
+	runnerGroupResourceName := acctest.ResourceName("example-runner-group")
+	runnerGroupName := runnerGroupResourceName
 
 	t.Cleanup(func() { deleteRunnerGroupFixture(runnerGroupName) })
 
@@ -96,7 +96,9 @@ func TestAccRunnerGroupAWSS3(t *testing.T) {
 }
 
 func TestAccRunnerGroupAzureBlobStorage(t *testing.T) {
-	t.Cleanup(func() { deleteRunnerGroupFixture("runnergroup") })
+	blobRunnerGroupName := acctest.ResourceName("runnergroup")
+
+	t.Cleanup(func() { deleteRunnerGroupFixture(blobRunnerGroupName) })
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -108,32 +110,32 @@ func TestAccRunnerGroupAzureBlobStorage(t *testing.T) {
 			{
 				Config: fmt.Sprintf(`resource "stackguardian_runner_group" "example-runner-group2" {
   max_number_of_runners = 2
-  resource_name     = "runnergroup"
+  resource_name     = %q
   storage_backend_config = {
     azure_blob_storage_access_key   = "%s"
     azure_blob_storage_account_name = "blobfbitv1"
     type                            = "azure_blob_storage"
   }
-}`, azureStorageBackendAccessKey),
+}`, blobRunnerGroupName, azureStorageBackendAccessKey),
 			},
 			{
 				Config: fmt.Sprintf(`resource "stackguardian_runner_group" "example-runner-group2" {
   max_number_of_runners = 5
-  resource_name     = "runnergroup"
+  resource_name     = %q
   storage_backend_config = {
     azure_blob_storage_access_key   = "%s"
     azure_blob_storage_account_name = "blobfbitv1"
     type                            = "azure_blob_storage"
   }
-}`, azureStorageBackendAccessKey),
+}`, blobRunnerGroupName, azureStorageBackendAccessKey),
 			},
 		},
 	})
 }
 
 func TestAccRunnerGroupRecreateOnExternalDelete(t *testing.T) {
-	runnerGroupResourceName := "runner-group2"
-	runnerGroupName := "runner-group2"
+	runnerGroupResourceName := acctest.ResourceName("runner-group2")
+	runnerGroupName := runnerGroupResourceName
 
 	t.Cleanup(func() { deleteRunnerGroupFixture(runnerGroupName) })
 
@@ -168,13 +170,16 @@ func TestAccRunnerGroupRecreateOnExternalDelete(t *testing.T) {
 }
 
 func TestAccConnectorOptionalId(t *testing.T) {
-	t.Cleanup(func() { deleteRunnerGroupFixture("example_runner_group3") })
-
 	// Test if the resource has name that is not compatible with the
+	optionalRunnerGroupID := acctest.ResourceName("example-runner-group3")
+	optionalRunnerGroupName := acctest.ResourceName("runnergroup")
+
+	t.Cleanup(func() { deleteRunnerGroupFixture(optionalRunnerGroupID) })
+
 	testResource := `resource "stackguardian_runner_group" "example-runner-group3" {
-  id = "example_runner_group3"
+  id = %q
   max_number_of_runners = 2
-  resource_name     = "runnergroup"
+  resource_name     = %q
   storage_backend_config = {
     azure_blob_storage_access_key   = "%s"
     azure_blob_storage_account_name = "blobfbitv1"
@@ -183,7 +188,7 @@ func TestAccConnectorOptionalId(t *testing.T) {
 }`
 	testUpdateResource := `resource "stackguardian_runner_group" "example-runner-group3" {
   max_number_of_runners = 2
-  resource_name     = "runnergroup"
+  resource_name     = %q
   storage_backend_config = {
     azure_blob_storage_access_key   = "%s"
     azure_blob_storage_account_name = "blobfbitv1"
@@ -199,7 +204,7 @@ func TestAccConnectorOptionalId(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(testResource, azureStorageBackendAccessKey),
+				Config: fmt.Sprintf(testResource, optionalRunnerGroupID, optionalRunnerGroupName, azureStorageBackendAccessKey),
 				//Check:  resource.TestCheckResourceAttr("aws-cloud-connector-example2"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
@@ -210,7 +215,7 @@ func TestAccConnectorOptionalId(t *testing.T) {
 				},
 			},
 			{
-				Config: testUpdateResource,
+				Config: fmt.Sprintf(testUpdateResource, optionalRunnerGroupName, azureStorageBackendAccessKey),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"stackguardian_runner_group.example-runner-group3",

@@ -41,8 +41,8 @@ const (
 )
 
 func TestAccWorkflowGroup(t *testing.T) {
-	workflowGroupResrouceName := "wfgrp-example-workflow-group"
-	workflowGroupName := "wfgrp-example-workflow-group"
+	workflowGroupResrouceName := acctest.ResourceName("wfgrp-example-workflow-group")
+	workflowGroupName := workflowGroupResrouceName
 
 	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupName) })
 
@@ -64,8 +64,8 @@ func TestAccWorkflowGroup(t *testing.T) {
 }
 
 func TestAccWorkflowGroupRecreateOnExternalDelete(t *testing.T) {
-	workflowGroupResourceName := "wfgrp-example-workflow-group2"
-	workflowGroupName := "wfgrp-example-workflow-group2"
+	workflowGroupResourceName := acctest.ResourceName("wfgrp-example-workflow-group2")
+	workflowGroupName := workflowGroupResourceName
 
 	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupName) })
 
@@ -101,7 +101,7 @@ func TestAccWorkflowGroupRecreateOnExternalDelete(t *testing.T) {
 
 func TestAccWorkflowGroupIncompatibleResourceName(t *testing.T) {
 	// Test if the resource has name that is not compatible with the
-	workflowGroupName := "wfgrp-example-workflow-group3"
+	workflowGroupName := acctest.ResourceName("wfgrp-example-workflow-group3")
 	workflowGroupResourceName := "wfgrp example workflow group3"
 
 	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupResourceName) })
@@ -124,20 +124,25 @@ func TestAccWorkflowGroupIncompatibleResourceName(t *testing.T) {
 }
 
 func TestAccWorkflowGroupOptionalId(t *testing.T) {
-	t.Cleanup(func() { deleteWorkflowGroupFixture("wfgrp_example_wfgrp4") })
+	wfGrpID := acctest.ResourceName("wfgrp-example-wfgrp4")
+	// The space is the subject here: a resource_name containing one has to
+	// survive the round trip, so it is made unique without being sanitised.
+	wfGrpName := acctest.ResourceNameRaw("wfgrp example wfgrp4")
 
-	testResource := `resource "stackguardian_workflow_group" "wfgrp-example-wfgrp4" {
-  id = "wfgrp_example_wfgrp4"
-  resource_name = "wfgrp example wfgrp4"
+	t.Cleanup(func() { deleteWorkflowGroupFixture(wfGrpID) })
+
+	testResource := fmt.Sprintf(`resource "stackguardian_workflow_group" "wfgrp-example-wfgrp4" {
+  id = %q
+  resource_name = %q
   description   = "Onboarding example  of terraform-provider-stackguardian for WorkflowGroup"
   tags          = ["tf-provider-example", "onboarding"]
-}`
-	testUpdateResource := `resource "stackguardian_workflow_group" "wfgrp-example-wfgrp4" {
-  id = "wfgrp_example_wfgrp4"
-  resource_name = "wfgrp example wfgrp4 updated"
+}`, wfGrpID, wfGrpName)
+	testUpdateResource := fmt.Sprintf(`resource "stackguardian_workflow_group" "wfgrp-example-wfgrp4" {
+  id = %q
+  resource_name = %q
   description   = "Onboarding example of terraform-provider-stackguardian for WorkflowGroup updated"
   tags          = ["tf-provider-example", "onboarding", "update"]
-}`
+}`, wfGrpID, wfGrpName+" updated")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -153,7 +158,7 @@ func TestAccWorkflowGroupOptionalId(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"stackguardian_workflow_group.wfgrp-example-wfgrp4",
 						tfjsonpath.New("id"),
-						knownvalue.StringExact("wfgrp_example_wfgrp4"),
+						knownvalue.StringExact(wfGrpID),
 					),
 				},
 			},
@@ -163,7 +168,7 @@ func TestAccWorkflowGroupOptionalId(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"stackguardian_workflow_group.wfgrp-example-wfgrp4",
 						tfjsonpath.New("id"),
-						knownvalue.StringExact("wfgrp_example_wfgrp4"),
+						knownvalue.StringExact(wfGrpID),
 					),
 				},
 			},
@@ -172,8 +177,8 @@ func TestAccWorkflowGroupOptionalId(t *testing.T) {
 }
 
 func TestAccWorkflowGroupNested_WithIdAndResourceName(t *testing.T) {
-	parentName := "wfgrp-example-workflow-group4"
-	nestedName := "nested-workflow-group"
+	parentName := acctest.ResourceName("wfgrp-example-workflow-group4")
+	nestedName := acctest.ResourceName("nested-workflow-group")
 
 	t.Cleanup(func() {
 		deleteWorkflowGroupFixture(parentName + "/" + nestedName)
@@ -221,8 +226,8 @@ resource "stackguardian_workflow_group" "nested" {
 }
 
 func TestAccWorkflowGroupNested_WithResourceNameOnly(t *testing.T) {
-	parentName := "wfgrp-example-workflow-group5"
-	nestedName := "nested-workflow-group-2"
+	parentName := acctest.ResourceName("wfgrp-example-workflow-group5")
+	nestedName := acctest.ResourceName("nested-workflow-group-2")
 
 	t.Cleanup(func() {
 		deleteWorkflowGroupFixture(parentName + "/" + nestedName)

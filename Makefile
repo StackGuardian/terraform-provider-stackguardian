@@ -35,6 +35,15 @@ test:
 test-acc:
 	TF_ACC=1 go test -parallel=1 $(TEST) -v $(TESTARGS) -timeout=15m
 
+# Reports resources an earlier acceptance run left behind. Read-only: it lists
+# what carries the test prefix and deletes nothing.
+test-acc-sweep:
+	SG_ACC_SWEEP=1 go test ./internal/acctest -run TestSweepOrphans -v -count=1
+
+# Deletes them. Only touches names carrying the acctest prefix.
+test-acc-sweep-apply:
+	SG_ACC_SWEEP=1 SG_ACC_SWEEP_APPLY=1 go test ./internal/acctest -run TestSweepOrphans -v -count=1
+
 test-examples-quickstart:
 	bash docs-guides-assets/quickstart/test-quickstart.sh $(ARGS)
 

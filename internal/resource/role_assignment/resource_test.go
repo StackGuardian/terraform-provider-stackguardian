@@ -113,11 +113,11 @@ func deleteRoleAssignmentFixture(userId string) {
 
 func TestAccRoleAssignment(t *testing.T) {
 	userId := "example.user@domain.com"
-	workflowGroupResourceName := "role-assign-example-workflow-group"
-	workflowGroupName := "role-assign-example-workflow-group"
-	roleResourceName := "role-assign-example-role"
-	roleName := "role-assign-example-role"
-	roleAssignmentName := "example-role-assignment"
+	workflowGroupResourceName := acctest.ResourceName("role-assign-example-workflow-group")
+	workflowGroupName := workflowGroupResourceName
+	roleResourceName := acctest.ResourceName("role-assign-example-role")
+	roleName := roleResourceName
+	roleAssignmentName := acctest.ResourceName("example-role-assignment")
 
 	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupName) })
 	t.Cleanup(func() { deleteRoleFixture(roleName) })
@@ -142,11 +142,11 @@ func TestAccRoleAssignment(t *testing.T) {
 
 func TestAccRoleAssignmentRecreateOnExternalDelete(t *testing.T) {
 	userId := "example.user2@domain.com"
-	workflowGroupResourceName := "role-assign-example-workflow-group2"
-	workflowGroupName := "role-assign-example-workflow-group2"
-	roleResourceName := "role-assign-example-role2"
-	roleName := "role-assign-example-role2"
-	roleAssignmentName := "example-role-assignment2"
+	workflowGroupResourceName := acctest.ResourceName("role-assign-example-workflow-group2")
+	workflowGroupName := workflowGroupResourceName
+	roleResourceName := acctest.ResourceName("role-assign-example-role2")
+	roleName := roleResourceName
+	roleAssignmentName := acctest.ResourceName("example-role-assignment2")
 
 	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupName) })
 	t.Cleanup(func() { deleteRoleFixture(roleName) })
@@ -184,11 +184,11 @@ func TestAccRoleAssignmentRecreateOnExternalDelete(t *testing.T) {
 
 func TestAccRoleAssignmentRecreateOnChangeInUserId(t *testing.T) {
 	userId := "example.user3@domain.com"
-	workflowGroupResourceName := "role-assign-example-workflow-group3"
-	workflowGroupName := "role-assign-example-workflow-group3"
-	roleResourceName := "role-assign-example-role3"
-	roleName := "role-assign-example-role3"
-	roleAssignmentName := "example-role-assignment3"
+	workflowGroupResourceName := acctest.ResourceName("role-assign-example-workflow-group3")
+	workflowGroupName := workflowGroupResourceName
+	roleResourceName := acctest.ResourceName("role-assign-example-role3")
+	roleName := roleResourceName
+	roleAssignmentName := acctest.ResourceName("example-role-assignment3")
 	newUserId := "example.user30@domain.com"
 
 	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupName) })
@@ -220,11 +220,11 @@ func TestAccRoleAssignmentRecreateOnChangeInUserId(t *testing.T) {
 
 func TestSendEmail(t *testing.T) {
 	userId := "example.user4@domain.com"
-	workflowGroupResourceName := "role-assign-example-workflow-group4"
-	workflowGroupName := "role-assign-example-workflow-group4"
-	roleResourceName := "role-assign-example-role4"
-	roleName := "role-assign-example-role4"
-	roleAssignmentName := "example-role-assignment4"
+	workflowGroupResourceName := acctest.ResourceName("role-assign-example-workflow-group4")
+	workflowGroupName := workflowGroupResourceName
+	roleResourceName := acctest.ResourceName("role-assign-example-role4")
+	roleName := roleResourceName
+	roleAssignmentName := acctest.ResourceName("example-role-assignment4")
 
 	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupName) })
 	t.Cleanup(func() { deleteRoleFixture(roleName) })
@@ -290,7 +290,7 @@ func TestRoleAssignmentGroupAlias(t *testing.T) {
 }
 `
 	userId := "sg-test-sso/group-devs"
-	roleAssignmentName := "example-role-assignment5"
+	roleAssignmentName := acctest.ResourceName("example-role-assignment5")
 	alias := "Group Developers"
 	newAlias := "Group Developers Updated"
 
@@ -329,7 +329,7 @@ func TestRoleAssignmentMultipleRoles(t *testing.T) {
 }
 `
 	userId := "example.user6@domain.com"
-	roleAssignmentName := "example-role-assignment6"
+	roleAssignmentName := acctest.ResourceName("example-role-assignment6")
 
 	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
 
@@ -367,7 +367,7 @@ func TestRoleAssignmentRoleToRoles(t *testing.T) {
 }
 `
 	userId := "example.user7@domain.com"
-	roleAssignmentName := "example-role-assignment7"
+	roleAssignmentName := acctest.ResourceName("example-role-assignment7")
 
 	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
 
@@ -405,7 +405,7 @@ func TestRoleAssignmentRolesToRole(t *testing.T) {
 }
 `
 	userId := "example.user8@domain.com"
-	roleAssignmentName := "example-role-assignment8"
+	roleAssignmentName := acctest.ResourceName("example-role-assignment8")
 
 	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
 
