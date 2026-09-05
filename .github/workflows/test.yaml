@@ -39,6 +39,20 @@ jobs:
       - name: "Build Provider"
         run: make build
 
+      # Runs before the acceptance tests on purpose. These checks need no
+      # credentials and no network, and they finish in a couple of minutes. Behind
+      # test-acc they were skipped outright whenever the production API was
+      # unavailable, a secret was unavailable to the PR, or an unrelated
+      # acceptance test failed -- a job stops at its first failing step.
+      - name: "Check Provider docs"
+        run: |
+          set -eu -x;
+          make tools-install;
+          make docs-validate;
+          make docs-validate-examples;
+          make docs-check;
+        shell: bash
+
       - name: "Test Provider with acceptance tests"
         run: make test-acc
         env:
@@ -68,12 +82,3 @@ jobs:
       #     STACKGUARDIAN_API_KEY: '${{ secrets.SG_PRD_API_KEY }}'
       #     STACKGUARDIAN_API_URI: '${{ secrets.SG_PRD_API_URI }}'
       #     STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'
-
-      - name: "Check Provider docs"
-        run: |
-          set -eu -x;
-          make tools-install;
-          make docs-validate;
-          make docs-check;
-          make docs-validate-examples;
-        shell: bash
