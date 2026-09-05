@@ -137,9 +137,9 @@ Required:
 
 Optional:
 
-- `data` (String) Input data as a JSON string.
+- `data` (String) Input data as a JSON string. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
 - `schema_id` (String) Schema ID for the input data.
-- `schema_type` (String) How the value in `data` is formatted. <ul><li>`FORM_JSONSCHEMA` — a StackGuardian NoCode form; `data` holds the values that form collects.</li><li>`RAW_HCL` — HCL-formatted input, as you would write in a `.tfvars` file.</li><li>`RAW_JSON` — the same input expressed as JSON.</li><li>`NONE` — the workflow takes no inputs.</li></ul>
+- `schema_type` (String) How the value in `data` is formatted. <ul><li>`FORM_JSONSCHEMA` — a StackGuardian NoCode form; `data` holds the values that form collects.</li><li>`RAW_HCL` — HCL-formatted input, as you would write in a `.tfvars` file.</li><li>`RAW_JSON` — the same input expressed as JSON.</li><li>`NONE` — the workflow takes no inputs.</li></ul>The platform also returns `NO_CODE_JSON` on some existing workflows. The provider passes that value through unchanged, but it is outside the set above and should not be written by hand.
 
 
 
@@ -182,7 +182,7 @@ Required:
 Optional:
 
 - `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `VAULT_SECRET`.
-- `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
+- `text_value` (String) Value written inline. Only used when `kind` is `PLAIN_TEXT`, and visible in configuration and state, so keep credentials in a `VAULT_SECRET` variable instead. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
 
 
 
@@ -447,7 +447,7 @@ Required:
 Optional:
 
 - `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `VAULT_SECRET`.
-- `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
+- `text_value` (String) Value written inline. Only used when `kind` is `PLAIN_TEXT`, and visible in configuration and state, so keep credentials in a `VAULT_SECRET` variable instead. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
 
 
 
@@ -509,7 +509,7 @@ Required:
 Optional:
 
 - `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `VAULT_SECRET`.
-- `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
+- `text_value` (String) Value written inline. Only used when `kind` is `PLAIN_TEXT`, and visible in configuration and state, so keep credentials in a `VAULT_SECRET` variable instead. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
 
 
 
@@ -571,7 +571,7 @@ Required:
 Optional:
 
 - `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `VAULT_SECRET`.
-- `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
+- `text_value` (String) Value written inline. Only used when `kind` is `PLAIN_TEXT`, and visible in configuration and state, so keep credentials in a `VAULT_SECRET` variable instead. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
 
 
 
@@ -633,7 +633,7 @@ Required:
 Optional:
 
 - `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `VAULT_SECRET`.
-- `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
+- `text_value` (String) Value written inline. Only used when `kind` is `PLAIN_TEXT`, and visible in configuration and state, so keep credentials in a `VAULT_SECRET` variable instead. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
 
 
 
@@ -726,7 +726,7 @@ Required:
 Optional:
 
 - `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `VAULT_SECRET`.
-- `text_value` (String) Text value (if using plain text). Only if type is <span style="background-color: #eff0f0; color: #e53835;">TEXT</span>
+- `text_value` (String) Value written inline. Only used when `kind` is `PLAIN_TEXT`, and visible in configuration and state, so keep credentials in a `VAULT_SECRET` variable instead. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
 
 
 
