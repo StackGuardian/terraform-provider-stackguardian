@@ -13,7 +13,7 @@ import (
 var sourceConfigKind = "TERRAFORM"
 
 func TestAccWorkflowTemplate_Basic(t *testing.T) {
-	templateName := "tf-provider-workflow-template-1"
+	templateName := acctest.ResourceName("tf-provider-workflow-template-1")
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -48,7 +48,7 @@ func TestAccWorkflowTemplate_Basic(t *testing.T) {
 }
 
 func TestAccWorkflowTemplate_WithRuntime(t *testing.T) {
-	templateName := "tf-provider-workflow-template-2"
+	templateName := acctest.ResourceName("tf-provider-workflow-template-2")
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")

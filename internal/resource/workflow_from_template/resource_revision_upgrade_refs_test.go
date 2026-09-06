@@ -133,19 +133,21 @@ func setupTwoRevIdenticalDerivedFields(t *testing.T, name string) (rev1, rev2 st
 // "inconsistent result after apply") by running the upgrade as a real apply step.
 func TestAccWorkflowUsingTemplate_RevisionUpgradeNoSpuriousDependentUpdate(t *testing.T) {
 	rev1, rev2 := setupTwoRevIdenticalDerivedFields(t, "tf-fixverify-tpl")
-	wfGrp := "tf-fixverify-wfgrp"
+	wfGrp := acctest.ResourceName("tf-fixverify-wfgrp")
+	wf1ID := acctest.ResourceName("tf-fixverify-1")
+	wf2ID := acctest.ResourceName("tf-fixverify-2")
 	if err := createWorkflowGroupFixture(wfGrp); err != nil {
 		t.Fatalf("wfgrp fixture: %s", err)
 	}
 	defer deleteWorkflowGroupFixture(wfGrp)
-	defer deleteWorkflowUsingTemplateFixture(wfGrp, "tf-fixverify-1")
-	defer deleteWorkflowUsingTemplateFixture(wfGrp, "tf-fixverify-2")
+	defer deleteWorkflowUsingTemplateFixture(wfGrp, wf1ID)
+	defer deleteWorkflowUsingTemplateFixture(wfGrp, wf2ID)
 
 	cfg := func(rev string) string {
 		return fmt.Sprintf(`
 resource "stackguardian_workflow_from_template" "test1" {
   workflow_group_id = %q
-  id                = "tf-fixverify-1"
+  id                = %q
   wf_type           = "TERRAFORM"
   vcs_config = {
     iac_vcs_config = {
@@ -159,7 +161,7 @@ resource "stackguardian_workflow_from_template" "test1" {
 
 resource "stackguardian_workflow_from_template" "test2" {
   workflow_group_id = %q
-  id                = "tf-fixverify-2"
+  id                = %q
   wf_type           = "TERRAFORM"
   vcs_config = {
     iac_vcs_config = {
@@ -179,7 +181,7 @@ resource "stackguardian_workflow_from_template" "test2" {
     terraform_version = "1.5.0"
   }
 }
-`, wfGrp, rev, wfGrp, rev1) // test2 always stays on rev1
+`, wfGrp, wf1ID, rev, wfGrp, wf2ID, rev1) // test2 always stays on rev1
 	}
 
 	resource.Test(t, resource.TestCase{

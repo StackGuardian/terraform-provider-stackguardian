@@ -132,7 +132,7 @@ resource "stackguardian_policy" "approval_on_apply" {
   enforced_on = ["/wfgrps/frontend"]
 
   approvers = [
-    "eu-central-1_EXAMPLEPOOL/local/platform-lead@example.com",
+    "platform-lead@example.com",
   ]
   number_of_approvals_required = 1
 
@@ -169,9 +169,9 @@ resource "stackguardian_policy" "approval_on_apply" {
 }
 ```
 
-~> `approvers` are fully qualified user IDs, not bare email addresses — the form is
-`<user-pool-id>/local/<email>`. Read an existing policy with the `stackguardian_policy` data
-source to see the prefix your organization uses.
+~> Each `approvers` entry is a user's email address, or an SSO group name to allow anyone in
+that group. The fully qualified form `<user-pool-id>/local/<email>` is also accepted. Read an
+existing policy with the `stackguardian_policy` data source to see what your organization uses.
 
 ## Where to go next
 

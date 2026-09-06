@@ -20,13 +20,17 @@ find . -type f -regextype posix-extended -regex '.+.tfstate(.[[:digit:]]+)?(.bac
 # --- Import resources
 set +e
 
-terraform import stackguardian_workflow_group.ONBOARDING-Project01-Frontend ONBOARDING-Project01-Frontend
-terraform import stackguardian_workflow_group.ONBOARDING-Project01-Backend  ONBOARDING-Project01-Backend
-terraform import stackguardian_workflow_group.ONBOARDING-Project01-DevOps   ONBOARDING-Project01-DevOps
+terraform import stackguardian_workflow_group.frontend ONBOARDING-Project01-Frontend
+terraform import stackguardian_workflow_group.backend  ONBOARDING-Project01-Backend
+terraform import stackguardian_workflow_group.devops   ONBOARDING-Project01-DevOps
 
-terraform import stackguardian_connector.ONBOARDING-Project01-Cloud-Connector ONBOARDING-Project01-Cloud-Connector
-terraform import stackguardian_connector.ONBOARDING-Project01-VCS-Connector   ONBOARDING-Project01-VCS-Connector
+terraform import stackguardian_connector.cloud ONBOARDING-Project01-Cloud-Connector
+terraform import stackguardian_connector.vcs   ONBOARDING-Project01-VCS-Connector
 
-terraform import stackguardian_role.ONBOARDING-Project01-Developer ONBOARDING-Project01-Developer
+terraform import stackguardian_rolev4.developer ONBOARDING-Project01-Developer
 
-terraform import stackguardian_role_assignment.ONBOARDING-Project01-Frontend-Developer "${SG_USER_ID}"
+terraform import stackguardian_role_assignment.developer "${SG_USER_ID}"
+
+# A workflow imports as "<workflow group>/<workflow>".
+terraform import stackguardian_workflow_git.frontend_deploy \
+  ONBOARDING-Project01-Frontend/ONBOARDING-Project01-Frontend-Deploy

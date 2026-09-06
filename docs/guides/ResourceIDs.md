@@ -8,7 +8,7 @@ description: |-
 # Resource IDs
 
 StackGuardian identifies most resources with a **path-like ID** rather than a plain name or a
-UUID — `/integrations/production-aws`, `/stackguardian/terraform:11`, `/wfgrps/platform/wfs/deploy-vpc`.
+UUID — `/integrations/production-aws`, `/stackguardian/aws-s3-demo-website:16`, `/wfgrps/platform/wfs/deploy-vpc`.
 The leading `/` is part of the value, not a typo, and these strings appear as ordinary attribute
 values throughout the provider.
 
@@ -21,7 +21,7 @@ reference.
 | --- | --- | --- |
 | `/integrations/<name>` | `/integrations/production-aws` | connectors |
 | `/secrets/<name>` | `/secrets/db-password` | secrets |
-| `/<org>/<name>:<revision>` | `/stackguardian/terraform:11` | template revisions, including marketplace |
+| `/<org>/<name>:<revision>` | `/stackguardian/aws-s3-demo-website:16` | template revisions, including marketplace |
 | `<name>:<revision>` | `my-template:1` | a template revision in your own org |
 | `/policies/<name>:<revision>` | `/policies/aws-all:1` | policies created in your own org |
 | `/wfgrps/<group>` | `/wfgrps/platform` | policy scope |
@@ -62,7 +62,7 @@ reference.
 `vcs_config.iac_vcs_config.iac_template_id` accepts both:
 
 - `my-template:1` — your own organization.
-- `/stackguardian/terraform:11` — a template owned by another organization. Any organization can
+- `/stackguardian/aws-s3-demo-website:16` — a template owned by another organization. Any organization can
   publish its own templates, make them public, or share them one-to-one with another org; public
   templates show up for other orgs as external templates. Templates published by StackGuardian
   itself live under the `stackguardian` org.
@@ -83,7 +83,7 @@ path returns `Unauthorized`.
 
 ```terraform
 # resource: both forms work
-iac_template_id = "/stackguardian/terraform:11"
+iac_template_id = "/stackguardian/aws-s3-demo-website:16"
 
 # data source: bare form only
 data "stackguardian_workflow_template_revision" "example" {
