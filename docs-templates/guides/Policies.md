@@ -65,7 +65,7 @@ resource "stackguardian_policy" "require_tags" {
   policy_type   = "GENERAL"
 
   # "*" would enforce this organization-wide.
-  enforced_on = ["/wfgrps/${stackguardian_workflow_group.frontend.resource_name}"]
+  enforced_on = ["/wfgrps/${stackguardian_workflow_group.frontend.id}"]
 
   policies_config = [{
     name    = "require-tags"

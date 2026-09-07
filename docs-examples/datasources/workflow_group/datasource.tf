@@ -7,7 +7,7 @@ data "stackguardian_workflow_group" "platform" {
 }
 
 resource "stackguardian_workflow_git" "example" {
-  workflow_group_id = data.stackguardian_workflow_group.platform.resource_name
+  workflow_group_id = data.stackguardian_workflow_group.platform.id
   id                = "deploy-vpc"
   wf_type           = "TERRAFORM"
 

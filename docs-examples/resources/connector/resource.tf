@@ -47,9 +47,10 @@ resource "stackguardian_connector" "github" {
   }
 }
 
-# Reference a connector from a workflow as `/integrations/<resource_name>`:
+# Reference a connector from a workflow as `/integrations/<id>`. `id` is the bare slug
+# (derived from resource_name unless you set it), so add the prefix yourself:
 #
 #   deployment_platform_config = [{
 #     kind   = "AWS_RBAC"
-#     config = { integration_id = stackguardian_connector.aws_rbac.id }
+#     config = { integration_id = "/integrations/${stackguardian_connector.aws_rbac.id}" }
 #   }]

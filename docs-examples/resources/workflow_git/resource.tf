@@ -12,7 +12,7 @@ resource "stackguardian_workflow_group" "sandbox" {
 }
 
 resource "stackguardian_workflow_git" "basic" {
-  workflow_group_id = stackguardian_workflow_group.sandbox.resource_name
+  workflow_group_id = stackguardian_workflow_group.sandbox.id
   id                = "hello-terraform"
   wf_type           = "TERRAFORM"
 
@@ -48,7 +48,7 @@ resource "stackguardian_workflow_group" "networking" {
 }
 
 resource "stackguardian_workflow_git" "vpc_staging" {
-  workflow_group_id = stackguardian_workflow_group.networking.resource_name
+  workflow_group_id = stackguardian_workflow_group.networking.id
   id                = "vpc-staging"
   wf_type           = "TERRAFORM"
 
@@ -112,7 +112,7 @@ resource "stackguardian_workflow_group" "production" {
 }
 
 resource "stackguardian_workflow_git" "vpc_production" {
-  workflow_group_id = stackguardian_workflow_group.production.resource_name
+  workflow_group_id = stackguardian_workflow_group.production.id
   id                = "vpc-production"
   wf_type           = "TERRAFORM"
 

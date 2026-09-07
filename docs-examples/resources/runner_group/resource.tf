@@ -27,7 +27,7 @@ resource "stackguardian_runner_group" "example" {
     aws_region     = "eu-central-1"
     s3_bucket_name = "my-org-runner-logs"
     auth = {
-      integration_id = stackguardian_connector.runner_logs.id
+      integration_id = "/integrations/${stackguardian_connector.runner_logs.id}"
     }
   }
 }
