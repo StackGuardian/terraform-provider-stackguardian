@@ -81,9 +81,9 @@ const (
 const (
 	EnvVarConfig          = "Configuration for the environment variable."
 	EnvVarConfigVarName   = "Name of the variable."
-	EnvVarConfigSecretId  = "Not used. To reference a secret, set `config.text_value` to `$${secret::<secret-name>}` instead."
-	EnvVarConfigTextValue = "Value written inline, and visible in configuration and state, so write a secret in as a reference rather than as a literal value. " + SecretReferenceSyntax
-	EnvVarKind            = "Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so put a `$${secret::<secret-name>}` reference there rather than a literal credential."
+	EnvVarConfigSecretId  = "Not used. To reference a secret, set `config.text_value` instead — see the [Runtime References guide](" + RuntimeReferencesGuide + ")."
+	EnvVarConfigTextValue = "Value written inline, and visible in configuration and state. " + RuntimeReferenceNote
+	EnvVarKind            = "Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so reference a credential rather than writing it literally: see the [Runtime References guide](" + RuntimeReferencesGuide + ")."
 )
 
 // Input Schemas attributes
@@ -152,7 +152,7 @@ const (
 	TerraformWfStepTemplateRevisionId = "Fully-qualified workflow step template revision pinned for this terraform config, as a path-form ID: `/<org>/<name>:<rev>` (e.g. `/stackguardian/terraform:11`)."
 	WfStepInputData                   = "Workflow step input data (JSON string)"
 	WfStepInputDataSchemaType         = "How the value in `data` is formatted. `FORM_JSONSCHEMA` is a StackGuardian NoCode form; `data` holds the values that form collects."
-	WfStepInputDataData               = "Input data (JSON)."
+	WfStepInputDataData               = "Input data (JSON). " + RuntimeReferenceNote
 )
 
 // Terraform Config attributes

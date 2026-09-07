@@ -15,6 +15,10 @@ description: |-
 
 Reads the outputs produced by a workflow's most recent run, so other Terraform resources can consume values that StackGuardian produced.
 
+These are read at plan time. To hand a value straight to another workflow instead, without
+Terraform seeing it, use a runtime reference — see the
+[Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+
 ## Example Usage
 
 ```terraform

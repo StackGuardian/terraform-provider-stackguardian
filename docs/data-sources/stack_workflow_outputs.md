@@ -15,6 +15,10 @@ description: |-
 
 Reads the outputs of a single workflow inside a stack, rather than the stack's outputs as a whole.
 
+These are read at plan time. To hand a value straight to another workflow instead, without
+Terraform seeing it, use a runtime reference — see the
+[Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+
 ## Example Usage
 
 ```terraform

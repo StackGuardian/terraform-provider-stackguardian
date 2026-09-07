@@ -47,7 +47,7 @@ resource "stackguardian_workflow_group" "example" {
 
 Reference for every resource and data source is on the
 [Terraform Registry](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs),
-alongside ten guides:
+alongside eleven guides:
 
 | Guide | What it covers |
 | --- | --- |
@@ -55,6 +55,7 @@ alongside ten guides:
 | [Getting Started](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/GettingStarted) | A working deployment, one resource at a time |
 | [Object Model](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ObjectModel) | How workflow groups, templates, connectors and roles relate |
 | [Resource IDs](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ResourceIDs) | The path-form IDs StackGuardian uses, and where they differ |
+| [Runtime References](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences) | The `${...}` tokens the platform resolves at run time |
 | [Templates and Revisions](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Templates) | The template/revision split, and what a revision upgrade changes |
 | [Policies](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Policies) | Guardrails, approval gates, and where a policy body comes from |
 | [Access Management](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/AccessManagement) | Roles, permissions and assignments |

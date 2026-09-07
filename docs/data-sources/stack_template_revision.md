@@ -115,15 +115,15 @@ Read-Only:
 Read-Only:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--actions--order--parameters--environment_variables--config))
-- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so put a `$${secret::<secret-name>}` reference there rather than a literal credential.
+- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so reference a credential rather than writing it literally: see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 
 <a id="nestedatt--actions--order--parameters--environment_variables--config"></a>
 ### Nested Schema for `actions.order.parameters.environment_variables.config`
 
 Read-Only:
 
-- `secret_id` (String) Not used. To reference a secret, set `config.text_value` to `$${secret::<secret-name>}` instead.
-- `text_value` (String) Value written inline, and visible in configuration and state, so write a secret in as a reference rather than as a literal value. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
+- `secret_id` (String) Not used. To reference a secret, set `config.text_value` instead — see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+- `text_value` (String) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `var_name` (String) Name of the variable.
 
 
@@ -156,15 +156,15 @@ Read-Only:
 Read-Only:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--actions--order--parameters--wf_steps_config--environment_variables--config))
-- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so put a `$${secret::<secret-name>}` reference there rather than a literal credential.
+- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so reference a credential rather than writing it literally: see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 
 <a id="nestedatt--actions--order--parameters--wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `actions.order.parameters.wf_steps_config.environment_variables.config`
 
 Read-Only:
 
-- `secret_id` (String) Not used. To reference a secret, set `config.text_value` to `$${secret::<secret-name>}` instead.
-- `text_value` (String) Value written inline, and visible in configuration and state, so write a secret in as a reference rather than as a literal value. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
+- `secret_id` (String) Not used. To reference a secret, set `config.text_value` instead — see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+- `text_value` (String) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `var_name` (String) Name of the variable.
 
 
@@ -184,7 +184,7 @@ Read-Only:
 
 Read-Only:
 
-- `data` (String) Input data (JSON).
+- `data` (String) Input data (JSON). May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `schema_type` (String) How the value in `data` is formatted. `FORM_JSONSCHEMA` is a StackGuardian NoCode form; `data` holds the values that form collects.
 
 
@@ -244,15 +244,15 @@ Read-Only:
 Read-Only:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--workflows_config--workflows--environment_variables--config))
-- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so put a `$${secret::<secret-name>}` reference there rather than a literal credential.
+- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so reference a credential rather than writing it literally: see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 
 <a id="nestedatt--workflows_config--workflows--environment_variables--config"></a>
 ### Nested Schema for `workflows_config.workflows.environment_variables.config`
 
 Read-Only:
 
-- `secret_id` (String) Not used. To reference a secret, set `config.text_value` to `$${secret::<secret-name>}` instead.
-- `text_value` (String) Value written inline, and visible in configuration and state, so write a secret in as a reference rather than as a literal value. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
+- `secret_id` (String) Not used. To reference a secret, set `config.text_value` instead — see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+- `text_value` (String) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `var_name` (String) Name of the variable.
 
 
@@ -311,15 +311,15 @@ Read-Only:
 Read-Only:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config--post_apply_wf_steps_config--environment_variables--config))
-- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so put a `$${secret::<secret-name>}` reference there rather than a literal credential.
+- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so reference a credential rather than writing it literally: see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 
 <a id="nestedatt--workflows_config--workflows--terraform_config--post_apply_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `workflows_config.workflows.terraform_config.post_apply_wf_steps_config.environment_variables.config`
 
 Read-Only:
 
-- `secret_id` (String) Not used. To reference a secret, set `config.text_value` to `$${secret::<secret-name>}` instead.
-- `text_value` (String) Value written inline, and visible in configuration and state, so write a secret in as a reference rather than as a literal value. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
+- `secret_id` (String) Not used. To reference a secret, set `config.text_value` instead — see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+- `text_value` (String) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `var_name` (String) Name of the variable.
 
 
@@ -339,7 +339,7 @@ Read-Only:
 
 Read-Only:
 
-- `data` (String) Input data (JSON).
+- `data` (String) Input data (JSON). May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `schema_type` (String) How the value in `data` is formatted. `FORM_JSONSCHEMA` is a StackGuardian NoCode form; `data` holds the values that form collects.
 
 
@@ -364,15 +364,15 @@ Read-Only:
 Read-Only:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config--post_plan_wf_steps_config--environment_variables--config))
-- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so put a `$${secret::<secret-name>}` reference there rather than a literal credential.
+- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so reference a credential rather than writing it literally: see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 
 <a id="nestedatt--workflows_config--workflows--terraform_config--post_plan_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `workflows_config.workflows.terraform_config.post_plan_wf_steps_config.environment_variables.config`
 
 Read-Only:
 
-- `secret_id` (String) Not used. To reference a secret, set `config.text_value` to `$${secret::<secret-name>}` instead.
-- `text_value` (String) Value written inline, and visible in configuration and state, so write a secret in as a reference rather than as a literal value. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
+- `secret_id` (String) Not used. To reference a secret, set `config.text_value` instead — see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+- `text_value` (String) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `var_name` (String) Name of the variable.
 
 
@@ -392,7 +392,7 @@ Read-Only:
 
 Read-Only:
 
-- `data` (String) Input data (JSON).
+- `data` (String) Input data (JSON). May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `schema_type` (String) How the value in `data` is formatted. `FORM_JSONSCHEMA` is a StackGuardian NoCode form; `data` holds the values that form collects.
 
 
@@ -417,15 +417,15 @@ Read-Only:
 Read-Only:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config--pre_apply_wf_steps_config--environment_variables--config))
-- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so put a `$${secret::<secret-name>}` reference there rather than a literal credential.
+- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so reference a credential rather than writing it literally: see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 
 <a id="nestedatt--workflows_config--workflows--terraform_config--pre_apply_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `workflows_config.workflows.terraform_config.pre_apply_wf_steps_config.environment_variables.config`
 
 Read-Only:
 
-- `secret_id` (String) Not used. To reference a secret, set `config.text_value` to `$${secret::<secret-name>}` instead.
-- `text_value` (String) Value written inline, and visible in configuration and state, so write a secret in as a reference rather than as a literal value. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
+- `secret_id` (String) Not used. To reference a secret, set `config.text_value` instead — see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+- `text_value` (String) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `var_name` (String) Name of the variable.
 
 
@@ -445,7 +445,7 @@ Read-Only:
 
 Read-Only:
 
-- `data` (String) Input data (JSON).
+- `data` (String) Input data (JSON). May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `schema_type` (String) How the value in `data` is formatted. `FORM_JSONSCHEMA` is a StackGuardian NoCode form; `data` holds the values that form collects.
 
 
@@ -470,15 +470,15 @@ Read-Only:
 Read-Only:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config--pre_plan_wf_steps_config--environment_variables--config))
-- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so put a `$${secret::<secret-name>}` reference there rather than a literal credential.
+- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so reference a credential rather than writing it literally: see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 
 <a id="nestedatt--workflows_config--workflows--terraform_config--pre_plan_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `workflows_config.workflows.terraform_config.pre_plan_wf_steps_config.environment_variables.config`
 
 Read-Only:
 
-- `secret_id` (String) Not used. To reference a secret, set `config.text_value` to `$${secret::<secret-name>}` instead.
-- `text_value` (String) Value written inline, and visible in configuration and state, so write a secret in as a reference rather than as a literal value. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
+- `secret_id` (String) Not used. To reference a secret, set `config.text_value` instead — see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+- `text_value` (String) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `var_name` (String) Name of the variable.
 
 
@@ -498,7 +498,7 @@ Read-Only:
 
 Read-Only:
 
-- `data` (String) Input data (JSON).
+- `data` (String) Input data (JSON). May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `schema_type` (String) How the value in `data` is formatted. `FORM_JSONSCHEMA` is a StackGuardian NoCode form; `data` holds the values that form collects.
 
 
@@ -538,7 +538,7 @@ Read-Only:
 
 Read-Only:
 
-- `data` (String) Input data as a JSON string.
+- `data` (String) Input data as a JSON string. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `schema_id` (String) Schema ID for the input data.
 - `schema_type` (String) How the value in `data` is formatted. <ul><li>`FORM_JSONSCHEMA` — a StackGuardian NoCode form; `data` holds the values that form collects.</li><li>`RAW_HCL` — HCL-formatted input, as you would write in a `.tfvars` file.</li><li>`RAW_JSON` — the same input expressed as JSON.</li><li>`NONE` — the workflow takes no inputs.</li></ul>The platform also returns `NO_CODE_JSON` on some existing workflows. The provider passes that value through unchanged, but it is outside the set above and should not be written by hand.
 
@@ -598,15 +598,15 @@ Read-Only:
 Read-Only:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--workflows_config--workflows--wf_steps_config--environment_variables--config))
-- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so put a `$${secret::<secret-name>}` reference there rather than a literal credential.
+- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so reference a credential rather than writing it literally: see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 
 <a id="nestedatt--workflows_config--workflows--wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `workflows_config.workflows.wf_steps_config.environment_variables.config`
 
 Read-Only:
 
-- `secret_id` (String) Not used. To reference a secret, set `config.text_value` to `$${secret::<secret-name>}` instead.
-- `text_value` (String) Value written inline, and visible in configuration and state, so write a secret in as a reference rather than as a literal value. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
+- `secret_id` (String) Not used. To reference a secret, set `config.text_value` instead — see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+- `text_value` (String) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `var_name` (String) Name of the variable.
 
 
@@ -626,7 +626,7 @@ Read-Only:
 
 Read-Only:
 
-- `data` (String) Input data (JSON).
+- `data` (String) Input data (JSON). May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `schema_type` (String) How the value in `data` is formatted. `FORM_JSONSCHEMA` is a StackGuardian NoCode form; `data` holds the values that form collects.
 
 

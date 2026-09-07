@@ -100,37 +100,35 @@ func TestIacInputDataSchemaTypeDocumentsPlatformOnlyValue(t *testing.T) {
 	}
 }
 
-// The separator is a double colon. A single-dot spelling appears in some tooling, and
-// it matches nothing on the platform, so a well-meaning correction to `${secret.name}`
-// would silently give every reader a value that never resolves.
-func TestSecretReferenceSyntaxUsesDoubleColon(t *testing.T) {
-	if !strings.Contains(SecretReferenceSyntax, "${secret::") {
-		t.Fatalf("SecretReferenceSyntax must document the ${secret::<name>} form, got: %s",
-			SecretReferenceSyntax)
-	}
-
-	if strings.Contains(SecretReferenceSyntax, "${secret.") {
-		t.Error("SecretReferenceSyntax documents the ${secret.<name>} form, which the " +
-			"platform does not resolve; the separator is a double colon")
-	}
-
-	// Terraform reads a bare ${ as its own interpolation, so the escaped spelling is
-	// the part a reader actually has to copy.
-	if !strings.Contains(SecretReferenceSyntax, "$${secret::") {
-		t.Error("SecretReferenceSyntax should show the escaped $${secret::<name>} form, " +
-			"otherwise a copied example is interpolated by Terraform instead of sent verbatim")
-	}
-}
-
-// Both attributes that accept a secret reference should describe it identically.
-func TestSecretReferenceDocumentedWhereItIsAccepted(t *testing.T) {
+// Every attribute whose value the platform resolves at run time has to point at the
+// guide. Without this, a new reference-accepting attribute ships with no way for a
+// reader to learn the syntax, which is how ${secret::...} came to be the only form
+// documented anywhere in the provider.
+func TestRuntimeReferenceDocumentedWhereItIsAccepted(t *testing.T) {
 	for name, doc := range map[string]string{
 		"WorkflowIacInputDataData": WorkflowIacInputDataData,
 		"EnvVarConfigTextValue":    EnvVarConfigTextValue,
+		"WfStepInputDataData":      WfStepInputDataData,
 	} {
-		if !strings.Contains(doc, SecretReferenceSyntax) {
-			t.Errorf("%s does not carry SecretReferenceSyntax, so the two descriptions "+
-				"of the same syntax can drift", name)
+		if !strings.Contains(doc, RuntimeReferenceNote) {
+			t.Errorf("%s does not carry RuntimeReferenceNote, so a reader has no way to "+
+				"find the reference syntax from this attribute", name)
+		}
+	}
+}
+
+// The note is a pointer, not a specification. Spelling a form out in an attribute
+// description puts a second copy of the syntax where nothing checks it against the
+// guide, which is exactly the drift this arrangement exists to prevent.
+func TestRuntimeReferenceNoteNamesNoForms(t *testing.T) {
+	if !strings.Contains(RuntimeReferenceNote, RuntimeReferencesGuide) {
+		t.Fatal("RuntimeReferenceNote does not link the guide, so it points nowhere")
+	}
+
+	for _, form := range referenceForms {
+		if strings.Contains(RuntimeReferenceNote, form) {
+			t.Errorf("RuntimeReferenceNote spells out %q; the forms belong in the guide "+
+				"so there is only one copy to keep correct", form)
 		}
 	}
 }
@@ -145,9 +143,9 @@ func TestPlainTextVariableWarnsAboutExposure(t *testing.T) {
 		if !strings.Contains(doc, "state") {
 			t.Errorf("%s does not mention that the value is visible in state", name)
 		}
-		if !strings.Contains(doc, "${secret::") {
-			t.Errorf("%s does not point at a ${secret::<name>} reference as the way to "+
-				"hold a credential", name)
+		if !strings.Contains(doc, RuntimeReferencesGuide) {
+			t.Errorf("%s does not link the Runtime References guide, so a reader is told "+
+				"not to write a credential without being told what to write instead", name)
 		}
 	}
 }

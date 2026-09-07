@@ -393,7 +393,7 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 						Required:            true,
 					},
 					"data": schema.StringAttribute{
-						MarkdownDescription: "Input data as a JSON string.",
+						MarkdownDescription: constants.WorkflowIacInputDataData,
 						Optional:            true,
 					},
 				},
@@ -411,7 +411,7 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 				Required:            true,
 			},
 			"data": schema.StringAttribute{
-				MarkdownDescription: "Input data as a JSON string.",
+				MarkdownDescription: constants.WorkflowIacInputDataData,
 				Optional:            true,
 			},
 		},
