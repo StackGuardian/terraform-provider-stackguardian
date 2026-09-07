@@ -98,7 +98,7 @@ const (
 	DiscoverySettingsBenchmarksRuntimeSourceConfigIncludeSubModule = "Indicates whether to include sub-modules."
 	DiscoverySettingsBenchmarksRuntimeSourceConfigRef              = "Reference identifier for the repository."
 	DiscoverySettingsBenchmarksRuntimeSourceConfigGitCoreAutoCRLF  = "Indicates if core.autocrlf should be enabled."
-	DiscoverySettingsBenchmarksRuntimeSourceConfigAuth             = "Authentication method for accessing the repository."
+	DiscoverySettingsBenchmarksRuntimeSourceConfigAuth             = "Credential used to reach the repository, as a path-form ID: a connector `/integrations/<connector-name>` or a secret `/secrets/<secret-name>`. Build the connector form from the resource rather than typing it: `\"/integrations/${stackguardian_connector.github.id}\"`."
 	DiscoverySettingsBenchmarksRuntimeSourceConfigWorkingDir       = "Working directory for operations."
 	DiscoverySettingsBenchmarksRuntimeSourceConfigRepo             = "Repository name or URL."
 	DiscoverySettingsBenchmarksRuntimeSourceConfigIsPrivate        = "Indicates if the repository is private."
@@ -137,7 +137,7 @@ const (
 const (
 	Approvers                 = "StackGuardian users who can approve a held run. Each entry is a user's email address, or an SSO group name to allow anyone in that group; the fully qualified form `<user-pool-id>/local/<email>` is also accepted. Read an existing policy with the `stackguardian_policy` data source to see what your organization uses. Applies only to `policy_type = \"GENERAL\"`."
 	NumberOfApprovalsRequired = "Number of approvals required for a policy check to pass"
-	EnforcedOn                = "What this policy is enforced on — either organization-wide, or any combination of workflow groups, workflows and connectors. <ul><li>`[\"*\"]` — the whole organization. Used on its own, not combined with other entries.</li><li>`[\"/wfgrps/&lt;group&gt;\"]` — a workflow group and everything inside it. No trailing slash.</li><li>Workflows and connectors follow the same resource-path convention and can be listed alongside workflow groups.</li></ul>Confirm an unfamiliar form against an existing policy before relying on it."
+	EnforcedOn                = "What this policy is enforced on — either organization-wide, or any combination of workflow groups, workflows and connectors. <ul><li>`[\"*\"]` — the whole organization. Used on its own, not combined with other entries.</li><li>`[\"/wfgrps/<group>\"]` — a workflow group and everything inside it. No trailing slash.</li><li>Workflows and connectors follow the same resource-path convention and can be listed alongside workflow groups.</li></ul>Confirm an unfamiliar form against an existing policy before relying on it."
 	PolicyType                = "What kind of policy this is. <ul><li>`GENERAL` — the standard policy, evaluated during workflow and stack runs. `enforced_on`, `approvers` and `number_of_approvals_required` apply only to this type.</li><li>`FILTER.INSIGHT` — a filter over Insight findings. It excludes findings that match its definition from the Insight dashboard rather than gating a run, so it takes no scope and no approval settings.</li></ul>"
 
 	PolicyConfig                    = "Policy configuration"
@@ -180,7 +180,7 @@ const (
 
 // Workflow Group
 const (
-	WorkflowGroupResourceName = "Name of the workflow group. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_/]+$"
+	WorkflowGroupResourceName = "Name of the workflow group, which is also its `id`. Must be less than 100 characters: letters, digits, `_` and `-`, with `/` separating the levels of a nested group (`platform/networking`)."
 )
 
 // Role Assignment or User
@@ -191,8 +191,8 @@ const (
 
 // Common
 const (
-	ResourceName         = "Name of the %s. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$"
-	Id                   = "ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>"
+	ResourceName         = "Name of the %s. Must be less than 100 characters. Free-form: when it is not already slug-shaped (letters, digits, `_`, `-`) the platform derives a slug for `id` — see `id`."
+	Id                   = "Identifier of the resource: a bare slug such as `production-aws`, never a path. When omitted it is derived from `resource_name` — unchanged if that is already slug-shaped (letters, digits, `_`, `-`), otherwise lowercased, spaces replaced by `-`, with a random suffix appended. Set it explicitly to control it. Use it to reference the resource elsewhere, adding the prefix the attribute expects: `\"/integrations/${stackguardian_connector.x.id}\"`, `\"/wfgrps/${stackguardian_workflow_group.x.id}\"`. The `resource_name` attribute is still available for references but its use is discouraged: it is not always equal to `id`."
 	Description          = "A brief description of the %s. Must be less than 256 characters."
 	Tags                 = "A list of tags associated with the %s. A maximum of 10 tags are allowed."
 	StorageBackendConfig = "Configuration for storing runner logs"
@@ -227,7 +227,7 @@ const (
 
 // Common
 const (
-	DatasourceId                      = "ID of the resource. Should be used to import the resource."
+	DatasourceId                      = "Identifier of the resource: a bare slug, never a path. Use it to look the resource up, and to reference it elsewhere with the prefix the attribute expects (e.g. `\"/integrations/${data.stackguardian_connector.x.id}\"`)."
 	StackguardianStack                = "Stackguardian stack name"
 	StackguardianWorkflow             = "Stackguardian workflow name"
 	StackguardianWorkflowGroup        = "Stackguardian workflow group name"
@@ -239,5 +239,5 @@ const (
 // api token
 const (
 	RunnerGroupToken = "Runner Group token"
-	RunnerGroupId    = "Runner group ID"
+	RunnerGroupId    = "Runner group to issue the token for, as its bare `id` / `resource_name` (e.g. `private-runners`) — not `/runnergroups/…`; the data source adds that prefix itself."
 )

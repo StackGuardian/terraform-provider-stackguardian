@@ -21,8 +21,9 @@ const (
 
 // Stack Template Revision Resource documentation
 const (
-	StackTemplateRevisionId              = "Unique identifier of the stack template revision."
-	StackTemplateRevisionTemplateId      = "ID of the parent stack template."
+	StackTemplateRevisionId              = "Identifier of the revision, in the form `<template-name>:<revision>` (e.g. `my-stack-template:1`)."
+	StackTemplateRevisionTemplateId      = "Parent stack template, as its bare `template_name` (which is also its `id`) — not a path."
+	StackTemplateRevisionIacTemplateId   = "Workflow template this stack workflow is created from, as the bare `template_name` of a template in your own organization (e.g. `my-workflow-template`). The provider qualifies it with your organization, so do not give the `/<org>/…` form."
 	StackTemplateRevisionAlias           = "Human-readable alias for the revision (e.g., `v1.0.0`)."
 	StackTemplateRevisionNotes           = "Release notes or changelog for this revision."
 	StackTemplateRevisionDescription     = "Long description for the stack template revision."

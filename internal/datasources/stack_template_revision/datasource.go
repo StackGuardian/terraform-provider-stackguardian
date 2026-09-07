@@ -290,7 +290,7 @@ var dsWorkflowInStackAttrs = map[string]schema.Attribute{
 						Computed:            true,
 					},
 					"iac_template_id": schema.StringAttribute{
-						MarkdownDescription: constants.WorkflowIacTemplateId,
+						MarkdownDescription: constants.StackTemplateRevisionIacTemplateId,
 						Computed:            true,
 					},
 					"custom_source": schema.SingleNestedAttribute{

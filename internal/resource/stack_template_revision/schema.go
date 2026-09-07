@@ -187,7 +187,7 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 		Required:            true,
 	},
 	"template_id": schema.StringAttribute{
-		MarkdownDescription: constants.WorkflowIacTemplateId,
+		MarkdownDescription: constants.StackTemplateRevisionIacTemplateId,
 		Required:            true,
 	},
 	"resource_name": schema.StringAttribute{
@@ -326,7 +326,7 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 						Optional:            true,
 					},
 					"iac_template_id": schema.StringAttribute{
-						MarkdownDescription: constants.WorkflowIacTemplateId,
+						MarkdownDescription: constants.StackTemplateRevisionIacTemplateId,
 						Optional:            true,
 					},
 					"custom_source": schema.SingleNestedAttribute{

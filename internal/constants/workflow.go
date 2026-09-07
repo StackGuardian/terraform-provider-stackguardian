@@ -7,16 +7,16 @@ const SecretReferenceSyntax = "The value may contain a `${secret::<secret-name>}
 
 // Workflow resource attributes
 const (
-	WorkflowWorkflowGroupId = "ID of the parent workflow group."
+	WorkflowWorkflowGroupId = "Workflow group the workflow lives in, as its bare `id` (e.g. `platform`; the full path `platform/networking` for a nested group) — not `/wfgrps/…`."
 	// WorkflowFromTemplateWorkflowGroupId is workflow_group_id for the workflow_from_template
 	// resource, where it is immutable (changing it forces recreation).
-	WorkflowFromTemplateWorkflowGroupId = "ID of the parent workflow group. Immutable — changing this forces the workflow to be recreated (destroy and create), as the platform has no operation to move a workflow between groups."
+	WorkflowFromTemplateWorkflowGroupId = "Workflow group the workflow lives in, as its bare `id` (e.g. `platform`; the full path `platform/networking` for a nested group) — not `/wfgrps/…`. Immutable — changing this forces the workflow to be recreated (destroy and create), as the platform has no operation to move a workflow between groups."
 	WorkflowType                        = "How this workflow is executed. <ul><li>`TERRAFORM` — run with Terraform.</li><li>`OPENTOFU` — run with OpenTofu.</li><li>`CUSTOM` — run the steps in `wf_steps_config` yourself, rather than a built-in engine. Templates of other kinds (Helm, Ansible, Kubectl, CloudFormation) run as `CUSTOM` workflows.</li></ul>This is a smaller set than a template's `source_config_kind`, which describes what the template contains rather than how the workflow runs."
 	WorkflowRunnerConstraints           = "Runner constraints to control which runner executes the workflow."
 	WorkflowVcsConfig                   = "VCS configuration for the workflow."
 	WorkflowIacVcsConfig                = "IaC VCS configuration for the workflow."
 	WorkflowUseMarketplaceTemplate      = "Whether to use a marketplace template."
-	WorkflowIacTemplateId               = "Workflow template revision this workflow is created from. <ul><li>`&lt;template-name&gt;:&lt;revision&gt;` — a template in your own organization.</li><li>`/&lt;org&gt;/&lt;template-name&gt;:&lt;revision&gt;` — a template owned by another organization: one shared with you, or published publicly. StackGuardian's own templates use the `stackguardian` org, for example `/stackguardian/aws-s3-demo-website:16`.</li></ul>A bare id is resolved against your own organization. Use `:latest` in place of a revision number to track the most recently published revision; pin an explicit revision when the workflow must not move."
+	WorkflowIacTemplateId               = "Workflow template revision this workflow is created from. <ul><li>`<template-name>:<revision>` — a template in your own organization.</li><li>`/<org>/<template-name>:<revision>` — a template owned by another organization: one shared with you, or published publicly. StackGuardian's own templates use the `stackguardian` org, for example `/stackguardian/aws-s3-demo-website:16`.</li></ul>A bare id is resolved against your own organization. Use `:latest` in place of a revision number to track the most recently published revision; pin an explicit revision when the workflow must not move."
 	WorkflowCustomSource                = "Custom VCS source configuration."
 	WorkflowIacInputData                = "IaC input data for the workflow."
 	WorkflowIacInputDataSchemaId        = "Schema ID for the input data."

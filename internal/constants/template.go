@@ -27,6 +27,7 @@ const (
 
 // Workflow Template Revision attributes
 const (
+	WorkflowTemplateRevisionId           = "Identifier of the revision, in the form `<template-name>:<revision>` (e.g. `my-terraform-template:1`)."
 	WorkflowTemplateRevisionTemplateId   = "Parent workflow template, as its bare `template_name` (e.g. `my-terraform-template`) — not a path. Reference the `stackguardian_workflow_template` resource rather than typing it."
 	WorkflowTemplateRevisionInputSchemas = "JSONSchema Form representation of input JSON data"
 )
@@ -36,7 +37,7 @@ const (
 	RuntimeSource                       = "Runtime source configuration for the %s."
 	RuntimeSourceDestKind               = "Which VCS provider hosts the repository. This decides how StackGuardian authenticates and, for `vcs_triggers`, which webhook integration is used. <ul><li>`GITHUB_COM` — github.com. See the [GitHub connector docs](https://docs.stackguardian.io/docs/connectors/vcs/githubcom/).</li><li>`GITHUB_APP_CUSTOM` — GitHub Enterprise, or a GitHub App you manage yourself. See the [GitHub Enterprise docs](https://docs.stackguardian.io/docs/connectors/vcs/github_enterprise/).</li><li>`GITLAB_COM` — gitlab.com. See the [GitLab connector docs](https://docs.stackguardian.io/docs/connectors/vcs/gitlabcom/).</li><li>`BITBUCKET_ORG` — Bitbucket Cloud. See the [Bitbucket connector docs](https://docs.stackguardian.io/docs/connectors/vcs/bitbucket/).</li><li>`AZURE_DEVOPS` — Azure DevOps. See the [Azure DevOps connector docs](https://docs.stackguardian.io/docs/connectors/vcs/azuredevops/).</li><li>`AZURE_DEVOPS_SP` — Azure DevOps authenticated with a service principal.</li><li>`GIT_OTHER` — any other Git host, including public repositories that need no authentication.</li></ul>"
 	RuntimeSourceConfig                 = "Configuration for the runtime environment."
-	RuntimeSourceConfigAuth             = "Connector used to clone a private repository, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/github-connector`). Required when `is_private` is `true`."
+	RuntimeSourceConfigAuth             = "Credential for cloning a private repository, as a path-form ID. Either a VCS connector — `/integrations/<connector-name>`, built as `\"/integrations/${stackguardian_connector.github.id}\"` — for `GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG` and `AZURE_DEVOPS*` sources, or a secret `/secrets/<secret-name>`. `GIT_OTHER` accepts only the secret form. Required when `is_private` is `true`."
 	RuntimeSourceConfigGitCoreCRLF      = "Whether to automatically handle CRLF line endings."
 	RuntimeSourceConfigGitSparse        = "Git sparse checkout command line git cli options."
 	RuntimeSourceConfigIncludeSubmodule = "Whether to include git submodules."
@@ -148,7 +149,7 @@ const (
 	WfStepCmdOverride                 = "Override command for the step."
 	WfStepMountPoints                 = "Mount points for the step."
 	WfStepTemplateId                  = "Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`."
-	TerraformWfStepTemplateRevisionId = "Fully-qualified workflow step template revision id pinned for this terraform config (e.g. \"/<org>/<name>:<rev>\")."
+	TerraformWfStepTemplateRevisionId = "Fully-qualified workflow step template revision pinned for this terraform config, as a path-form ID: `/<org>/<name>:<rev>` (e.g. `/stackguardian/terraform:11`)."
 	WfStepInputData                   = "Workflow step input data (JSON string)"
 	WfStepInputDataSchemaType         = "How the value in `data` is formatted. `FORM_JSONSCHEMA` is a StackGuardian NoCode form; `data` holds the values that form collects."
 	WfStepInputDataData               = "Input data (JSON)."
