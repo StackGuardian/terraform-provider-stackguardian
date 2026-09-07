@@ -158,7 +158,7 @@ const (
 // Terraform Config attributes
 const (
 	TerraformConfig                  = "Terraform configuration. Valid only for terraform type template"
-	TerraformVersion                 = "Terraform or OpenTofu version, in bare form (e.g. `1.5.7`). StackGuardian stores an engine prefix (`TERRAFORM-` / `OPENTOFU-`) internally; the provider strips it, so the value can be referenced directly into another resource without producing a perpetual diff. Which engine runs is decided by `wf_type`, not by this value."
+	TerraformVersion                 = "Version of the engine to run, written bare (e.g. `1.5.7`). <ul><li>OpenTofu — any version.</li><li>Terraform — the open-source releases, `1.5.7` and earlier. A later release is BUSL-licensed and is only available on a workflow step template built on your own runtime image.</li></ul>The workflow step's container ships a set of versions preinstalled and downloads anything else when the workflow runs, provided it exists upstream. Which engine runs is decided by `wf_type`, not by this value."
 	TerraformDriftCheck              = "Enable drift check."
 	TerraformDriftCron               = "Cron expression for drift check."
 	TerraformManagedState            = "Enable stackguardian managed terraform state."

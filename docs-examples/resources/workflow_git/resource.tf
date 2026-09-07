@@ -166,8 +166,9 @@ resource "stackguardian_workflow_git" "vpc_production" {
   }
 
   terraform_config = {
-    # Bare version, with no TERRAFORM-/OPENTOFU- prefix; a patch wildcard such as
-    # "1.9.x" is accepted too. The engine comes from wf_type, not from this value.
+    # Bare version. OpenTofu accepts any version; Terraform is limited to the
+    # open-source releases unless the step runs your own runtime image. The engine
+    # comes from wf_type, not from this value.
     terraform_version = "1.5.7"
 
     # StackGuardian stores the state file. Set false only if state lives in your
