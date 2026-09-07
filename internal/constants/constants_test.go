@@ -149,3 +149,30 @@ func TestPlainTextVariableWarnsAboutExposure(t *testing.T) {
 		}
 	}
 }
+
+// terraform_version is asked about often enough that the description has to answer the
+// two questions readers actually arrive with: which versions exist for each engine, and
+// what supplies them. It previously explained the "TERRAFORM-"/"OPENTOFU-" prefix the API
+// stores instead -- provider internals a reader can neither see nor act on.
+func TestTerraformVersionDocumentsWhatIsAvailable(t *testing.T) {
+	for _, engine := range []string{"OpenTofu", "Terraform"} {
+		if !strings.Contains(TerraformVersion, engine) {
+			t.Errorf("TerraformVersion does not say which versions %s supports", engine)
+		}
+	}
+
+	// The stock container carries the open-source releases, so a BUSL-licensed
+	// Terraform needs a runtime image of your own. Omitting that leaves a reader
+	// guessing why a recent version is missing.
+	if !strings.Contains(TerraformVersion, "runtime image") {
+		t.Error("TerraformVersion does not mention that a custom runtime image is what " +
+			"carries versions the stock workflow step does not")
+	}
+
+	for _, prefix := range []string{"TERRAFORM-", "OPENTOFU-"} {
+		if strings.Contains(TerraformVersion, prefix) {
+			t.Errorf("TerraformVersion documents the %s prefix, which is how the API "+
+				"stores the value rather than anything a reader writes", prefix)
+		}
+	}
+}
