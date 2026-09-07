@@ -89,6 +89,10 @@ func (p *stackguardianProvider) Metadata(_ context.Context, _ provider.MetadataR
 // Schema defines the provider-level schema for configuration data.
 func (p *stackguardianProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Manage StackGuardian from Terraform: workflow groups and the workflows inside them, " +
+			"the templates workflows are built from, the connectors and runner groups they run with, and the roles " +
+			"and policies that govern them.\n\n" +
+			"New to the provider? Start with the **Getting Started** guide, then **Object Model** for how the pieces fit together.",
 		Attributes: map[string]schema.Attribute{
 			"org_name": schema.StringAttribute{
 				Optional:            true,

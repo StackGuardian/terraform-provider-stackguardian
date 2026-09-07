@@ -100,15 +100,15 @@ esac
 # --- Bootstrap & Configuration
 rm -rfv ~/tmp/terraform-stackguardian-quickstart
 mkdir -p ~/tmp/terraform-stackguardian-quickstart
-cp -v ${SCRIPT_DIRPATH}/stackguardian_workflow.tf -t ~/tmp/terraform-stackguardian-quickstart/
+cp -v ${SCRIPT_DIRPATH}/main.tf -t ~/tmp/terraform-stackguardian-quickstart/
 cd ~/tmp/terraform-stackguardian-quickstart
 
 # Set the version of the provider inside the terraform config exactly to the version of the downloaded provider.
-sed -E -i "s/version = \"[[:alnum:]\.\+\_\-]+\" #provider-version/version = \"${TFSG_VERSION}\" #provider-version/" stackguardian_workflow.tf
+sed -E -i "s/version = \"[[:alnum:]\.\+\_\-]+\" #provider-version/version = \"${TFSG_VERSION}\" #provider-version/" main.tf
 
 # Randomize the workflow resource id in the config file in order to isolate the test
 tf_test_id="T$(date +%s)-R$(printf '%05d' $RANDOM)"
-sed -E -i "s/T000000/${tf_test_id}/" stackguardian_workflow.tf
+sed -E -i "s/quickstart-workflow/quickstart-workflow-${tf_test_id}/" main.tf
 
 
 ## Provider Execution Test

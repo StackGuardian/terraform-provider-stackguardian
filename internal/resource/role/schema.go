@@ -15,6 +15,8 @@ import (
 // Schema defines the schema for the resource.
 func (r *RoleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Manages a role: a named set of API permissions that is granted to users through a `stackguardian_role_assignment`. Permission paths typically reference workflow groups, which is how a role is scoped to part of the organization.\n\n~> **Deprecated.** Use `stackguardian_rolev4` instead. This resource expands permissions by combining every path with every other path; `stackguardian_rolev4` maps paths one to one.",
+		DeprecationMessage:  "stackguardian_role is deprecated and may be removed in a future release. Use stackguardian_rolev4, which maps permission paths one to one instead of combining every path with every other path.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.Id,

@@ -12,7 +12,7 @@ import (
 
 func (d *workflowGitDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Use this data source to read a git-based workflow.",
+		MarkdownDescription: "Reads an existing git-based workflow, including its VCS, Terraform and trigger configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.DatasourceId,
@@ -23,11 +23,11 @@ func (d *workflowGitDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 				Required:            true,
 			},
 			"resource_name": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "workflow_git"),
+				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "workflow"),
 				Computed:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow_git"),
+				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow"),
 				Computed:            true,
 			},
 			"wf_type": schema.StringAttribute{
@@ -97,7 +97,7 @@ func (d *workflowGitDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 				},
 			},
 			"tags": schema.ListAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow_git"),
+				MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow"),
 				Computed:            true,
 				ElementType:         types.StringType,
 			},
@@ -126,7 +126,7 @@ func (d *workflowGitDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 				},
 			},
 			"context_tags": schema.MapAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.ContextTags, "workflow_git"),
+				MarkdownDescription: fmt.Sprintf(constants.ContextTags, "workflow"),
 				Computed:            true,
 				ElementType:         types.StringType,
 			},
@@ -551,7 +551,8 @@ func dsVcsTriggerActionNestedObject() schema.NestedAttributeObject {
 	return schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
 			"enabled": schema.BoolAttribute{
-				Computed: true,
+				MarkdownDescription: constants.VCSTriggersActionEnabled,
+				Computed:            true,
 			},
 		},
 	}

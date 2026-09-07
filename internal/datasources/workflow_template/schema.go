@@ -12,7 +12,7 @@ import (
 
 func (d *workflowTemplateDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Use this data source to read a workflow template.",
+		MarkdownDescription: "> **Note:** This data source is currently in **BETA**. Features and behavior may change.\n\nReads an existing workflow template. The template is a container only — use `stackguardian_workflow_template_revision` to read the configuration workflows inherit.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.DatasourceId,
@@ -31,7 +31,8 @@ func (d *workflowTemplateDataSource) Schema(_ context.Context, _ datasource.Sche
 				Computed:            true,
 			},
 			"source_config_kind": schema.StringAttribute{
-				Computed: true,
+				MarkdownDescription: constants.SourceConfigKind,
+				Computed:            true,
 			},
 			"is_public": schema.StringAttribute{
 				MarkdownDescription: "Whether the template is public.",
@@ -61,35 +62,45 @@ func (d *workflowTemplateDataSource) Schema(_ context.Context, _ datasource.Sche
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"source_config_dest_kind": schema.StringAttribute{
-						Computed: true,
+						MarkdownDescription: constants.RuntimeSourceDestKind,
+						Computed:            true,
 					},
 					"config": schema.SingleNestedAttribute{
-						Computed: true,
+						MarkdownDescription: constants.RuntimeSourceConfig,
+						Computed:            true,
 						Attributes: map[string]schema.Attribute{
 							"auth": schema.StringAttribute{
-								Computed:  true,
-								Sensitive: true,
+								MarkdownDescription: constants.RuntimeSourceConfigAuth,
+								Computed:            true,
+								Sensitive:           true,
 							},
 							"git_core_auto_crlf": schema.BoolAttribute{
-								Computed: true,
+								MarkdownDescription: constants.RuntimeSourceConfigGitCoreCRLF,
+								Computed:            true,
 							},
 							"git_sparse_checkout_config": schema.StringAttribute{
-								Computed: true,
+								MarkdownDescription: constants.RuntimeSourceConfigGitSparse,
+								Computed:            true,
 							},
 							"include_sub_module": schema.BoolAttribute{
-								Computed: true,
+								MarkdownDescription: constants.RuntimeSourceConfigIncludeSubmodule,
+								Computed:            true,
 							},
 							"is_private": schema.BoolAttribute{
-								Computed: true,
+								MarkdownDescription: constants.RuntimeSourceConfigIsPrivate,
+								Computed:            true,
 							},
 							"ref": schema.StringAttribute{
-								Computed: true,
+								MarkdownDescription: constants.RuntimeSourceConfigRef,
+								Computed:            true,
 							},
 							"repo": schema.StringAttribute{
-								Computed: true,
+								MarkdownDescription: constants.RuntimeSourceConfigRepo,
+								Computed:            true,
 							},
 							"working_dir": schema.StringAttribute{
-								Computed: true,
+								MarkdownDescription: constants.RuntimeSourceConfigWorkingDir,
+								Computed:            true,
 							},
 						},
 					},
@@ -100,16 +111,20 @@ func (d *workflowTemplateDataSource) Schema(_ context.Context, _ datasource.Sche
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
-						Computed: true,
+						MarkdownDescription: constants.VCSTriggersType,
+						Computed:            true,
 					},
 					"create_tag": schema.SingleNestedAttribute{
-						Computed: true,
+						MarkdownDescription: constants.VCSTriggersCreateTag,
+						Computed:            true,
 						Attributes: map[string]schema.Attribute{
 							"create_revision": schema.SingleNestedAttribute{
-								Computed: true,
+								MarkdownDescription: constants.VCSTriggersCreateTagRevision,
+								Computed:            true,
 								Attributes: map[string]schema.Attribute{
 									"enabled": schema.BoolAttribute{
-										Computed: true,
+										MarkdownDescription: constants.VCSTriggersCreateTagRevisionEnabled,
+										Computed:            true,
 									},
 								},
 							},

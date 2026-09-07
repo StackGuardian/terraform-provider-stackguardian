@@ -15,7 +15,7 @@ import (
 // Schema defines the schema for the resource.
 func (r *workflowStepTemplateRevisionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a workflow step template revision resource.",
+		MarkdownDescription: "Manages a versioned revision of a `stackguardian_workflow_step_template`: the container image or source, the inputs the step accepts, and how it executes.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.WorkflowStepTemplateRevisionId,

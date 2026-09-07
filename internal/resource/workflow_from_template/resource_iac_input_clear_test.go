@@ -95,20 +95,22 @@ func setupTemplateWithInputDefaults(t *testing.T, name string) string {
 // Also asserts the omit case still inherits (control), and the clear round-trips (clean plan).
 func TestAccWorkflowUsingTemplate_ExplicitEmptyIacInputData(t *testing.T) {
 	templateID := setupTemplateWithInputDefaults(t, "tf-iacclear-tpl")
-	wfGrp := "tf-iacclear-wfgrp"
+	wfGrp := acctest.ResourceName("tf-iacclear-wfgrp")
+	inheritID := acctest.ResourceName("tf-iacclear-inherit")
+	emptyID := acctest.ResourceName("tf-iacclear-empty")
 	if err := createWorkflowGroupFixture(wfGrp); err != nil {
 		t.Fatalf("wfgrp fixture: %s", err)
 	}
 	defer deleteWorkflowGroupFixture(wfGrp)
-	defer deleteWorkflowUsingTemplateFixture(wfGrp, "tf-iacclear-inherit")
-	defer deleteWorkflowUsingTemplateFixture(wfGrp, "tf-iacclear-empty")
+	defer deleteWorkflowUsingTemplateFixture(wfGrp, inheritID)
+	defer deleteWorkflowUsingTemplateFixture(wfGrp, emptyID)
 
 	// Control: omits iac_input_data -> inherits the template defaults.
 	// Subject: declares data = "{}" -> clears (suppresses inheritance).
 	cfg := fmt.Sprintf(`
 resource "stackguardian_workflow_from_template" "inherit" {
   workflow_group_id = %q
-  id                = "tf-iacclear-inherit"
+  id                = %q
   wf_type           = "TERRAFORM"
   vcs_config = {
     iac_vcs_config = {
@@ -122,7 +124,7 @@ resource "stackguardian_workflow_from_template" "inherit" {
 
 resource "stackguardian_workflow_from_template" "empty" {
   workflow_group_id = %q
-  id                = "tf-iacclear-empty"
+  id                = %q
   wf_type           = "TERRAFORM"
   vcs_config = {
     iac_vcs_config = {
@@ -137,7 +139,7 @@ resource "stackguardian_workflow_from_template" "empty" {
     terraform_version = "1.5.0"
   }
 }
-`, wfGrp, templateID, wfGrp, templateID)
+`, wfGrp, inheritID, templateID, wfGrp, emptyID, templateID)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.TestAccPreCheck(t) },

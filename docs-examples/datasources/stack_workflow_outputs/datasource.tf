@@ -1,9 +1,15 @@
-data "stackguardian_stack_workflow_outputs" "example" {
-  stack          = "stack-name"
-  workflow       = "workflow-name"
-  workflow_group = "workflow-group-name"
+# Read the outputs of one workflow inside a stack, rather than the stack's outputs as a whole.
+# Use this when a stack runs several workflows and you need a value from a specific one.
+data "stackguardian_stack_workflow_outputs" "cluster" {
+  stack          = "platform-stack"
+  workflow       = "deploy-cluster"
+  workflow_group = "platform"
 }
 
-output "stack-workflow-output-json" {
-  value = data.stackguardian_stack_workflow_outputs.example.data_json
+locals {
+  cluster_outputs = jsondecode(data.stackguardian_stack_workflow_outputs.cluster.data_json)
+}
+
+output "cluster_endpoint" {
+  value = try(local.cluster_outputs.cluster_endpoint, null)
 }

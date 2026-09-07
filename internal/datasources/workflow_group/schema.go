@@ -12,6 +12,7 @@ import (
 
 func (d *workflowGroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Reads an existing workflow group. For a nested group, give the full path — for example `platform/networking`.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.DatasourceId,

@@ -43,7 +43,7 @@ func RuntimeSourceConfigSchemaAttributes() map[string]schema.Attribute {
 // Schema defines the schema for the resource.
 func (r *workflowStepTemplateResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a workflow step template resource.",
+		MarkdownDescription: "Manages a workflow step template: a reusable container-based step that workflows can run as part of their lifecycle.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.Id,

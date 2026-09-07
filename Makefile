@@ -35,18 +35,43 @@ test:
 test-acc:
 	TF_ACC=1 go test -parallel=1 $(TEST) -v $(TESTARGS) -timeout=15m
 
+# Reports resources an earlier acceptance run left behind. Read-only: it lists
+# what carries the test prefix and deletes nothing.
+test-acc-sweep:
+	SG_ACC_SWEEP=1 go test ./internal/acctest -run TestSweepOrphans -v -count=1
+
+# Deletes them. Only touches names carrying the acctest prefix.
+test-acc-sweep-apply:
+	SG_ACC_SWEEP=1 SG_ACC_SWEEP_APPLY=1 go test ./internal/acctest -run TestSweepOrphans -v -count=1
+
 test-examples-quickstart:
 	bash docs-guides-assets/quickstart/test-quickstart.sh $(ARGS)
 
 test-examples-onboarding:
 	bash docs-guides-assets/onboarding/project-test/test-onboarding.sh $(ARGS)
 
+# The banner step is temporary, for as long as the docs revamp is in progress.
+# Delete the line below and re-run to remove the banner from every page.
 docs-generate:
 	tfplugindocs generate \
 		--provider-name stackguardian --website-source-dir docs-templates
+	bash scripts/inject-docs-banner.sh
 
 docs-validate:
-	tfplugindocs validate
+	tfplugindocs validate --provider-name stackguardian
+
+# Fails if docs/ is not what docs-templates/ + the current schemas generate.
+# Without this, a schema change silently leaves the published docs stale.
+docs-check: docs-generate
+	@git diff --exit-code -- docs/ \
+		|| { echo ""; echo "ERROR: docs/ is out of date. Run 'make docs-generate' and commit the result."; exit 1; }
+
+# Type-checks every documentation example against the provider schema: the files
+# under docs-examples/ and docs-guides-assets/, plus every ```terraform block
+# embedded in page and guide prose (see scripts/extract-doc-blocks.py).
+# No credentials and no API calls -- `terraform validate` only.
+docs-validate-examples:
+	bash scripts/validate-examples.sh
 
 tools-install:
 	cd tools; go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs

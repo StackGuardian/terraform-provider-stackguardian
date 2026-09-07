@@ -130,8 +130,8 @@ const (
 )
 
 func TestAccPolicy(t *testing.T) {
-	resourceName := "example-policy"
-	policyName := "example-policy"
+	resourceName := acctest.ResourceName("example-policy")
+	policyName := resourceName
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -151,8 +151,8 @@ func TestAccPolicy(t *testing.T) {
 }
 
 func TestAccPolicyRecreateOnExternalDelete(t *testing.T) {
-	resourceName := "example-policy2"
-	policyName := "example-policy2"
+	resourceName := acctest.ResourceName("example-policy2")
+	policyName := resourceName
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -186,16 +186,16 @@ func TestAccPolicyRecreateOnExternalDelete(t *testing.T) {
 
 func TestAccPolicyOptionalId(t *testing.T) {
 	// Test if the resource has name that is not compatible with the
-	testResource := `resource "stackguardian_policy" "example-policy3" {
-  id = "example_policy3"
-  resource_name = "example_policy3_resource_name"
+	policyID := acctest.ResourceName("example-policy3")
+	policyResourceName := acctest.ResourceName("example-policy3-resource-name")
+
+	const policyConfig = `resource "stackguardian_policy" "example-policy3" {
+  id = %q
+  resource_name = %q
   policy_type = "GENERAL"
 }`
-	testUpdateResource := `resource "stackguardian_policy" "example-policy3" {
-  id = "example_policy3"
-  resource_name = "example_policy3_resource_name"
-  policy_type = "GENERAL"
-}`
+	testResource := fmt.Sprintf(policyConfig, policyID, policyResourceName)
+	testUpdateResource := fmt.Sprintf(policyConfig, policyID, policyResourceName)
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -211,7 +211,7 @@ func TestAccPolicyOptionalId(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"stackguardian_policy.example-policy3",
 						tfjsonpath.New("id"),
-						knownvalue.StringExact("example_policy3"),
+						knownvalue.StringExact(policyID),
 					),
 				},
 			},

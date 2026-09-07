@@ -13,6 +13,7 @@ import (
 // Schema defines the schema for the resource.
 func (r *roleDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Reads an existing role and its permission set, for use in a `stackguardian_role_assignment`.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.DatasourceId,

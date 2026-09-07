@@ -15,6 +15,7 @@ import (
 
 func (r *runnerGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Manages a runner group: a pool of self-hosted runners together with the storage backend their run logs are written to.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.Id,
@@ -145,7 +146,8 @@ func (r *runnerGroupResource) Schema(_ context.Context, _ resource.SchemaRequest
 								Optional:            true,
 							},
 							"local_workspace_dir": schema.StringAttribute{
-								Optional: true,
+								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigLocalWorkspaceDirCommon,
+								Optional:            true,
 							},
 						},
 					},
