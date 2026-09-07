@@ -58,7 +58,7 @@ resource "stackguardian_workflow_group" "sandbox" {
 }
 
 resource "stackguardian_workflow_git" "basic" {
-  workflow_group_id = stackguardian_workflow_group.sandbox.resource_name
+  workflow_group_id = stackguardian_workflow_group.sandbox.id
   id                = "hello-terraform"
   wf_type           = "TERRAFORM"
 
@@ -94,7 +94,7 @@ resource "stackguardian_workflow_group" "networking" {
 }
 
 resource "stackguardian_workflow_git" "vpc_staging" {
-  workflow_group_id = stackguardian_workflow_group.networking.resource_name
+  workflow_group_id = stackguardian_workflow_group.networking.id
   id                = "vpc-staging"
   wf_type           = "TERRAFORM"
 
@@ -158,7 +158,7 @@ resource "stackguardian_workflow_group" "production" {
 }
 
 resource "stackguardian_workflow_git" "vpc_production" {
-  workflow_group_id = stackguardian_workflow_group.production.resource_name
+  workflow_group_id = stackguardian_workflow_group.production.id
   id                = "vpc-production"
   wf_type           = "TERRAFORM"
 
@@ -303,10 +303,10 @@ resource "stackguardian_workflow_git" "vpc_production" {
 
 ### Required
 
-- `id` (String) ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>
+- `id` (String) Identifier of the resource: a bare slug such as `production-aws`, never a path. When omitted it is derived from `resource_name` — unchanged if that is already slug-shaped (letters, digits, `_`, `-`), otherwise lowercased, spaces replaced by `-`, with a random suffix appended. Set it explicitly to control it. Use it to reference the resource elsewhere, adding the prefix the attribute expects: `"/integrations/${stackguardian_connector.x.id}"`, `"/wfgrps/${stackguardian_workflow_group.x.id}"`. The `resource_name` attribute is still available for references but its use is discouraged: it is not always equal to `id`.
 - `vcs_config` (Attributes) VCS configuration for the workflow. (see [below for nested schema](#nestedatt--vcs_config))
 - `wf_type` (String) How this workflow is executed. <ul><li>`TERRAFORM` — run with Terraform.</li><li>`OPENTOFU` — run with OpenTofu.</li><li>`CUSTOM` — run the steps in `wf_steps_config` yourself, rather than a built-in engine. Templates of other kinds (Helm, Ansible, Kubectl, CloudFormation) run as `CUSTOM` workflows.</li></ul>This is a smaller set than a template's `source_config_kind`, which describes what the template contains rather than how the workflow runs.
-- `workflow_group_id` (String) ID of the parent workflow group.
+- `workflow_group_id` (String) Workflow group the workflow lives in, as its bare `id` (e.g. `platform`; the full path `platform/networking` for a nested group) — not `/wfgrps/…`.
 
 ### Optional
 
@@ -317,7 +317,7 @@ resource "stackguardian_workflow_git" "vpc_production" {
 - `environment_variables` (Attributes List) Environment variables made available to the workflow during its runs. (see [below for nested schema](#nestedatt--environment_variables))
 - `mini_steps` (Attributes) Actions that are required to be performed once workflow execution is complete (see [below for nested schema](#nestedatt--mini_steps))
 - `number_of_approvals_required` (Number) Number of approvals required.
-- `resource_name` (String) Name of the workflow. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
+- `resource_name` (String) Name of the workflow. Must be less than 100 characters. Free-form: when it is not already slug-shaped (letters, digits, `_`, `-`) the platform derives a slug for `id` — see `id`.
 - `runner_constraints` (Attributes) Runner constraints to control which runner executes the workflow. (see [below for nested schema](#nestedatt--runner_constraints))
 - `tags` (List of String) A list of tags associated with the workflow. A maximum of 10 tags are allowed.
 - `terraform_config` (Attributes) Terraform configuration. Valid only for terraform type template (see [below for nested schema](#nestedatt--terraform_config))
@@ -362,7 +362,7 @@ Required:
 
 Optional:
 
-- `auth` (String) Connector used to clone a private repository, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/github-connector`). Required when `is_private` is `true`.
+- `auth` (String) Credential for cloning a private repository, as a path-form ID. Either a VCS connector — `/integrations/<connector-name>`, built as `"/integrations/${stackguardian_connector.github.id}"` — for `GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG` and `AZURE_DEVOPS*` sources, or a secret `/secrets/<secret-name>`. `GIT_OTHER` accepts only the secret form. Required when `is_private` is `true`.
 - `git_core_auto_crlf` (Boolean) Whether to automatically handle CRLF line endings.
 - `git_sparse_checkout_config` (String) Git sparse checkout command line git cli options.
 - `include_sub_module` (Boolean) Whether to include git submodules.

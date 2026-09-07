@@ -42,7 +42,7 @@ output "workflow_step_template_info" {
 
 ### Required
 
-- `id` (String) ID of the resource. Should be used to import the resource.
+- `id` (String) Identifier of the resource: a bare slug, never a path. Use it to look the resource up, and to reference it elsewhere with the prefix the attribute expects (e.g. `"/integrations/${data.stackguardian_connector.x.id}"`).
 
 ### Read-Only
 
@@ -74,7 +74,7 @@ Read-Only:
 
 Read-Only:
 
-- `auth` (String, Sensitive) Authentication credentials or method for accessing the private registry or repository. (Sensitive)
+- `auth` (String, Sensitive) Credential for the private registry or repository, as a path-form ID: a connector `/integrations/<connector-name>` (build it as `"/integrations/${stackguardian_connector.x.id}"`) or a secret `/secrets/<secret-name>`. (Sensitive)
 - `docker_image` (String) Docker image URI to be used for template execution. Example: `ubuntu:latest`, `myregistry.azurecr.io/myapp:v1.0`
 - `docker_registry_username` (String) Username for authentication with the Docker registry (if using private registries).
 - `is_private` (Boolean) Indicates whether the container registry or repository is private.

@@ -319,7 +319,7 @@ Read-Only:
 
 Read-Only:
 
-- `auth` (String) Connector used to clone a private repository, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/github-connector`). Required when `is_private` is `true`.
+- `auth` (String) Credential for cloning a private repository, as a path-form ID. Either a VCS connector — `/integrations/<connector-name>`, built as `"/integrations/${stackguardian_connector.github.id}"` — for `GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG` and `AZURE_DEVOPS*` sources, or a secret `/secrets/<secret-name>`. `GIT_OTHER` accepts only the secret form. Required when `is_private` is `true`.
 - `git_core_auto_crlf` (Boolean) Whether to automatically handle CRLF line endings.
 - `git_sparse_checkout_config` (String) Git sparse checkout command line git cli options.
 - `include_sub_module` (Boolean) Whether to include git submodules.

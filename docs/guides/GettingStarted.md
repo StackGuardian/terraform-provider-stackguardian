@@ -67,11 +67,15 @@ Now wire the two together.
 
 ```terraform
 resource "stackguardian_workflow_git" "quickstart" {
-  workflow_group_id = stackguardian_workflow_group.quickstart.resource_name
+  workflow_group_id = stackguardian_workflow_group.quickstart.id
   id                = "quickstart-workflow"
   wf_type           = "TERRAFORM"
 
   description = "Deploys the Terraform in the referenced repository"
+
+  terraform_config = {
+    terraform_version = "1.5.7"
+  }
 
   vcs_config = {
     iac_vcs_config = {
@@ -90,17 +94,21 @@ resource "stackguardian_workflow_git" "quickstart" {
   deployment_platform_config = [{
     kind = "AWS_RBAC"
     config = {
-      integration_id = stackguardian_connector.aws.id
+      integration_id = "/integrations/${stackguardian_connector.aws.id}"
     }
   }]
 }
 ```
 
-Two things worth noticing:
+Three things worth noticing:
 
 - `id` is **required** and chosen by you. Changing it later replaces the workflow.
-- `integration_id` references the connector resource rather than a hard-coded string, so
-  Terraform creates them in the right order and keeps them in step.
+- `terraform_config` is required for `TERRAFORM` and `OPENTOFU` workflows.
+- `integration_id` is built from the connector resource — `"/integrations/${…id}"` — rather than
+  typed as a string, so Terraform creates them in the right order and keeps them in step. The
+  connector's `id` on its own is a bare slug; the `/integrations/` prefix is what the platform
+  resolves. Leaving it off passes `apply` and fails every run — see
+  [Resource IDs](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ResourceIDs).
 
 Run `terraform apply`. The workflow appears in the group, ready to run.
 
@@ -111,7 +119,7 @@ Once the workflow has run, read its outputs back:
 ```terraform
 data "stackguardian_workflow_outputs" "quickstart" {
   workflow       = stackguardian_workflow_git.quickstart.id
-  workflow_group = stackguardian_workflow_group.quickstart.resource_name
+  workflow_group = stackguardian_workflow_group.quickstart.id
 }
 
 locals {
@@ -123,16 +131,21 @@ Outputs arrive as a JSON string, so decode before use.
 
 ## Cloning a private repository
 
-The example above uses a public repository. For a private one, set `is_private` and point `auth`
-at a VCS connector:
+The example above uses a public repository. For a private one on GitHub, GitLab, Bitbucket or
+Azure DevOps, set the matching `source_config_dest_kind`, set `is_private`, and point `auth` at a
+VCS connector in the `/integrations/…` form:
 
 ```terraform
+source_config_dest_kind = "GITHUB_COM"
 config = {
   is_private = true
-  auth       = stackguardian_connector.github.id
+  auth       = "/integrations/${stackguardian_connector.github.id}"
   repo       = "https://github.com/my-org/private-repo.git"
 }
 ```
+
+`GIT_OTHER` sources cannot use a connector: a private repository there needs a secret,
+`auth = "/secrets/<secret-name>"`.
 
 ## Where to go next
 

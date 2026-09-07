@@ -37,7 +37,7 @@ output "revision_notes" {
 
 ### Required
 
-- `id` (String) ID of the resource. Should be used to import the resource.
+- `id` (String) Identifier of the resource: a bare slug, never a path. Use it to look the resource up, and to reference it elsewhere with the prefix the attribute expects (e.g. `"/integrations/${data.stackguardian_connector.x.id}"`).
 
 ### Read-Only
 
@@ -52,7 +52,7 @@ output "revision_notes" {
 - `notes` (String) Release notes or changelog for this revision.
 - `source_config_kind` (String) What the stack contains. Use `MIXED` — a stack groups workflows built from different tools, and the tool used by each individual workflow is recorded on that workflow rather than here. The other values (`TERRAFORM`, `OPENTOFU`, `ANSIBLE_PLAYBOOK`, `HELM`, `KUBECTL`, `CLOUDFORMATION`, `CUSTOM`) belong on a `stackguardian_workflow_template`, which describes a single workflow.
 - `tags` (List of String) A list of tags associated with the stack template revision. A maximum of 10 tags are allowed.
-- `template_id` (String) ID of the parent stack template.
+- `template_id` (String) Parent stack template, as its bare `template_name` (which is also its `id`) — not a path.
 - `workflows_config` (Attributes) JSON-encoded workflows configuration for the stack template revision. (see [below for nested schema](#nestedatt--workflows_config))
 
 <a id="nestedatt--actions"></a>
@@ -549,7 +549,7 @@ Read-Only:
 Read-Only:
 
 - `custom_source` (Attributes) Custom source configuration. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source))
-- `iac_template_id` (String) Workflow template revision this workflow is created from. <ul><li>`&lt;template-name&gt;:&lt;revision&gt;` — a template in your own organization.</li><li>`/&lt;org&gt;/&lt;template-name&gt;:&lt;revision&gt;` — a template owned by another organization: one shared with you, or published publicly. StackGuardian's own templates use the `stackguardian` org, for example `/stackguardian/aws-s3-demo-website:16`.</li></ul>A bare id is resolved against your own organization. Use `:latest` in place of a revision number to track the most recently published revision; pin an explicit revision when the workflow must not move.
+- `iac_template_id` (String) Workflow template this stack workflow is created from, as the bare `template_name` of a template in your own organization (e.g. `my-workflow-template`). The provider qualifies it with your organization, so do not give the `/<org>/…` form.
 - `use_marketplace_template` (Boolean) Whether to use a marketplace template.
 
 <a id="nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source"></a>
@@ -565,7 +565,7 @@ Read-Only:
 
 Read-Only:
 
-- `auth` (String, Sensitive) Connector used to clone a private repository, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/github-connector`). Required when `is_private` is `true`.
+- `auth` (String, Sensitive) Credential for cloning a private repository, as a path-form ID. Either a VCS connector — `/integrations/<connector-name>`, built as `"/integrations/${stackguardian_connector.github.id}"` — for `GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG` and `AZURE_DEVOPS*` sources, or a secret `/secrets/<secret-name>`. `GIT_OTHER` accepts only the secret form. Required when `is_private` is `true`.
 - `git_core_auto_crlf` (Boolean) Whether to automatically handle CRLF line endings.
 - `git_sparse_checkout_config` (String) Git sparse checkout command line git cli options.
 - `include_sub_module` (Boolean) Whether to include git submodules.

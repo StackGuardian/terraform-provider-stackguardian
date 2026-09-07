@@ -17,10 +17,28 @@ Manages a connector: the stored credential StackGuardian uses to reach an extern
 
 ## Referencing a connector
 
-Other resources refer to a connector by ID, in the form `/integrations/<resource_name>`:
+Other resources refer to a connector as `/integrations/<id>`. The connector's `id` is the bare
+slug — `production-aws`, not a path — so build the reference with the prefix:
+
+```terraform
+integration_id = "/integrations/${stackguardian_connector.aws.id}"
+```
 
 - `deployment_platform_config.integration_id` on a workflow — the credentials it deploys with.
-- `custom_source.config.auth` on any VCS-backed resource — how a private repository is cloned.
+- `storage_backend_config.auth.integration_id` on a runner group — where run logs are written.
+- `custom_source.config.auth` on a VCS-backed resource — how a private repository is cloned
+  (`GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG`, `AZURE_DEVOPS*`; `GIT_OTHER`
+  takes a `/secrets/…` path instead).
+
+A bare `id` in `integration_id` is accepted by `terraform apply` and fails on the first run with
+`Connector <id> does not exist`.
+
+## What `id` is
+
+Set `id` and it is stored as given. Leave it out and it is derived from `resource_name`: unchanged
+when the name is already slug-shaped (letters, digits, `_`, `-`), otherwise lowercased, spaces
+replaced by `-`, with a random suffix appended. The `GITHUB_COM` connector is a per-organization
+singleton whose `id` is always `github_com`.
 
 ## Choosing a kind
 
@@ -80,11 +98,12 @@ resource "stackguardian_connector" "github" {
   }
 }
 
-# Reference a connector from a workflow as `/integrations/<resource_name>`:
+# Reference a connector from a workflow as `/integrations/<id>`. `id` is the bare slug
+# (derived from resource_name unless you set it), so add the prefix yourself:
 #
 #   deployment_platform_config = [{
 #     kind   = "AWS_RBAC"
-#     config = { integration_id = stackguardian_connector.aws_rbac.id }
+#     config = { integration_id = "/integrations/${stackguardian_connector.aws_rbac.id}" }
 #   }]
 ```
 
@@ -93,14 +112,14 @@ resource "stackguardian_connector" "github" {
 
 ### Required
 
-- `resource_name` (String) Name of the connector. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
+- `resource_name` (String) Name of the connector. Must be less than 100 characters. Free-form: when it is not already slug-shaped (letters, digits, `_`, `-`) the platform derives a slug for `id` — see `id`.
 - `settings` (Attributes) (see [below for nested schema](#nestedatt--settings))
 
 ### Optional
 
 - `description` (String) A brief description of the connector. Must be less than 256 characters.
 - `discovery_settings` (Attributes) Settings for discovery insights related to the connector. (see [below for nested schema](#nestedatt--discovery_settings))
-- `id` (String) ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>
+- `id` (String) Identifier of the resource: a bare slug such as `production-aws`, never a path. When omitted it is derived from `resource_name` — unchanged if that is already slug-shaped (letters, digits, `_`, `-`), otherwise lowercased, spaces replaced by `-`, with a random suffix appended. Set it explicitly to control it. Use it to reference the resource elsewhere, adding the prefix the attribute expects: `"/integrations/${stackguardian_connector.x.id}"`, `"/wfgrps/${stackguardian_workflow_group.x.id}"`. The `resource_name` attribute is still available for references but its use is discouraged: it is not always equal to `id`.
 - `tags` (List of String) A list of tags associated with the connector. A maximum of 10 tags are allowed.
 
 <a id="nestedatt--settings"></a>
@@ -242,7 +261,7 @@ Optional:
 
 Optional:
 
-- `auth` (String) Authentication method for accessing the repository.
+- `auth` (String) Credential used to reach the repository, as a path-form ID: a connector `/integrations/<connector-name>` or a secret `/secrets/<secret-name>`. Build the connector form from the resource rather than typing it: `"/integrations/${stackguardian_connector.github.id}"`.
 - `git_core_auto_crlf` (Boolean) Indicates if core.autocrlf should be enabled.
 - `include_sub_module` (Boolean) Indicates whether to include sub-modules.
 - `is_private` (Boolean) Indicates if the repository is private.

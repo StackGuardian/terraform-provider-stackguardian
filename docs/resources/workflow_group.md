@@ -62,12 +62,12 @@ resource "stackguardian_workflow_group" "nested" {
 
 ### Required
 
-- `resource_name` (String) Name of the workflow group. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_/]+$
+- `resource_name` (String) Name of the workflow group, which is also its `id`. Must be less than 100 characters: letters, digits, `_` and `-`, with `/` separating the levels of a nested group (`platform/networking`).
 
 ### Optional
 
 - `description` (String) A brief description of the workflow group. Must be less than 256 characters.
-- `id` (String) ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>
+- `id` (String) Identifier of the resource: a bare slug such as `production-aws`, never a path. When omitted it is derived from `resource_name` — unchanged if that is already slug-shaped (letters, digits, `_`, `-`), otherwise lowercased, spaces replaced by `-`, with a random suffix appended. Set it explicitly to control it. Use it to reference the resource elsewhere, adding the prefix the attribute expects: `"/integrations/${stackguardian_connector.x.id}"`, `"/wfgrps/${stackguardian_workflow_group.x.id}"`. The `resource_name` attribute is still available for references but its use is discouraged: it is not always equal to `id`.
 - `tags` (List of String) A list of tags associated with the workflow group. A maximum of 10 tags are allowed.
 
 

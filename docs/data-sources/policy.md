@@ -38,14 +38,14 @@ output "policy_type" {
 
 ### Optional
 
-- `id` (String) ID of the resource. Should be used to import the resource.
-- `resource_name` (String) Name of the policy. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$ <span style='color: #e53835;'>Deprecated:</span> The `resource_name` attribute is still available but its use is discouraged and may not work in some cases. Use `id`.
+- `id` (String) Identifier of the resource: a bare slug, never a path. Use it to look the resource up, and to reference it elsewhere with the prefix the attribute expects (e.g. `"/integrations/${data.stackguardian_connector.x.id}"`).
+- `resource_name` (String) Name of the policy. Must be less than 100 characters. Free-form: when it is not already slug-shaped (letters, digits, `_`, `-`) the platform derives a slug for `id` — see `id`. <span style='color: #e53835;'>Deprecated:</span> The `resource_name` attribute is still available but its use is discouraged and may not work in some cases. Use `id`.
 
 ### Read-Only
 
 - `approvers` (List of String) StackGuardian users who can approve a held run. Each entry is a user's email address, or an SSO group name to allow anyone in that group; the fully qualified form `<user-pool-id>/local/<email>` is also accepted. Read an existing policy with the `stackguardian_policy` data source to see what your organization uses. Applies only to `policy_type = "GENERAL"`.
 - `description` (String) A brief description of the policy. Must be less than 256 characters.
-- `enforced_on` (List of String) What this policy is enforced on — either organization-wide, or any combination of workflow groups, workflows and connectors. <ul><li>`["*"]` — the whole organization. Used on its own, not combined with other entries.</li><li>`["/wfgrps/&lt;group&gt;"]` — a workflow group and everything inside it. No trailing slash.</li><li>Workflows and connectors follow the same resource-path convention and can be listed alongside workflow groups.</li></ul>Confirm an unfamiliar form against an existing policy before relying on it.
+- `enforced_on` (List of String) What this policy is enforced on — either organization-wide, or any combination of workflow groups, workflows and connectors. <ul><li>`["*"]` — the whole organization. Used on its own, not combined with other entries.</li><li>`["/wfgrps/<group>"]` — a workflow group and everything inside it. No trailing slash.</li><li>Workflows and connectors follow the same resource-path convention and can be listed alongside workflow groups.</li></ul>Confirm an unfamiliar form against an existing policy before relying on it.
 - `number_of_approvals_required` (Number) Number of approvals required for a policy check to pass
 - `policies_config` (Attributes List) Policy configuration (see [below for nested schema](#nestedatt--policies_config))
 - `policy_type` (String) What kind of policy this is. <ul><li>`GENERAL` — the standard policy, evaluated during workflow and stack runs. `enforced_on`, `approvers` and `number_of_approvals_required` apply only to this type.</li><li>`FILTER.INSIGHT` — a filter over Insight findings. It excludes findings that match its definition from the Insight dashboard rather than gating a run, so it takes no scope and no approval settings.</li></ul>
@@ -56,7 +56,7 @@ output "policy_type" {
 
 Read-Only:
 
-- `name` (String) Name of the policy config. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
+- `name` (String) Name of the policy config. Must be less than 100 characters. Free-form: when it is not already slug-shaped (letters, digits, `_`, `-`) the platform derives a slug for `id` — see `id`.
 - `on_fail` (String) Action taken when the policy evaluation **fails**. <ul><li>`FAIL` — stop the run.</li><li>`WARN` — record a warning and let the run continue.</li><li>`PASS` — treat the failure as acceptable and continue.</li><li>`APPROVAL_REQUIRED` — hold the run until an approver signs off.</li></ul>
 - `on_pass` (String) Action taken when the policy evaluation **passes**. Same values as `on_fail`: <ul><li>`PASS` — continue, the usual choice.</li><li>`WARN` — continue but record a warning.</li><li>`APPROVAL_REQUIRED` — hold the run for approval even though the policy passed.</li><li>`FAIL` — stop the run even though the policy passed.</li></ul>
 - `policy_input_data` (Attributes) Policy definition (see [below for nested schema](#nestedatt--policies_config--policy_input_data))
@@ -97,7 +97,7 @@ Read-Only:
 
 Read-Only:
 
-- `auth` (String) Authentication method for accessing the repository.
+- `auth` (String) Credential used to reach the repository, as a path-form ID: a connector `/integrations/<connector-name>` or a secret `/secrets/<secret-name>`. Build the connector form from the resource rather than typing it: `"/integrations/${stackguardian_connector.github.id}"`.
 - `git_core_auto_crlf` (Boolean) Indicates if core.autocrlf should be enabled.
 - `git_sparse_checkout_config` (String) Configuration for git sparse checkout
 - `include_submodule` (Boolean) Indicates whether to include sub-modules.

@@ -58,7 +58,7 @@ resource "stackguardian_workflow_step_template" "example" {
 
 - `context_tags` (Map of String) Contextual key-value tags that provide additional context to the main tags.
 - `description` (String) A brief description of the workflow step template. Must be less than 256 characters.
-- `id` (String) ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>
+- `id` (String) Identifier of the resource: a bare slug such as `production-aws`, never a path. When omitted it is derived from `resource_name` — unchanged if that is already slug-shaped (letters, digits, `_`, `-`), otherwise lowercased, spaces replaced by `-`, with a random suffix appended. Set it explicitly to control it. Use it to reference the resource elsewhere, adding the prefix the attribute expects: `"/integrations/${stackguardian_connector.x.id}"`, `"/wfgrps/${stackguardian_workflow_group.x.id}"`. The `resource_name` attribute is still available for references but its use is discouraged: it is not always equal to `id`.
 - `is_public` (String) Whether the workflow step template is publicly available. Valid values:
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
 	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)
@@ -92,7 +92,7 @@ Required:
 
 Optional:
 
-- `auth` (String, Sensitive) Authentication credentials or method for accessing the private registry or repository. (Sensitive)
+- `auth` (String, Sensitive) Credential for the private registry or repository, as a path-form ID: a connector `/integrations/<connector-name>` (build it as `"/integrations/${stackguardian_connector.x.id}"`) or a secret `/secrets/<secret-name>`. (Sensitive)
 - `docker_registry_username` (String) Username for authentication with the Docker registry (if using private registries).
 - `is_private` (Boolean) Indicates whether the container registry or repository is private.
 - `local_workspace_dir` (String) Working directory path inside the workspace, relative to the repository root.

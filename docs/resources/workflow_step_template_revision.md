@@ -66,7 +66,7 @@ resource "stackguardian_workflow_step_template_revision" "example" {
 
 - `runtime_source` (Attributes) Runtime source configuration for the revision. (see [below for nested schema](#nestedatt--runtime_source))
 - `source_config_kind` (String) Where the step's runnable definition comes from. `DOCKER_IMAGE` — a container image, pulled from the registry described by `runtime_source`.
-- `template_id` (String) ID of the parent workflow step template.
+- `template_id` (String) Parent workflow step template, as its bare `template_name` (which is also its `id`) — not a path.
 
 ### Optional
 
@@ -106,7 +106,7 @@ Required:
 
 Optional:
 
-- `auth` (String, Sensitive) Authentication credentials or method for accessing the private registry or repository. (Sensitive)
+- `auth` (String, Sensitive) Credential for the private registry or repository, as a path-form ID: a connector `/integrations/<connector-name>` (build it as `"/integrations/${stackguardian_connector.x.id}"`) or a secret `/secrets/<secret-name>`. (Sensitive)
 - `docker_registry_username` (String) Username for authentication with the Docker registry (if using private registries).
 - `is_private` (Boolean) Indicates whether the container registry or repository is private.
 - `local_workspace_dir` (String) Working directory path inside the workspace, relative to the repository root.
