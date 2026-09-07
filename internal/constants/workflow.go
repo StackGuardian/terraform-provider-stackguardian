@@ -1,9 +1,14 @@
 package constants
 
-// SecretReferenceSyntax documents the `${secret::<name>}` form the platform
-// resolves at run time. The separator is a double colon, not a dot -- verified
-// against live workflow payloads.
-const SecretReferenceSyntax = "The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation."
+// RuntimeReferencesGuide is the guide documenting every `${...}` form the platform
+// resolves at run time -- secrets, external secrets, workflow outputs and stack
+// template outputs -- along with the `$$` escaping Terraform requires.
+const RuntimeReferencesGuide = "https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences"
+
+// RuntimeReferenceNote is appended to every attribute whose value the platform
+// resolves at run time. The forms themselves are stated once, in the guide, so an
+// attribute description cannot drift from them.
+const RuntimeReferenceNote = "May contain a reference the platform resolves at run time. See the [Runtime References guide](" + RuntimeReferencesGuide + ")."
 
 // Workflow resource attributes
 const (
@@ -21,5 +26,5 @@ const (
 	WorkflowIacInputData                = "IaC input data for the workflow."
 	WorkflowIacInputDataSchemaId        = "Schema ID for the input data."
 	WorkflowIacInputDataSchemaType      = "How the value in `data` is formatted. <ul><li>`FORM_JSONSCHEMA` — a StackGuardian NoCode form; `data` holds the values that form collects.</li><li>`RAW_HCL` — HCL-formatted input, as you would write in a `.tfvars` file.</li><li>`RAW_JSON` — the same input expressed as JSON.</li><li>`NONE` — the workflow takes no inputs.</li></ul>The platform also returns `NO_CODE_JSON` on some existing workflows. The provider passes that value through unchanged, but it is outside the set above and should not be written by hand."
-	WorkflowIacInputDataData            = "Input data as a JSON string. " + SecretReferenceSyntax
+	WorkflowIacInputDataData            = "Input data as a JSON string. " + RuntimeReferenceNote
 )

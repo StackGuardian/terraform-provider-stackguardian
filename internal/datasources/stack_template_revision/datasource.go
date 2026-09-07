@@ -357,7 +357,7 @@ var dsWorkflowInStackAttrs = map[string]schema.Attribute{
 						Computed:            true,
 					},
 					"data": schema.StringAttribute{
-						MarkdownDescription: "Input data as a JSON string.",
+						MarkdownDescription: constants.WorkflowIacInputDataData,
 						Computed:            true,
 					},
 				},

@@ -21,6 +21,7 @@ New to the provider? Start with the **Getting Started** guide, then **Object Mod
 | [Getting Started](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/GettingStarted) | A working deployment, built one resource at a time |
 | [Object Model](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ObjectModel) | How workflow groups, templates, connectors and roles relate |
 | [Resource IDs](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ResourceIDs) | Why some values look like `/integrations/my-connector` |
+| [Runtime References](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences) | Values the platform resolves when a workflow runs |
 | [Templates and Revisions](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Templates) | The template lifecycle and how inheritance works |
 | [Access Management](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/AccessManagement) | Roles and role assignments |
 | [Policies](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Policies) | Guardrails that gate a run, and approval gating |
