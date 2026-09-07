@@ -12,7 +12,7 @@ const (
 
 	WorkflowStepTemplateRuntimeSourceConfigIsPrivateCommon = "Indicates whether the container registry or repository is private."
 
-	WorkflowStepTemplateRuntimeSourceConfigAuthCommon = "Authentication credentials or method for accessing the private registry or repository. (Sensitive)"
+	WorkflowStepTemplateRuntimeSourceConfigAuthCommon = "Credential for the private registry or repository, as a path-form ID: a connector `/integrations/<connector-name>` (build it as `\"/integrations/${stackguardian_connector.x.id}\"`) or a secret `/secrets/<secret-name>`. (Sensitive)"
 
 	WorkflowStepTemplateRuntimeSourceConfigDockerImageCommon = "Docker image URI to be used for template execution. Example: `ubuntu:latest`, `myregistry.azurecr.io/myapp:v1.0`"
 
@@ -66,7 +66,7 @@ const (
 const (
 	WorkflowStepTemplateRevisionId = "ID of the revision in the format `templateId:revisionNumber`."
 
-	WorkflowStepTemplateRevisionTemplateId = "ID of the parent workflow step template."
+	WorkflowStepTemplateRevisionTemplateId = "Parent workflow step template, as its bare `template_name` (which is also its `id`) — not a path."
 
 	WorkflowStepTemplateRevisionAlias = "Alias for the revision to easily identify it."
 
