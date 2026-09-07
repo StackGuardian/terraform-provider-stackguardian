@@ -69,7 +69,7 @@ resource "stackguardian_workflow_template" "with_runtime" {
 
 - `context_tags` (Map of String) Context tags for workflow template
 - `description` (String) A brief description of the workflow template. Must be less than 256 characters.
-- `id` (String) ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>
+- `id` (String) Identifier of the resource: a bare slug such as `production-aws`, never a path. When omitted it is derived from `resource_name` — unchanged if that is already slug-shaped (letters, digits, `_`, `-`), otherwise lowercased, spaces replaced by `-`, with a random suffix appended. Set it explicitly to control it. Use it to reference the resource elsewhere, adding the prefix the attribute expects: `"/integrations/${stackguardian_connector.x.id}"`, `"/wfgrps/${stackguardian_workflow_group.x.id}"`. The `resource_name` attribute is still available for references but its use is discouraged: it is not always equal to `id`.
 - `is_public` (String) Whether this **template** is shared with other organizations. Distinct from `is_public` on a revision, which controls whether that revision is published for use. Available values: <span style="background-color: #eff0f0; color: #e53835;">"0"</span> or <span style="background-color: #eff0f0; color: #e53835;">"1"</span>
 - `runtime_source` (Attributes) Runtime source configuration for the template. (see [below for nested schema](#nestedatt--runtime_source))
 - `shared_orgs_list` (List of String) List of organizations the template is shared with.
@@ -97,7 +97,7 @@ Required:
 
 Optional:
 
-- `auth` (String) Connector used to clone a private repository, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/github-connector`). Required when `is_private` is `true`.
+- `auth` (String) Credential for cloning a private repository, as a path-form ID. Either a VCS connector — `/integrations/<connector-name>`, built as `"/integrations/${stackguardian_connector.github.id}"` — for `GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG` and `AZURE_DEVOPS*` sources, or a secret `/secrets/<secret-name>`. `GIT_OTHER` accepts only the secret form. Required when `is_private` is `true`.
 - `git_core_auto_crlf` (Boolean) Whether to automatically handle CRLF line endings.
 - `git_sparse_checkout_config` (String) Git sparse checkout command line git cli options.
 - `include_sub_module` (Boolean) Whether to include git submodules.

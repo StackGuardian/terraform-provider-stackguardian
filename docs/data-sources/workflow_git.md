@@ -43,8 +43,8 @@ output "workflow_git_repo" {
 
 ### Required
 
-- `id` (String) ID of the resource. Should be used to import the resource.
-- `workflow_group_id` (String) ID of the parent workflow group.
+- `id` (String) Identifier of the resource: a bare slug, never a path. Use it to look the resource up, and to reference it elsewhere with the prefix the attribute expects (e.g. `"/integrations/${data.stackguardian_connector.x.id}"`).
+- `workflow_group_id` (String) Workflow group the workflow lives in, as its bare `id` (e.g. `platform`; the full path `platform/networking` for a nested group) — not `/wfgrps/…`.
 
 ### Read-Only
 
@@ -55,7 +55,7 @@ output "workflow_git_repo" {
 - `environment_variables` (Attributes List) Environment variables made available to the workflow during its runs. (see [below for nested schema](#nestedatt--environment_variables))
 - `mini_steps` (Attributes) Actions that are required to be performed once workflow execution is complete (see [below for nested schema](#nestedatt--mini_steps))
 - `number_of_approvals_required` (Number) Number of approvals required.
-- `resource_name` (String) Name of the workflow. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
+- `resource_name` (String) Name of the workflow. Must be less than 100 characters. Free-form: when it is not already slug-shaped (letters, digits, `_`, `-`) the platform derives a slug for `id` — see `id`.
 - `runner_constraints` (Attributes) Runner constraints to control which runner executes the workflow. (see [below for nested schema](#nestedatt--runner_constraints))
 - `tags` (List of String) A list of tags associated with the workflow. A maximum of 10 tags are allowed.
 - `terraform_config` (Attributes) Terraform configuration. Valid only for terraform type template (see [below for nested schema](#nestedatt--terraform_config))
@@ -577,7 +577,7 @@ Read-Only:
 
 Read-Only:
 
-- `auth` (String, Sensitive) Connector used to clone a private repository, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/github-connector`). Required when `is_private` is `true`.
+- `auth` (String, Sensitive) Credential for cloning a private repository, as a path-form ID. Either a VCS connector — `/integrations/<connector-name>`, built as `"/integrations/${stackguardian_connector.github.id}"` — for `GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG` and `AZURE_DEVOPS*` sources, or a secret `/secrets/<secret-name>`. `GIT_OTHER` accepts only the secret form. Required when `is_private` is `true`.
 - `git_core_auto_crlf` (Boolean) Whether to automatically handle CRLF line endings.
 - `git_sparse_checkout_config` (String) Git sparse checkout command line git cli options.
 - `include_sub_module` (Boolean) Whether to include git submodules.

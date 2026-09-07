@@ -57,7 +57,7 @@ output "workflow_step_template_revision_info" {
 - `runtime_source` (Attributes) Runtime source configuration for the revision. (see [below for nested schema](#nestedatt--runtime_source))
 - `source_config_kind` (String) Where the step's runnable definition comes from. `DOCKER_IMAGE` — a container image, pulled from the registry described by `runtime_source`.
 - `tags` (List of String) A list of tags associated with the revision. A maximum of 10 tags are allowed.
-- `template_id` (String) ID of the parent workflow step template.
+- `template_id` (String) Parent workflow step template, as its bare `template_name` (which is also its `id`) — not a path.
 - `template_type` (String) Which family of template this revision belongs to. Read-only, and always `WORKFLOW_STEP` here. StackGuardian uses the same field across all template types: <ul><li>`WORKFLOW_STEP` — a workflow step template.</li><li>`IAC` — a workflow template.</li><li>`IAC_GROUP` — a stack template.</li><li>`IAC_POLICY` — a policy template.</li></ul>
 
 <a id="nestedatt--deprecation"></a>
@@ -83,7 +83,7 @@ Read-Only:
 
 Read-Only:
 
-- `auth` (String, Sensitive) Authentication credentials or method for accessing the private registry or repository. (Sensitive)
+- `auth` (String, Sensitive) Credential for the private registry or repository, as a path-form ID: a connector `/integrations/<connector-name>` (build it as `"/integrations/${stackguardian_connector.x.id}"`) or a secret `/secrets/<secret-name>`. (Sensitive)
 - `docker_image` (String) Docker image URI to be used for template execution. Example: `ubuntu:latest`, `myregistry.azurecr.io/myapp:v1.0`
 - `docker_registry_username` (String) Username for authentication with the Docker registry (if using private registries).
 - `is_private` (Boolean) Indicates whether the container registry or repository is private.

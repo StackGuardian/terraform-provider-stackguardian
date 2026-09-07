@@ -127,8 +127,8 @@ resource "stackguardian_stack_template_revision" "with_vcs" {
 
 ### Read-Only
 
-- `id` (String) Unique identifier of the stack template revision.
-- `template_id` (String) ID of the parent stack template.
+- `id` (String) Identifier of the revision, in the form `<template-name>:<revision>` (e.g. `my-stack-template:1`).
+- `template_id` (String) Parent stack template, as its bare `template_name` (which is also its `id`) — not a path.
 
 <a id="nestedatt--actions"></a>
 ### Nested Schema for `actions`
@@ -304,7 +304,7 @@ Optional:
 Required:
 
 - `id` (String) UUID identifying the workflow within the stack template.
-- `template_id` (String) Workflow template revision this workflow is created from. <ul><li>`&lt;template-name&gt;:&lt;revision&gt;` — a template in your own organization.</li><li>`/&lt;org&gt;/&lt;template-name&gt;:&lt;revision&gt;` — a template owned by another organization: one shared with you, or published publicly. StackGuardian's own templates use the `stackguardian` org, for example `/stackguardian/aws-s3-demo-website:16`.</li></ul>A bare id is resolved against your own organization. Use `:latest` in place of a revision number to track the most recently published revision; pin an explicit revision when the workflow must not move.
+- `template_id` (String) Workflow template this stack workflow is created from, as the bare `template_name` of a template in your own organization (e.g. `my-workflow-template`). The provider qualifies it with your organization, so do not give the `/<org>/…` form.
 
 Optional:
 
@@ -381,7 +381,7 @@ Optional:
 
 - `description` (String) A brief description of the workflow. Must be less than 256 characters.
 - `encoded_data` (String) Base64-encoded schema data.
-- `id` (String) ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>
+- `id` (String) Identifier of the resource: a bare slug such as `production-aws`, never a path. When omitted it is derived from `resource_name` — unchanged if that is already slug-shaped (letters, digits, `_`, `-`), otherwise lowercased, spaces replaced by `-`, with a random suffix appended. Set it explicitly to control it. Use it to reference the resource elsewhere, adding the prefix the attribute expects: `"/integrations/${stackguardian_connector.x.id}"`, `"/wfgrps/${stackguardian_workflow_group.x.id}"`. The `resource_name` attribute is still available for references but its use is discouraged: it is not always equal to `id`.
 - `is_committed` (Boolean)
 - `name` (String) Name of the input schema.
 - `ui_schema_data` (String) Schema for how the JSON schema is to be visualized. The schema needs to be base64 encoded.
@@ -898,7 +898,7 @@ Optional:
 Optional:
 
 - `custom_source` (Attributes) Custom source configuration. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source))
-- `iac_template_id` (String) Workflow template revision this workflow is created from. <ul><li>`&lt;template-name&gt;:&lt;revision&gt;` — a template in your own organization.</li><li>`/&lt;org&gt;/&lt;template-name&gt;:&lt;revision&gt;` — a template owned by another organization: one shared with you, or published publicly. StackGuardian's own templates use the `stackguardian` org, for example `/stackguardian/aws-s3-demo-website:16`.</li></ul>A bare id is resolved against your own organization. Use `:latest` in place of a revision number to track the most recently published revision; pin an explicit revision when the workflow must not move.
+- `iac_template_id` (String) Workflow template this stack workflow is created from, as the bare `template_name` of a template in your own organization (e.g. `my-workflow-template`). The provider qualifies it with your organization, so do not give the `/<org>/…` form.
 - `use_marketplace_template` (Boolean) Whether to use a marketplace template.
 
 <a id="nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source"></a>
@@ -917,7 +917,7 @@ Optional:
 
 Optional:
 
-- `auth` (String, Sensitive) Connector used to clone a private repository, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/github-connector`). Required when `is_private` is `true`.
+- `auth` (String, Sensitive) Credential for cloning a private repository, as a path-form ID. Either a VCS connector — `/integrations/<connector-name>`, built as `"/integrations/${stackguardian_connector.github.id}"` — for `GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG` and `AZURE_DEVOPS*` sources, or a secret `/secrets/<secret-name>`. `GIT_OTHER` accepts only the secret form. Required when `is_private` is `true`.
 - `git_core_auto_crlf` (Boolean) Whether to automatically handle CRLF line endings.
 - `git_sparse_checkout_config` (String) Git sparse checkout command line git cli options.
 - `include_sub_module` (Boolean) Whether to include git submodules.

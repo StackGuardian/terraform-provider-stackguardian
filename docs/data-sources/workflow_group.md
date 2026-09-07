@@ -27,7 +27,7 @@ data "stackguardian_workflow_group" "platform" {
 }
 
 resource "stackguardian_workflow_git" "example" {
-  workflow_group_id = data.stackguardian_workflow_group.platform.resource_name
+  workflow_group_id = data.stackguardian_workflow_group.platform.id
   id                = "deploy-vpc"
   wf_type           = "TERRAFORM"
 
@@ -50,8 +50,8 @@ resource "stackguardian_workflow_git" "example" {
 
 ### Optional
 
-- `id` (String) ID of the resource. Should be used to import the resource.
-- `resource_name` (String) Name of the workflow group. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_/]+$ <span style='color: #e53835;'>Deprecated:</span> The `resource_name` attribute is still available but its use is discouraged and may not work in some cases. Use `id`.
+- `id` (String) Identifier of the resource: a bare slug, never a path. Use it to look the resource up, and to reference it elsewhere with the prefix the attribute expects (e.g. `"/integrations/${data.stackguardian_connector.x.id}"`).
+- `resource_name` (String) Name of the workflow group, which is also its `id`. Must be less than 100 characters: letters, digits, `_` and `-`, with `/` separating the levels of a nested group (`platform/networking`). <span style='color: #e53835;'>Deprecated:</span> The `resource_name` attribute is still available but its use is discouraged and may not work in some cases. Use `id`.
 
 ### Read-Only
 

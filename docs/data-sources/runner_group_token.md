@@ -37,7 +37,7 @@ output "runner_registration_token" {
 
 ### Required
 
-- `runner_group_id` (String) Runner group ID
+- `runner_group_id` (String) Runner group to issue the token for, as its bare `id` / `resource_name` (e.g. `private-runners`) — not `/runnergroups/…`; the data source adds that prefix itself.
 
 ### Read-Only
 

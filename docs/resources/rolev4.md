@@ -55,13 +55,13 @@ resource "stackguardian_rolev4" "example_role" {
 
 ### Required
 
-- `resource_name` (String) Name of the role. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
+- `resource_name` (String) Name of the role. Must be less than 100 characters. Free-form: when it is not already slug-shaped (letters, digits, `_`, `-`) the platform derives a slug for `id` — see `id`.
 
 ### Optional
 
 - `allowed_permissions` (Attributes Map) A map of permissions assigned to the role. (see [below for nested schema](#nestedatt--allowed_permissions))
 - `description` (String) A brief description of the role. Must be less than 256 characters.
-- `id` (String) ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>
+- `id` (String) Identifier of the resource: a bare slug such as `production-aws`, never a path. When omitted it is derived from `resource_name` — unchanged if that is already slug-shaped (letters, digits, `_`, `-`), otherwise lowercased, spaces replaced by `-`, with a random suffix appended. Set it explicitly to control it. Use it to reference the resource elsewhere, adding the prefix the attribute expects: `"/integrations/${stackguardian_connector.x.id}"`, `"/wfgrps/${stackguardian_workflow_group.x.id}"`. The `resource_name` attribute is still available for references but its use is discouraged: it is not always equal to `id`.
 - `tags` (List of String) A list of tags associated with the role. A maximum of 10 tags are allowed.
 
 ### Read-Only

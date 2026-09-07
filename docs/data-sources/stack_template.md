@@ -37,7 +37,7 @@ output "stack_template_description" {
 
 ### Required
 
-- `id` (String) ID of the resource. Should be used to import the resource.
+- `id` (String) Identifier of the resource: a bare slug, never a path. Use it to look the resource up, and to reference it elsewhere with the prefix the attribute expects (e.g. `"/integrations/${data.stackguardian_connector.x.id}"`).
 
 ### Read-Only
 

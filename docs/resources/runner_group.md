@@ -67,7 +67,7 @@ resource "stackguardian_runner_group" "example" {
     aws_region     = "eu-central-1"
     s3_bucket_name = "my-org-runner-logs"
     auth = {
-      integration_id = stackguardian_connector.runner_logs.id
+      integration_id = "/integrations/${stackguardian_connector.runner_logs.id}"
     }
   }
 }
@@ -85,13 +85,13 @@ resource "stackguardian_runner_group" "example" {
 
 ### Required
 
-- `resource_name` (String) Name of the runner group. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
+- `resource_name` (String) Name of the runner group. Must be less than 100 characters. Free-form: when it is not already slug-shaped (letters, digits, `_`, `-`) the platform derives a slug for `id` — see `id`.
 - `storage_backend_config` (Attributes) Configuration for storing runner logs (see [below for nested schema](#nestedatt--storage_backend_config))
 
 ### Optional
 
 - `description` (String) A brief description of the runner group. Must be less than 256 characters.
-- `id` (String) ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>
+- `id` (String) Identifier of the resource: a bare slug such as `production-aws`, never a path. When omitted it is derived from `resource_name` — unchanged if that is already slug-shaped (letters, digits, `_`, `-`), otherwise lowercased, spaces replaced by `-`, with a random suffix appended. Set it explicitly to control it. Use it to reference the resource elsewhere, adding the prefix the attribute expects: `"/integrations/${stackguardian_connector.x.id}"`, `"/wfgrps/${stackguardian_workflow_group.x.id}"`. The `resource_name` attribute is still available for references but its use is discouraged: it is not always equal to `id`.
 - `max_number_of_runners` (Number) Maximum number of runners allowed in a runner group
 - `run_controller_runtime_source` (Attributes) Source configuration type and settings definition (see [below for nested schema](#nestedatt--run_controller_runtime_source))
 - `runner_token` (String) Private token of the runner group
@@ -136,7 +136,7 @@ Optional:
 
 Optional:
 
-- `auth` (String) Authentication method for accessing the repository.
+- `auth` (String) Credential used to reach the repository, as a path-form ID: a connector `/integrations/<connector-name>` or a secret `/secrets/<secret-name>`. Build the connector form from the resource rather than typing it: `"/integrations/${stackguardian_connector.github.id}"`.
 - `docker_image` (String) Docker image to used to execute workflows
 - `docker_registry_username` (String) Username for docker register
 - `git_core_auto_crlf` (Boolean) Indicates if core.autocrlf should be enabled.

@@ -45,7 +45,7 @@ resource "stackguardian_workflow_git" "example" {
   deployment_platform_config = [{
     kind = "AWS_RBAC"
     config = {
-      integration_id = data.stackguardian_connector.shared_aws.id
+      integration_id = "/integrations/${data.stackguardian_connector.shared_aws.id}"
     }
   }]
 }
@@ -56,8 +56,8 @@ resource "stackguardian_workflow_git" "example" {
 
 ### Optional
 
-- `id` (String) ID of the resource. Should be used to import the resource.
-- `resource_name` (String) Name of the connector. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$ <span style='color: #e53835;'>Deprecated:</span> The `resource_name` attribute is still available but its use is discouraged and may not work in some cases. Use `id`.
+- `id` (String) Identifier of the resource: a bare slug, never a path. Use it to look the resource up, and to reference it elsewhere with the prefix the attribute expects (e.g. `"/integrations/${data.stackguardian_connector.x.id}"`).
+- `resource_name` (String) Name of the connector. Must be less than 100 characters. Free-form: when it is not already slug-shaped (letters, digits, `_`, `-`) the platform derives a slug for `id` — see `id`. <span style='color: #e53835;'>Deprecated:</span> The `resource_name` attribute is still available but its use is discouraged and may not work in some cases. Use `id`.
 
 ### Read-Only
 
@@ -110,7 +110,7 @@ Read-Only:
 
 Read-Only:
 
-- `auth` (String) Authentication method for accessing the repository.
+- `auth` (String) Credential used to reach the repository, as a path-form ID: a connector `/integrations/<connector-name>` or a secret `/secrets/<secret-name>`. Build the connector form from the resource rather than typing it: `"/integrations/${stackguardian_connector.github.id}"`.
 - `git_core_auto_crlf` (Boolean) Indicates if core.autocrlf should be enabled.
 - `include_sub_module` (Boolean) Indicates whether to include sub-modules.
 - `is_private` (Boolean) Indicates if the repository is private.

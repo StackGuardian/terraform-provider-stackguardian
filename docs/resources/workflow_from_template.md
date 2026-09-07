@@ -90,10 +90,10 @@ resource "stackguardian_workflow_from_template" "example" {
 
 ### Required
 
-- `id` (String) ID of the resource — Use this attribute: <ul><li>Set the Id of the resource manually</li><li>To reference the resource in other resources. The `resource_name` attribute is still available but its use is discouraged and may not work in some cases.</li></ul>
+- `id` (String) Identifier of the resource: a bare slug such as `production-aws`, never a path. When omitted it is derived from `resource_name` — unchanged if that is already slug-shaped (letters, digits, `_`, `-`), otherwise lowercased, spaces replaced by `-`, with a random suffix appended. Set it explicitly to control it. Use it to reference the resource elsewhere, adding the prefix the attribute expects: `"/integrations/${stackguardian_connector.x.id}"`, `"/wfgrps/${stackguardian_workflow_group.x.id}"`. The `resource_name` attribute is still available for references but its use is discouraged: it is not always equal to `id`.
 - `vcs_config` (Attributes) VCS configuration for the workflow. (see [below for nested schema](#nestedatt--vcs_config))
 - `wf_type` (String) How this workflow is executed. <ul><li>`TERRAFORM` — run with Terraform.</li><li>`OPENTOFU` — run with OpenTofu.</li><li>`CUSTOM` — run the steps in `wf_steps_config` yourself, rather than a built-in engine. Templates of other kinds (Helm, Ansible, Kubectl, CloudFormation) run as `CUSTOM` workflows.</li></ul>This is a smaller set than a template's `source_config_kind`, which describes what the template contains rather than how the workflow runs.
-- `workflow_group_id` (String) ID of the parent workflow group. Immutable — changing this forces the workflow to be recreated (destroy and create), as the platform has no operation to move a workflow between groups.
+- `workflow_group_id` (String) Workflow group the workflow lives in, as its bare `id` (e.g. `platform`; the full path `platform/networking` for a nested group) — not `/wfgrps/…`. Immutable — changing this forces the workflow to be recreated (destroy and create), as the platform has no operation to move a workflow between groups.
 
 ### Optional
 
@@ -104,7 +104,7 @@ resource "stackguardian_workflow_from_template" "example" {
 - `environment_variables` (Attributes List) Environment variables made available to the workflow during its runs. (see [below for nested schema](#nestedatt--environment_variables))
 - `mini_steps` (Attributes) Actions that are required to be performed once workflow execution is complete (see [below for nested schema](#nestedatt--mini_steps))
 - `number_of_approvals_required` (Number) Number of approvals required.
-- `resource_name` (String) Name of the workflow. Must be less than 100 characters. Allowed characters are ^[a-zA-Z0-9_]+$
+- `resource_name` (String) Name of the workflow. Must be less than 100 characters. Free-form: when it is not already slug-shaped (letters, digits, `_`, `-`) the platform derives a slug for `id` — see `id`.
 - `runner_constraints` (Attributes) Runner constraints to control which runner executes the workflow. (see [below for nested schema](#nestedatt--runner_constraints))
 - `tags` (List of String) A list of tags associated with the workflow. A maximum of 10 tags are allowed.
 - `terraform_config` (Attributes) Terraform configuration. Valid only for terraform type template (see [below for nested schema](#nestedatt--terraform_config))
@@ -129,7 +129,7 @@ Optional:
 
 Required:
 
-- `iac_template_id` (String) Workflow template revision this workflow is created from. <ul><li>`&lt;template-name&gt;:&lt;revision&gt;` — a template in your own organization.</li><li>`/&lt;org&gt;/&lt;template-name&gt;:&lt;revision&gt;` — a template owned by another organization: one shared with you, or published publicly. StackGuardian's own templates use the `stackguardian` org, for example `/stackguardian/aws-s3-demo-website:16`.</li></ul>A bare id is resolved against your own organization. Use `:latest` in place of a revision number to track the most recently published revision; pin an explicit revision when the workflow must not move.
+- `iac_template_id` (String) Workflow template revision this workflow is created from. <ul><li>`<template-name>:<revision>` — a template in your own organization.</li><li>`/<org>/<template-name>:<revision>` — a template owned by another organization: one shared with you, or published publicly. StackGuardian's own templates use the `stackguardian` org, for example `/stackguardian/aws-s3-demo-website:16`.</li></ul>A bare id is resolved against your own organization. Use `:latest` in place of a revision number to track the most recently published revision; pin an explicit revision when the workflow must not move.
 
 
 <a id="nestedatt--vcs_config--iac_input_data"></a>
@@ -410,7 +410,7 @@ Optional:
 - `terraform_plan_options` (String) Additional options for terraform plan.
 - `terraform_version` (String) Terraform or OpenTofu version, in bare form (e.g. `1.5.7`). StackGuardian stores an engine prefix (`TERRAFORM-` / `OPENTOFU-`) internally; the provider strips it, so the value can be referenced directly into another resource without producing a perpetual diff. Which engine runs is decided by `wf_type`, not by this value.
 - `timeout` (Number) Timeout for terraform operations in seconds.
-- `wf_step_template_revision_id` (String) Fully-qualified workflow step template revision id pinned for this terraform config (e.g. "/<org>/<name>:<rev>").
+- `wf_step_template_revision_id` (String) Fully-qualified workflow step template revision pinned for this terraform config, as a path-form ID: `/<org>/<name>:<rev>` (e.g. `/stackguardian/terraform:11`).
 
 <a id="nestedatt--terraform_config--post_apply_wf_steps_config"></a>
 ### Nested Schema for `terraform_config.post_apply_wf_steps_config`
