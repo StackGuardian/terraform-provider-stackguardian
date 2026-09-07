@@ -141,7 +141,7 @@ Optional:
 Required:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--environment_variables--config))
-- `kind` (String) Where the variable's value comes from. <ul><li>`PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so do not use it for credentials.</li><li>`VAULT_SECRET` — the value is read at run time from the secret named by `config.secret_id`, so it never appears in your configuration or state.</li></ul>
+- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so put a `$${secret::<secret-name>}` reference there rather than a literal credential.
 
 <a id="nestedatt--environment_variables--config"></a>
 ### Nested Schema for `environment_variables.config`
@@ -152,8 +152,8 @@ Required:
 
 Optional:
 
-- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `VAULT_SECRET`.
-- `text_value` (String) Value written inline. Only used when `kind` is `PLAIN_TEXT`, and visible in configuration and state, so keep credentials in a `VAULT_SECRET` variable instead. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
+- `secret_id` (String) Not used. To reference a secret, set `config.text_value` to `$${secret::<secret-name>}` instead.
+- `text_value` (String) Value written inline, and visible in configuration and state, so write a secret in as a reference rather than as a literal value. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
 
 
 
@@ -441,7 +441,7 @@ Optional:
 Required:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--terraform_config--post_apply_wf_steps_config--environment_variables--config))
-- `kind` (String) Where the variable's value comes from. <ul><li>`PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so do not use it for credentials.</li><li>`VAULT_SECRET` — the value is read at run time from the secret named by `config.secret_id`, so it never appears in your configuration or state.</li></ul>
+- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so put a `$${secret::<secret-name>}` reference there rather than a literal credential.
 
 <a id="nestedatt--terraform_config--post_apply_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `terraform_config.post_apply_wf_steps_config.environment_variables.config`
@@ -452,8 +452,8 @@ Required:
 
 Optional:
 
-- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `VAULT_SECRET`.
-- `text_value` (String) Value written inline. Only used when `kind` is `PLAIN_TEXT`, and visible in configuration and state, so keep credentials in a `VAULT_SECRET` variable instead. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
+- `secret_id` (String) Not used. To reference a secret, set `config.text_value` to `$${secret::<secret-name>}` instead.
+- `text_value` (String) Value written inline, and visible in configuration and state, so write a secret in as a reference rather than as a literal value. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
 
 
 
@@ -500,7 +500,7 @@ Optional:
 Required:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--terraform_config--post_plan_wf_steps_config--environment_variables--config))
-- `kind` (String) Where the variable's value comes from. <ul><li>`PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so do not use it for credentials.</li><li>`VAULT_SECRET` — the value is read at run time from the secret named by `config.secret_id`, so it never appears in your configuration or state.</li></ul>
+- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so put a `$${secret::<secret-name>}` reference there rather than a literal credential.
 
 <a id="nestedatt--terraform_config--post_plan_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `terraform_config.post_plan_wf_steps_config.environment_variables.config`
@@ -511,8 +511,8 @@ Required:
 
 Optional:
 
-- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `VAULT_SECRET`.
-- `text_value` (String) Value written inline. Only used when `kind` is `PLAIN_TEXT`, and visible in configuration and state, so keep credentials in a `VAULT_SECRET` variable instead. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
+- `secret_id` (String) Not used. To reference a secret, set `config.text_value` to `$${secret::<secret-name>}` instead.
+- `text_value` (String) Value written inline, and visible in configuration and state, so write a secret in as a reference rather than as a literal value. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
 
 
 
@@ -559,7 +559,7 @@ Optional:
 Required:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--terraform_config--pre_apply_wf_steps_config--environment_variables--config))
-- `kind` (String) Where the variable's value comes from. <ul><li>`PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so do not use it for credentials.</li><li>`VAULT_SECRET` — the value is read at run time from the secret named by `config.secret_id`, so it never appears in your configuration or state.</li></ul>
+- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so put a `$${secret::<secret-name>}` reference there rather than a literal credential.
 
 <a id="nestedatt--terraform_config--pre_apply_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `terraform_config.pre_apply_wf_steps_config.environment_variables.config`
@@ -570,8 +570,8 @@ Required:
 
 Optional:
 
-- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `VAULT_SECRET`.
-- `text_value` (String) Value written inline. Only used when `kind` is `PLAIN_TEXT`, and visible in configuration and state, so keep credentials in a `VAULT_SECRET` variable instead. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
+- `secret_id` (String) Not used. To reference a secret, set `config.text_value` to `$${secret::<secret-name>}` instead.
+- `text_value` (String) Value written inline, and visible in configuration and state, so write a secret in as a reference rather than as a literal value. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
 
 
 
@@ -618,7 +618,7 @@ Optional:
 Required:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--terraform_config--pre_plan_wf_steps_config--environment_variables--config))
-- `kind` (String) Where the variable's value comes from. <ul><li>`PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so do not use it for credentials.</li><li>`VAULT_SECRET` — the value is read at run time from the secret named by `config.secret_id`, so it never appears in your configuration or state.</li></ul>
+- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so put a `$${secret::<secret-name>}` reference there rather than a literal credential.
 
 <a id="nestedatt--terraform_config--pre_plan_wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `terraform_config.pre_plan_wf_steps_config.environment_variables.config`
@@ -629,8 +629,8 @@ Required:
 
 Optional:
 
-- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `VAULT_SECRET`.
-- `text_value` (String) Value written inline. Only used when `kind` is `PLAIN_TEXT`, and visible in configuration and state, so keep credentials in a `VAULT_SECRET` variable instead. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
+- `secret_id` (String) Not used. To reference a secret, set `config.text_value` to `$${secret::<secret-name>}` instead.
+- `text_value` (String) Value written inline, and visible in configuration and state, so write a secret in as a reference rather than as a literal value. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
 
 
 
@@ -702,7 +702,7 @@ Optional:
 Required:
 
 - `config` (Attributes) Configuration for the environment variable. (see [below for nested schema](#nestedatt--wf_steps_config--environment_variables--config))
-- `kind` (String) Where the variable's value comes from. <ul><li>`PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so do not use it for credentials.</li><li>`VAULT_SECRET` — the value is read at run time from the secret named by `config.secret_id`, so it never appears in your configuration or state.</li></ul>
+- `kind` (String) Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so put a `$${secret::<secret-name>}` reference there rather than a literal credential.
 
 <a id="nestedatt--wf_steps_config--environment_variables--config"></a>
 ### Nested Schema for `wf_steps_config.environment_variables.config`
@@ -713,8 +713,8 @@ Required:
 
 Optional:
 
-- `secret_id` (String) Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `VAULT_SECRET`.
-- `text_value` (String) Value written inline. Only used when `kind` is `PLAIN_TEXT`, and visible in configuration and state, so keep credentials in a `VAULT_SECRET` variable instead. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
+- `secret_id` (String) Not used. To reference a secret, set `config.text_value` to `$${secret::<secret-name>}` instead.
+- `text_value` (String) Value written inline, and visible in configuration and state, so write a secret in as a reference rather than as a literal value. The value may contain a `${secret::<secret-name>}` reference, which StackGuardian resolves at run time; write it as `$${secret::<secret-name>}` in Terraform so the `$` is not read as an interpolation.
 
 
 

@@ -35,8 +35,9 @@ resource "stackguardian_workflow_git" "basic" {
 #
 # Groups nest with `/`, and the nested group is an ordinary resource of its own --
 # creating "platform/networking" does not create "platform" for you, so both are
-# declared. Anything secret belongs in a VAULT_SECRET variable or a `${secret::...}`
-# reference, never in PLAIN_TEXT, which is visible in configuration and state.
+# declared. A secret goes into a PLAIN_TEXT variable as a `${secret::<name>}`
+# reference, never as a literal value -- the literal would be visible in
+# configuration and state, the reference is resolved at run time.
 resource "stackguardian_workflow_group" "platform" {
   resource_name = "platform"
   description   = "Platform team workflows"
@@ -92,10 +93,10 @@ resource "stackguardian_workflow_git" "vpc_staging" {
       }
     },
     {
-      kind = "VAULT_SECRET"
+      kind = "PLAIN_TEXT"
       config = {
-        var_name  = "DATADOG_API_KEY"
-        secret_id = "/secrets/datadog-api-key"
+        var_name   = "DATADOG_API_KEY"
+        text_value = "$${secret::datadog-api-key}"
       }
     },
   ]
@@ -203,10 +204,10 @@ resource "stackguardian_workflow_git" "vpc_production" {
 
   environment_variables = [
     {
-      kind = "VAULT_SECRET"
+      kind = "PLAIN_TEXT"
       config = {
-        var_name  = "TF_VAR_datadog_api_key"
-        secret_id = "/secrets/datadog-api-key"
+        var_name   = "TF_VAR_datadog_api_key"
+        text_value = "$${secret::datadog-api-key}"
       }
     }
   ]

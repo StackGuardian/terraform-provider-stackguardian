@@ -61,7 +61,6 @@ Reference `id`.
 | `deployment_platform_config.config.integration_id` | `"/integrations/${stackguardian_connector.x.id}"` |
 | `storage_backend_config.auth.integration_id` (runner group) | `"/integrations/${stackguardian_connector.x.id}"` |
 | `custom_source.config.auth` | `"/integrations/${stackguardian_connector.x.id}"` for `GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG`, `AZURE_DEVOPS*`; `/secrets/<secret-name>` for any source, and the **only** form `GIT_OTHER` accepts |
-| `environment_variables.config.secret_id` | `/secrets/<secret-name>` |
 | `wf_steps_config.wf_step_template_id` | `/<org>/<step-template-name>:<revision>` |
 | `terraform_config.wf_step_template_revision_id` | `/<org>/<name>:<revision>` |
 | `policy_vcs_config.policy_template_id` | `/policies/<name>:<rev>`, or `/<org>/<name>:<rev>` |

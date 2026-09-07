@@ -81,9 +81,9 @@ const (
 const (
 	EnvVarConfig          = "Configuration for the environment variable."
 	EnvVarConfigVarName   = "Name of the variable."
-	EnvVarConfigSecretId  = "Secret to read the value from, as a path-form ID: `/secrets/<secret-name>` (e.g. `/secrets/db-password`). Only used when `kind` is `VAULT_SECRET`."
-	EnvVarConfigTextValue = "Value written inline. Only used when `kind` is `PLAIN_TEXT`, and visible in configuration and state, so keep credentials in a `VAULT_SECRET` variable instead. " + SecretReferenceSyntax
-	EnvVarKind            = "Where the variable's value comes from. <ul><li>`PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so do not use it for credentials.</li><li>`VAULT_SECRET` — the value is read at run time from the secret named by `config.secret_id`, so it never appears in your configuration or state.</li></ul>"
+	EnvVarConfigSecretId  = "Not used. To reference a secret, set `config.text_value` to `$${secret::<secret-name>}` instead."
+	EnvVarConfigTextValue = "Value written inline, and visible in configuration and state, so write a secret in as a reference rather than as a literal value. " + SecretReferenceSyntax
+	EnvVarKind            = "Where the variable's value comes from. Must be `PLAIN_TEXT` — the value is written inline in `config.text_value`. It is visible in configuration and state, so put a `$${secret::<secret-name>}` reference there rather than a literal credential."
 )
 
 // Input Schemas attributes
