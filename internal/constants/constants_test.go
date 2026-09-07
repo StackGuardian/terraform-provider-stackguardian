@@ -51,11 +51,15 @@ func TestDocumentedEnumsMatchSDK(t *testing.T) {
 				string(sgsdkgo.IacInputDataSchemaTypeEnumRawHcl),
 			},
 		},
+		// The SDK still carries VAULT_SECRET, but the platform does not accept it,
+		// so the description must not offer it as a value to write.
 		{
 			name: "EnvVarKind",
 			doc:  EnvVarKind,
 			mustHave: []string{
 				string(sgsdkgo.EnvVarsKindEnumPlainText),
+			},
+			mustNotHave: []string{
 				string(sgsdkgo.EnvVarsKindEnumVaultSecret),
 			},
 		},
@@ -141,9 +145,9 @@ func TestPlainTextVariableWarnsAboutExposure(t *testing.T) {
 		if !strings.Contains(doc, "state") {
 			t.Errorf("%s does not mention that the value is visible in state", name)
 		}
-		if !strings.Contains(doc, string(sgsdkgo.EnvVarsKindEnumVaultSecret)) {
-			t.Errorf("%s does not point at %s as the alternative for credentials",
-				name, sgsdkgo.EnvVarsKindEnumVaultSecret)
+		if !strings.Contains(doc, "${secret::") {
+			t.Errorf("%s does not point at a ${secret::<name>} reference as the way to "+
+				"hold a credential", name)
 		}
 	}
 }
