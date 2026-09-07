@@ -15,7 +15,7 @@ description: |-
 
 `enforced_on` decides where the policy applies: `["*"]` for the whole organization, or any
 combination of workflow groups, workflows and connectors — a workflow group is `/wfgrps/<group>`,
-with no trailing slash.
+with no trailing slash, best written as `"/wfgrps/${stackguardian_workflow_group.x.id}"`.
 
 Note this is **not** the same form a `stackguardian_role` uses in `allowed_permissions`, which
 takes bare resource names. See

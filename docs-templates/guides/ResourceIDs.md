@@ -2,56 +2,79 @@
 page_title: "Resource IDs"
 subcategory: "Concepts"
 description: |-
-  StackGuardian identifies resources with path-like IDs. This is what each one looks like.
+  What the `id` attribute holds, which attributes take path-like IDs such as /integrations/<id>, and how to build them.
 ---
 
 # Resource IDs
 
-StackGuardian identifies most resources with a **path-like ID** rather than a plain name or a
-UUID — `/integrations/production-aws`, `/stackguardian/aws-s3-demo-website:16`, `/wfgrps/platform/wfs/deploy-vpc`.
-The leading `/` is part of the value, not a typo, and these strings appear as ordinary attribute
-values throughout the provider.
+Two things are easy to conflate:
 
-Not every attribute takes a path, though, and the difference is not guessable. This page is the
-reference.
+- The **`id` attribute** every resource exposes. It is a **bare slug** — `production-aws`,
+  `platform`, `my-template` — never a path.
+- The **path-form IDs** the platform expects in *references*: `/integrations/production-aws`,
+  `/wfgrps/platform`, `/stackguardian/aws-s3-demo-website:16`. The leading `/` is part of the value.
+
+A reference is the `id` plus the prefix the attribute expects. Let Terraform build it:
+
+```terraform
+integration_id = "/integrations/${stackguardian_connector.aws.id}"
+enforced_on    = ["/wfgrps/${stackguardian_workflow_group.platform.id}"]
+```
+
+This keeps the reference correct through renames and orders resource creation for you.
+
+## What `id` holds
+
+- Set `id` yourself and it is stored verbatim.
+- Leave it out and the platform derives it from `resource_name`: unchanged when the name is
+  already slug-shaped (letters, digits, `_`, `-`); otherwise lowercased, spaces replaced by `-`,
+  **with a random suffix appended** — `"AWS Prod Connector"` becomes something like
+  `aws-prod-connector-x7k2lm9q4n1d`.
+- Workflow groups always have `id == resource_name`, nested ones included: `platform/networking`.
+- The `GITHUB_COM` connector is a per-organization singleton whose `id` is always `github_com`,
+  whatever its `resource_name`.
+
+So `resource_name` is only a safe stand-in for `id` when you know the name is slug-shaped.
+Reference `id`.
 
 ## The forms
 
 | Form | Example | Used for |
 | --- | --- | --- |
-| `/integrations/<name>` | `/integrations/production-aws` | connectors |
-| `/secrets/<name>` | `/secrets/db-password` | secrets |
-| `/<org>/<name>:<revision>` | `/stackguardian/aws-s3-demo-website:16` | template revisions, including marketplace |
-| `<name>:<revision>` | `my-template:1` | a template revision in your own org |
-| `/policies/<name>:<revision>` | `/policies/aws-all:1` | policies created in your own org |
-| `/wfgrps/<group>` | `/wfgrps/platform` | policy scope |
+| `<slug>` | `production-aws` | the `id` attribute of every resource; most import IDs |
+| `<parent>/<child>` | `platform/networking` | the `id` of a nested workflow group |
+| `/integrations/<id>` | `/integrations/production-aws` | referencing a connector |
+| `/secrets/<name>` | `/secrets/db-password` | referencing a secret |
+| `/wfgrps/<id>` | `/wfgrps/platform` | policy scope |
 | `*` | `*` | policy scope: the whole organization |
-| `/wfgrps/<group>/wfs/<workflow>` | `/wfgrps/platform/wfs/deploy-vpc` | how the API addresses a workflow |
-| `<name>` | `production-aws` | most `resource_name` values, and most import IDs |
-| `<parent>/<child>` | `platform/networking` | a nested workflow group |
+| `<name>:<revision>` | `my-template:1` | a template revision in your own org; also the `id` of a revision resource |
+| `/<org>/<name>:<revision>` | `/stackguardian/aws-s3-demo-website:16` | a template revision owned by another org, including marketplace |
+| `/policies/<name>:<revision>` | `/policies/aws-all:1` | a policy template created in your own org |
+| `/wfgrps/<group>/wfs/<workflow>` | `/wfgrps/platform/wfs/deploy-vpc` | how the API addresses a workflow; not used by any provider attribute |
 
 ## Which attribute takes which
 
-### Path-form IDs
+### Path-form — build with the prefix
 
 | Attribute | Form |
 | --- | --- |
-| `deployment_platform_config.config.integration_id` | `/integrations/<connector-name>` |
-| `custom_source.config.auth` | `/integrations/<connector-name>` |
-| `storage_backend_config.auth.integration_id` (runner group) | `/integrations/<connector-name>` |
+| `deployment_platform_config.config.integration_id` | `"/integrations/${stackguardian_connector.x.id}"` |
+| `storage_backend_config.auth.integration_id` (runner group) | `"/integrations/${stackguardian_connector.x.id}"` |
+| `custom_source.config.auth` | `"/integrations/${stackguardian_connector.x.id}"` for `GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG`, `AZURE_DEVOPS*`; `/secrets/<secret-name>` for any source, and the **only** form `GIT_OTHER` accepts |
 | `environment_variables.config.secret_id` | `/secrets/<secret-name>` |
 | `wf_steps_config.wf_step_template_id` | `/<org>/<step-template-name>:<revision>` |
 | `terraform_config.wf_step_template_revision_id` | `/<org>/<name>:<revision>` |
 | `policy_vcs_config.policy_template_id` | `/policies/<name>:<rev>`, or `/<org>/<name>:<rev>` |
-| `policy.enforced_on` | `/wfgrps/<group>` (no trailing slash), or `*` for the whole org |
+| `policy.enforced_on` | `"/wfgrps/${stackguardian_workflow_group.x.id}"` (no trailing slash), or `*` for the whole org |
 
-### Bare names, not paths
+### Bare `id`, no prefix
 
 | Attribute | Value |
 | --- | --- |
-| `resource_name` on every resource | the name itself |
-| `workflow_group_id` on a workflow | the group's name; full path if nested |
-| `template_id` on a revision | the parent template's `template_name` |
+| `workflow_group_id` on a workflow | `stackguardian_workflow_group.x.id` — the full path when nested |
+| `template_id` on a revision | the parent template's `template_name`, which is its `id` |
+| `template_id` / `iac_template_id` inside a stack template revision | the bare `template_name` of a template in your own org; the provider adds `/<org>/` |
+| `runner_group_id` on the token data source | the runner group's `id`; the provider adds `/runnergroups/` |
 | `runner_constraints.names` | runner group `resource_name` values |
 | `role_assignment.role` / `.roles` | role `resource_name` values |
 | `allowed_permissions.*.paths` values | bare resource names — see below |
@@ -59,7 +82,7 @@ reference.
 
 ### Either form
 
-`vcs_config.iac_vcs_config.iac_template_id` accepts both:
+`vcs_config.iac_vcs_config.iac_template_id` on `stackguardian_workflow_from_template` accepts both:
 
 - `my-template:1` — your own organization.
 - `/stackguardian/aws-s3-demo-website:16` — a template owned by another organization. Any organization can
@@ -72,7 +95,21 @@ A bare id is resolved against your own organization.
 In place of a revision number you can use `:latest`, which tracks the most recently published
 revision — `my-terraform-template:latest`. Pin an explicit revision when the workflow must not move.
 
-## Two places that surprise people
+## Where it goes wrong
+
+### A bare connector id applies, then every run fails
+
+`integration_id = stackguardian_connector.aws.id` passes `terraform apply` — the API stores the
+string exactly as given — and every run then fails in its preparation step (`pre_0_step`) with
+`Connector aws does not exist`, because the platform looks connectors up by `/integrations/<id>`.
+Runner groups are stricter: the same mistake in `storage_backend_config.auth.integration_id` is
+rejected on apply with `Invalid integration id used in auth for storage backend config`.
+
+### `auth` is checked on apply
+
+`custom_source.config.auth` must start with `/secrets/` or `/integrations/`; anything else is a
+validation error. With `source_config_dest_kind = "GIT_OTHER"` only the `/secrets/` form is
+allowed — `only secrets supported for GIT_OTHER`.
 
 ### The template revision data source is stricter than the resource
 
@@ -112,21 +149,7 @@ allowed_permissions = {
 
 `policy.enforced_on` uses a third convention: `["*"]` for the whole organization — on its own,
 not combined — or a list mixing workflow groups, workflows and connectors. A workflow group is
-`/wfgrps/<group>`, with **no trailing slash**.
-
-## Prefer references over literals
-
-Every path-form ID is derivable from a resource attribute, so let Terraform build it:
-
-```terraform
-deployment_platform_config = [{
-  kind   = "AWS_RBAC"
-  config = { integration_id = stackguardian_connector.aws.id }
-}]
-```
-
-This keeps the ID correct through renames, and orders resource creation for you. Hard-coding
-`"/integrations/aws"` works until someone renames the connector.
+`/wfgrps/<id>`, with **no trailing slash**.
 
 ## Import IDs are a separate question
 

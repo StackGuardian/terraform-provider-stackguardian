@@ -228,9 +228,13 @@ resource "stackguardian_connector" "vcs" {
 # --- A workflow ----------------------------------------------------------------
 
 resource "stackguardian_workflow_git" "backend_deploy" {
-  workflow_group_id = stackguardian_workflow_group.backend.resource_name
+  workflow_group_id = stackguardian_workflow_group.backend.id
   id                = "ONBOARDING-Project02-Backend-Deploy"
   wf_type           = "TERRAFORM"
+
+  terraform_config = {
+    terraform_version = "1.5.7"
+  }
 
   description = "Deploys the Terraform in the referenced repository"
   tags        = ["tf-provider-example", "onboarding"]
@@ -250,7 +254,7 @@ resource "stackguardian_workflow_git" "backend_deploy" {
   deployment_platform_config = [{
     kind = "AWS_RBAC"
     config = {
-      integration_id = stackguardian_connector.cloud.id
+      integration_id = "/integrations/${stackguardian_connector.cloud.id}"
     }
   }]
 }

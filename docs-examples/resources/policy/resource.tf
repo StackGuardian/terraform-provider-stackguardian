@@ -19,7 +19,7 @@ resource "stackguardian_policy" "require_environment_tag" {
 
   # A workflow group is a path, with no trailing slash. Use ["*"] to enforce
   # organization-wide instead.
-  enforced_on = ["/wfgrps/${stackguardian_workflow_group.production.resource_name}"]
+  enforced_on = ["/wfgrps/${stackguardian_workflow_group.production.id}"]
 
   policies_config = [{
     name    = "require-environment-tag"
@@ -75,7 +75,7 @@ resource "stackguardian_policy" "approval_on_apply" {
   description   = "Approval needed before an apply"
   policy_type   = "GENERAL"
 
-  enforced_on = ["/wfgrps/${stackguardian_workflow_group.production.resource_name}"]
+  enforced_on = ["/wfgrps/${stackguardian_workflow_group.production.id}"]
 
   # Each approver is a user's email address, or an SSO group name to allow anyone in
   # that group. The fully qualified form "<user-pool-id>/local/<email>" is also
@@ -162,7 +162,7 @@ resource "stackguardian_policy" "opa_from_git" {
   description   = "Rego policies maintained alongside our platform code"
   policy_type   = "GENERAL"
 
-  enforced_on = ["/wfgrps/${stackguardian_workflow_group.production.resource_name}"]
+  enforced_on = ["/wfgrps/${stackguardian_workflow_group.production.id}"]
 
   policies_config = [{
     name    = "opa-from-git"

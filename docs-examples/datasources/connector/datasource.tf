@@ -25,7 +25,7 @@ resource "stackguardian_workflow_git" "example" {
   deployment_platform_config = [{
     kind = "AWS_RBAC"
     config = {
-      integration_id = data.stackguardian_connector.shared_aws.id
+      integration_id = "/integrations/${data.stackguardian_connector.shared_aws.id}"
     }
   }]
 }
