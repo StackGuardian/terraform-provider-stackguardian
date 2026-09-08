@@ -54,7 +54,7 @@ func (r *connectorResource) Configure(_ context.Context, req resource.ConfigureR
 	}
 
 	r.client = provider.Client
-	r.org_name = provider.Org_name
+	r.org_name = provider.OrgName
 }
 
 func (r *connectorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {

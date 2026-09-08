@@ -47,7 +47,7 @@ func (d *connectorDataSource) Configure(_ context.Context, req datasource.Config
 	}
 
 	d.client = provInfo.Client
-	d.orgName = provInfo.Org_name
+	d.orgName = provInfo.OrgName
 }
 
 func (d *connectorDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

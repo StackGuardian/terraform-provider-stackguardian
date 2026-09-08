@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -19,18 +18,20 @@ import (
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
+var org = config.Get().OrgName
 
 func getClient() *sgclient.Client {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+	cfg := config.Get()
 	return sgclient.NewClient(
-		sgoption.WithApiKey(fmt.Sprintf("apikey %s", os.Getenv("STACKGUARDIAN_API_KEY"))),
-		sgoption.WithBaseURL(os.Getenv("STACKGUARDIAN_API_URI")),
+		sgoption.WithApiKey(cfg.FormatApiKey()),
+		sgoption.WithBaseURL(cfg.ApiUri),
 		sgoption.WithHTTPHeader(customHeader),
 	)
 }
@@ -53,12 +54,12 @@ func createWorkflowGroupFixture(wfGrpName string) error {
 
 func deleteWorkflowGroupFixture(wfGrpName string) {
 	client := getClient()
-	client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), org, wfGrpName)
+	_, _ = client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), org, wfGrpName)
 }
 
 func deleteWorkflowUsingTemplateFixture(wfGrpName, workflowName string) {
 	client := getClient()
-	client.Workflows.DeleteWorkflow(context.TODO(), org, workflowName, wfGrpName)
+	_, _ = client.Workflows.DeleteWorkflow(context.TODO(), org, workflowName, wfGrpName)
 }
 
 // setupWorkflowTemplate creates a workflow template + published revision and registers
@@ -128,7 +129,7 @@ func setupWorkflowTemplate(t *testing.T, templateID string) string {
 		},
 	)
 	if err != nil && !is409(err) {
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
 		t.Fatalf("setupWorkflowTemplate: create revision for %q: %s", templateID, err)
 	}
 
@@ -140,8 +141,8 @@ func setupWorkflowTemplate(t *testing.T, templateID string) string {
 		},
 	)
 	if err != nil {
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
 		t.Fatalf("setupWorkflowTemplate: publish revision %q: %s", revisionID, err)
 	}
 
@@ -153,8 +154,8 @@ func setupWorkflowTemplate(t *testing.T, templateID string) string {
 		},
 	)
 	if err != nil {
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
 		t.Fatalf("setupWorkflowTemplate: publish template %q: %s", templateID, err)
 	}
 
@@ -162,7 +163,7 @@ func setupWorkflowTemplate(t *testing.T, templateID string) string {
 	t.Cleanup(func() {
 		effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
 		message := "Test cleanup"
-		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
+		_, _ = client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
 			context.TODO(), org, revisionID,
 			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
 				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{
@@ -171,8 +172,8 @@ func setupWorkflowTemplate(t *testing.T, templateID string) string {
 				}),
 			},
 		)
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
 	})
 
 	return fmt.Sprintf("/%s/%s", org, templateID)
@@ -233,14 +234,14 @@ func addSecondRevision(t *testing.T, templateID string) string {
 		},
 	)
 	if err != nil {
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
 		t.Fatalf("addSecondRevision: publish revision %q: %s", revisionID, err)
 	}
 
 	t.Cleanup(func() {
 		effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
 		message := "Test cleanup"
-		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
+		_, _ = client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
 			context.TODO(), org, revisionID,
 			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
 				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{
@@ -249,7 +250,7 @@ func addSecondRevision(t *testing.T, templateID string) string {
 				}),
 			},
 		)
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
 	})
 
 	return fmt.Sprintf("/%s/%s:2", org, templateID)
@@ -318,7 +319,7 @@ func setupWorkflowStepTemplate(t *testing.T, name string) string {
 	}
 
 	t.Cleanup(func() {
-		client.WorkflowStepTemplate.DeleteWorkflowStepTemplate(context.TODO(), org, name)
+		_ = client.WorkflowStepTemplate.DeleteWorkflowStepTemplate(context.TODO(), org, name)
 	})
 
 	return fmt.Sprintf("/%s/%s:1", org, name)
@@ -365,7 +366,7 @@ func setupCustomWorkflowTemplate(t *testing.T, templateID string) string {
 		},
 	)
 	if err != nil && !is409(err) {
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
 		t.Fatalf("setupCustomWorkflowTemplate: create revision for %q: %s", templateID, err)
 	}
 
@@ -376,8 +377,8 @@ func setupCustomWorkflowTemplate(t *testing.T, templateID string) string {
 		},
 	)
 	if err != nil {
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
 		t.Fatalf("setupCustomWorkflowTemplate: publish revision %q: %s", revisionID, err)
 	}
 
@@ -388,15 +389,15 @@ func setupCustomWorkflowTemplate(t *testing.T, templateID string) string {
 		},
 	)
 	if err != nil {
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
 		t.Fatalf("setupCustomWorkflowTemplate: publish template %q: %s", templateID, err)
 	}
 
 	t.Cleanup(func() {
 		effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
 		message := "Test cleanup"
-		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
+		_, _ = client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
 			context.TODO(), org, revisionID,
 			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
 				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{
@@ -405,8 +406,8 @@ func setupCustomWorkflowTemplate(t *testing.T, templateID string) string {
 				}),
 			},
 		)
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
 	})
 
 	return fmt.Sprintf("/%s/%s", org, templateID)
@@ -660,29 +661,29 @@ func setupTemplateWithWfStepRevision(t *testing.T, name, stepRev string) string 
 			},
 		})
 	if err != nil && !is409(err) {
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
 		t.Fatalf("create rev: %s", err)
 	}
 	if _, err := client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, revisionID,
 		&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne)}); err != nil {
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
 		t.Fatalf("publish rev: %s", err)
 	}
 	if _, err := client.WorkflowTemplates.UpdateWorkflowTemplate(context.TODO(), org, name,
 		&workflowtemplates.UpdateWorkflowTemplateRequest{IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne)}); err != nil {
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
 		t.Fatalf("publish tpl: %s", err)
 	}
 	t.Cleanup(func() {
 		eff := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
 		msg := "cleanup"
-		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, revisionID,
+		_, _ = client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, revisionID,
 			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
 				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{EffectiveDate: &eff, Message: &msg})})
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
 	})
 	return fmt.Sprintf("/%s/%s:1", org, name)
 }
@@ -1593,7 +1594,7 @@ func setupDriftEnabledTemplate(t *testing.T, templateID string) string {
 		},
 	)
 	if err != nil && !is409(err) {
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
 		t.Fatalf("setupDriftEnabledTemplate: create revision for %q: %s", templateID, err)
 	}
 
@@ -1604,8 +1605,8 @@ func setupDriftEnabledTemplate(t *testing.T, templateID string) string {
 		},
 	)
 	if err != nil {
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
 		t.Fatalf("setupDriftEnabledTemplate: publish revision %q: %s", revisionID, err)
 	}
 
@@ -1616,15 +1617,15 @@ func setupDriftEnabledTemplate(t *testing.T, templateID string) string {
 		},
 	)
 	if err != nil {
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
 		t.Fatalf("setupDriftEnabledTemplate: publish template %q: %s", templateID, err)
 	}
 
 	t.Cleanup(func() {
 		effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
 		message := "Test cleanup"
-		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
+		_, _ = client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
 			context.TODO(), org, revisionID,
 			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
 				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{
@@ -1633,8 +1634,8 @@ func setupDriftEnabledTemplate(t *testing.T, templateID string) string {
 				}),
 			},
 		)
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
 	})
 
 	return fmt.Sprintf("/%s/%s", org, templateID)

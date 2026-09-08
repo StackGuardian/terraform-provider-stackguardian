@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 
@@ -15,19 +14,21 @@ import (
 	"github.com/StackGuardian/sg-sdk-go/stacktemplates"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
+var org = config.Get().OrgName
 
 func getClient() *sgclient.Client {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
+	cfg := config.Get()
 	return sgclient.NewClient(
-		sgoption.WithApiKey(fmt.Sprintf("apikey %s", os.Getenv("STACKGUARDIAN_API_KEY"))),
-		sgoption.WithBaseURL(os.Getenv("STACKGUARDIAN_API_URI")),
+		sgoption.WithApiKey(cfg.FormatApiKey()),
+		sgoption.WithBaseURL(cfg.ApiUri),
 		sgoption.WithHTTPHeader(customHeader),
 	)
 }
@@ -66,24 +67,24 @@ func createStackTemplateFixture(templateName, sourceConfigKind string) error {
 
 func deleteWorkflowTemplateFixture(templateId string) {
 	client := getClient()
-	client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateId)
+	_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateId)
 }
 
 func deleteStackTemplateFixture(templateId string) {
 	client := getClient()
-	client.StackTemplates.DeleteStackTemplate(context.TODO(), org, templateId)
+	_ = client.StackTemplates.DeleteStackTemplate(context.TODO(), org, templateId)
 }
 
 func deleteStackTemplateRevisionFixture(revisionId string) {
 	client := getClient()
-	client.StackTemplateRevisions.DeleteStackTemplateRevision(context.TODO(), org, revisionId, true)
+	_ = client.StackTemplateRevisions.DeleteStackTemplateRevision(context.TODO(), org, revisionId, true)
 }
 
 func deprecateStackTemplateRevisionFixture(revisionId string) {
 	client := getClient()
 	effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
 	message := "This revision is deprecated"
-	client.StackTemplateRevisions.UpdateStackTemplateRevision(context.TODO(), org, revisionId, &stacktemplaterevisions.UpdateStackTemplateRevisionRequest{
+	_, _ = client.StackTemplateRevisions.UpdateStackTemplateRevision(context.TODO(), org, revisionId, &stacktemplaterevisions.UpdateStackTemplateRevisionRequest{
 		Deprecation: sgsdkgo.Optional(stacktemplaterevisions.Deprecation{
 			EffectiveDate: &effectiveDate,
 			Message:       &message,

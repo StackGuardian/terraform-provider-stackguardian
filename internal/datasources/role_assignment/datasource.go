@@ -48,7 +48,7 @@ func (d *roleAssignmentDataSource) Configure(_ context.Context, req datasource.C
 	}
 
 	d.client = provInfo.Client
-	d.orgName = provInfo.Org_name
+	d.orgName = provInfo.OrgName
 }
 
 func (d *roleAssignmentDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

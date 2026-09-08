@@ -45,7 +45,7 @@ func (d *workflowStepTemplateDatasource) Configure(_ context.Context, req dataso
 	}
 
 	d.client = provInfo.Client
-	d.orgName = provInfo.Org_name
+	d.orgName = provInfo.OrgName
 }
 
 func (d *workflowStepTemplateDatasource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
