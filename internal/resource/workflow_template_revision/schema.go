@@ -290,6 +290,10 @@ var mount_point = map[string]schema.Attribute{
 	"read_only": schema.BoolAttribute{
 		MarkdownDescription: constants.MountPointReadOnly,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.Bool{
+			boolplanmodifier.UseStateForUnknown(),
+		},
 	},
 }
 var wfStepsConfig = schema.NestedAttributeObject{
@@ -433,7 +437,7 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 						},
 						"type": schema.StringAttribute{
 							MarkdownDescription: constants.InputSchemaType,
-							Optional:            true,
+							Required:            true,
 						},
 						"encoded_data": schema.StringAttribute{
 							MarkdownDescription: constants.InputSchemaEncodedData,

@@ -132,11 +132,14 @@ Optional:
 <a id="nestedatt--input_schemas"></a>
 ### Nested Schema for `input_schemas`
 
+Required:
+
+- `type` (String) Type of the schema.
+
 Optional:
 
 - `encoded_data` (String) JSON schema for the Form in templates. The schema needs to be base64 encoded.
 - `name` (String) Name of the input schema.
-- `type` (String) Type of the schema.
 - `ui_schema_data` (String) Schema for how the JSON schema is to be visualized. The schema needs to be base64 encoded.
 
 
