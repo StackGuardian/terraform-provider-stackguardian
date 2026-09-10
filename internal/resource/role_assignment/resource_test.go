@@ -89,6 +89,28 @@ resource "stackguardian_role_assignment" "%s" {
 `
 )
 
+var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
+
+// Safety-net cleanup: Terraform's own destroy step tears these down in the
+// normal case. These exist so a test that fails before reaching destroy
+// (e.g. a failed assertion) doesn't leave the workflow group, role, or role
+// assignment behind. Errors are ignored — the resource may already be gone,
+// deleted by Terraform's own destroy step.
+func deleteWorkflowGroupFixture(resourceName string) {
+	client := acctest.SGClient()
+	client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), org, resourceName)
+}
+
+func deleteRoleFixture(resourceName string) {
+	client := acctest.SGClient()
+	client.AccessManagement.DeleteRole(context.TODO(), org, resourceName)
+}
+
+func deleteRoleAssignmentFixture(userId string) {
+	client := acctest.SGClient()
+	client.AccessManagement.DeleteUser(context.TODO(), org, &sgsdkgo.GetorRemoveUserFromOrganization{UserId: &userId})
+}
+
 func TestAccRoleAssignment(t *testing.T) {
 	userId := "example.user@domain.com"
 	workflowGroupResourceName := "role-assign-example-workflow-group"
@@ -96,6 +118,10 @@ func TestAccRoleAssignment(t *testing.T) {
 	roleResourceName := "role-assign-example-role"
 	roleName := "role-assign-example-role"
 	roleAssignmentName := "example-role-assignment"
+
+	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupName) })
+	t.Cleanup(func() { deleteRoleFixture(roleName) })
+	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -121,6 +147,10 @@ func TestAccRoleAssignmentRecreateOnExternalDelete(t *testing.T) {
 	roleResourceName := "role-assign-example-role2"
 	roleName := "role-assign-example-role2"
 	roleAssignmentName := "example-role-assignment2"
+
+	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupName) })
+	t.Cleanup(func() { deleteRoleFixture(roleName) })
+	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -160,6 +190,12 @@ func TestAccRoleAssignmentRecreateOnChangeInUserId(t *testing.T) {
 	roleName := "role-assign-example-role3"
 	roleAssignmentName := "example-role-assignment3"
 	newUserId := "example.user30@domain.com"
+
+	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupName) })
+	t.Cleanup(func() { deleteRoleFixture(roleName) })
+	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
+	t.Cleanup(func() { deleteRoleAssignmentFixture(newUserId) })
+
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -183,12 +219,16 @@ func TestAccRoleAssignmentRecreateOnChangeInUserId(t *testing.T) {
 }
 
 func TestSendEmail(t *testing.T) {
-	userId := "example.user3@domain.com"
+	userId := "example.user4@domain.com"
 	workflowGroupResourceName := "role-assign-example-workflow-group4"
 	workflowGroupName := "role-assign-example-workflow-group4"
 	roleResourceName := "role-assign-example-role4"
 	roleName := "role-assign-example-role4"
 	roleAssignmentName := "example-role-assignment4"
+
+	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupName) })
+	t.Cleanup(func() { deleteRoleFixture(roleName) })
+	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
 
 	testResource := `resource "stackguardian_workflow_group" "%s" {
   resource_name = "%s"
@@ -254,6 +294,8 @@ func TestRoleAssignmentGroupAlias(t *testing.T) {
 	alias := "Group Developers"
 	newAlias := "Group Developers Updated"
 
+	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
+
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -288,6 +330,8 @@ func TestRoleAssignmentMultipleRoles(t *testing.T) {
 `
 	userId := "example.user6@domain.com"
 	roleAssignmentName := "example-role-assignment6"
+
+	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -325,6 +369,8 @@ func TestRoleAssignmentRoleToRoles(t *testing.T) {
 	userId := "example.user7@domain.com"
 	roleAssignmentName := "example-role-assignment7"
 
+	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
+
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -360,6 +406,8 @@ func TestRoleAssignmentRolesToRole(t *testing.T) {
 `
 	userId := "example.user8@domain.com"
 	roleAssignmentName := "example-role-assignment8"
+
+	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },

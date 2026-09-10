@@ -34,6 +34,19 @@ func setupTwoRevIdenticalWfStepsConfig(t *testing.T, name, stepTemplateID string
 		return errors.As(err, &apiErr) && apiErr.StatusCode == 409
 	}
 
+	// Register cleanup first so it fires even if setup fails partway through.
+	t.Cleanup(func() {
+		eff := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
+		msg := "cleanup"
+		for _, rev := range []string{name + ":1", name + ":2"} {
+			client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, rev,
+				&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
+					Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{EffectiveDate: &eff, Message: &msg})})
+			client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, rev, true)
+		}
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
+	})
+
 	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(context.TODO(), org, false,
 		&workflowtemplates.CreateWorkflowTemplateRequest{
 			Id: &name, TemplateName: name, SourceConfigKind: &sck,
@@ -111,17 +124,6 @@ func setupTwoRevIdenticalWfStepsConfig(t *testing.T, name, stepTemplateID string
 		&workflowtemplates.UpdateWorkflowTemplateRequest{IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne)}); err != nil {
 		t.Fatalf("publish tpl: %s", err)
 	}
-	t.Cleanup(func() {
-		eff := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
-		msg := "cleanup"
-		for _, rev := range []string{name + ":1", name + ":2"} {
-			client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, rev,
-				&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
-					Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{EffectiveDate: &eff, Message: &msg})})
-			client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, rev, true)
-		}
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
-	})
 	return fmt.Sprintf("/%s/%s:1", org, name), fmt.Sprintf("/%s/%s:2", org, name)
 }
 
