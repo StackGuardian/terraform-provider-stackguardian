@@ -12,9 +12,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = &workflowTemplateResource{}
-	_ resource.ResourceWithConfigure   = &workflowTemplateResource{}
-	_ resource.ResourceWithImportState = &workflowTemplateResource{}
+	_ resource.Resource                   = &workflowTemplateResource{}
+	_ resource.ResourceWithConfigure      = &workflowTemplateResource{}
+	_ resource.ResourceWithImportState    = &workflowTemplateResource{}
+	_ resource.ResourceWithValidateConfig = &workflowTemplateResource{}
 )
 
 type workflowTemplateResource struct {
@@ -58,6 +59,19 @@ func (r *workflowTemplateResource) Configure(_ context.Context, req resource.Con
 // ImportState imports a workflow template using its ID.
 func (r *workflowTemplateResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+}
+
+// ValidateConfig validates the is_private/auth relationship on runtime_source.
+func (r *workflowTemplateResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config WorkflowTemplateResourceModel
+
+	diags := req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(ValidateRuntimeSourceAuth(ctx, config.RuntimeSource, path.Root("runtime_source"))...)
 }
 
 // Create creates the resource and sets the initial Terraform state.

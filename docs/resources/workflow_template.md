@@ -48,7 +48,7 @@ resource "stackguardian_workflow_template" "with_runtime" {
   tags               = ["terraform", "github"]
 
   runtime_source = {
-    source_config_dest_kind = "GITHUB_COM"
+    source_config_dest_kind = "GIT_OTHER"
     config = {
       is_private = false
       repo       = "https://github.com/example/terraform-modules.git"

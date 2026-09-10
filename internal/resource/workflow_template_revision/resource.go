@@ -7,15 +7,17 @@ import (
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
+	workflowtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var (
-	_ resource.Resource                = &workflowTemplateRevisionResource{}
-	_ resource.ResourceWithConfigure   = &workflowTemplateRevisionResource{}
-	_ resource.ResourceWithImportState = &workflowTemplateRevisionResource{}
+	_ resource.Resource                   = &workflowTemplateRevisionResource{}
+	_ resource.ResourceWithConfigure      = &workflowTemplateRevisionResource{}
+	_ resource.ResourceWithImportState    = &workflowTemplateRevisionResource{}
+	_ resource.ResourceWithValidateConfig = &workflowTemplateRevisionResource{}
 )
 
 type workflowTemplateRevisionResource struct {
@@ -59,6 +61,27 @@ func (r *workflowTemplateRevisionResource) Configure(_ context.Context, req reso
 // ImportState imports a workflow template revision using its ID.
 func (r *workflowTemplateRevisionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+}
+
+// ValidateConfig enforces:
+//   - wf_steps_config is only used when source_config_kind is not TERRAFORM or OPENTOFU:
+//     those two kinds use fixed, built-in run steps instead.
+//   - the is_private/auth relationship on runtime_source.
+func (r *workflowTemplateRevisionResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config WorkflowTemplateRevisionResourceModel
+
+	diags := req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !config.SourceConfigKind.IsUnknown() && !config.WfStepsConfig.IsUnknown() {
+		hasWfStepsConfig := !config.WfStepsConfig.IsNull() && len(config.WfStepsConfig.Elements()) > 0
+		resp.Diagnostics.Append(wfStepsConfigNotAllowedForTerraformDiagnostics(config.SourceConfigKind.ValueString(), hasWfStepsConfig)...)
+	}
+
+	resp.Diagnostics.Append(workflowtemplate.ValidateRuntimeSourceAuth(ctx, config.RuntimeSource, path.Root("runtime_source"))...)
 }
 
 // Create creates the resource and sets the initial Terraform state.

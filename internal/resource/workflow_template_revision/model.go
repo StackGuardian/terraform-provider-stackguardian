@@ -467,15 +467,34 @@ func ConvertUserSchedulesToAPIModel(ctx context.Context, userSchedulesList types
 // ToAPIModel converts the Terraform model to the API request model
 func (m *WorkflowTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) (*workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest, diag.Diagnostics) {
 	apiModel := &workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
-		LongDescription:           m.LongDescription.ValueStringPointer(),
-		SourceConfigKind:          (*workflowtemplates.WorkflowTemplateSourceConfigKindEnum)(m.SourceConfigKind.ValueStringPointer()),
-		Alias:                     m.Alias.ValueString(),
-		Notes:                     m.Notes.ValueString(),
-		TemplateType:              "IAC",
-		IsPublic:                  (*sgsdkgo.IsPublicEnum)(m.IsPublic.ValueStringPointer()),
-		NumberOfApprovalsRequired: expanders.IntPtr(m.NumberOfApprovalsRequired.ValueInt64Pointer()),
-		UserJobCPU:                expanders.IntPtr(m.UserJobCPU.ValueInt64Pointer()),
-		UserJobMemory:             expanders.IntPtr(m.UserJobMemory.ValueInt64Pointer()),
+		SourceConfigKind: (*workflowtemplates.WorkflowTemplateSourceConfigKindEnum)(m.SourceConfigKind.ValueStringPointer()),
+		Alias:            m.Alias.ValueString(),
+		TemplateType:     "IAC",
+		UserJobCPU:       expanders.IntPtr(m.UserJobCPU.ValueInt64Pointer()),
+		UserJobMemory:    expanders.IntPtr(m.UserJobMemory.ValueInt64Pointer()),
+	}
+
+	// description, notes, is_public, and number_of_approvals_required are
+	// Optional+Computed: when unset in config they are Unknown (not Null) on
+	// Create, and ValueString()/ValueStringPointer()/ValueInt64Pointer() return
+	// the zero value (or a pointer to it) for Unknown rather than nil/"".  For
+	// the pointer-typed API fields, a non-nil zero-value pointer is still
+	// marshaled despite `omitempty`, so the guard is required to actually omit
+	// the field.
+	if !m.LongDescription.IsNull() && !m.LongDescription.IsUnknown() {
+		apiModel.LongDescription = m.LongDescription.ValueStringPointer()
+	}
+
+	if !m.Notes.IsNull() && !m.Notes.IsUnknown() {
+		apiModel.Notes = m.Notes.ValueString()
+	}
+
+	if !m.IsPublic.IsNull() && !m.IsPublic.IsUnknown() {
+		apiModel.IsPublic = (*sgsdkgo.IsPublicEnum)(m.IsPublic.ValueStringPointer())
+	}
+
+	if !m.NumberOfApprovalsRequired.IsNull() && !m.NumberOfApprovalsRequired.IsUnknown() {
+		apiModel.NumberOfApprovalsRequired = expanders.IntPtr(m.NumberOfApprovalsRequired.ValueInt64Pointer())
 	}
 
 	deprecation, diags := ConvertDeprecationToAPIModel(ctx, m.Deprecation)
@@ -1011,9 +1030,13 @@ func ConvertMountPointsListToAPI(ctx context.Context, mountPointsList types.List
 	mountPoints := make([]sgsdkgo.MountPoint, len(mountPointModels))
 	for i, mp := range mountPointModels {
 		mountPoints[i] = sgsdkgo.MountPoint{
-			Source:   mp.Source.ValueString(),
-			Target:   mp.Target.ValueString(),
-			ReadOnly: mp.ReadOnly.ValueBoolPointer(),
+			Source: mp.Source.ValueString(),
+			Target: mp.Target.ValueString(),
+		}
+		// read_only is Optional+Computed: guard against Unknown, which
+		// ValueBoolPointer() would otherwise turn into an explicit `false`.
+		if !mp.ReadOnly.IsNull() && !mp.ReadOnly.IsUnknown() {
+			mountPoints[i].ReadOnly = mp.ReadOnly.ValueBoolPointer()
 		}
 	}
 	return mountPoints, nil
