@@ -1,9 +1,12 @@
 package connector_test
 
 import (
+	"context"
 	"net/http"
+	"os"
 	"testing"
 
+	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -11,6 +14,33 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
+
+var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
+
+// deleteConnectorByResourceName is a safety-net cleanup for a test that fails before
+// Terraform's own destroy step runs. A connector's id is server-generated when the config
+// doesn't set one explicitly, so this looks it up by resource_name via ListAllConnectors
+// before deleting. Best-effort: errors and no-matches are ignored.
+func deleteConnectorByResourceName(resourceName string) {
+	client := acctest.SGClient()
+	resp, err := client.Connectors.ListAllConnectors(context.TODO(), org, &sgsdkgo.ListAllConnectorsRequest{
+		ResourceNames: sgsdkgo.String(resourceName),
+	})
+	if err != nil {
+		return
+	}
+	for _, c := range resp.Msg {
+		if c != nil && c.Msg != nil {
+			client.Connectors.DeleteConnector(context.TODO(), c.Msg.Id, org)
+		}
+	}
+}
+
+// deleteConnectorByID is a safety-net cleanup for a test with an explicit, known id.
+func deleteConnectorByID(id string) {
+	client := acctest.SGClient()
+	client.Connectors.DeleteConnector(context.TODO(), id, org)
+}
 
 const (
 	testAccResource = `resource "stackguardian_connector" "aws-cloud-connector-example" {
@@ -45,6 +75,8 @@ const (
 )
 
 func TestAccConnector(t *testing.T) {
+	t.Cleanup(func() { deleteConnectorByResourceName("aws-rbac-connector") })
+
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -70,6 +102,8 @@ func TestAccConnector(t *testing.T) {
 }
 
 func TestAccConnectorIncompatibleResourceName(t *testing.T) {
+	t.Cleanup(func() { deleteConnectorByResourceName("aws rbac connector") })
+
 	// Test if the resource has name that is not compatible with the
 	testResource := `resource "stackguardian_connector" "aws-cloud-connector-example1" {
   resource_name = "aws rbac connector"
@@ -118,6 +152,8 @@ func TestAccConnectorIncompatibleResourceName(t *testing.T) {
 }
 
 func TestAccConnectorOptionalId(t *testing.T) {
+	t.Cleanup(func() { deleteConnectorByID("aws_rbac_connector2") })
+
 	// Test if the resource has name that is not compatible with the
 	testResource := `resource "stackguardian_connector" "aws-cloud-connector-example2" {
   id = "aws_rbac_connector2"
