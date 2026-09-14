@@ -167,6 +167,7 @@ resource "stackguardian_stack_template_revision" "test" {
 // --- Tests ---
 
 func TestAccStackTemplateRevision_Basic(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	stackTemplateID := acctest.ResourceName("provider-test-stack-template-rev1")
 	wfTemplateID := acctest.ResourceName("provider-test-wft-for-stack-rev1")
 	revisionAlias := "v1"
@@ -227,6 +228,7 @@ func TestAccStackTemplateRevision_Basic(t *testing.T) {
 }
 
 func TestAccStackTemplateRevision_WithWorkflowsConfig(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	stackTemplateID := acctest.ResourceName("provider-test-stack-template-rev2")
 	wfTemplateID := acctest.ResourceName("provider-test-wft-for-stack-rev2")
 	revisionAlias := "v1"
@@ -275,6 +277,7 @@ func TestAccStackTemplateRevision_WithWorkflowsConfig(t *testing.T) {
 }
 
 func TestAccStackTemplateRevision_Lifecycle(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	stackTemplateName := acctest.ResourceName("tf-provider-stack-template-lifecycle")
 	wfTemplateName := acctest.ResourceName("tf-provider-wft-lifecycle-for-stack")
 	alias := "v1"

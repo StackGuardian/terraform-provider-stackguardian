@@ -207,7 +207,7 @@ func TestAccWorkflowTemplate_WithRuntime(t *testing.T) {
 }
 
 func TestAccWorkflowTemplate_WithContextTagsAndSharedOrgs(t *testing.T) {
-	templateName := "tf-provider-workflow-template-3"
+	templateName := acctest.ResourceName("tf-provider-workflow-template-3")
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")

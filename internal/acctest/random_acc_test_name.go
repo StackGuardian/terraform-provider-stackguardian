@@ -94,19 +94,6 @@ func randomSuffix() string {
 	return string(result)
 }
 
-// GenerateRandomResourceName builds a unique-ish resource identifier to use in
-// tests.
-//
-// Deprecated: prefer ResourceName, whose output carries the shared prefix and so
-// can be recognised and swept up after a failed run.
-func GenerateRandomResourceName() string {
-	result := make([]byte, resourceNameLength)
-	for i := 0; i < resourceNameLength; i++ {
-		result[i] = charSetAlpha[randIntRange(0, len(charSetAlpha))]
-	}
-	return string(result)
-}
-
 // randIntRange returns a random integer between min (inclusive) and max
 // (exclusive).
 func randIntRange(min int, max int) int {

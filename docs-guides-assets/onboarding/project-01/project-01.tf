@@ -10,6 +10,8 @@
 // with every other path; it is deprecated.
 
 terraform {
+  required_version = ">= 1.5.7"
+
   required_providers {
     stackguardian = {
       source  = "StackGuardian/stackguardian"

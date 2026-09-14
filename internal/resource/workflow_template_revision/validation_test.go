@@ -14,6 +14,7 @@ import (
 // OPENTOFU — those kinds use fixed, built-in run steps instead. Since ValidateConfig runs
 // before Create, no API call happens and no fixture/cleanup is needed.
 func TestAccWorkflowTemplateRevision_ValidateWfStepsConfigNotAllowedForTerraform(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
@@ -53,6 +54,7 @@ func TestAccWorkflowTemplateRevision_ValidateWfStepsConfigNotAllowedForTerraform
 // is covered once, on workflow_template, since the validator is shared — this just proves
 // the wiring here, not the whole rule set again.
 func TestAccWorkflowTemplateRevision_ValidateRuntimeSourceAuthRequired(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 

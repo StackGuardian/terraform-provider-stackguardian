@@ -21,6 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `internal/constants/vcs.go` with shared enum constants for VCS provider kinds (`GITHUB_COM`, `GIT_OTHER`, etc.)
 - `acctest.TFStandardErrorPattern` helper that builds regex patterns tolerating Terraform CLI line-wrapping in expected error messages
 - Comprehensive acceptance tests covering every schema attribute on `workflow_template` and `workflow_template_revision`
+- `internal/constants/terraform_version.go` with `MinTerraformVersion` (1.5.7), `MaxTerraformVersion` (1.16.4), and `SupportedTerraformVersions` CI matrix
+- `internal/provider/version_check.go` runtime check that refuses to configure below `MinTerraformVersion` with an actionable error message
+- `internal/acctest/skip.go` with `SkipUnlessAcceptance(t)` helper for early `TF_ACC` guard before fixture-creation API calls
+- `internal/acctest/tfversion.go` with `VersionChecks()` returning `tfversion.RequireAbove(MinTerraformVersion)`
+- `scripts/tf-compat-check.sh` hermetic Terraform CLI compatibility gate (schema decode + example validation, no credentials)
+- `compat.yaml` workflow — hermetic compatibility gate targeting `main`: build, vet, unit tests, docs validation, and TF compatibility matrix
+- Terraform version matrix (1.5.7–1.16.4) in `test.yaml` acceptance workflow
+- `concurrency: acceptance-tests` group in `test.yaml` to prevent overlapping acceptance runs
+- `Makefile` targets `tf-compat-check` and `test-acc-min-terraform`
 
 ### Changed
 
@@ -38,6 +47,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Make `mount_point.read_only` `Computed` with `UseStateForUnknown()` on `workflow_template_revision` to match API behavior
 - Make `input_schemas.type` `Required` (was `Optional`) on `workflow_template_revision` to match actual API behavior
 - Shorten import alias `workflowtemplate` → `wft` across `provider.go`, `datasource.go`, `resource.go`, `model.go`, and `schema.go`
+- All CI workflows now target `main` only (removed `develop` branch triggers from `compat.yaml`, `test-api-stg.yaml`, `test-api.yaml`)
+- `test-api-stg.yaml` and `test-api.yaml` default `gitref` changed from `develop` to `main`
+- `release.yaml` now calls `compat.yaml` as a pre-release gate
+- `test.yaml` installs Terraform CLI before the docs check step
 
 ### Fixed
 
@@ -50,6 +63,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Guard Optional+Computed fields (`LongDescription`, `Notes`, `IsPublic`, `NumberOfApprovalsRequired`) in `WorkflowTemplateRevisionResourceModel.ToAPIModel` against Unknown values, preventing unintended zero-value sends on Create
 - Guard `mount_point.read_only` in `ConvertMountPointsListToAPI` against Unknown values to prevent sending an explicit `false`
 - Replace `os.Getenv("STACKGUARDIAN_ORG_NAME")` with `config.Get().OrgName` in `sweep_test.go`
+- Fix `make test` failing in CI with `401: Unauthorized` — acceptance test fixtures made API calls before the `TF_ACC` check; added `SkipUnlessAcceptance(t)` guard to 54 `TestAcc*` functions
+- Fix `make docs-validate-examples` failing in `test.yaml` CI with `terraform: command not found` — Terraform CLI is now installed before the docs check step
 
 
 ## [0.1.0] - 2024-03-14
