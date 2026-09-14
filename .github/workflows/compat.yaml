@@ -1,0 +1,104 @@
+name: "Terraform Compatibility"  # layers 1, 2 and 4 of the version-support guarantee
+
+# Runs on pull requests targeting the main branch. Every check here is
+# hermetic: no API credentials, no StackGuardian resources created, so it is
+# safe on fork pull requests and cheap enough to run on every push.
+#
+# The expensive acceptance matrix that proves the provider actually *works* on
+# the supported Terraform versions also runs on pull requests to main
+# (.github/workflows/test.yaml).
+
+on:
+  pull_request:
+    branches:
+      - "main"
+    types: [ opened, edited, reopened, synchronize, ready_for_review ]
+  push:
+    branches:
+      - "main"
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+
+  unit-test:
+    name: "Build and unit tests"
+    runs-on: ubuntu-latest
+    env:
+      GOPRIVATE: github.com/StackGuardian/sg-sdk-go
+    steps:
+
+      - name: "Checkout code"
+        uses: actions/checkout@v4
+
+      - name: "Install Go"
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+
+      - name: "Build Provider"
+        run: make build
+
+      - name: "Vet"
+        run: go vet ./...
+
+      # Covers TestCheckTerraformVersion: the provider refuses to configure
+      # below constants.MinTerraformVersion, and the documented floor matches
+      # the enforced one.
+      - name: "Unit tests"
+        run: make test
+
+      - name: "Check Provider docs"
+        run: |
+          set -eu -x;
+          make tools-install;
+          make docs-validate;
+        shell: bash
+
+  terraform-compat:
+    name: "Terraform ${{ matrix.terraform }} compatibility"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The support floor, the newest tested release, and the latest patch of
+        # every minor series in between. Kept in sync with
+        # constants.SupportedTerraformVersions by
+        # TestTerraformMatrixMatchesWorkflows.
+        terraform:
+          - "1.5.7"  # MinTerraformVersion: the support floor
+          - "1.6.6"
+          - "1.7.5"
+          - "1.8.5"
+          - "1.9.8"
+          - "1.10.5"
+          - "1.11.4"
+          - "1.12.2"
+          - "1.13.5"
+          - "1.14.9"
+          - "1.15.9"
+          - "1.16.2"  # MaxTerraformVersion: the newest tested release
+    env:
+      GOPRIVATE: github.com/StackGuardian/sg-sdk-go
+    steps:
+
+      - name: "Checkout code"
+        uses: actions/checkout@v4
+
+      - name: "Install Go"
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+
+      - name: "Install Terraform ${{ matrix.terraform }}"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+          terraform_version: "${{ matrix.terraform }}"
+
+      # Makes this Terraform CLI launch the freshly built provider, decode its
+      # entire schema over the plugin protocol, and validate every example under
+      # docs-examples/. This is what catches a schema construct an older CLI
+      # cannot handle.
+      - name: "Check provider loads and examples validate"
+        run: make tf-compat-check

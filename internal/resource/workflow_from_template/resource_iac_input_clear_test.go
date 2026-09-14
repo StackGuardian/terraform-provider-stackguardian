@@ -15,7 +15,6 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 // setupTemplateWithInputDefaults creates and publishes a TERRAFORM template revision whose
@@ -97,6 +96,8 @@ func setupTemplateWithInputDefaults(t *testing.T, name string) string {
 // pointer, "data": {} reaches the wire, the API accepts it, and inheritance is suppressed.
 // Also asserts the omit case still inherits (control), and the clear round-trips (clean plan).
 func TestAccWorkflowUsingTemplate_ExplicitEmptyIacInputData(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupTemplateWithInputDefaults(t, "tf-iacclear-tpl")
 	wfGrp := acctest.ResourceName("tf-iacclear-wfgrp")
 	inheritID := acctest.ResourceName("tf-iacclear-inherit")
@@ -146,7 +147,7 @@ resource "stackguardian_workflow_from_template" "empty" {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks:   []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_1_0)},
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{

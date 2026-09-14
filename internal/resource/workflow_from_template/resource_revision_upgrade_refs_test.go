@@ -15,7 +15,6 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 // setupTwoRevIdenticalDerivedFields builds a template whose rev1 and rev2 are IDENTICAL in every
@@ -136,6 +135,8 @@ func setupTwoRevIdenticalDerivedFields(t *testing.T, name string) (rev1, rev2 st
 // changes + iac_template_id), but test2 must be NoOp. Also proves apply succeeds (no
 // "inconsistent result after apply") by running the upgrade as a real apply step.
 func TestAccWorkflowUsingTemplate_RevisionUpgradeNoSpuriousDependentUpdate(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	rev1, rev2 := setupTwoRevIdenticalDerivedFields(t, "tf-fixverify-tpl")
 	wfGrp := acctest.ResourceName("tf-fixverify-wfgrp")
 	wf1ID := acctest.ResourceName("tf-fixverify-1")
@@ -190,7 +191,7 @@ resource "stackguardian_workflow_from_template" "test2" {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks:   []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_1_0)},
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{

@@ -35,6 +35,18 @@ test:
 test-acc:
 	TF_ACC=1 go test -parallel=1 $(TEST) -v $(TESTARGS) -timeout=15m
 
+# Terraform CLI compatibility gate. Needs no API credentials: it only makes the
+# CLI load the provider and decode its schema, then validates docs-examples/.
+# Override the CLI under test with TERRAFORM_BIN=/path/to/terraform.
+tf-compat-check:
+	bash scripts/tf-compat-check.sh
+
+# Runs the acceptance suite against the oldest supported Terraform release.
+# Keep in sync with constants.MinTerraformVersion (enforced by
+# TestTerraformMatrixMatchesWorkflows).
+test-acc-min-terraform:
+	TF_ACC_TERRAFORM_VERSION=1.5.7 $(MAKE) test-acc
+
 # Reports resources an earlier acceptance run left behind. Read-only: it lists
 # what carries the test prefix and deletes nothing.
 test-acc-sweep:
