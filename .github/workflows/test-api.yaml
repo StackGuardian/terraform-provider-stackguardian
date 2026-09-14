@@ -5,7 +5,7 @@ on:
     inputs:
       gitref:
         type: string
-        default: 'devel'
+        default: 'develop'
         required: true
       testenv:
         type: string

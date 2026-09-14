@@ -14,7 +14,6 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 // setupTwoRevIdenticalWfStepsConfig builds a CUSTOM template whose rev1 and rev2 carry an
@@ -135,6 +134,8 @@ func setupTwoRevIdenticalWfStepsConfig(t *testing.T, name, stepTemplateID string
 // apply") — the round-trip that was previously unproven, which is why the field was left
 // unknown. wf_steps_config is CUSTOM-only, so both workflows are wf_type = "CUSTOM".
 func TestAccWorkflowUsingTemplate_WfStepsConfigRevisionUpgradeNoSpuriousDependentUpdate(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	stepTemplateID := setupWorkflowStepTemplate(t, "tf-wfsteps-fixverify-step")
 	rev1, rev2 := setupTwoRevIdenticalWfStepsConfig(t, "tf-wfsteps-fixverify-tpl", stepTemplateID)
 	wfGrp := "tf-wfsteps-fixverify-wfgrp"
@@ -176,7 +177,7 @@ resource "stackguardian_workflow_from_template" "test2" {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks:   []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_1_0)},
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{

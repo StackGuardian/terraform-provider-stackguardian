@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
@@ -143,16 +142,16 @@ const (
 )
 
 func TestAccPolicy(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	resourceName := "example-policy"
 	policyName := "example-policy"
 
 	t.Cleanup(func() { deletePolicyFixture(policyName) })
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -166,16 +165,16 @@ func TestAccPolicy(t *testing.T) {
 }
 
 func TestAccPolicyRecreateOnExternalDelete(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	resourceName := "example-policy2"
 	policyName := "example-policy2"
 
 	t.Cleanup(func() { deletePolicyFixture(policyName) })
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -202,6 +201,8 @@ func TestAccPolicyRecreateOnExternalDelete(t *testing.T) {
 }
 
 func TestAccPolicyOptionalId(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	t.Cleanup(func() { deletePolicyFixture("example_policy3") })
 
 	// Test if the resource has name that is not compatible with the
@@ -217,10 +218,8 @@ func TestAccPolicyOptionalId(t *testing.T) {
 }`
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{

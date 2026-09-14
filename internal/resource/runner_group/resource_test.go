@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 var azureStorageBackendAccessKey = config.Get().AzureStorageAccessKey
@@ -73,16 +72,16 @@ var (
 )
 
 func TestAccRunnerGroupAWSS3(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	runnerGroupResourceName := "example-runner-group"
 	runnerGroupName := "example-runner-group"
 
 	t.Cleanup(func() { deleteRunnerGroupFixture(runnerGroupName) })
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -96,13 +95,13 @@ func TestAccRunnerGroupAWSS3(t *testing.T) {
 }
 
 func TestAccRunnerGroupAzureBlobStorage(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	t.Cleanup(func() { deleteRunnerGroupFixture("runnergroup") })
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -132,16 +131,16 @@ func TestAccRunnerGroupAzureBlobStorage(t *testing.T) {
 }
 
 func TestAccRunnerGroupRecreateOnExternalDelete(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	runnerGroupResourceName := "runner-group2"
 	runnerGroupName := "runner-group2"
 
 	t.Cleanup(func() { deleteRunnerGroupFixture(runnerGroupName) })
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -168,6 +167,8 @@ func TestAccRunnerGroupRecreateOnExternalDelete(t *testing.T) {
 }
 
 func TestAccConnectorOptionalId(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	t.Cleanup(func() { deleteRunnerGroupFixture("example_runner_group3") })
 
 	// Test if the resource has name that is not compatible with the
@@ -192,10 +193,8 @@ func TestAccConnectorOptionalId(t *testing.T) {
 }`
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{

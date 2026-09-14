@@ -12,7 +12,6 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 const (
@@ -113,6 +112,8 @@ func deleteRoleAssignmentFixture(userId string) {
 }
 
 func TestAccRoleAssignment(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	userId := "example.user@domain.com"
 	workflowGroupResourceName := "role-assign-example-workflow-group"
 	workflowGroupName := "role-assign-example-workflow-group"
@@ -125,10 +126,8 @@ func TestAccRoleAssignment(t *testing.T) {
 	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -142,6 +141,8 @@ func TestAccRoleAssignment(t *testing.T) {
 }
 
 func TestAccRoleAssignmentRecreateOnExternalDelete(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	userId := "example.user2@domain.com"
 	workflowGroupResourceName := "role-assign-example-workflow-group2"
 	workflowGroupName := "role-assign-example-workflow-group2"
@@ -154,10 +155,8 @@ func TestAccRoleAssignmentRecreateOnExternalDelete(t *testing.T) {
 	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -184,6 +183,8 @@ func TestAccRoleAssignmentRecreateOnExternalDelete(t *testing.T) {
 }
 
 func TestAccRoleAssignmentRecreateOnChangeInUserId(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	userId := "example.user3@domain.com"
 	workflowGroupResourceName := "role-assign-example-workflow-group3"
 	workflowGroupName := "role-assign-example-workflow-group3"
@@ -198,10 +199,8 @@ func TestAccRoleAssignmentRecreateOnChangeInUserId(t *testing.T) {
 	t.Cleanup(func() { deleteRoleAssignmentFixture(newUserId) })
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -268,10 +267,8 @@ resource "stackguardian_role_assignment" "%s" {
 	`
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -298,10 +295,8 @@ func TestRoleAssignmentGroupAlias(t *testing.T) {
 	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -335,10 +330,8 @@ func TestRoleAssignmentMultipleRoles(t *testing.T) {
 	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -373,10 +366,8 @@ func TestRoleAssignmentRoleToRoles(t *testing.T) {
 	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -411,10 +402,8 @@ func TestRoleAssignmentRolesToRole(t *testing.T) {
 	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{

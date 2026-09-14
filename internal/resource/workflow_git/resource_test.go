@@ -13,7 +13,6 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 var org = config.Get().OrgName
@@ -69,6 +68,8 @@ resource "stackguardian_workflow_git" "test" {
 }
 
 func TestAccWorkflowGit_WithVcsConfig(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	wfGrpName := "tf-provider-workflow-git-vcs-wfgrp"
 	id := "tf-provider-workflow-git-vcs"
 
@@ -104,10 +105,8 @@ func TestAccWorkflowGit_WithVcsConfig(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
@@ -133,6 +132,8 @@ func TestAccWorkflowGit_WithVcsConfig(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithTerraformConfig(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	wfGrpName := "tf-provider-workflow-git-tfconfig-wfgrp"
 	id := "tf-provider-workflow-git-tfconfig"
 
@@ -171,10 +172,8 @@ func TestAccWorkflowGit_WithTerraformConfig(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
@@ -199,6 +198,8 @@ func TestAccWorkflowGit_WithTerraformConfig(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithEnvironmentVariables(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	wfGrpName := "tf-provider-workflow-git-envvars-wfgrp"
 	id := "tf-provider-workflow-git-envvars"
 
@@ -242,10 +243,8 @@ func TestAccWorkflowGit_WithEnvironmentVariables(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
@@ -269,6 +268,8 @@ func TestAccWorkflowGit_WithEnvironmentVariables(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithTagsAndContextTags(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	wfGrpName := "tf-provider-workflow-git-tags-wfgrp"
 	id := "tf-provider-workflow-git-tags"
 
@@ -308,10 +309,8 @@ func TestAccWorkflowGit_WithTagsAndContextTags(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
@@ -335,6 +334,8 @@ func TestAccWorkflowGit_WithTagsAndContextTags(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithApprovers(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	wfGrpName := "tf-provider-workflow-git-approvers-wfgrp"
 	id := "tf-provider-workflow-git-approvers"
 
@@ -371,10 +372,8 @@ func TestAccWorkflowGit_WithApprovers(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
@@ -397,6 +396,8 @@ func TestAccWorkflowGit_WithApprovers(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithUserSchedules(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	wfGrpName := "tf-provider-workflow-git-schedules-wfgrp"
 	id := "tf-provider-workflow-git-schedules"
 
@@ -438,10 +439,8 @@ func TestAccWorkflowGit_WithUserSchedules(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
@@ -464,6 +463,8 @@ func TestAccWorkflowGit_WithUserSchedules(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithVcsTriggers_Push(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	wfGrpName := "tf-provider-workflow-git-vcs-triggers-push-wfgrp"
 	id := "tf-provider-workflow-git-vcs-triggers-push"
 
@@ -532,10 +533,8 @@ func TestAccWorkflowGit_WithVcsTriggers_Push(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
@@ -575,6 +574,8 @@ func TestAccWorkflowGit_WithVcsTriggers_Push(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithVcsTriggers_PullRequest(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	wfGrpName := "tf-provider-workflow-git-vcs-triggers-pr-wfgrp"
 	id := "tf-provider-workflow-git-vcs-triggers-pr"
 
@@ -661,10 +662,8 @@ func TestAccWorkflowGit_WithVcsTriggers_PullRequest(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
@@ -703,6 +702,8 @@ func TestAccWorkflowGit_WithVcsTriggers_PullRequest(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithVcsTriggers_CreateTag(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	wfGrpName := "tf-provider-workflow-git-vcs-triggers-tag-wfgrp"
 	id := "tf-provider-workflow-git-vcs-triggers-tag"
 
@@ -742,10 +743,8 @@ func TestAccWorkflowGit_WithVcsTriggers_CreateTag(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
@@ -767,6 +766,8 @@ func TestAccWorkflowGit_WithVcsTriggers_CreateTag(t *testing.T) {
 }
 
 func TestAccWorkflowGit_InNestedWorkflowGroup(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	parentWfGrpName := "tf-provider-wfgit-nested-parent"
 	childWfGrpName := parentWfGrpName + "/tf-provider-wfgit-nested-child"
 	id := "tf-provider-wfgit-nested"
@@ -803,10 +804,8 @@ func TestAccWorkflowGit_InNestedWorkflowGroup(t *testing.T) {
 `
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
@@ -822,6 +821,8 @@ func TestAccWorkflowGit_InNestedWorkflowGroup(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithIacInputData(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	wfGrpName := "tf-provider-workflow-git-iac-input-wfgrp"
 	id := "tf-provider-workflow-git-iac-input"
 
@@ -863,10 +864,8 @@ func TestAccWorkflowGit_WithIacInputData(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
@@ -889,6 +888,8 @@ func TestAccWorkflowGit_WithIacInputData(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithRunnerConstraints(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	wfGrpName := "tf-provider-workflow-git-runner-wfgrp"
 	id := "tf-provider-workflow-git-runner"
 
@@ -943,10 +944,8 @@ func TestAccWorkflowGit_WithRunnerConstraints(t *testing.T) {
 `
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
@@ -969,6 +968,8 @@ func TestAccWorkflowGit_WithRunnerConstraints(t *testing.T) {
 }
 
 func TestAccWorkflowGit_WithMiniSteps_WfChaining(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	wfGrpName := "tf-provider-workflow-git-chaining-wfgrp"
 	id := "tf-provider-workflow-git-chaining"
 
@@ -1012,10 +1013,8 @@ func TestAccWorkflowGit_WithMiniSteps_WfChaining(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{

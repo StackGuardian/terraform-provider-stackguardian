@@ -3,5 +3,5 @@ data "stackguardian_workflow_group" "example" {
 }
 
 output "workflow-group-output" {
-  value = stackguardian_workflow_group.example.description
+  value = data.stackguardian_workflow_group.example.description
 }

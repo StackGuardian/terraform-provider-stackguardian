@@ -16,7 +16,6 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 var org = config.Get().OrgName
@@ -167,14 +166,14 @@ func setupStepTemplate(t *testing.T, name string) string {
 // any revision carrying a populated deployment_platform_config. The TERRAFORM-source path
 // (populated terraform_config) is covered by _Terraform below.
 func TestAccWorkflowTemplateRevisionDataSource_Custom(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	stepTemplateID := setupStepTemplate(t, "tf-ds-wtr-step")
 	revisionID := setupPopulatedRevision(t, "tf-ds-wtr-tpl", stepTemplateID)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -293,13 +292,13 @@ func setupTerraformRevision(t *testing.T, name string) string {
 // by the data source Read so it feeds workflow_from_template without a perpetual diff — this
 // assertion is the guard for that normalization.
 func TestAccWorkflowTemplateRevisionDataSource_Terraform(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	revisionID := setupTerraformRevision(t, "tf-ds-wtr-tftpl")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{

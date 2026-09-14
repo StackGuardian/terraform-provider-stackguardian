@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
@@ -42,16 +41,16 @@ const (
 )
 
 func TestAccWorkflowGroup(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	workflowGroupResrouceName := "wfgrp-example-workflow-group"
 	workflowGroupName := "wfgrp-example-workflow-group"
 
 	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupName) })
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -65,16 +64,16 @@ func TestAccWorkflowGroup(t *testing.T) {
 }
 
 func TestAccWorkflowGroupRecreateOnExternalDelete(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	workflowGroupResourceName := "wfgrp-example-workflow-group2"
 	workflowGroupName := "wfgrp-example-workflow-group2"
 
 	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupName) })
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -101,6 +100,8 @@ func TestAccWorkflowGroupRecreateOnExternalDelete(t *testing.T) {
 }
 
 func TestAccWorkflowGroupIncompatibleResourceName(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	// Test if the resource has name that is not compatible with the
 	workflowGroupName := "wfgrp-example-workflow-group3"
 	workflowGroupResourceName := "wfgrp example workflow group3"
@@ -108,10 +109,8 @@ func TestAccWorkflowGroupIncompatibleResourceName(t *testing.T) {
 	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupResourceName) })
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -125,6 +124,8 @@ func TestAccWorkflowGroupIncompatibleResourceName(t *testing.T) {
 }
 
 func TestAccWorkflowGroupOptionalId(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	t.Cleanup(func() { deleteWorkflowGroupFixture("wfgrp_example_wfgrp4") })
 
 	testResource := `resource "stackguardian_workflow_group" "wfgrp-example-wfgrp4" {
@@ -141,10 +142,8 @@ func TestAccWorkflowGroupOptionalId(t *testing.T) {
 }`
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -173,6 +172,8 @@ func TestAccWorkflowGroupOptionalId(t *testing.T) {
 }
 
 func TestAccWorkflowGroupNested_WithIdAndResourceName(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	parentName := "wfgrp-example-workflow-group4"
 	nestedName := "nested-workflow-group"
 
@@ -197,10 +198,8 @@ resource "stackguardian_workflow_group" "nested" {
 `, parentName, nestedName, nestedName)
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -222,6 +221,8 @@ resource "stackguardian_workflow_group" "nested" {
 }
 
 func TestAccWorkflowGroupNested_WithResourceNameOnly(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	parentName := "wfgrp-example-workflow-group5"
 	nestedName := "nested-workflow-group-2"
 
@@ -245,10 +246,8 @@ resource "stackguardian_workflow_group" "nested" {
 `, parentName, nestedName)
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{

@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
@@ -95,6 +94,8 @@ resource "stackguardian_role" "%s" {
 )
 
 func TestAccRole(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	workflowGroupResourceName := "role-example-workflow-group"
 	workflowGroupName := "role-example-workflow-group"
 	roleResourceName := "role-example-role"
@@ -106,10 +107,8 @@ func TestAccRole(t *testing.T) {
 	})
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -123,6 +122,8 @@ func TestAccRole(t *testing.T) {
 }
 
 func TestAccRoleRecreateOnExternalDelete(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	workflowGroupResourceName := "role-example-workflow-group2"
 	workflowGroupName := "role-example-workflow-group2"
 	roleResourceName := "role-example-role2"
@@ -134,10 +135,8 @@ func TestAccRoleRecreateOnExternalDelete(t *testing.T) {
 	})
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -188,10 +187,8 @@ resource "stackguardian_role" "%s" {
 	t.Cleanup(func() { deleteRoleFixture(roleName) })
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -202,6 +199,8 @@ resource "stackguardian_role" "%s" {
 }
 
 func TestAccRoleOptionalId(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	t.Cleanup(func() { deleteRoleFixture("role_example_role4") })
 
 	// Test if the resource has name that is not compatible with the
@@ -243,10 +242,8 @@ resource "stackguardian_role" "role-example-role4" {
 }`
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -275,6 +272,8 @@ resource "stackguardian_role" "role-example-role4" {
 }
 
 func TestAccRoleWithoutAllowedPermissions(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	roleResourceName := "role-example-role5"
 	roleName := "role-example-role5"
 
@@ -289,10 +288,8 @@ resource "stackguardian_role" "%s" {
   ]
 }`
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{

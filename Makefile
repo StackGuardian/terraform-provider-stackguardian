@@ -35,6 +35,18 @@ test:
 test-acc:
 	TF_ACC=1 go test -parallel=1 $(TEST) -v $(TESTARGS) -timeout=15m
 
+# Terraform CLI compatibility gate. Needs no API credentials: it only makes the
+# CLI load the provider and decode its schema, then validates docs-examples/.
+# Override the CLI under test with TERRAFORM_BIN=/path/to/terraform.
+tf-compat-check:
+	bash scripts/tf-compat-check.sh
+
+# Runs the acceptance suite against the oldest supported Terraform release.
+# Keep in sync with constants.MinTerraformVersion (enforced by
+# TestTerraformMatrixMatchesWorkflows).
+test-acc-min-terraform:
+	TF_ACC_TERRAFORM_VERSION=1.5.7 $(MAKE) test-acc
+
 test-examples-quickstart:
 	bash docs-guides-assets/quickstart/test-quickstart.sh $(ARGS)
 
@@ -71,7 +83,7 @@ gh-workflow-test-provider-mock-stg-as-prd:
 		push \
 		;
 
-#		--local-repository StackGuardian/terraform-provider-stackguardian@devel=${PWD} \#
+#		--local-repository StackGuardian/terraform-provider-stackguardian@develop=${PWD} \#
 gh-workflow-test-api-stg:
 	act \
 		--workflows ${PWD}/.github/workflows/test-api-stg.yaml \
@@ -81,7 +93,7 @@ gh-workflow-test-api-stg:
 		workflow_dispatch \
 		;
 
-#		--local-repository StackGuardian/terraform-provider-stackguardian@devel=${PWD} \#
+#		--local-repository StackGuardian/terraform-provider-stackguardian@develop=${PWD} \#
 gh-workflow-test-api-prd:
 	act \
 		--workflows ${PWD}/.github/workflows/test-api-prd.yaml \

@@ -9,7 +9,6 @@ import (
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 var sourceConfigKind = "TERRAFORM"
@@ -26,6 +25,8 @@ func deleteStackTemplateFixture(id string) {
 }
 
 func TestAccStackTemplate_Basic(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateName := "tf-provider-stack-template-1"
 
 	t.Cleanup(func() { deleteStackTemplateFixture(templateName) })
@@ -34,10 +35,8 @@ func TestAccStackTemplate_Basic(t *testing.T) {
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			// Create and Read testing
