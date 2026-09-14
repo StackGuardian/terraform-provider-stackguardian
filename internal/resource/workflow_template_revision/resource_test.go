@@ -65,6 +65,10 @@ func deleteWorkflowTemplateRevisionFixture(revisionId string) {
 	client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionId, true)
 }
 
+// deprecateWorkflowTemplateRevisionFixture deprecates a revision so it can be deleted
+// (required when its is_public is "1"). The API call's result is ignored on purpose: if
+// the revision was never published, deprecation isn't applicable and the call may fail —
+// that's fine, since deletion doesn't need it in that case either.
 func deprecateWorkflowTemplateRevisionFixture(revisionId string) {
 	client := GetClient()
 	effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
@@ -81,12 +85,17 @@ func TestAccWorkflowTemplateRevision_Basic(t *testing.T) {
 	templateID := "tf-provider-workflow-template-revision-1"
 	alias := "revision1"
 
+	// Register cleanup before creation so it fires even if setup fails partway through.
+	// The revision must be deprecated before it can be deleted (required when its
+	// is_public is "1", harmless otherwise), and deleted before the parent template.
+	defer deleteWorkflowTemplateFixture(templateID)
+	defer deleteWorkflowTemplateRevisionFixture(fmt.Sprintf("%s:1", templateID))
+	defer deprecateWorkflowTemplateRevisionFixture(fmt.Sprintf("%s:1", templateID))
+
 	err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
 	if err != nil {
 		t.Error(err)
 	}
-	defer deleteWorkflowTemplateFixture(templateID)
-	defer deleteWorkflowTemplateRevisionFixture(fmt.Sprintf("%s:1", templateID))
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -125,12 +134,17 @@ func TestAccWorkflowTemplateRevision_WithConfig(t *testing.T) {
 	templateID := "test-workflow-template-revision"
 	alias := "revision2"
 
+	// Register cleanup before creation so it fires even if setup fails partway through.
+	// The revision must be deprecated before it can be deleted (required when its
+	// is_public is "1", harmless otherwise), and deleted before the parent template.
+	defer deleteWorkflowTemplateFixture(templateID)
+	defer deleteWorkflowTemplateRevisionFixture(fmt.Sprintf("%s:1", templateID))
+	defer deprecateWorkflowTemplateRevisionFixture(fmt.Sprintf("%s:1", templateID))
+
 	err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer deleteWorkflowTemplateFixture(templateID)
-	defer deleteWorkflowTemplateRevisionFixture(fmt.Sprintf("%s:1", templateID))
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -182,12 +196,17 @@ func TestAccWorkflowTemplateRevision_WithDeploymentPlatformConfig(t *testing.T) 
 	templateID := "test-workflow-template-revision-dpc"
 	alias := "revision-dpc"
 
+	// Register cleanup before creation so it fires even if setup fails partway through.
+	// The revision must be deprecated before it can be deleted (required when its
+	// is_public is "1", harmless otherwise), and deleted before the parent template.
+	defer deleteWorkflowTemplateFixture(templateID)
+	defer deleteWorkflowTemplateRevisionFixture(fmt.Sprintf("%s:1", templateID))
+	defer deprecateWorkflowTemplateRevisionFixture(fmt.Sprintf("%s:1", templateID))
+
 	err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer deleteWorkflowTemplateFixture(templateID)
-	defer deleteWorkflowTemplateRevisionFixture(fmt.Sprintf("%s:1", templateID))
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
