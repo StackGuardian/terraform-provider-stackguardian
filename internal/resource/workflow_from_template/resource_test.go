@@ -20,7 +20,6 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 var org = config.Get().OrgName
@@ -450,6 +449,8 @@ func setupCustomWorkflowTemplate(t *testing.T, templateID string) string {
 // and round-trips stably — the second PlanOnly step asserts no perpetual diff (gotcha #7)
 // and that wf_step_template_id is preserved. Top-level wf_steps_config is CUSTOM-only.
 func TestAccWorkflowUsingTemplate_WithWfStepsConfig(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupCustomWorkflowTemplate(t, "tf-provider-wf-tmpl-wfsteps") + ":1"
 	stepTemplateID := setupWorkflowStepTemplate(t, "tf-provider-wf-step-tmpl")
 	wfGrpName := "tf-provider-wf-template-wfsteps-wfgrp"
@@ -472,10 +473,8 @@ func TestAccWorkflowUsingTemplate_WithWfStepsConfig(t *testing.T) {
 `, stepTemplateID)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -501,6 +500,8 @@ func TestAccWorkflowUsingTemplate_WithWfStepsConfig(t *testing.T) {
 // wfStepsConfig() nested object in a Computed context. Asserts create + round-trip
 // stability (PlanOnly no-op) for the Required wf_step_template_id in that context.
 func TestAccWorkflowUsingTemplate_LifecycleWfStepsConfig(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-lifecyclesteps") + ":1"
 	stepTemplateID := setupWorkflowStepTemplate(t, "tf-provider-wf-lifecycle-step-tmpl")
 	wfGrpName := "tf-provider-wf-template-lifecyclesteps-wfgrp"
@@ -525,10 +526,8 @@ func TestAccWorkflowUsingTemplate_LifecycleWfStepsConfig(t *testing.T) {
 `, stepTemplateID)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -547,6 +546,8 @@ func TestAccWorkflowUsingTemplate_LifecycleWfStepsConfig(t *testing.T) {
 }
 
 func TestAccWorkflowUsingTemplate_Basic(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-basic") + ":1"
 	wfGrpName := "tf-provider-wf-template-basic-wfgrp"
 	id := "tf-provider-wf-template-basic"
@@ -582,10 +583,8 @@ func TestAccWorkflowUsingTemplate_Basic(t *testing.T) {
 `, "1.5.0")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -616,6 +615,8 @@ func TestAccWorkflowUsingTemplate_Basic(t *testing.T) {
 }
 
 func TestAccWorkflowUsingTemplate_WithDescription(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-desc") + ":1"
 	wfGrpName := "tf-provider-wf-template-desc-wfgrp"
 	id := "tf-provider-wf-template-desc"
@@ -637,10 +638,8 @@ func TestAccWorkflowUsingTemplate_WithDescription(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -723,6 +722,8 @@ func setupTemplateWithWfStepRevision(t *testing.T, name, stepRev string) string 
 // does NOT declare it, the workflow INHERITS it (proving the Computed + merge path), and the
 // value round-trips with no diff.
 func TestAccWorkflowUsingTemplate_WfStepRevisionInheritedFromTemplate(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	stepRev := setupWorkflowStepTemplate(t, "tf-provider-wf-steprev-inh") // "/<org>/<name>:1"
 	templateID := setupTemplateWithWfStepRevision(t, "tf-provider-wf-tmpl-steprev-inh", stepRev)
 	wfGrpName := "tf-provider-wf-template-steprev-inh-wfgrp"
@@ -749,10 +750,8 @@ func TestAccWorkflowUsingTemplate_WfStepRevisionInheritedFromTemplate(t *testing
 `
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -786,6 +785,8 @@ func TestAccWorkflowUsingTemplate_WfStepRevisionInheritedFromTemplate(t *testing
 // terraform_config.wf_step_template_revision_id round-trips: set it, confirm it's stored and
 // read back unchanged (PlanOnly no-op), then update it to a different revision.
 func TestAccWorkflowUsingTemplate_WithWfStepTemplateRevisionId(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-wfsteprev") + ":1"
 	step1 := setupWorkflowStepTemplate(t, "tf-provider-wf-steprev-1") // "/<org>/<name>:1"
 	step2 := setupWorkflowStepTemplate(t, "tf-provider-wf-steprev-2")
@@ -808,10 +809,8 @@ func TestAccWorkflowUsingTemplate_WithWfStepTemplateRevisionId(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -835,6 +834,8 @@ func TestAccWorkflowUsingTemplate_WithWfStepTemplateRevisionId(t *testing.T) {
 }
 
 func TestAccWorkflowUsingTemplate_WithTerraformConfig(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-tfcfg") + ":1"
 	wfGrpName := "tf-provider-wf-template-tfcfg-wfgrp"
 	id := "tf-provider-wf-template-tfcfg"
@@ -854,10 +855,8 @@ func TestAccWorkflowUsingTemplate_WithTerraformConfig(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -884,6 +883,8 @@ func TestAccWorkflowUsingTemplate_WithTerraformConfig(t *testing.T) {
 // Step 1 creates; step 2 mutates every one of them; step 3 re-applies step 2's config to
 // prove the update settled to a stable, no-diff state.
 func TestAccWorkflowUsingTemplate_NormalUpdate(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-normalupd") + ":1"
 	wfGrpName := "tf-provider-wf-template-normalupd-wfgrp"
 	id := "tf-provider-wf-template-normalupd"
@@ -911,10 +912,8 @@ func TestAccWorkflowUsingTemplate_NormalUpdate(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -952,6 +951,8 @@ func TestAccWorkflowUsingTemplate_NormalUpdate(t *testing.T) {
 // terraform_init_options} and a transition where drift_cron is "" while drift_check is
 // false. Also asserts the plan is stable afterward (empty round-trips consistently).
 func TestAccWorkflowUsingTemplate_EmptyAllowBlankFalse(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-emptyblank") + ":1"
 	wfGrpName := "tf-provider-wf-template-emptyblank-wfgrp"
 	id := "tf-provider-wf-template-emptyblank"
@@ -977,10 +978,8 @@ func TestAccWorkflowUsingTemplate_EmptyAllowBlankFalse(t *testing.T) {
 `
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -1040,6 +1039,8 @@ func TestAccWorkflowUsingTemplate_EmptyAllowBlankFalse(t *testing.T) {
 // than inherit it. Omitting the attribute entirely (control, step 2 of a separate run is
 // covered elsewhere) would instead inherit TMPL_VAR.
 func TestAccWorkflowUsingTemplate_ExplicitEmptySuppressesTemplateDefault(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	base := "tf-provider-wf-tmpl-emptysuppress"
 	rev1 := setupWorkflowTemplate(t, base) + ":1" // supplies TMPL_VAR
 	rev2 := addSecondRevision(t, base)            // supplies REV2_VAR
@@ -1062,10 +1063,8 @@ func TestAccWorkflowUsingTemplate_ExplicitEmptySuppressesTemplateDefault(t *test
 `
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -1104,6 +1103,8 @@ func TestAccWorkflowUsingTemplate_ExplicitEmptySuppressesTemplateDefault(t *test
 }
 
 func TestAccWorkflowUsingTemplate_WithEnvironmentVariables(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-envvars") + ":1"
 	wfGrpName := "tf-provider-wf-template-envvars-wfgrp"
 	id := "tf-provider-wf-template-envvars"
@@ -1133,10 +1134,8 @@ func TestAccWorkflowUsingTemplate_WithEnvironmentVariables(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -1160,6 +1159,8 @@ func TestAccWorkflowUsingTemplate_WithEnvironmentVariables(t *testing.T) {
 }
 
 func TestAccWorkflowUsingTemplate_WithUserSchedules(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-schedules") + ":1"
 	wfGrpName := "tf-provider-wf-template-schedules-wfgrp"
 	id := "tf-provider-wf-template-schedules"
@@ -1187,10 +1188,8 @@ func TestAccWorkflowUsingTemplate_WithUserSchedules(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -1213,6 +1212,8 @@ func TestAccWorkflowUsingTemplate_WithUserSchedules(t *testing.T) {
 }
 
 func TestAccWorkflowUsingTemplate_WithTagsAndContextTags(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-tags") + ":1"
 	wfGrpName := "tf-provider-wf-template-tags-wfgrp"
 	id := "tf-provider-wf-template-tags"
@@ -1238,10 +1239,8 @@ func TestAccWorkflowUsingTemplate_WithTagsAndContextTags(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -1265,6 +1264,8 @@ func TestAccWorkflowUsingTemplate_WithTagsAndContextTags(t *testing.T) {
 }
 
 func TestAccWorkflowUsingTemplate_WithApprovers(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-approvers") + ":1"
 	wfGrpName := "tf-provider-wf-template-approvers-wfgrp"
 	id := "tf-provider-wf-template-approvers"
@@ -1287,10 +1288,8 @@ func TestAccWorkflowUsingTemplate_WithApprovers(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -1313,6 +1312,8 @@ func TestAccWorkflowUsingTemplate_WithApprovers(t *testing.T) {
 }
 
 func TestAccWorkflowUsingTemplate_WithRunnerConstraints(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-runner") + ":1"
 	wfGrpName := "tf-provider-wf-template-runner-wfgrp"
 	id := "tf-provider-wf-template-runner"
@@ -1345,10 +1346,8 @@ func TestAccWorkflowUsingTemplate_WithRunnerConstraints(t *testing.T) {
 `, "1.5.0")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -1371,6 +1370,8 @@ func TestAccWorkflowUsingTemplate_WithRunnerConstraints(t *testing.T) {
 }
 
 func TestAccWorkflowUsingTemplate_WithIacInputData(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-iac-input") + ":1"
 	wfGrpName := "tf-provider-wf-template-iac-input-wfgrp"
 	id := "tf-provider-wf-template-iac-input"
@@ -1406,10 +1407,8 @@ resource "stackguardian_workflow_from_template" "test" {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -1432,6 +1431,8 @@ resource "stackguardian_workflow_from_template" "test" {
 }
 
 func TestAccWorkflowUsingTemplate_InNestedWorkflowGroup(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-nested") + ":1"
 	parentWfGrpName := "tf-provider-wf-template-nested-parent"
 	childWfGrpName := parentWfGrpName + "/tf-provider-wf-template-nested-child"
@@ -1455,10 +1456,8 @@ func TestAccWorkflowUsingTemplate_InNestedWorkflowGroup(t *testing.T) {
 `, "1.5.0")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -1477,6 +1476,8 @@ func TestAccWorkflowUsingTemplate_InNestedWorkflowGroup(t *testing.T) {
 // declared fields and the template-derived defaults are both resolved onto the
 // top-level attributes (state mirrors the fully-merged API record).
 func TestAccWorkflowUsingTemplate_FullResolution(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-resolved") + ":1"
 	wfGrpName := "tf-provider-wf-template-resolved-wfgrp"
 	id := "tf-provider-wf-template-resolved"
@@ -1506,10 +1507,8 @@ func TestAccWorkflowUsingTemplate_FullResolution(t *testing.T) {
 `
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -1536,6 +1535,8 @@ func TestAccWorkflowUsingTemplate_FullResolution(t *testing.T) {
 // user never declares is populated from the template revision (provider-side merge),
 // and that a clean plan immediately after apply shows no diff.
 func TestAccWorkflowUsingTemplate_TemplateDefaultsResolved(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-defaults") + ":1"
 	wfGrpName := "tf-provider-wf-template-defaults-wfgrp"
 	id := "tf-provider-wf-template-defaults"
@@ -1551,10 +1552,8 @@ func TestAccWorkflowUsingTemplate_TemplateDefaultsResolved(t *testing.T) {
 	config := ``
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -1674,6 +1673,8 @@ func setupDriftEnabledTemplate(t *testing.T, templateID string) string {
 // must be "" (the cron is meaningless when checking is off), and the plan must be stable
 // afterward (no "inconsistent result after apply", no perpetual diff).
 func TestAccWorkflowUsingTemplate_DriftCronDroppedWhenCheckFalse(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupDriftEnabledTemplate(t, "tf-provider-wf-tmpl-driftcron") + ":1"
 	wfGrpName := "tf-provider-wf-template-driftcron-wfgrp"
 	id := "tf-provider-wf-template-driftcron"
@@ -1702,10 +1703,8 @@ func TestAccWorkflowUsingTemplate_DriftCronDroppedWhenCheckFalse(t *testing.T) {
 `
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -1738,6 +1737,8 @@ func TestAccWorkflowUsingTemplate_DriftCronDroppedWhenCheckFalse(t *testing.T) {
 // is made directly via the API between steps; the following refresh-and-plan must be
 // non-empty.
 func TestAccWorkflowUsingTemplate_DriftDetection(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-drift") + ":1"
 	wfGrpName := "tf-provider-wf-template-drift-wfgrp"
 	id := "tf-provider-wf-template-drift"
@@ -1757,10 +1758,8 @@ func TestAccWorkflowUsingTemplate_DriftDetection(t *testing.T) {
 `
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -1801,6 +1800,8 @@ func TestAccWorkflowUsingTemplate_DriftDetection(t *testing.T) {
 // must reflect rev2's REV2_VAR (not rev1's TMPL_VAR). The user-declared description is
 // preserved across the upgrade.
 func TestAccWorkflowUsingTemplate_RevisionUpgrade(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	base := "tf-provider-wf-tmpl-upgrade"
 	rev1 := setupWorkflowTemplate(t, base) + ":1"
 	rev2 := addSecondRevision(t, base)
@@ -1823,10 +1824,8 @@ func TestAccWorkflowUsingTemplate_RevisionUpgrade(t *testing.T) {
 `
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{

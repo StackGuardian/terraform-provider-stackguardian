@@ -1,5 +1,5 @@
 data "stackguardian_workflow_template" "example" {
-  template_name = "my-terraform-template"
+  id = "my-terraform-template"
 }
 
 output "workflow_template_output" {

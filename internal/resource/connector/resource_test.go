@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
@@ -75,13 +74,13 @@ const (
 )
 
 func TestAccConnector(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	t.Cleanup(func() { deleteConnectorByResourceName("aws-rbac-connector") })
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -102,6 +101,8 @@ func TestAccConnector(t *testing.T) {
 }
 
 func TestAccConnectorIncompatibleResourceName(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	t.Cleanup(func() { deleteConnectorByResourceName("aws rbac connector") })
 
 	// Test if the resource has name that is not compatible with the
@@ -135,10 +136,8 @@ func TestAccConnectorIncompatibleResourceName(t *testing.T) {
 }`
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -152,6 +151,8 @@ func TestAccConnectorIncompatibleResourceName(t *testing.T) {
 }
 
 func TestAccConnectorOptionalId(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	t.Cleanup(func() { deleteConnectorByID("aws_rbac_connector2") })
 
 	// Test if the resource has name that is not compatible with the
@@ -187,10 +188,8 @@ func TestAccConnectorOptionalId(t *testing.T) {
 }`
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{

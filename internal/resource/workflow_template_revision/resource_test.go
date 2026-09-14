@@ -15,7 +15,6 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 var org = config.Get().OrgName
@@ -83,6 +82,8 @@ func deprecateWorkflowTemplateRevisionFixture(revisionId string) {
 }
 
 func TestAccWorkflowTemplateRevision_Basic(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := "tf-provider-workflow-template-revision-1"
 	alias := "revision1"
 
@@ -102,10 +103,8 @@ func TestAccWorkflowTemplateRevision_Basic(t *testing.T) {
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			// Create and Read testing
@@ -132,6 +131,8 @@ func TestAccWorkflowTemplateRevision_Basic(t *testing.T) {
 }
 
 func TestAccWorkflowTemplateRevision_WithConfig(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := "test-workflow-template-revision"
 	alias := "revision2"
 
@@ -151,10 +152,8 @@ func TestAccWorkflowTemplateRevision_WithConfig(t *testing.T) {
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			// Create and Read testing with full configuration
@@ -194,6 +193,8 @@ resource "stackguardian_workflow_template_revision" "test" {
 }
 
 func TestAccWorkflowTemplateRevision_WithDeploymentPlatformConfig(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := "test-workflow-template-revision-dpc"
 	alias := "revision-dpc"
 
@@ -213,10 +214,8 @@ func TestAccWorkflowTemplateRevision_WithDeploymentPlatformConfig(t *testing.T) 
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
@@ -270,6 +269,8 @@ resource "stackguardian_workflow_template_revision" "test" {
 }
 
 func TestAccWorkflowTemplateRevision_Lifecycle(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateName := "tf-provider-wf-template-lifecycle"
 	alias := "v1"
 
@@ -284,10 +285,8 @@ func TestAccWorkflowTemplateRevision_Lifecycle(t *testing.T) {
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			// Step 1: Create parent template and revision

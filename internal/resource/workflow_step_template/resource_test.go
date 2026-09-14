@@ -44,6 +44,8 @@ resource "stackguardian_workflow_step_template" "test" {
 }
 
 func TestAccWorkflowStepTemplate_Basic(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	name := "example-workflow-step-template1"
 
 	t.Cleanup(func() { deleteWorkflowStepTemplateFixture(name) })
@@ -69,6 +71,7 @@ resource "stackguardian_workflow_step_template" "test" {
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			// Create and Read testing
@@ -94,6 +97,8 @@ resource "stackguardian_workflow_step_template" "test" {
 }
 
 func TestAccWorkflowStepTemplate_WithRuntime(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	name := "example-workflow-step-template2"
 
 	t.Cleanup(func() { deleteWorkflowStepTemplateFixture(name) })
@@ -102,6 +107,7 @@ func TestAccWorkflowStepTemplate_WithRuntime(t *testing.T) {
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			// Create and Read testing with runtime source

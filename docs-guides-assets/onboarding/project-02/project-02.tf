@@ -1,6 +1,8 @@
 // Project-02
 
 terraform {
+  required_version = ">= 1.5.7"
+
   required_providers {
     stackguardian = {
       source  = "terraform.local/local/StackGuardian"

@@ -24,6 +24,8 @@ resource "stackguardian_workflow_template_revision" "basic" {
   alias              = "v1"
   source_config_kind = "TERRAFORM"
   is_public          = "0"
+  user_job_cpu       = 1
+  user_job_memory    = 2048
   tags               = ["terraform", "revision"]
 }
 

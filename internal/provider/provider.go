@@ -111,6 +111,11 @@ func (p *stackguardianProvider) Schema(_ context.Context, _ provider.SchemaReque
 func (p *stackguardianProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	tflog.Info(ctx, "Configuring StackGuardian client")
 
+	resp.Diagnostics.Append(checkTerraformVersion(req.TerraformVersion)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	var config stackguardianProviderModel
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)

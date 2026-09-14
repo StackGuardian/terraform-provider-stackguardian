@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
@@ -95,6 +94,8 @@ resource "stackguardian_rolev4" "%s" {
 )
 
 func TestAccRole(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	workflowGroupResourceName := "rolev4-example-workflow-group"
 	workflowGroupName := "rolev4-example-workflow-group"
 	roleResourceName := "rolev4-example-role"
@@ -106,10 +107,8 @@ func TestAccRole(t *testing.T) {
 	})
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -123,6 +122,8 @@ func TestAccRole(t *testing.T) {
 }
 
 func TestAccRoleRecreateOnExternalDelete(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	workflowGroupResourceName := "rolev4-example-workflow-group2"
 	workflowGroupName := "rolev4-example-workflow-group2"
 	roleResourceName := "rolev4-example-role2"
@@ -134,10 +135,8 @@ func TestAccRoleRecreateOnExternalDelete(t *testing.T) {
 	})
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -188,10 +187,8 @@ resource "stackguardian_rolev4" "%s" {
 	t.Cleanup(func() { deleteRoleFixture(roleName) })
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -202,6 +199,8 @@ resource "stackguardian_rolev4" "%s" {
 }
 
 func TestAccRoleV4IncompatibleResourceName(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	// Test if the resource has name that is not compatible with the
 	workflowGroupResourceName := "rolev4-example-workflow-group4"
 	workflowGroupName := "rolev4-example-workflow-group4"
@@ -214,10 +213,8 @@ func TestAccRoleV4IncompatibleResourceName(t *testing.T) {
 	})
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -231,6 +228,8 @@ func TestAccRoleV4IncompatibleResourceName(t *testing.T) {
 }
 
 func TestAccRoleOptionalId(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	t.Cleanup(func() { deleteRoleFixture("rolev4_example_role5") })
 
 	// Test if the resource has name that is not compatible with the
@@ -272,10 +271,8 @@ resource "stackguardian_rolev4" "rolev4-example-role5" {
 }`
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
+		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
