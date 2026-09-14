@@ -15,6 +15,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
+var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
+
+// deletePolicyFixture is a safety-net cleanup: Terraform's own destroy step tears the
+// policy down in the normal case. This exists so a test that fails before reaching destroy
+// (e.g. a failed assertion) doesn't leave it behind. Errors are ignored — the resource may
+// already be gone. id is the policy's id, which defaults to its resource_name when the
+// config doesn't set an explicit id.
+func deletePolicyFixture(id string) {
+	client := acctest.SGClient()
+	client.Policies.DeletePolicy(context.TODO(), org, id)
+}
+
 const (
 	testAccResource = `resource "stackguardian_policy" "%s" {
   resource_name = "%s"
@@ -133,6 +145,8 @@ func TestAccPolicy(t *testing.T) {
 	resourceName := "example-policy"
 	policyName := "example-policy"
 
+	t.Cleanup(func() { deletePolicyFixture(policyName) })
+
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -153,6 +167,8 @@ func TestAccPolicy(t *testing.T) {
 func TestAccPolicyRecreateOnExternalDelete(t *testing.T) {
 	resourceName := "example-policy2"
 	policyName := "example-policy2"
+
+	t.Cleanup(func() { deletePolicyFixture(policyName) })
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -185,6 +201,8 @@ func TestAccPolicyRecreateOnExternalDelete(t *testing.T) {
 }
 
 func TestAccPolicyOptionalId(t *testing.T) {
+	t.Cleanup(func() { deletePolicyFixture("example_policy3") })
+
 	// Test if the resource has name that is not compatible with the
 	testResource := `resource "stackguardian_policy" "example-policy3" {
   id = "example_policy3"

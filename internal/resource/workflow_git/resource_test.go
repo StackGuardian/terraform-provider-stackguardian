@@ -71,12 +71,15 @@ func TestAccWorkflowGit_WithVcsConfig(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-git-vcs-wfgrp"
 	id := "tf-provider-workflow-git-vcs"
 
+	t.Cleanup(func() {
+		deleteWorkflowGitFixture(wfGrpName, id)
+		deleteWorkflowGroupFixture(wfGrpName)
+	})
+
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(wfGrpName)
-	defer deleteWorkflowGitFixture(wfGrpName, id)
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -132,12 +135,15 @@ func TestAccWorkflowGit_WithTerraformConfig(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-git-tfconfig-wfgrp"
 	id := "tf-provider-workflow-git-tfconfig"
 
+	t.Cleanup(func() {
+		deleteWorkflowGitFixture(wfGrpName, id)
+		deleteWorkflowGroupFixture(wfGrpName)
+	})
+
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(wfGrpName)
-	defer deleteWorkflowGitFixture(wfGrpName, id)
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -195,12 +201,15 @@ func TestAccWorkflowGit_WithEnvironmentVariables(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-git-envvars-wfgrp"
 	id := "tf-provider-workflow-git-envvars"
 
+	t.Cleanup(func() {
+		deleteWorkflowGitFixture(wfGrpName, id)
+		deleteWorkflowGroupFixture(wfGrpName)
+	})
+
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(wfGrpName)
-	defer deleteWorkflowGitFixture(wfGrpName, id)
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -262,12 +271,15 @@ func TestAccWorkflowGit_WithTagsAndContextTags(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-git-tags-wfgrp"
 	id := "tf-provider-workflow-git-tags"
 
+	t.Cleanup(func() {
+		deleteWorkflowGitFixture(wfGrpName, id)
+		deleteWorkflowGroupFixture(wfGrpName)
+	})
+
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(wfGrpName)
-	defer deleteWorkflowGitFixture(wfGrpName, id)
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -325,12 +337,15 @@ func TestAccWorkflowGit_WithApprovers(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-git-approvers-wfgrp"
 	id := "tf-provider-workflow-git-approvers"
 
+	t.Cleanup(func() {
+		deleteWorkflowGitFixture(wfGrpName, id)
+		deleteWorkflowGroupFixture(wfGrpName)
+	})
+
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(wfGrpName)
-	defer deleteWorkflowGitFixture(wfGrpName, id)
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -384,12 +399,15 @@ func TestAccWorkflowGit_WithUserSchedules(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-git-schedules-wfgrp"
 	id := "tf-provider-workflow-git-schedules"
 
+	t.Cleanup(func() {
+		deleteWorkflowGitFixture(wfGrpName, id)
+		deleteWorkflowGroupFixture(wfGrpName)
+	})
+
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(wfGrpName)
-	defer deleteWorkflowGitFixture(wfGrpName, id)
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -448,12 +466,15 @@ func TestAccWorkflowGit_WithVcsTriggers_Push(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-git-vcs-triggers-push-wfgrp"
 	id := "tf-provider-workflow-git-vcs-triggers-push"
 
+	t.Cleanup(func() {
+		deleteWorkflowGitFixture(wfGrpName, id)
+		deleteWorkflowGroupFixture(wfGrpName)
+	})
+
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(wfGrpName)
-	defer deleteWorkflowGitFixture(wfGrpName, id)
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -556,12 +577,15 @@ func TestAccWorkflowGit_WithVcsTriggers_PullRequest(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-git-vcs-triggers-pr-wfgrp"
 	id := "tf-provider-workflow-git-vcs-triggers-pr"
 
+	t.Cleanup(func() {
+		deleteWorkflowGitFixture(wfGrpName, id)
+		deleteWorkflowGroupFixture(wfGrpName)
+	})
+
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(wfGrpName)
-	defer deleteWorkflowGitFixture(wfGrpName, id)
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -681,12 +705,15 @@ func TestAccWorkflowGit_WithVcsTriggers_CreateTag(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-git-vcs-triggers-tag-wfgrp"
 	id := "tf-provider-workflow-git-vcs-triggers-tag"
 
+	t.Cleanup(func() {
+		deleteWorkflowGitFixture(wfGrpName, id)
+		deleteWorkflowGroupFixture(wfGrpName)
+	})
+
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(wfGrpName)
-	defer deleteWorkflowGitFixture(wfGrpName, id)
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -743,16 +770,19 @@ func TestAccWorkflowGit_InNestedWorkflowGroup(t *testing.T) {
 	childWfGrpName := parentWfGrpName + "/tf-provider-wfgit-nested-child"
 	id := "tf-provider-wfgit-nested"
 
+	t.Cleanup(func() {
+		deleteWorkflowGitFixture(childWfGrpName, id)
+		deleteWorkflowGroupFixture(childWfGrpName)
+		deleteWorkflowGroupFixture(parentWfGrpName)
+	})
+
 	if err := createWorkflowGroupFixture(parentWfGrpName); err != nil {
 		t.Errorf("failed to create parent workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(parentWfGrpName)
 
 	if err := createWorkflowGroupFixture(childWfGrpName); err != nil {
 		t.Errorf("failed to create child workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(childWfGrpName)
-	defer deleteWorkflowGitFixture(childWfGrpName, id)
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -794,12 +824,15 @@ func TestAccWorkflowGit_WithIacInputData(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-git-iac-input-wfgrp"
 	id := "tf-provider-workflow-git-iac-input"
 
+	t.Cleanup(func() {
+		deleteWorkflowGitFixture(wfGrpName, id)
+		deleteWorkflowGroupFixture(wfGrpName)
+	})
+
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(wfGrpName)
-	defer deleteWorkflowGitFixture(wfGrpName, id)
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -858,12 +891,15 @@ func TestAccWorkflowGit_WithRunnerConstraints(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-git-runner-wfgrp"
 	id := "tf-provider-workflow-git-runner"
 
+	t.Cleanup(func() {
+		deleteWorkflowGitFixture(wfGrpName, id)
+		deleteWorkflowGroupFixture(wfGrpName)
+	})
+
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(wfGrpName)
-	defer deleteWorkflowGitFixture(wfGrpName, id)
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -935,12 +971,15 @@ func TestAccWorkflowGit_WithMiniSteps_WfChaining(t *testing.T) {
 	wfGrpName := "tf-provider-workflow-git-chaining-wfgrp"
 	id := "tf-provider-workflow-git-chaining"
 
+	t.Cleanup(func() {
+		deleteWorkflowGitFixture(wfGrpName, id)
+		deleteWorkflowGroupFixture(wfGrpName)
+	})
+
 	err := createWorkflowGroupFixture(wfGrpName)
 	if err != nil {
 		t.Errorf("failed to create workflow group fixture: %s", err.Error())
 	}
-	defer deleteWorkflowGroupFixture(wfGrpName)
-	defer deleteWorkflowGitFixture(wfGrpName, id)
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")

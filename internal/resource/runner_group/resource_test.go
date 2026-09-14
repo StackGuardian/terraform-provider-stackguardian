@@ -16,6 +16,17 @@ import (
 )
 
 var azureStorageBackendAccessKey = os.Getenv("TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY")
+var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
+
+// deleteRunnerGroupFixture is a safety-net cleanup: Terraform's own destroy step tears the
+// runner group down in the normal case. This exists so a test that fails before reaching
+// destroy (e.g. a failed assertion) doesn't leave it behind. Errors are ignored — the
+// resource may already be gone. id is the runner group's id, which defaults to its
+// resource_name when the config doesn't set an explicit id.
+func deleteRunnerGroupFixture(id string) {
+	client := acctest.SGClient()
+	client.RunnerGroups.DeleteRunnerGroup(context.TODO(), org, id)
+}
 
 var (
 	testAccResource = `resource "stackguardian_runner_group" "%s" {
@@ -65,6 +76,8 @@ func TestAccRunnerGroupAWSS3(t *testing.T) {
 	runnerGroupResourceName := "example-runner-group"
 	runnerGroupName := "example-runner-group"
 
+	t.Cleanup(func() { deleteRunnerGroupFixture(runnerGroupName) })
+
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -83,6 +96,8 @@ func TestAccRunnerGroupAWSS3(t *testing.T) {
 }
 
 func TestAccRunnerGroupAzureBlobStorage(t *testing.T) {
+	t.Cleanup(func() { deleteRunnerGroupFixture("runnergroup") })
+
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -120,6 +135,8 @@ func TestAccRunnerGroupRecreateOnExternalDelete(t *testing.T) {
 	runnerGroupResourceName := "runner-group2"
 	runnerGroupName := "runner-group2"
 
+	t.Cleanup(func() { deleteRunnerGroupFixture(runnerGroupName) })
+
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -151,6 +168,8 @@ func TestAccRunnerGroupRecreateOnExternalDelete(t *testing.T) {
 }
 
 func TestAccConnectorOptionalId(t *testing.T) {
+	t.Cleanup(func() { deleteRunnerGroupFixture("example_runner_group3") })
+
 	// Test if the resource has name that is not compatible with the
 	testResource := `resource "stackguardian_runner_group" "example-runner-group3" {
   id = "example_runner_group3"

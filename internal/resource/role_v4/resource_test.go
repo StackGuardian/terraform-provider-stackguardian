@@ -15,6 +15,23 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
+var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
+
+// Safety-net cleanup: Terraform's own destroy step tears these down in the normal case.
+// These exist so a test that fails before reaching destroy (e.g. a failed assertion) doesn't
+// leave the workflow group or role behind. Errors are ignored — the resource may already be
+// gone, deleted by Terraform's own destroy step. roleID is the role's id, which defaults to
+// its resource_name when the config doesn't set an explicit id.
+func deleteWorkflowGroupFixture(resourceName string) {
+	client := acctest.SGClient()
+	client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), org, resourceName)
+}
+
+func deleteRoleFixture(roleID string) {
+	client := acctest.SGClient()
+	client.AccessManagement.DeleteRole(context.TODO(), org, roleID)
+}
+
 const (
 	testAccResource = `
 resource "stackguardian_workflow_group" "%s" {
@@ -82,6 +99,11 @@ func TestAccRole(t *testing.T) {
 	roleResourceName := "rolev4-example-role"
 	roleName := "rolev4-example-role"
 
+	t.Cleanup(func() {
+		deleteRoleFixture(roleName)
+		deleteWorkflowGroupFixture(workflowGroupName)
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -104,6 +126,11 @@ func TestAccRoleRecreateOnExternalDelete(t *testing.T) {
 	workflowGroupName := "rolev4-example-workflow-group2"
 	roleResourceName := "rolev4-example-role2"
 	roleName := "rolev4-example-role2"
+
+	t.Cleanup(func() {
+		deleteRoleFixture(roleName)
+		deleteWorkflowGroupFixture(workflowGroupName)
+	})
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -156,6 +183,9 @@ resource "stackguardian_rolev4" "%s" {
 
 	roleResourceName := "rolev4-example-role3"
 	roleName := "rolev4-example-role3"
+
+	t.Cleanup(func() { deleteRoleFixture(roleName) })
+
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -177,6 +207,11 @@ func TestAccRoleV4IncompatibleResourceName(t *testing.T) {
 	roleName := "rolev4-assign-example-role4"
 	roleResourceName := "rolev4-assign-example-role4"
 
+	t.Cleanup(func() {
+		deleteRoleFixture(roleName)
+		deleteWorkflowGroupFixture(workflowGroupName)
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -195,6 +230,8 @@ func TestAccRoleV4IncompatibleResourceName(t *testing.T) {
 }
 
 func TestAccRoleOptionalId(t *testing.T) {
+	t.Cleanup(func() { deleteRoleFixture("rolev4_example_role5") })
+
 	// Test if the resource has name that is not compatible with the
 	testResource := `
 resource "stackguardian_rolev4" "rolev4-example-role5" {

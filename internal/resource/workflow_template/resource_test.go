@@ -1,8 +1,10 @@
 package workflowtemplate_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
@@ -11,9 +13,22 @@ import (
 )
 
 var sourceConfigKind = "TERRAFORM"
+var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
+
+// deleteWorkflowTemplateFixture is a safety-net cleanup: Terraform's own destroy step tears
+// the template down in the normal case. This exists so a test that fails before reaching
+// destroy (e.g. a failed assertion) doesn't leave it behind. Errors are ignored — the
+// resource may already be gone. id is the template's id, which defaults to its
+// template_name when the config doesn't set an explicit id.
+func deleteWorkflowTemplateFixture(id string) {
+	client := acctest.SGClient()
+	client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, id)
+}
 
 func TestAccWorkflowTemplate_Basic(t *testing.T) {
 	templateName := "tf-provider-workflow-template-1"
+
+	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -49,6 +64,8 @@ func TestAccWorkflowTemplate_Basic(t *testing.T) {
 
 func TestAccWorkflowTemplate_WithRuntime(t *testing.T) {
 	templateName := "tf-provider-workflow-template-2"
+
+	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")

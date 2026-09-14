@@ -79,6 +79,10 @@ func deleteStackTemplateRevisionFixture(revisionId string) {
 	client.StackTemplateRevisions.DeleteStackTemplateRevision(context.TODO(), org, revisionId, true)
 }
 
+// deprecateStackTemplateRevisionFixture deprecates a revision so it can be deleted
+// (required when its is_public is "1"). The API call's result is ignored on purpose: if
+// the revision was never published, deprecation isn't applicable and the call may fail —
+// that's fine, since deletion doesn't need it in that case either.
 func deprecateStackTemplateRevisionFixture(revisionId string) {
 	client := getClient()
 	effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
@@ -169,10 +173,13 @@ func TestAccStackTemplateRevision_Basic(t *testing.T) {
 	wfTemplateID := "provider-test-wft-for-stack-rev1"
 	revisionAlias := "v1"
 
-	// Register cleanup before creation so defers run even if a later create fails
-	defer deleteStackTemplateRevisionFixture(fmt.Sprintf("%s:1", stackTemplateID))
-	defer deleteStackTemplateFixture(stackTemplateID)
+	// Register cleanup before creation so defers run even if a later create fails. The
+	// revision must be deprecated before it can be deleted (required when its is_public is
+	// "1", harmless otherwise), and deleted before the parent stack template.
 	defer deleteWorkflowTemplateFixture(wfTemplateID)
+	defer deleteStackTemplateFixture(stackTemplateID)
+	defer deleteStackTemplateRevisionFixture(fmt.Sprintf("%s:1", stackTemplateID))
+	defer deprecateStackTemplateRevisionFixture(fmt.Sprintf("%s:1", stackTemplateID))
 
 	// Create prerequisite resources via SDK
 	if err := createWorkflowTemplateFixture(wfTemplateID, "TERRAFORM"); err != nil {
@@ -226,10 +233,13 @@ func TestAccStackTemplateRevision_WithWorkflowsConfig(t *testing.T) {
 	wfTemplateID := "provider-test-wft-for-stack-rev2"
 	revisionAlias := "v1"
 
-	// Register cleanup before creation so defers run even if a later create fails
-	defer deleteStackTemplateRevisionFixture(fmt.Sprintf("%s:1", stackTemplateID))
-	defer deleteStackTemplateFixture(stackTemplateID)
+	// Register cleanup before creation so defers run even if a later create fails. The
+	// revision must be deprecated before it can be deleted (required when its is_public is
+	// "1", harmless otherwise), and deleted before the parent stack template.
 	defer deleteWorkflowTemplateFixture(wfTemplateID)
+	defer deleteStackTemplateFixture(stackTemplateID)
+	defer deleteStackTemplateRevisionFixture(fmt.Sprintf("%s:1", stackTemplateID))
+	defer deprecateStackTemplateRevisionFixture(fmt.Sprintf("%s:1", stackTemplateID))
 
 	// Create prerequisite resources via SDK
 	if err := createWorkflowTemplateFixture(wfTemplateID, "TERRAFORM"); err != nil {

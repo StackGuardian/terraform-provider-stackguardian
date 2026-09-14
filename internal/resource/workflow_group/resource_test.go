@@ -15,6 +15,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
+var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
+
+// deleteWorkflowGroupFixture is a safety-net cleanup: Terraform's own destroy step tears the
+// workflow group down in the normal case. This exists so a test that fails before reaching
+// destroy (e.g. a failed assertion) doesn't leave it behind. Errors are ignored — the
+// resource may already be gone. id is the group's id, which defaults to its resource_name
+// when the config doesn't set an explicit id.
+func deleteWorkflowGroupFixture(id string) {
+	client := acctest.SGClient()
+	client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), org, id)
+}
+
 const (
 	testAccResource = `resource "stackguardian_workflow_group" "%s" {
   resource_name = "%s"
@@ -31,6 +43,8 @@ const (
 func TestAccWorkflowGroup(t *testing.T) {
 	workflowGroupResrouceName := "wfgrp-example-workflow-group"
 	workflowGroupName := "wfgrp-example-workflow-group"
+
+	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupName) })
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -52,6 +66,8 @@ func TestAccWorkflowGroup(t *testing.T) {
 func TestAccWorkflowGroupRecreateOnExternalDelete(t *testing.T) {
 	workflowGroupResourceName := "wfgrp-example-workflow-group2"
 	workflowGroupName := "wfgrp-example-workflow-group2"
+
+	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupName) })
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -88,6 +104,8 @@ func TestAccWorkflowGroupIncompatibleResourceName(t *testing.T) {
 	workflowGroupName := "wfgrp-example-workflow-group3"
 	workflowGroupResourceName := "wfgrp example workflow group3"
 
+	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupResourceName) })
+
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -106,6 +124,8 @@ func TestAccWorkflowGroupIncompatibleResourceName(t *testing.T) {
 }
 
 func TestAccWorkflowGroupOptionalId(t *testing.T) {
+	t.Cleanup(func() { deleteWorkflowGroupFixture("wfgrp_example_wfgrp4") })
+
 	testResource := `resource "stackguardian_workflow_group" "wfgrp-example-wfgrp4" {
   id = "wfgrp_example_wfgrp4"
   resource_name = "wfgrp example wfgrp4"
@@ -155,6 +175,11 @@ func TestAccWorkflowGroupNested_WithIdAndResourceName(t *testing.T) {
 	parentName := "wfgrp-example-workflow-group4"
 	nestedName := "nested-workflow-group"
 
+	t.Cleanup(func() {
+		deleteWorkflowGroupFixture(parentName + "/" + nestedName)
+		deleteWorkflowGroupFixture(parentName)
+	})
+
 	testConfig := fmt.Sprintf(`
 resource "stackguardian_workflow_group" "parent" {
   resource_name = "%s"
@@ -198,6 +223,11 @@ resource "stackguardian_workflow_group" "nested" {
 func TestAccWorkflowGroupNested_WithResourceNameOnly(t *testing.T) {
 	parentName := "wfgrp-example-workflow-group5"
 	nestedName := "nested-workflow-group-2"
+
+	t.Cleanup(func() {
+		deleteWorkflowGroupFixture(parentName + "/" + nestedName)
+		deleteWorkflowGroupFixture(parentName)
+	})
 
 	testConfig := fmt.Sprintf(`
 resource "stackguardian_workflow_group" "parent" {

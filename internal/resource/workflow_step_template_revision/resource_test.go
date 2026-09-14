@@ -39,6 +39,10 @@ func deleteStepTemplateRevisionFixture(revisionId string) {
 	client.WorkflowStepTemplateRevision.DeleteWorkflowStepTemplateRevision(context.TODO(), stepTemplateOrg, revisionId, true)
 }
 
+// deprecateStepTemplateRevisionFixture deprecates a revision so it can be deleted (required
+// when its is_public is "1"). The API call's result is ignored on purpose: if the revision
+// was never published, deprecation isn't applicable and the call may fail — that's fine,
+// since deletion doesn't need it in that case either.
 func deprecateStepTemplateRevisionFixture(revisionId string) {
 	client := getStepTemplateTestClient()
 	effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
@@ -90,6 +94,15 @@ resource "stackguardian_workflow_step_template_revision" "test" {
 func TestAccWorkflowStepTemplateRevision_Basic(t *testing.T) {
 	templateName := "provider-test-workflow-step-template1"
 	revisionAlias := "v1"
+
+	// Safety-net cleanup: Terraform's own destroy step tears these down in the normal case.
+	// The revision must be deprecated before it can be deleted (required when its is_public
+	// is "1", harmless otherwise), and it must be deleted before the parent template.
+	t.Cleanup(func() {
+		deprecateStepTemplateRevisionFixture(fmt.Sprintf("%s:1", templateName))
+		deleteStepTemplateRevisionFixture(fmt.Sprintf("%s:1", templateName))
+		deleteStepTemplateFixture(templateName)
+	})
 
 	testAccResource := testAccWorkflowStepTemplateRevisionConfig(templateName, revisionAlias)
 	customHeader := http.Header{}
