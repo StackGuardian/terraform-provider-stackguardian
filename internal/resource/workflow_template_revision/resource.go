@@ -53,7 +53,7 @@ func (r *workflowTemplateRevisionResource) Configure(_ context.Context, req reso
 	}
 
 	r.client = provider.Client
-	r.org_name = provider.Org_name
+	r.org_name = provider.OrgName
 }
 
 // ImportState imports a workflow template revision using its ID.

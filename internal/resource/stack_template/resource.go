@@ -49,7 +49,7 @@ func (r *stackTemplateResource) Configure(_ context.Context, req resource.Config
 	}
 
 	r.client = provider.Client
-	r.org_name = provider.Org_name
+	r.org_name = provider.OrgName
 }
 
 // ImportState imports a stack template using its ID.

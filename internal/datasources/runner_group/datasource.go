@@ -47,7 +47,7 @@ func (d *runnerGroupDataSource) Configure(_ context.Context, req datasource.Conf
 	}
 
 	d.client = provInfo.Client
-	d.org_name = provInfo.Org_name
+	d.org_name = provInfo.OrgName
 }
 
 func (d *runnerGroupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
