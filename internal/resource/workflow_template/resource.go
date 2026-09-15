@@ -52,7 +52,7 @@ func (r *workflowTemplateResource) Configure(_ context.Context, req resource.Con
 	}
 
 	r.client = provider.Client
-	r.org_name = provider.Org_name
+	r.org_name = provider.OrgName
 }
 
 // ImportState imports a workflow template using its ID.

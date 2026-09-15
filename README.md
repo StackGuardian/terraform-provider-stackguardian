@@ -73,7 +73,7 @@ alongside eleven guides:
 
 ### Prerequisites
 
-- [Go](https://go.dev/) 1.21.4 or newer (see [go.mod](/go.mod))
+- [Go](https://go.dev/) >= 1.26.7 (see [go.mod](/go.mod))
 - [Terraform](https://developer.hashicorp.com/terraform/downloads) — CI tests against 1.14.0; the
   acceptance suite skips versions below 1.1.0, and the `import {}` block examples need 1.5.0 or newer
 - [`tfplugindocs`](https://github.com/hashicorp/terraform-plugin-docs) for documentation work, via `make tools-install`

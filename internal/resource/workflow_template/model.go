@@ -281,6 +281,9 @@ func (m *WorkflowTemplateResourceModel) ToUpdateAPIModel(ctx context.Context) (*
 
 	// Convert ContextTags
 	contextTags, diags := expanders.MapStringString(ctx, m.ContextTags)
+	if diags.HasError() {
+		return nil, diags
+	}
 	if contextTags != nil {
 		apiModel.ContextTags = sgsdkgo.Optional(contextTags)
 	} else {

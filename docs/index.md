@@ -31,7 +31,7 @@ New to the provider? Start with the **Getting Started** guide, then **Object Mod
 
 ## Example Usage
 
-Terraform 0.13 and later:
+Terraform 1.5.7 and later:
 
 ```terraform
 terraform {
@@ -64,7 +64,7 @@ resource "stackguardian_workflow_group" "Simple-Workflow-Group" {
 
 - `api_key` (String, Sensitive) API key to authenticate on StackGuardian API. **Required** if not using environment variable STACKGUARDIAN_API_KEY
 - `api_uri` (String) API URI to set as prefix URL for StackGuardian API. Can also be configured using environment variable STACKGUARDIAN_API_URI
-- `org_name` (String) Stackguardian Organization name. **Required** if not using environment variable STACKGUARDIAN_ORG_NAME
+- `org_name` (String) StackGuardian Organization name. **Required** if not using environment variable STACKGUARDIAN_ORG_NAME
 
 ## Release Notes
 

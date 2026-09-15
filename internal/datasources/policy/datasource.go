@@ -48,7 +48,7 @@ func (d *policyDatasource) Configure(_ context.Context, req datasource.Configure
 	}
 
 	d.client = provInfo.Client
-	d.orgName = provInfo.Org_name
+	d.orgName = provInfo.OrgName
 }
 
 func (d *policyDatasource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

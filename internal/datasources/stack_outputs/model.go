@@ -36,7 +36,7 @@ func buildAPIModelToTerraformModel(stackOutputs *sgsdkgo.GeneratedStackOutputsRe
 			if err != nil {
 				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Failed to fetch stack outputs", "")}
 			}
-			defer reqResp.Body.Close()
+			defer func() { _ = reqResp.Body.Close() }()
 
 			body, err := io.ReadAll(reqResp.Body)
 			if err != nil {
