@@ -156,7 +156,7 @@ func (r *workflowTemplateResource) Update(ctx context.Context, req resource.Upda
 
 	templateID := state.Id.ValueString()
 
-	payload, diags := plan.ToUpdateAPIModel(ctx)
+	payload, diags := plan.ToUpdateAPIModel(ctx, &state)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return

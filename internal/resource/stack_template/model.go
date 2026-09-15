@@ -70,7 +70,10 @@ func (m *StackTemplateResourceModel) ToAPIModel(ctx context.Context) (*stacktemp
 	return apiModel, diags
 }
 
-func (m *StackTemplateResourceModel) ToUpdateAPIModel(ctx context.Context) (*stacktemplates.UpdateStackTemplateRequest, diag.Diagnostics) {
+// ToUpdateAPIModel builds the update request. IsPublic is only sent when it
+// differs from prior (nil prior always sends it): the API rejects any update
+// carrying IsPublic on a private-repo template, even "0".
+func (m *StackTemplateResourceModel) ToUpdateAPIModel(ctx context.Context, prior *StackTemplateResourceModel) (*stacktemplates.UpdateStackTemplateRequest, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
 
 	apiModel := &stacktemplates.UpdateStackTemplateRequest{
@@ -89,7 +92,7 @@ func (m *StackTemplateResourceModel) ToUpdateAPIModel(ctx context.Context) (*sta
 		apiModel.ShortDescription = sgsdkgo.Null[string]()
 	}
 
-	if !m.IsPublic.IsNull() && !m.IsPublic.IsUnknown() {
+	if isPublicChanged(m.IsPublic, prior) {
 		apiModel.IsPublic = sgsdkgo.Optional(sgsdkgo.IsPublicEnum(m.IsPublic.ValueString()))
 	}
 
@@ -185,4 +188,14 @@ func BuildAPIModelToStackTemplateModel(apiResponse *stacktemplates.ReadStackTemp
 	}
 
 	return model, diags
+}
+
+func isPublicChanged(planned types.String, prior *StackTemplateResourceModel) bool {
+	if planned.IsNull() || planned.IsUnknown() {
+		return false
+	}
+	if prior == nil {
+		return true
+	}
+	return !planned.Equal(prior.IsPublic)
 }

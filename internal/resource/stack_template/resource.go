@@ -150,7 +150,7 @@ func (r *stackTemplateResource) Update(ctx context.Context, req resource.UpdateR
 
 	templateID := state.Id.ValueString()
 
-	payload, diags := plan.ToUpdateAPIModel(ctx)
+	payload, diags := plan.ToUpdateAPIModel(ctx, &state)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
