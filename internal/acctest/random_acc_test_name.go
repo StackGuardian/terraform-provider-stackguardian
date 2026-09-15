@@ -8,10 +8,6 @@ import (
 )
 
 const (
-	// charSetAlphaNum is the alphanumeric character set for use with
-	// RandStringFromCharSet.
-	charSetAlphaNum = "abcdefghijklmnopqrstuvwxyz012346789"
-
 	// charSetAlpha is the alphabetical character set for use with
 	// RandStringFromCharSet.
 	charSetAlpha = "abcdefghijklmnopqrstuvwxyz"
