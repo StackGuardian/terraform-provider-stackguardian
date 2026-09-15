@@ -13,6 +13,7 @@ import (
 // Schema defines the schema for the resource.
 func (r *policyDatasource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Reads an existing policy, including its evaluation configuration and the resource paths it is enforced on.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.DatasourceId,
@@ -107,49 +108,49 @@ func (r *policyDatasource) Schema(_ context.Context, _ datasource.SchemaRequest,
 											Computed:            true,
 										},
 										"source_config_kind": schema.StringAttribute{
-											MarkdownDescription: "",
+											MarkdownDescription: constants.PolicyVCSConfigCustomSourceSourceConfigKind,
 											Computed:            true,
 										},
 										"config": schema.SingleNestedAttribute{
-											MarkdownDescription: "",
+											MarkdownDescription: constants.PolicyVCSConfigCustomSourceConfig,
 											Computed:            true,
 											Attributes: map[string]schema.Attribute{
 												"include_submodule": schema.BoolAttribute{
-													MarkdownDescription: "",
+													MarkdownDescription: constants.PolicyVCSConfigCustomSourceIncludeSubmodule,
 													Computed:            true,
 												},
 												"ref": schema.StringAttribute{
-													MarkdownDescription: "",
+													MarkdownDescription: constants.PolicyVCSConfigCustomSourceRef,
 													Computed:            true,
 												},
 												"git_core_auto_crlf": schema.BoolAttribute{
-													MarkdownDescription: "",
+													MarkdownDescription: constants.PolicyVCSConfigCustomSourceGitCoreAutoCRLF,
 													Computed:            true,
 												},
 												"git_sparse_checkout_config": schema.StringAttribute{
-													MarkdownDescription: "",
+													MarkdownDescription: constants.PolicyVCSConfigCustomSourceGitSparseCheckoutConfig,
 													Computed:            true,
 												},
 												"auth": schema.StringAttribute{
-													MarkdownDescription: "",
+													MarkdownDescription: constants.PolicyVCSConfigCustomSourceAuth,
 													Computed:            true,
 												},
 												"working_dir": schema.StringAttribute{
-													MarkdownDescription: "",
+													MarkdownDescription: constants.PolicyVCSConfigCustomSourceWorkingDir,
 													Computed:            true,
 												},
 												"repo": schema.StringAttribute{
-													MarkdownDescription: "",
+													MarkdownDescription: constants.PolicyVCSConfigCustomSourceRepo,
 													Computed:            true,
 												},
 												"is_private": schema.BoolAttribute{
-													MarkdownDescription: "",
+													MarkdownDescription: constants.PolicyVCSConfigCustomSourceIsPrivate,
 													Computed:            true,
 												},
 											},
 										},
 										"additional_config": schema.StringAttribute{
-											MarkdownDescription: "",
+											MarkdownDescription: constants.PolicyVCSConfigAdditionalConfig,
 											Computed:            true,
 										},
 									},

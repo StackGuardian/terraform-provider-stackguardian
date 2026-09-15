@@ -44,7 +44,7 @@ resource "stackguardian_workflow_step_template" "test" {
 }
 
 func TestAccWorkflowStepTemplate_Basic(t *testing.T) {
-	name := "example-workflow-step-template1"
+	name := acctest.ResourceName("example-workflow-step-template1")
 
 	t.Cleanup(func() { deleteWorkflowStepTemplateFixture(name) })
 
@@ -94,7 +94,7 @@ resource "stackguardian_workflow_step_template" "test" {
 }
 
 func TestAccWorkflowStepTemplate_WithRuntime(t *testing.T) {
-	name := "example-workflow-step-template2"
+	name := acctest.ResourceName("example-workflow-step-template2")
 
 	t.Cleanup(func() { deleteWorkflowStepTemplateFixture(name) })
 

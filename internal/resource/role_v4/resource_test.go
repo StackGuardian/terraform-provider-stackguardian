@@ -94,10 +94,10 @@ resource "stackguardian_rolev4" "%s" {
 )
 
 func TestAccRole(t *testing.T) {
-	workflowGroupResourceName := "rolev4-example-workflow-group"
-	workflowGroupName := "rolev4-example-workflow-group"
-	roleResourceName := "rolev4-example-role"
-	roleName := "rolev4-example-role"
+	workflowGroupResourceName := acctest.ResourceName("rolev4-example-workflow-group")
+	workflowGroupName := workflowGroupResourceName
+	roleResourceName := acctest.ResourceName("rolev4-example-role")
+	roleName := roleResourceName
 
 	t.Cleanup(func() {
 		deleteRoleFixture(roleName)
@@ -122,10 +122,10 @@ func TestAccRole(t *testing.T) {
 }
 
 func TestAccRoleRecreateOnExternalDelete(t *testing.T) {
-	workflowGroupResourceName := "rolev4-example-workflow-group2"
-	workflowGroupName := "rolev4-example-workflow-group2"
-	roleResourceName := "rolev4-example-role2"
-	roleName := "rolev4-example-role2"
+	workflowGroupResourceName := acctest.ResourceName("rolev4-example-workflow-group2")
+	workflowGroupName := workflowGroupResourceName
+	roleResourceName := acctest.ResourceName("rolev4-example-role2")
+	roleName := roleResourceName
 
 	t.Cleanup(func() {
 		deleteRoleFixture(roleName)
@@ -181,8 +181,8 @@ resource "stackguardian_rolev4" "%s" {
   }
 }`
 
-	roleResourceName := "rolev4-example-role3"
-	roleName := "rolev4-example-role3"
+	roleResourceName := acctest.ResourceName("rolev4-example-role3")
+	roleName := roleResourceName
 
 	t.Cleanup(func() { deleteRoleFixture(roleName) })
 
@@ -202,10 +202,10 @@ resource "stackguardian_rolev4" "%s" {
 
 func TestAccRoleV4IncompatibleResourceName(t *testing.T) {
 	// Test if the resource has name that is not compatible with the
-	workflowGroupResourceName := "rolev4-example-workflow-group4"
-	workflowGroupName := "rolev4-example-workflow-group4"
-	roleName := "rolev4-assign-example-role4"
-	roleResourceName := "rolev4-assign-example-role4"
+	workflowGroupResourceName := acctest.ResourceName("rolev4-example-workflow-group4")
+	workflowGroupName := workflowGroupResourceName
+	roleName := acctest.ResourceName("rolev4-assign-example-role4")
+	roleResourceName := roleName
 
 	t.Cleanup(func() {
 		deleteRoleFixture(roleName)
@@ -230,14 +230,17 @@ func TestAccRoleV4IncompatibleResourceName(t *testing.T) {
 }
 
 func TestAccRoleOptionalId(t *testing.T) {
-	t.Cleanup(func() { deleteRoleFixture("rolev4_example_role5") })
-
 	// Test if the resource has name that is not compatible with the
-	testResource := `
+	roleID := acctest.ResourceName("rolev4-example-role5")
+	roleIDResourceName := acctest.ResourceName("rolev4-example-role5-resource-name")
+
+	t.Cleanup(func() { deleteRoleFixture(roleID) })
+
+	const roleConfig = `
 resource "stackguardian_rolev4" "rolev4-example-role5" {
-  id = "rolev4_example_role5"
-  resource_name = "rolev4_example_role5_resource_name"
-  description   = "Example of terraform-provider-stackguardian for a Role"
+  id = %q
+  resource_name = %q
+  description   = %q
   tags = [
     "example-org",
   ]
@@ -251,24 +254,10 @@ resource "stackguardian_rolev4" "rolev4-example-role5" {
     }
   }
 }`
-	testUpdateResource := `
-resource "stackguardian_rolev4" "rolev4-example-role5" {
-  id = "rolev4_example_role5"
-  resource_name = "rolev4_example_role5_resource_name"
-  description   = "Example of terraform-provider-stackguardian for a Role updated"
-  tags = [
-    "example-org",
-  ]
-
-  # Defining allowed permissions for the role
-  allowed_permissions = {
-    # Permission for accessing a Workflow Group
-    "GET/api/v1/orgs/<org>/wfgrps/<wfGrp>/" = { # Replace with your organization name
-      name = "GetWorkflowGroup",
-      paths = {}
-    }
-  }
-}`
+	testResource := fmt.Sprintf(roleConfig, roleID, roleIDResourceName,
+		"Example of terraform-provider-stackguardian for a Role")
+	testUpdateResource := fmt.Sprintf(roleConfig, roleID, roleIDResourceName,
+		"Example of terraform-provider-stackguardian for a Role updated")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -284,7 +273,7 @@ resource "stackguardian_rolev4" "rolev4-example-role5" {
 					statecheck.ExpectKnownValue(
 						"stackguardian_rolev4.rolev4-example-role5",
 						tfjsonpath.New("id"),
-						knownvalue.StringExact("rolev4_example_role5"),
+						knownvalue.StringExact(roleID),
 					),
 				},
 			},
@@ -294,7 +283,7 @@ resource "stackguardian_rolev4" "rolev4-example-role5" {
 					statecheck.ExpectKnownValue(
 						"stackguardian_rolev4.rolev4-example-role5",
 						tfjsonpath.New("id"),
-						knownvalue.StringExact("rolev4_example_role5"),
+						knownvalue.StringExact(roleID),
 					),
 				},
 			},

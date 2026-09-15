@@ -14,9 +14,9 @@ import (
 // operation to move a workflow between groups.
 func TestAccWorkflowUsingTemplate_WorkflowGroupRequiresReplace(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-wfgrp-replace-tpl") + ":1"
-	wfGrpA := "tf-wfgrp-replace-a"
-	wfGrpB := "tf-wfgrp-replace-b"
-	id := "tf-wfgrp-replace-wf"
+	wfGrpA := acctest.ResourceName("tf-wfgrp-replace-a")
+	wfGrpB := acctest.ResourceName("tf-wfgrp-replace-b")
+	id := acctest.ResourceName("tf-wfgrp-replace-wf")
 
 	for _, g := range []string{wfGrpA, wfGrpB} {
 		if err := createWorkflowGroupFixture(g); err != nil {
@@ -61,8 +61,8 @@ func TestAccWorkflowUsingTemplate_WorkflowGroupRequiresReplace(t *testing.T) {
 // ExpectNonEmptyPlan on the refresh step asserts the resource is planned for recreate.
 func TestAccWorkflowUsingTemplate_ManualDeleteRecreates(t *testing.T) {
 	templateID := setupWorkflowTemplate(t, "tf-manualdel-tpl") + ":1"
-	wfGrp := "tf-manualdel-wfgrp"
-	id := "tf-manualdel-wf"
+	wfGrp := acctest.ResourceName("tf-manualdel-wfgrp")
+	id := acctest.ResourceName("tf-manualdel-wf")
 
 	if err := createWorkflowGroupFixture(wfGrp); err != nil {
 		t.Fatalf("wfgrp fixture: %s", err)

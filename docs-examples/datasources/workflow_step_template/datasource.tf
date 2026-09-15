@@ -1,3 +1,5 @@
+# Read an existing workflow step template. The template is a container -- the runnable
+# definition lives in a revision.
 data "stackguardian_workflow_step_template" "example" {
   id = "12345678901234567890"
 }

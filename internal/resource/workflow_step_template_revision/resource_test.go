@@ -92,7 +92,7 @@ resource "stackguardian_workflow_step_template_revision" "test" {
 }
 
 func TestAccWorkflowStepTemplateRevision_Basic(t *testing.T) {
-	templateName := "provider-test-workflow-step-template1"
+	templateName := acctest.ResourceName("provider-test-workflow-step-template1")
 	revisionAlias := "v1"
 
 	// Safety-net cleanup: Terraform's own destroy step tears these down in the normal case.
@@ -128,7 +128,7 @@ func TestAccWorkflowStepTemplateRevision_Basic(t *testing.T) {
 }
 
 func TestAccWorkflowStepTemplateRevision_Lifecycle(t *testing.T) {
-	templateName := "tf-provider-step-template-lifecycle"
+	templateName := acctest.ResourceName("tf-provider-step-template-lifecycle")
 	alias := "v1"
 
 	// Safety-net cleanup. Defers run LIFO, so registration order here is the
