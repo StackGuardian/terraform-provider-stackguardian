@@ -70,6 +70,14 @@ jobs:
       - name: "Build Provider"
         run: make build
 
+      # docs-validate-examples shells out to `terraform init` and `terraform
+      # validate`, so the CLI must be on PATH before the docs check runs.
+      - name: "Install Terraform ${{ matrix.terraform }}"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+          terraform_version: "${{ matrix.terraform }}"
+
       # Runs before the acceptance tests on purpose. These checks need no
       # credentials and no network, and they finish in a couple of minutes. Behind
       # test-acc they were skipped outright whenever the production API was
@@ -86,8 +94,8 @@ jobs:
 
       # TF_ACC_TERRAFORM_VERSION makes terraform-plugin-testing download and use
       # exactly this CLI, so the matrix is the single authority on which version
-      # is under test. Nothing else installs Terraform in this job, which rules
-      # out a stray binary on PATH silently taking over.
+      # is under test. The CLI installed above is the same version, which keeps
+      # the matrix authoritative.
       - name: "Test Provider with acceptance tests"
         run: make test-acc
         env:
