@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
@@ -42,22 +43,22 @@ func TestAccWorkflowTemplate_ValidateRuntimeSourceAuth(t *testing.T) {
 	}{
 		{
 			name:        "is_private true requires auth",
-			additional:  runtimeSourceConfig("GIT_OTHER", true, ""),
+			additional:  runtimeSourceConfig(constants.GitOther, true, ""),
 			expectError: `auth is required for this runtime_source`,
 		},
 		{
 			name:        "non-GIT_OTHER requires auth even when is_private is false",
-			additional:  runtimeSourceConfig("GITHUB_COM", false, ""),
+			additional:  runtimeSourceConfig(constants.GithubCom, false, ""),
 			expectError: `auth is required for this runtime_source`,
 		},
 		{
 			name:        "GIT_OTHER auth must start with /secrets/",
-			additional:  runtimeSourceConfig("GIT_OTHER", true, "/integrations/oops"),
-			expectError: `auth must start with /secrets/ for GIT_OTHER`,
+			additional:  runtimeSourceConfig(constants.GitOther, true, "/integrations/oops"),
+			expectError: `auth must start with /secrets/ for ` + constants.GitOther,
 		},
 		{
 			name:        "non-GIT_OTHER auth must start with /integration",
-			additional:  runtimeSourceConfig("GITHUB_COM", true, "/secrets/oops"),
+			additional:  runtimeSourceConfig(constants.GithubCom, true, "/secrets/oops"),
 			expectError: `auth must start with /integration for this source_config_dest_kind`,
 		},
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -14,13 +15,13 @@ import (
 // isPrivate/auth rules below apply to. Other kinds (e.g. CONTAINER_REGISTRY, INLINE) don't have
 // this isPrivate/auth/repo shape, so validation is a no-op for them.
 var runtimeSourceDestKindsRequiringAuthRules = map[string]bool{
-	"GITHUB_COM":        true,
-	"GITHUB_APP_CUSTOM": true,
-	"GIT_OTHER":         true,
-	"BITBUCKET_ORG":     true,
-	"GITLAB_COM":        true,
-	"AZURE_DEVOPS":      true,
-	"AZURE_DEVOPS_SP":   true,
+	constants.GithubCom:       true,
+	constants.GithubAppCustom: true,
+	constants.GitOther:        true,
+	constants.BitbucketOrg:    true,
+	constants.GitlabCom:       true,
+	constants.AzureDevops:     true,
+	constants.AzureDevopsSp:   true,
 }
 
 // ValidateRuntimeSourceAuth validates the is_private/auth relationship on a git-based
@@ -84,7 +85,7 @@ func ValidateRuntimeSourceAuth(ctx context.Context, runtimeSourceObj types.Objec
 
 	configPath := attrPath.AtName("config")
 
-	if (isPrivate || destKind != "GIT_OTHER") && !hasAuth {
+	if (isPrivate || destKind != constants.GitOther) && !hasAuth {
 		diags.AddAttributeError(
 			configPath.AtName("auth"),
 			"Invalid runtime_source Configuration",
@@ -94,12 +95,12 @@ func ValidateRuntimeSourceAuth(ctx context.Context, runtimeSourceObj types.Objec
 	}
 
 	if hasAuth {
-		if destKind == "GIT_OTHER" {
+		if destKind == constants.GitOther {
 			if !strings.HasPrefix(auth, "/secrets/") {
 				diags.AddAttributeError(
 					configPath.AtName("auth"),
 					"Invalid runtime_source Configuration",
-					"auth must start with /secrets/ for GIT_OTHER.",
+					"auth must start with /secrets/ for "+constants.GitOther+".",
 				)
 			}
 		} else if !strings.HasPrefix(auth, "/integration") {

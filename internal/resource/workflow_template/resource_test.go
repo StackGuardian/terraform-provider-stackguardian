@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
@@ -132,7 +133,7 @@ func TestAccWorkflowTemplate_WithRuntime(t *testing.T) {
 				Config: testAccWorkflowTemplate(templateName, sourceConfigKind, templateCallback("main", "src")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "template_name", templateName),
-					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "runtime_source.source_config_dest_kind", "GIT_OTHER"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "runtime_source.source_config_dest_kind", constants.GitOther),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "runtime_source.config.repo", "https://github.com/StackGuardian/tf-null-resource.git"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "runtime_source.config.is_private", "false"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "runtime_source.config.ref", "main"),
@@ -236,7 +237,7 @@ func TestAccWorkflowTemplate_WithVCSTriggers(t *testing.T) {
 				Config: testAccWorkflowTemplate(templateName, sourceConfigKind, templateCallback(true)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "template_name", templateName),
-					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "vcs_triggers.type", "GITHUB_COM"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "vcs_triggers.type", constants.GithubCom),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "vcs_triggers.create_tag.create_revision.enabled", "true"),
 				),
 			},

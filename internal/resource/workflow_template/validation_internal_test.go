@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -69,32 +70,32 @@ func TestValidateRuntimeSourceAuth(t *testing.T) {
 		},
 		{
 			name:      "is_private true requires auth",
-			obj:       mustRuntimeSourceObject(t, "GIT_OTHER", true, "", true),
+			obj:       mustRuntimeSourceObject(t, constants.GitOther, true, "", true),
 			wantError: "auth is required for this runtime_source",
 		},
 		{
 			name:      "non-GIT_OTHER requires auth even when is_private is false",
-			obj:       mustRuntimeSourceObject(t, "GITHUB_COM", false, "", true),
+			obj:       mustRuntimeSourceObject(t, constants.GithubCom, false, "", true),
 			wantError: "auth is required for this runtime_source",
 		},
 		{
 			name:      "GIT_OTHER auth must start with /secrets/",
-			obj:       mustRuntimeSourceObject(t, "GIT_OTHER", true, "/integrations/oops", false),
-			wantError: "auth must start with /secrets/ for GIT_OTHER",
+			obj:       mustRuntimeSourceObject(t, constants.GitOther, true, "/integrations/oops", false),
+			wantError: "auth must start with /secrets/ for " + constants.GitOther,
 		},
 		{
 			name:      "non-GIT_OTHER auth must start with /integration",
-			obj:       mustRuntimeSourceObject(t, "GITHUB_COM", true, "/secrets/oops", false),
+			obj:       mustRuntimeSourceObject(t, constants.GithubCom, true, "/secrets/oops", false),
 			wantError: "auth must start with /integration for this source_config_dest_kind",
 		},
 		{
 			name:      "GIT_OTHER private repo with a correctly-prefixed secret is valid",
-			obj:       mustRuntimeSourceObject(t, "GIT_OTHER", true, "/secrets/my-token", false),
+			obj:       mustRuntimeSourceObject(t, constants.GitOther, true, "/secrets/my-token", false),
 			wantError: "",
 		},
 		{
 			name:      "GIT_OTHER public repo with no auth is valid",
-			obj:       mustRuntimeSourceObject(t, "GIT_OTHER", false, "", true),
+			obj:       mustRuntimeSourceObject(t, constants.GitOther, false, "", true),
 			wantError: "",
 		},
 		{
@@ -102,19 +103,19 @@ func TestValidateRuntimeSourceAuth(t *testing.T) {
 			// contradiction the validator rejects; GIT_OTHER allows auth regardless of
 			// is_private.
 			name:      "GIT_OTHER public repo with auth is valid",
-			obj:       mustRuntimeSourceObject(t, "GIT_OTHER", false, "/secrets/my-token", false),
+			obj:       mustRuntimeSourceObject(t, constants.GitOther, false, "/secrets/my-token", false),
 			wantError: "",
 		},
 		{
 			name:      "non-GIT_OTHER private repo with a correctly-prefixed integration is valid",
-			obj:       mustRuntimeSourceObject(t, "GITHUB_COM", true, "/integrations/my-conn", false),
+			obj:       mustRuntimeSourceObject(t, constants.GithubCom, true, "/integrations/my-conn", false),
 			wantError: "",
 		},
 		{
 			// The prefix check is "/integration", not the exact literal "/integrations/" —
 			// this value has no trailing "s" or slash and must still pass.
 			name:      "non-GIT_OTHER auth prefix check is loose, not the exact literal /integrations/",
-			obj:       mustRuntimeSourceObject(t, "GITHUB_COM", true, "/integration-hub/my-conn", false),
+			obj:       mustRuntimeSourceObject(t, constants.GithubCom, true, "/integration-hub/my-conn", false),
 			wantError: "",
 		},
 	}
