@@ -109,7 +109,7 @@ func TestAccWorkflowTemplate_WithRuntime(t *testing.T) {
 			source_config_dest_kind = "GIT_OTHER"
 			config = {
 			  is_private                 = false
-			  repo                       = "https://github.com/taherkk/taher-null-resource.git"
+			  repo                       = "https://github.com/StackGuardian/tf-null-resource.git"
 			  ref                        = %q
 			  working_dir                = %q
 			  include_sub_module         = true
@@ -133,7 +133,7 @@ func TestAccWorkflowTemplate_WithRuntime(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "template_name", templateName),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "runtime_source.source_config_dest_kind", "GIT_OTHER"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "runtime_source.config.repo", "https://github.com/taherkk/taher-null-resource.git"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "runtime_source.config.repo", "https://github.com/StackGuardian/tf-null-resource.git"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "runtime_source.config.is_private", "false"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "runtime_source.config.ref", "main"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "runtime_source.config.working_dir", "src"),
@@ -209,7 +209,7 @@ func TestAccWorkflowTemplate_WithVCSTriggers(t *testing.T) {
 			config = {
 			  is_private = true
 			  auth       = "/integrations/tf-provider-test-connector"
-			  repo       = "https://github.com/taherkk/taher-null-resource.git"
+			  repo       = "https://github.com/StackGuardian/tf-null-resource.git"
 			}
 		  }
 		

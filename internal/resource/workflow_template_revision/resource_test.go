@@ -606,7 +606,7 @@ func TestAccWorkflowTemplateRevision_WithRuntimeSource(t *testing.T) {
 		    config = {
 		      is_private                 = false
 		      auth                       = "/integrations/tf-provider-test-connector"
-		      repo                       = "https://github.com/taherkk/taher-null-resource.git"
+		      repo                       = "https://github.com/StackGuardian/tf-null-resource.git"
 		      ref                        = %q
 		      working_dir                = "src"
 		      include_sub_module         = true
@@ -628,7 +628,7 @@ func TestAccWorkflowTemplateRevision_WithRuntimeSource(t *testing.T) {
 				Config: testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, templateRevisionCallback("main")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "runtime_source.source_config_dest_kind", "GITHUB_COM"),
-					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "runtime_source.config.repo", "https://github.com/taherkk/taher-null-resource.git"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "runtime_source.config.repo", "https://github.com/StackGuardian/tf-null-resource.git"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "runtime_source.config.is_private", "false"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "runtime_source.config.auth", "/integrations/tf-provider-test-connector"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "runtime_source.config.ref", "main"),
