@@ -39,7 +39,7 @@ import (
 	workflowgroup "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_group"
 	workflowsteptemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_step_template"
 	workflowsteptemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_step_template_revision"
-	workflowtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
+	wft "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
 	workflowtemplaterevision "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template_revision"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -251,7 +251,7 @@ func (p *stackguardianProvider) Resources(_ context.Context) []func() resource.R
 		policy.NewResource,
 		runnergroup.NewResource,
 		rolev4.NewResource,
-		workflowtemplate.NewResource,
+		wft.NewResource,
 		workflowtemplaterevision.NewResource,
 		stacktemplate.NewResource,
 		stacktemplaterevision.NewResource,

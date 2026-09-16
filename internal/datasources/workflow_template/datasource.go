@@ -6,7 +6,7 @@ import (
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
-	workflowtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
+	wft "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 )
 
@@ -49,7 +49,7 @@ func (d *workflowTemplateDataSource) Configure(_ context.Context, req datasource
 }
 
 func (d *workflowTemplateDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var config workflowtemplate.WorkflowTemplateResourceModel
+	var config wft.WorkflowTemplateResourceModel
 
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -74,7 +74,7 @@ func (d *workflowTemplateDataSource) Read(ctx context.Context, req datasource.Re
 		return
 	}
 
-	model, diags := workflowtemplate.BuildAPIModelToWorkflowTemplateModel(&readResp.Msg)
+	model, diags := wft.BuildAPIModelToWorkflowTemplateModel(&readResp.Msg)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

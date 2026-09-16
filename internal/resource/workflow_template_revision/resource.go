@@ -7,7 +7,7 @@ import (
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
-	workflowtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
+	wft "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -81,7 +81,7 @@ func (r *workflowTemplateRevisionResource) ValidateConfig(ctx context.Context, r
 		resp.Diagnostics.Append(wfStepsConfigNotAllowedForTerraformDiagnostics(templateModel.SourceConfigKind.ValueString(), hasWfStepsConfig)...)
 	}
 
-	resp.Diagnostics.Append(workflowtemplate.ValidateRuntimeSourceAuth(ctx, templateModel.RuntimeSource, path.Root("runtime_source"))...)
+	resp.Diagnostics.Append(wft.ValidateRuntimeSourceAuth(ctx, templateModel.RuntimeSource, path.Root("runtime_source"))...)
 }
 
 // Create creates the resource and sets the initial Terraform state.

@@ -8,7 +8,7 @@ import (
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/expanders"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/flatteners"
-	workflowtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
+	wft "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -574,7 +574,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) 
 
 	// Handle RuntimeSource
 	if !m.RuntimeSource.IsNull() && !m.RuntimeSource.IsUnknown() {
-		var runtimeSourceModel workflowtemplate.RuntimeSourceModel
+		var runtimeSourceModel wft.RuntimeSourceModel
 		diags := m.RuntimeSource.As(ctx, &runtimeSourceModel, basetypes.ObjectAsOptions{
 			UnhandledNullAsEmpty:    true,
 			UnhandledUnknownAsEmpty: true,
