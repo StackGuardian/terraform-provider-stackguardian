@@ -31,7 +31,7 @@ func TestErrorPattern(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := ErrorPattern(tc.msg).MatchString(tc.text)
+			got := TFStandardErrorPattern(tc.msg).MatchString(tc.text)
 			if got != tc.want {
 				t.Fatalf("ErrorPattern(%q).MatchString(%q) = %v, want %v", tc.msg, tc.text, got, tc.want)
 			}

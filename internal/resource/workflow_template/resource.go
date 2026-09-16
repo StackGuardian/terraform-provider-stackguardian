@@ -63,15 +63,15 @@ func (r *workflowTemplateResource) ImportState(ctx context.Context, req resource
 
 // ValidateConfig validates the is_private/auth relationship on runtime_source.
 func (r *workflowTemplateResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var config WorkflowTemplateResourceModel
+	var templateModel WorkflowTemplateResourceModel
 
-	diags := req.Config.Get(ctx, &config)
+	diags := req.Config.Get(ctx, &templateModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(ValidateRuntimeSourceAuth(ctx, config.RuntimeSource, path.Root("runtime_source"))...)
+	resp.Diagnostics.Append(ValidateRuntimeSourceAuth(ctx, templateModel.RuntimeSource, path.Root("runtime_source"))...)
 }
 
 // Create creates the resource and sets the initial Terraform state.

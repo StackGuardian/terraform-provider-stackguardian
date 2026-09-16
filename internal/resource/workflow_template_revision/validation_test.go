@@ -18,15 +18,15 @@ func TestAccWorkflowTemplateRevision_ValidateWfStepsConfigNotAllowedForTerraform
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
 	wfStepsConfig := `
-  alias = "revision-validate-wfsteps"
-
-  wf_steps_config = [
-    {
-      name                = "step-1"
-      wf_step_template_id = "/tf-provider-test-org/dummy-step-template:1"
-    }
-  ]
-`
+		  alias = "revision-validate-wfsteps"
+		
+		  wf_steps_config = [
+		    {
+		      name                = "step-1"
+		      wf_step_template_id = "/tf-provider-test-org/dummy-step-template:1"
+		    }
+		  ]
+		`
 
 	for _, sourceConfigKind := range []string{"TERRAFORM", "OPENTOFU"} {
 		t.Run(sourceConfigKind, func(t *testing.T) {
@@ -39,7 +39,7 @@ func TestAccWorkflowTemplateRevision_ValidateWfStepsConfigNotAllowedForTerraform
 				Steps: []resource.TestStep{
 					{
 						Config:      testAccWorkflowTemplateRevision("does-not-need-to-exist", sourceConfigKind, 500, 1024, wfStepsConfig),
-						ExpectError: acctest.ErrorPattern("wf_steps_config is not allowed when source_config_kind is TERRAFORM or OPENTOFU; those workflow types use fixed, built-in run steps instead."),
+						ExpectError: acctest.TFStandardErrorPattern("wf_steps_config is not allowed when source_config_kind is TERRAFORM or OPENTOFU; those workflow types use fixed, built-in run steps instead."),
 					},
 				},
 			})
@@ -56,17 +56,17 @@ func TestAccWorkflowTemplateRevision_ValidateRuntimeSourceAuthRequired(t *testin
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
-	config := testAccWorkflowTemplateRevision("does-not-need-to-exist", "CUSTOM", 500, 1024, `
-  alias = "revision-validate-runtime-source"
-
-  runtime_source = {
-    source_config_dest_kind = "GITHUB_COM"
-    config = {
-      is_private = true
-      repo       = "https://example.com/repo.git"
-    }
-  }
-`)
+	templateRevisionCallback := testAccWorkflowTemplateRevision("does-not-need-to-exist", "CUSTOM", 500, 1024, `
+		  alias = "revision-validate-runtime-source"
+		
+		  runtime_source = {
+		    source_config_dest_kind = "GITHUB_COM"
+		    config = {
+		      is_private = true
+		      repo       = "https://example.com/repo.git"
+		    }
+		  }
+		`)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -76,8 +76,8 @@ func TestAccWorkflowTemplateRevision_ValidateRuntimeSourceAuthRequired(t *testin
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
-				Config:      config,
-				ExpectError: acctest.ErrorPattern("auth is required for this runtime_source"),
+				Config:      templateRevisionCallback,
+				ExpectError: acctest.TFStandardErrorPattern("auth is required for this runtime_source"),
 			},
 		},
 	})

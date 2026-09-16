@@ -73,7 +73,7 @@ func TestAccWorkflowTemplate_ValidateRuntimeSourceAuth(t *testing.T) {
 				Steps: []resource.TestStep{
 					{
 						Config:      testAccWorkflowTemplate("does-not-need-to-exist", sourceConfigKind, tc.additional),
-						ExpectError: acctest.ErrorPattern(tc.expectError),
+						ExpectError: acctest.TFStandardErrorPattern(tc.expectError),
 					},
 				},
 			})

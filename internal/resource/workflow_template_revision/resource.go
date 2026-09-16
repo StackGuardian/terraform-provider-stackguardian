@@ -68,20 +68,20 @@ func (r *workflowTemplateRevisionResource) ImportState(ctx context.Context, req 
 //     those two kinds use fixed, built-in run steps instead.
 //   - the is_private/auth relationship on runtime_source.
 func (r *workflowTemplateRevisionResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var config WorkflowTemplateRevisionResourceModel
+	var templateModel WorkflowTemplateRevisionResourceModel
 
-	diags := req.Config.Get(ctx, &config)
+	diags := req.Config.Get(ctx, &templateModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if !config.SourceConfigKind.IsUnknown() && !config.WfStepsConfig.IsUnknown() {
-		hasWfStepsConfig := !config.WfStepsConfig.IsNull() && len(config.WfStepsConfig.Elements()) > 0
-		resp.Diagnostics.Append(wfStepsConfigNotAllowedForTerraformDiagnostics(config.SourceConfigKind.ValueString(), hasWfStepsConfig)...)
+	if !templateModel.SourceConfigKind.IsUnknown() && !templateModel.WfStepsConfig.IsUnknown() {
+		hasWfStepsConfig := !templateModel.WfStepsConfig.IsNull() && len(templateModel.WfStepsConfig.Elements()) > 0
+		resp.Diagnostics.Append(wfStepsConfigNotAllowedForTerraformDiagnostics(templateModel.SourceConfigKind.ValueString(), hasWfStepsConfig)...)
 	}
 
-	resp.Diagnostics.Append(workflowtemplate.ValidateRuntimeSourceAuth(ctx, config.RuntimeSource, path.Root("runtime_source"))...)
+	resp.Diagnostics.Append(workflowtemplate.ValidateRuntimeSourceAuth(ctx, templateModel.RuntimeSource, path.Root("runtime_source"))...)
 }
 
 // Create creates the resource and sets the initial Terraform state.

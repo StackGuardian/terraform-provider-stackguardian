@@ -262,20 +262,20 @@ func customHeader() http.Header {
 // testAccWorkflowUsingTemplate builds a Terraform config for the resource.
 func testAccWorkflowUsingTemplate(wfGrpName, id, wfType, templateID, additionalConfig string) string {
 	return fmt.Sprintf(`
-resource "stackguardian_workflow_from_template" "test" {
-  workflow_group_id = %q
-  id                = %q
-  wf_type           = %q
-
-  vcs_config = {
-    iac_vcs_config = {
-      iac_template_id = %q
-    }
-  }
-
-  %s
-}
-`, wfGrpName, id, wfType, templateID, additionalConfig)
+		resource "stackguardian_workflow_from_template" "test" {
+		  workflow_group_id = %q
+		  id                = %q
+		  wf_type           = %q
+		
+		  vcs_config = {
+		    iac_vcs_config = {
+		      iac_template_id = %q
+		    }
+		  }
+		
+		  %s
+		}
+		`, wfGrpName, id, wfType, templateID, additionalConfig)
 }
 
 // setupWorkflowStepTemplate creates and publishes a WORKFLOW_STEP template (with a
@@ -423,15 +423,15 @@ func TestAccWorkflowUsingTemplate_WithWfStepsConfig(t *testing.T) {
 	defer deleteWorkflowGroupFixture(wfGrpName)
 	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
 
-	config := fmt.Sprintf(`
-  wf_steps_config = [
-    {
-      name                = "step-one"
-      wf_step_template_id = %q
-      approval            = true
-    }
-  ]
-`, stepTemplateID)
+	fromTemplateCallback := fmt.Sprintf(`
+		  wf_steps_config = [
+		    {
+		      name                = "step-one"
+		      wf_step_template_id = %q
+		      approval            = true
+		    }
+		  ]
+		`, stepTemplateID)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -441,7 +441,7 @@ func TestAccWorkflowUsingTemplate_WithWfStepsConfig(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "CUSTOM", templateID, config),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "CUSTOM", templateID, fromTemplateCallback),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "wf_steps_config.0.name", "step-one"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "wf_steps_config.0.wf_step_template_id", stepTemplateID),
@@ -451,7 +451,7 @@ func TestAccWorkflowUsingTemplate_WithWfStepsConfig(t *testing.T) {
 			{
 				// Re-plan the same config: must be a no-op (no perpetual diff on the
 				// nested Optional fields / wf_step_template_id).
-				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "CUSTOM", templateID, config),
+				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "CUSTOM", templateID, fromTemplateCallback),
 				PlanOnly: true,
 			},
 		},
@@ -474,17 +474,17 @@ func TestAccWorkflowUsingTemplate_LifecycleWfStepsConfig(t *testing.T) {
 	defer deleteWorkflowGroupFixture(wfGrpName)
 	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
 
-	config := fmt.Sprintf(`
-  terraform_config = {
-    terraform_version = "1.5.0"
-    post_apply_wf_steps_config = [
-      {
-        name                = "post-apply-step"
-        wf_step_template_id = %q
-      }
-    ]
-  }
-`, stepTemplateID)
+	fromTemplateCallback := fmt.Sprintf(`
+		  terraform_config = {
+		    terraform_version = "1.5.0"
+		    post_apply_wf_steps_config = [
+		      {
+		        name                = "post-apply-step"
+		        wf_step_template_id = %q
+		      }
+		    ]
+		  }
+		`, stepTemplateID)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -494,14 +494,14 @@ func TestAccWorkflowUsingTemplate_LifecycleWfStepsConfig(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.post_apply_wf_steps_config.0.name", "post-apply-step"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.post_apply_wf_steps_config.0.wf_step_template_id", stepTemplateID),
 				),
 			},
 			{
-				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config),
+				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback),
 				PlanOnly: true,
 			},
 		},
@@ -521,27 +521,27 @@ func TestAccWorkflowUsingTemplate_Basic(t *testing.T) {
 
 	// No overrides — template defaults should be resolved onto the top-level attributes.
 	configNoOverrides := fmt.Sprintf(`
-  terraform_config = {
-    terraform_version = %q
-  }
-`, "1.5.0")
+		  terraform_config = {
+		    terraform_version = %q
+		  }
+		`, "1.5.0")
 
 	// Override the env var set on the revision.
 	configWithOverrides := fmt.Sprintf(`
-  terraform_config = {
-    terraform_version = %q
-  }
-
-  environment_variables = [
-    {
-      kind = "PLAIN_TEXT"
-      config = {
-        var_name   = "OVERRIDE_VAR"
-        text_value = "override-value"
-      }
-    }
-  ]
-`, "1.5.0")
+		  terraform_config = {
+		    terraform_version = %q
+		  }
+		
+		  environment_variables = [
+		    {
+		      kind = "PLAIN_TEXT"
+		      config = {
+		        var_name   = "OVERRIDE_VAR"
+		        text_value = "override-value"
+		      }
+		    }
+		  ]
+		`, "1.5.0")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -588,14 +588,14 @@ func TestAccWorkflowUsingTemplate_WithDescription(t *testing.T) {
 	defer deleteWorkflowGroupFixture(wfGrpName)
 	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
 
-	config := func(description string) string {
+	fromTemplateCallback := func(description string) string {
 		return fmt.Sprintf(`
-  description = %q
-
-  terraform_config = {
-    terraform_version = %q
-  }
-`, description, "1.5.0")
+		  description = %q
+		
+		  terraform_config = {
+		    terraform_version = %q
+		  }
+		`, description, "1.5.0")
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -606,14 +606,14 @@ func TestAccWorkflowUsingTemplate_WithDescription(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("initial description")),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback("initial description")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "description", "initial description"),
 				),
 			},
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("updated description")),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback("updated description")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "description", "updated description"),
@@ -697,18 +697,18 @@ func TestAccWorkflowUsingTemplate_WfStepRevisionInheritedFromTemplate(t *testing
 	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
 
 	// User declares only terraform_version; wf_step_template_revision_id is inherited.
-	config := `
-  terraform_config = {
-    terraform_version = "1.5.0"
-  }
-`
+	fromTemplateCallback := `
+		  terraform_config = {
+		    terraform_version = "1.5.0"
+		  }
+		`
 	// Suppress the inherited value with an explicit "" -> API maps "" to None -> default.
 	suppressConfig := `
-  terraform_config = {
-    terraform_version            = "1.5.0"
-    wf_step_template_revision_id = ""
-  }
-`
+		  terraform_config = {
+		    terraform_version            = "1.5.0"
+		    wf_step_template_revision_id = ""
+		  }
+		`
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -719,13 +719,13 @@ func TestAccWorkflowUsingTemplate_WfStepRevisionInheritedFromTemplate(t *testing
 		Steps: []resource.TestStep{
 			{
 				// Case 2: present in template, user omits -> inherited.
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback),
 				Check: resource.TestCheckResourceAttr(
 					"stackguardian_workflow_from_template.test", "terraform_config.wf_step_template_revision_id", stepRev),
 			},
 			{
 				// Inherited value round-trips with no diff.
-				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config),
+				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback),
 				PlanOnly: true,
 			},
 			{
@@ -760,13 +760,13 @@ func TestAccWorkflowUsingTemplate_WithWfStepTemplateRevisionId(t *testing.T) {
 	defer deleteWorkflowGroupFixture(wfGrpName)
 	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
 
-	config := func(stepRev string) string {
+	fromTemplateCallback := func(stepRev string) string {
 		return fmt.Sprintf(`
-  terraform_config = {
-    terraform_version            = "1.5.0"
-    wf_step_template_revision_id = %q
-  }
-`, stepRev)
+		  terraform_config = {
+		    terraform_version            = "1.5.0"
+		    wf_step_template_revision_id = %q
+		  }
+		`, stepRev)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -777,18 +777,18 @@ func TestAccWorkflowUsingTemplate_WithWfStepTemplateRevisionId(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config(step1)),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback(step1)),
 				Check: resource.TestCheckResourceAttr(
 					"stackguardian_workflow_from_template.test", "terraform_config.wf_step_template_revision_id", step1),
 			},
 			{
 				// Round-trips with no diff.
-				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config(step1)),
+				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback(step1)),
 				PlanOnly: true,
 			},
 			{
 				// Update to a different step template revision.
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config(step2)),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback(step2)),
 				Check: resource.TestCheckResourceAttr(
 					"stackguardian_workflow_from_template.test", "terraform_config.wf_step_template_revision_id", step2),
 			},
@@ -807,12 +807,12 @@ func TestAccWorkflowUsingTemplate_WithTerraformConfig(t *testing.T) {
 	defer deleteWorkflowGroupFixture(wfGrpName)
 	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
 
-	config := func(tfVersion string) string {
+	fromTemplateCallback := func(tfVersion string) string {
 		return fmt.Sprintf(`
-  terraform_config = {
-    terraform_version = %q
-  }
-`, tfVersion)
+		  terraform_config = {
+		    terraform_version = %q
+		  }
+		`, tfVersion)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -823,14 +823,14 @@ func TestAccWorkflowUsingTemplate_WithTerraformConfig(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("1.5.0")),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback("1.5.0")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_version", "1.5.0"),
 				),
 			},
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("1.5.7")),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback("1.5.7")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_version", "1.5.7"),
@@ -856,20 +856,20 @@ func TestAccWorkflowUsingTemplate_NormalUpdate(t *testing.T) {
 	defer deleteWorkflowGroupFixture(wfGrpName)
 	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
 
-	config := func(desc, tfVersion, tagVal, ctxVal string) string {
+	fromTemplateCallback := func(desc, tfVersion, tagVal, ctxVal string) string {
 		return fmt.Sprintf(`
-  description = %q
-
-  terraform_config = {
-    terraform_version = %q
-  }
-
-  tags = [%q]
-
-  context_tags = {
-    env = %q
-  }
-`, desc, tfVersion, tagVal, ctxVal)
+		  description = %q
+		
+		  terraform_config = {
+		    terraform_version = %q
+		  }
+		
+		  tags = [%q]
+		
+		  context_tags = {
+		    env = %q
+		  }
+		`, desc, tfVersion, tagVal, ctxVal)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -880,7 +880,7 @@ func TestAccWorkflowUsingTemplate_NormalUpdate(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("first", "1.5.0", "tag-a", "dev")),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback("first", "1.5.0", "tag-a", "dev")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "description", "first"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_version", "1.5.0"),
@@ -890,7 +890,7 @@ func TestAccWorkflowUsingTemplate_NormalUpdate(t *testing.T) {
 			},
 			{
 				// Update every attribute at once.
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("second", "1.5.7", "tag-b", "prod")),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback("second", "1.5.7", "tag-b", "prod")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "description", "second"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_version", "1.5.7"),
@@ -900,7 +900,7 @@ func TestAccWorkflowUsingTemplate_NormalUpdate(t *testing.T) {
 			},
 			{
 				// Re-apply identical config: must be a stable no-op.
-				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("second", "1.5.7", "tag-b", "prod")),
+				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback("second", "1.5.7", "tag-b", "prod")),
 				PlanOnly: true,
 			},
 		},
@@ -927,16 +927,16 @@ func TestAccWorkflowUsingTemplate_EmptyAllowBlankFalse(t *testing.T) {
 	// All allow_blank=False strings set to "". Without the omit-empty guard the API would
 	// reject the blank values; with it, they are dropped and creation succeeds.
 	emptyConfig := `
-  description = ""
-
-  terraform_config = {
-    terraform_version      = "1.5.0"
-    terraform_plan_options = ""
-    terraform_init_options = ""
-    drift_check            = false
-    drift_cron             = ""
-  }
-`
+		  description = ""
+		
+		  terraform_config = {
+		    terraform_version      = "1.5.0"
+		    terraform_plan_options = ""
+		    terraform_init_options = ""
+		    drift_check            = false
+		    drift_cron             = ""
+		  }
+		`
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -974,21 +974,21 @@ func TestAccWorkflowUsingTemplate_EmptyAllowBlankFalse(t *testing.T) {
 				// Transition empty -> real value, proving an allow_blank=False field can be
 				// set after being empty (a normal update on a previously-omitted field).
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, `
-  terraform_config = {
-    terraform_version      = "1.5.0"
-    terraform_plan_options = "-input=false"
-  }
-`),
+		  terraform_config = {
+		    terraform_version      = "1.5.0"
+		    terraform_plan_options = "-input=false"
+		  }
+		`),
 				Check: resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_plan_options", "-input=false"),
 			},
 			{
 				// And the transitioned real value must itself round-trip cleanly.
 				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, `
-  terraform_config = {
-    terraform_version      = "1.5.0"
-    terraform_plan_options = "-input=false"
-  }
-`),
+		  terraform_config = {
+		    terraform_version      = "1.5.0"
+		    terraform_plan_options = "-input=false"
+		  }
+		`),
 				PlanOnly: true,
 			},
 		},
@@ -1016,12 +1016,12 @@ func TestAccWorkflowUsingTemplate_ExplicitEmptySuppressesTemplateDefault(t *test
 
 	// environment_variables = [] explicitly suppresses the template's env var default.
 	suppressConfig := `
-  terraform_config = {
-    terraform_version = "1.5.0"
-  }
-
-  environment_variables = []
-`
+		  terraform_config = {
+		    terraform_version = "1.5.0"
+		  }
+		
+		  environment_variables = []
+		`
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -1076,22 +1076,22 @@ func TestAccWorkflowUsingTemplate_WithEnvironmentVariables(t *testing.T) {
 	defer deleteWorkflowGroupFixture(wfGrpName)
 	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
 
-	config := func(textValue string) string {
+	fromTemplateCallback := func(textValue string) string {
 		return fmt.Sprintf(`
-  terraform_config = {
-    terraform_version = %q
-  }
-
-  environment_variables = [
-    {
-      kind = "PLAIN_TEXT"
-      config = {
-        var_name   = "MY_VAR"
-        text_value = %q
-      }
-    }
-  ]
-`, "1.5.0", textValue)
+		  terraform_config = {
+		    terraform_version = %q
+		  }
+		
+		  environment_variables = [
+		    {
+		      kind = "PLAIN_TEXT"
+		      config = {
+		        var_name   = "MY_VAR"
+		        text_value = %q
+		      }
+		    }
+		  ]
+		`, "1.5.0", textValue)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -1102,7 +1102,7 @@ func TestAccWorkflowUsingTemplate_WithEnvironmentVariables(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("initial-value")),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback("initial-value")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "environment_variables.0.kind", "PLAIN_TEXT"),
@@ -1111,7 +1111,7 @@ func TestAccWorkflowUsingTemplate_WithEnvironmentVariables(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("updated-value")),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback("updated-value")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "environment_variables.0.config.text_value", "updated-value"),
@@ -1132,20 +1132,20 @@ func TestAccWorkflowUsingTemplate_WithUserSchedules(t *testing.T) {
 	defer deleteWorkflowGroupFixture(wfGrpName)
 	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
 
-	config := func(cron string) string {
+	fromTemplateCallback := func(cron string) string {
 		return fmt.Sprintf(`
-  terraform_config = {
-    terraform_version = %q
-  }
-
-  user_schedules = [
-    {
-      cron  = %q
-      state = "ENABLED"
-      desc  = "Runs on schedule"
-    }
-  ]
-`, "1.5.0", cron)
+		  terraform_config = {
+		    terraform_version = %q
+		  }
+		
+		  user_schedules = [
+		    {
+		      cron  = %q
+		      state = "ENABLED"
+		      desc  = "Runs on schedule"
+		    }
+		  ]
+		`, "1.5.0", cron)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -1156,7 +1156,7 @@ func TestAccWorkflowUsingTemplate_WithUserSchedules(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("0 8 ? * MON *")),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback("0 8 ? * MON *")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "user_schedules.0.cron", "0 8 ? * MON *"),
@@ -1164,7 +1164,7 @@ func TestAccWorkflowUsingTemplate_WithUserSchedules(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("0 9 ? * MON *")),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback("0 9 ? * MON *")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "user_schedules.0.cron", "0 9 ? * MON *"),
@@ -1185,18 +1185,18 @@ func TestAccWorkflowUsingTemplate_WithTagsAndContextTags(t *testing.T) {
 	defer deleteWorkflowGroupFixture(wfGrpName)
 	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
 
-	config := func(tag, ctxVal string) string {
+	fromTemplateCallback := func(tag, ctxVal string) string {
 		return fmt.Sprintf(`
-  terraform_config = {
-    terraform_version = %q
-  }
-
-  tags = [%q]
-
-  context_tags = {
-    env = %q
-  }
-`, "1.5.0", tag, ctxVal)
+		  terraform_config = {
+		    terraform_version = %q
+		  }
+		
+		  tags = [%q]
+		
+		  context_tags = {
+		    env = %q
+		  }
+		`, "1.5.0", tag, ctxVal)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -1207,7 +1207,7 @@ func TestAccWorkflowUsingTemplate_WithTagsAndContextTags(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("v1", "staging")),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback("v1", "staging")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "tags.0", "v1"),
@@ -1215,7 +1215,7 @@ func TestAccWorkflowUsingTemplate_WithTagsAndContextTags(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config("v2", "production")),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback("v2", "production")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "tags.0", "v2"),
@@ -1237,15 +1237,15 @@ func TestAccWorkflowUsingTemplate_WithApprovers(t *testing.T) {
 	defer deleteWorkflowGroupFixture(wfGrpName)
 	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
 
-	config := func(numApprovals int) string {
+	fromTemplateCallback := func(numApprovals int) string {
 		return fmt.Sprintf(`
-  terraform_config = {
-    terraform_version = %q
-  }
-
-  approvers                    = ["approver@example.com"]
-  number_of_approvals_required = %d
-`, "1.5.0", numApprovals)
+		  terraform_config = {
+		    terraform_version = %q
+		  }
+		
+		  approvers                    = ["approver@example.com"]
+		  number_of_approvals_required = %d
+		`, "1.5.0", numApprovals)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -1256,7 +1256,7 @@ func TestAccWorkflowUsingTemplate_WithApprovers(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config(1)),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback(1)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "approvers.0", "approver@example.com"),
@@ -1264,7 +1264,7 @@ func TestAccWorkflowUsingTemplate_WithApprovers(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config(2)),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback(2)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "number_of_approvals_required", "2"),
@@ -1286,25 +1286,25 @@ func TestAccWorkflowUsingTemplate_WithRunnerConstraints(t *testing.T) {
 	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
 
 	configShared := fmt.Sprintf(`
-  terraform_config = {
-    terraform_version = %q
-  }
-
-  runner_constraints = {
-    type = "shared"
-  }
-`, "1.5.0")
+		  terraform_config = {
+		    terraform_version = %q
+		  }
+		
+		  runner_constraints = {
+		    type = "shared"
+		  }
+		`, "1.5.0")
 
 	configPrivate := fmt.Sprintf(`
-  terraform_config = {
-    terraform_version = %q
-  }
-
-  runner_constraints = {
-    type  = "private"
-    names = ["runner-1"]
-  }
-`, "1.5.0")
+		  terraform_config = {
+		    terraform_version = %q
+		  }
+		
+		  runner_constraints = {
+		    type  = "private"
+		    names = ["runner-1"]
+		  }
+		`, "1.5.0")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -1345,26 +1345,26 @@ func TestAccWorkflowUsingTemplate_WithIacInputData(t *testing.T) {
 
 	configWithIacInput := func(dataExpr string) string {
 		return fmt.Sprintf(`
-resource "stackguardian_workflow_from_template" "test" {
-  workflow_group_id = %q
-  id                = %q
-  wf_type           = "TERRAFORM"
-
-  vcs_config = {
-    iac_vcs_config = {
-      iac_template_id = %q
-    }
-    iac_input_data = {
-      schema_type = "RAW_JSON"
-      data        = %s
-    }
-  }
-
-  terraform_config = {
-    terraform_version = %q
-  }
-}
-`, wfGrpName, id, templateID, dataExpr, "1.5.0")
+		resource "stackguardian_workflow_from_template" "test" {
+		  workflow_group_id = %q
+		  id                = %q
+		  wf_type           = "TERRAFORM"
+		
+		  vcs_config = {
+		    iac_vcs_config = {
+		      iac_template_id = %q
+		    }
+		    iac_input_data = {
+		      schema_type = "RAW_JSON"
+		      data        = %s
+		    }
+		  }
+		
+		  terraform_config = {
+		    terraform_version = %q
+		  }
+		}
+		`, wfGrpName, id, templateID, dataExpr, "1.5.0")
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -1410,11 +1410,11 @@ func TestAccWorkflowUsingTemplate_InNestedWorkflowGroup(t *testing.T) {
 	defer deleteWorkflowGroupFixture(childWfGrpName)
 	defer deleteWorkflowUsingTemplateFixture(childWfGrpName, id)
 
-	config := fmt.Sprintf(`
-  terraform_config = {
-    terraform_version = %q
-  }
-`, "1.5.0")
+	fromTemplateCallback := fmt.Sprintf(`
+		  terraform_config = {
+		    terraform_version = %q
+		  }
+		`, "1.5.0")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -1424,7 +1424,7 @@ func TestAccWorkflowUsingTemplate_InNestedWorkflowGroup(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowUsingTemplate(childWfGrpName, id, "TERRAFORM", templateID, config),
+				Config: testAccWorkflowUsingTemplate(childWfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "workflow_group_id", childWfGrpName),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
@@ -1449,23 +1449,23 @@ func TestAccWorkflowUsingTemplate_FullResolution(t *testing.T) {
 	defer deleteWorkflowGroupFixture(wfGrpName)
 	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
 
-	config := `
-  description = "test resolved schema"
-
-  terraform_config = {
-    terraform_version = "1.5.0"
-  }
-
-  environment_variables = [
-    {
-      kind = "PLAIN_TEXT"
-      config = {
-        var_name   = "RESOLVED_VAR"
-        text_value = "resolved-value"
-      }
-    }
-  ]
-`
+	fromTemplateCallback := `
+		  description = "test resolved schema"
+		
+		  terraform_config = {
+		    terraform_version = "1.5.0"
+		  }
+		
+		  environment_variables = [
+		    {
+		      kind = "PLAIN_TEXT"
+		      config = {
+		        var_name   = "RESOLVED_VAR"
+		        text_value = "resolved-value"
+		      }
+		    }
+		  ]
+		`
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -1475,7 +1475,7 @@ func TestAccWorkflowUsingTemplate_FullResolution(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
 					// User-declared fields resolved onto top-level attributes.
@@ -1510,7 +1510,7 @@ func TestAccWorkflowUsingTemplate_TemplateDefaultsResolved(t *testing.T) {
 
 	// The user declares nothing beyond the template reference. Env vars and the user
 	// schedule come from the template revision created in setupWorkflowTemplate.
-	config := ``
+	fromTemplateCallback := ``
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -1520,7 +1520,7 @@ func TestAccWorkflowUsingTemplate_TemplateDefaultsResolved(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "id", id),
 					// Template-derived env var resolved even though the user declared none.
@@ -1532,7 +1532,7 @@ func TestAccWorkflowUsingTemplate_TemplateDefaultsResolved(t *testing.T) {
 			},
 			{
 				// Re-applying the identical config must produce no plan (state == reality).
-				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config),
+				Config:   testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback),
 				PlanOnly: true,
 			},
 		},
@@ -1649,19 +1649,19 @@ func TestAccWorkflowUsingTemplate_DriftCronDroppedWhenCheckFalse(t *testing.T) {
 	// User disables drift_check and leaves drift_cron unset. The template would otherwise
 	// supply drift_cron="0 */6 * * ? *"; the coupling must drop it.
 	configCheckOff := `
-  terraform_config = {
-    terraform_version = "1.5.0"
-    drift_check       = false
-  }
-`
+		  terraform_config = {
+		    terraform_version = "1.5.0"
+		    drift_check       = false
+		  }
+		`
 	// Flip drift_check on with an explicit cron — the cron must now be kept.
 	configCheckOn := `
-  terraform_config = {
-    terraform_version = "1.5.0"
-    drift_check       = true
-    drift_cron        = "0 */6 * * ? *"
-  }
-`
+		  terraform_config = {
+		    terraform_version = "1.5.0"
+		    drift_check       = true
+		    drift_cron        = "0 */6 * * ? *"
+		  }
+		`
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -1710,13 +1710,13 @@ func TestAccWorkflowUsingTemplate_DriftDetection(t *testing.T) {
 	defer deleteWorkflowGroupFixture(wfGrpName)
 	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
 
-	config := `
-  description = "original description"
-
-  terraform_config = {
-    terraform_version = "1.5.0"
-  }
-`
+	fromTemplateCallback := `
+		  description = "original description"
+		
+		  terraform_config = {
+		    terraform_version = "1.5.0"
+		  }
+		`
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -1726,7 +1726,7 @@ func TestAccWorkflowUsingTemplate_DriftDetection(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, fromTemplateCallback),
 				Check: resource.TestCheckResourceAttr(
 					"stackguardian_workflow_from_template.test", "description", "original description"),
 			},
@@ -1776,13 +1776,13 @@ func TestAccWorkflowUsingTemplate_RevisionUpgrade(t *testing.T) {
 	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
 
 	// User declares only description + terraform_version; env vars come from the template.
-	config := `
-  description = "user-owned description"
-
-  terraform_config = {
-    terraform_version = "1.5.0"
-  }
-`
+	fromTemplateCallback := `
+		  description = "user-owned description"
+		
+		  terraform_config = {
+		    terraform_version = "1.5.0"
+		  }
+		`
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -1793,7 +1793,7 @@ func TestAccWorkflowUsingTemplate_RevisionUpgrade(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				// Create on rev1 → env var resolves to TMPL_VAR.
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", rev1, config),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", rev1, fromTemplateCallback),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "vcs_config.iac_vcs_config.iac_template_id", rev1),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "environment_variables.0.config.var_name", "TMPL_VAR"),
@@ -1805,7 +1805,7 @@ func TestAccWorkflowUsingTemplate_RevisionUpgrade(t *testing.T) {
 				// rev2 ADDS terraform_config drift fields (rev1 had none); they must re-resolve
 				// without an inconsistent-result error while the user's terraform_version is kept.
 				// rev2 has drift_check=true with a cron, so the cron is meaningful and kept.
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", rev2, config),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", rev2, fromTemplateCallback),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "vcs_config.iac_vcs_config.iac_template_id", rev2),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "environment_variables.0.config.var_name", "REV2_VAR"),
