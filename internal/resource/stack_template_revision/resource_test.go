@@ -19,16 +19,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-var org = config.Get().OrgName
-
 func getClient() *sgclient.Client {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
-	cfg := config.Get()
 	return sgclient.NewClient(
-		sgoption.WithApiKey(cfg.FormatApiKey()),
-		sgoption.WithBaseURL(cfg.ApiUri),
+		sgoption.WithApiKey(config.Get().FormatApiKey()),
+		sgoption.WithBaseURL(config.Get().ApiUri),
 		sgoption.WithHTTPHeader(customHeader),
 	)
 }
@@ -38,13 +35,13 @@ func getClient() *sgclient.Client {
 func createWorkflowTemplateFixture(templateName, sourceConfigKind string) error {
 	client := getClient()
 	kind := workflowtemplates.WorkflowTemplateSourceConfigKindEnum(sourceConfigKind)
-	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(context.TODO(), org, false, &workflowtemplates.CreateWorkflowTemplateRequest{
+	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(context.TODO(), config.Get().OrgName, false, &workflowtemplates.CreateWorkflowTemplateRequest{
 		Id:               &templateName,
 		TemplateName:     templateName,
 		SourceConfigKind: &kind,
 		TemplateType:     sgsdkgo.TemplateTypeEnumIac,
 		IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
-		OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+		OwnerOrg:         fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 	})
 	return err
 }
@@ -52,13 +49,13 @@ func createWorkflowTemplateFixture(templateName, sourceConfigKind string) error 
 func createStackTemplateFixture(templateName, sourceConfigKind string) error {
 	client := getClient()
 	kind := stacktemplates.StackTemplateSourceConfigKindEnum(sourceConfigKind)
-	_, err := client.StackTemplates.CreateStackTemplate(context.TODO(), org, false, &stacktemplates.CreateStackTemplateRequest{
+	_, err := client.StackTemplates.CreateStackTemplate(context.TODO(), config.Get().OrgName, false, &stacktemplates.CreateStackTemplateRequest{
 		Id:               &templateName,
 		TemplateName:     templateName,
 		SourceConfigKind: &kind,
 		TemplateType:     sgsdkgo.TemplateTypeEnumIacGroup,
 		IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
-		OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+		OwnerOrg:         fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 	})
 	return err
 }
@@ -67,17 +64,17 @@ func createStackTemplateFixture(templateName, sourceConfigKind string) error {
 
 func deleteWorkflowTemplateFixture(templateId string) {
 	client := getClient()
-	_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateId)
+	_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), config.Get().OrgName, templateId)
 }
 
 func deleteStackTemplateFixture(templateId string) {
 	client := getClient()
-	_ = client.StackTemplates.DeleteStackTemplate(context.TODO(), org, templateId)
+	_ = client.StackTemplates.DeleteStackTemplate(context.TODO(), config.Get().OrgName, templateId)
 }
 
 func deleteStackTemplateRevisionFixture(revisionId string) {
 	client := getClient()
-	_ = client.StackTemplateRevisions.DeleteStackTemplateRevision(context.TODO(), org, revisionId, true)
+	_ = client.StackTemplateRevisions.DeleteStackTemplateRevision(context.TODO(), config.Get().OrgName, revisionId, true)
 }
 
 // deprecateStackTemplateRevisionFixture deprecates a revision so it can be deleted
@@ -88,7 +85,7 @@ func deprecateStackTemplateRevisionFixture(revisionId string) {
 	client := getClient()
 	effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
 	message := "This revision is deprecated"
-	_, _ = client.StackTemplateRevisions.UpdateStackTemplateRevision(context.TODO(), org, revisionId, &stacktemplaterevisions.UpdateStackTemplateRevisionRequest{
+	_, _ = client.StackTemplateRevisions.UpdateStackTemplateRevision(context.TODO(), config.Get().OrgName, revisionId, &stacktemplaterevisions.UpdateStackTemplateRevisionRequest{
 		Deprecation: sgsdkgo.Optional(stacktemplaterevisions.Deprecation{
 			EffectiveDate: &effectiveDate,
 			Message:       &message,

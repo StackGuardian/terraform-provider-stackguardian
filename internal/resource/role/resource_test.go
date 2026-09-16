@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
@@ -16,8 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
-
 // Safety-net cleanup: Terraform's own destroy step tears these down in the normal case.
 // These exist so a test that fails before reaching destroy (e.g. a failed assertion) doesn't
 // leave the workflow group or role behind. Errors are ignored — the resource may already be
@@ -25,12 +22,12 @@ var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
 // its resource_name when the config doesn't set an explicit id.
 func deleteWorkflowGroupFixture(resourceName string) {
 	client := acctest.SGClient()
-	client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), org, resourceName)
+	client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), config.Get().OrgName, resourceName)
 }
 
 func deleteRoleFixture(roleID string) {
 	client := acctest.SGClient()
-	client.AccessManagement.DeleteRole(context.TODO(), org, roleID)
+	client.AccessManagement.DeleteRole(context.TODO(), config.Get().OrgName, roleID)
 }
 
 const (

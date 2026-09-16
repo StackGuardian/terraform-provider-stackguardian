@@ -16,16 +16,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-var org = config.Get().OrgName
-
 func getClient() *sgclient.Client {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
-	cfg := config.Get()
 	return sgclient.NewClient(
-		sgoption.WithApiKey(cfg.FormatApiKey()),
-		sgoption.WithBaseURL(cfg.ApiUri),
+		sgoption.WithApiKey(config.Get().FormatApiKey()),
+		sgoption.WithBaseURL(config.Get().ApiUri),
 		sgoption.WithHTTPHeader(customHeader),
 	)
 }
@@ -39,33 +36,33 @@ func createWorkflowGroupFixture(wfGrpName string) error {
 	}
 	if len(parts) > 1 {
 		parent := strings.Join(parts[:len(parts)-1], "/")
-		_, err := client.WorkflowGroups.CreateChildWorkflowGroup(context.TODO(), org, parent, payload)
+		_, err := client.WorkflowGroups.CreateChildWorkflowGroup(context.TODO(), config.Get().OrgName, parent, payload)
 		return err
 	}
-	_, err := client.WorkflowGroups.CreateWorkflowGroup(context.TODO(), org, payload)
+	_, err := client.WorkflowGroups.CreateWorkflowGroup(context.TODO(), config.Get().OrgName, payload)
 	return err
 }
 
 func deleteWorkflowGroupFixture(wfGrpName string) {
 	client := getClient()
-	_, _ = client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), org, wfGrpName)
+	_, _ = client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), config.Get().OrgName, wfGrpName)
 }
 
 func deleteWorkflowGitFixture(wfGrpName, workflowName string) {
 	client := getClient()
-	_, _ = client.Workflows.DeleteWorkflow(context.TODO(), org, workflowName, wfGrpName)
+	_, _ = client.Workflows.DeleteWorkflow(context.TODO(), config.Get().OrgName, workflowName, wfGrpName)
 }
 
 func testAccWorkflowGit(wfGrpName, resourceName, wfType, additionalConfig string) string {
 	return fmt.Sprintf(`
-resource "stackguardian_workflow_git" "test" {
-  workflow_group_id = %q
-  id			    = %q
-  wf_type           = %q
-
-  %s
-}
-`, wfGrpName, resourceName, wfType, additionalConfig)
+		resource "stackguardian_workflow_git" "test" {
+		  workflow_group_id = %q
+		  id			    = %q
+		  wf_type           = %q
+		
+		  %s
+		}
+		`, wfGrpName, resourceName, wfType, additionalConfig)
 }
 
 func TestAccWorkflowGit_WithVcsConfig(t *testing.T) {
@@ -85,22 +82,22 @@ func TestAccWorkflowGit_WithVcsConfig(t *testing.T) {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
-	config := func(description string) string {
+	gitCallback := func(description string) string {
 		return fmt.Sprintf(`
-  description = %q
-
-  vcs_config = {
-    iac_vcs_config = {
-      custom_source = {
-        config = {
-          is_private = false
-          repo       = "https://github.com/dummy/test-repo.git"
-        }
-        source_config_dest_kind = "GIT_OTHER"
-      }
-    }
-  }
-`, description)
+		  description = %q
+		
+		  vcs_config = {
+		    iac_vcs_config = {
+		      custom_source = {
+		        config = {
+		          is_private = false
+		          repo       = "https://github.com/dummy/test-repo.git"
+		        }
+		        source_config_dest_kind = "GIT_OTHER"
+		      }
+		    }
+		  }
+		`, description)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -111,7 +108,7 @@ func TestAccWorkflowGit_WithVcsConfig(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config("initial description")),
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", gitCallback("initial description")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "workflow_group_id", wfGrpName),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
@@ -121,7 +118,7 @@ func TestAccWorkflowGit_WithVcsConfig(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config("updated description")),
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", gitCallback("updated description")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "workflow_group_id", wfGrpName),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
@@ -149,25 +146,25 @@ func TestAccWorkflowGit_WithTerraformConfig(t *testing.T) {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
-	config := func(tfVersion string) string {
+	gitCallback := func(tfVersion string) string {
 		return fmt.Sprintf(`
-  vcs_config = {
-    iac_vcs_config = {
-      use_marketplace_template = false
-      custom_source = {
-        config = {
-          is_private = false
-          repo       = "https://github.com/dummy/test-repo.git"
-        }
-        source_config_dest_kind = "GIT_OTHER"
-      }
-    }
-  }
-
-  terraform_config = {
-    terraform_version = %q
-  }
-`, tfVersion)
+		  vcs_config = {
+		    iac_vcs_config = {
+		      use_marketplace_template = false
+		      custom_source = {
+		        config = {
+		          is_private = false
+		          repo       = "https://github.com/dummy/test-repo.git"
+		        }
+		        source_config_dest_kind = "GIT_OTHER"
+		      }
+		    }
+		  }
+		
+		  terraform_config = {
+		    terraform_version = %q
+		  }
+		`, tfVersion)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -178,7 +175,7 @@ func TestAccWorkflowGit_WithTerraformConfig(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowGit(wfGrpName, id, "TERRAFORM", config("1.5.0")),
+				Config: testAccWorkflowGit(wfGrpName, id, "TERRAFORM", gitCallback("1.5.0")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "workflow_group_id", wfGrpName),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
@@ -187,7 +184,7 @@ func TestAccWorkflowGit_WithTerraformConfig(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccWorkflowGit(wfGrpName, id, "TERRAFORM", config("1.5.7")),
+				Config: testAccWorkflowGit(wfGrpName, id, "TERRAFORM", gitCallback("1.5.7")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "workflow_group_id", wfGrpName),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
@@ -215,30 +212,30 @@ func TestAccWorkflowGit_WithEnvironmentVariables(t *testing.T) {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
-	config := func(textValue string) string {
+	gitCallback := func(textValue string) string {
 		return fmt.Sprintf(`
-  vcs_config = {
-    iac_vcs_config = {
-      custom_source = {
-        config = {
-          is_private = false
-          repo       = "https://github.com/dummy/test-repo.git"
-        }
-        source_config_dest_kind = "GIT_OTHER"
-      }
-    }
-  }
-
-  environment_variables = [
-    {
-      kind = "PLAIN_TEXT"
-      config = {
-        var_name   = "MY_VAR"
-        text_value = %q
-      }
-    }
-  ]
-`, textValue)
+		  vcs_config = {
+		    iac_vcs_config = {
+		      custom_source = {
+		        config = {
+		          is_private = false
+		          repo       = "https://github.com/dummy/test-repo.git"
+		        }
+		        source_config_dest_kind = "GIT_OTHER"
+		      }
+		    }
+		  }
+		
+		  environment_variables = [
+		    {
+		      kind = "PLAIN_TEXT"
+		      config = {
+		        var_name   = "MY_VAR"
+		        text_value = %q
+		      }
+		    }
+		  ]
+		`, textValue)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -249,7 +246,7 @@ func TestAccWorkflowGit_WithEnvironmentVariables(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config("initial-value")),
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", gitCallback("initial-value")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "environment_variables.0.kind", "PLAIN_TEXT"),
@@ -258,7 +255,7 @@ func TestAccWorkflowGit_WithEnvironmentVariables(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config("updated-value")),
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", gitCallback("updated-value")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "environment_variables.0.config.text_value", "updated-value"),
@@ -285,26 +282,26 @@ func TestAccWorkflowGit_WithTagsAndContextTags(t *testing.T) {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
-	config := func(tag, ctxVal string) string {
+	gitCallback := func(tag, ctxVal string) string {
 		return fmt.Sprintf(`
-  vcs_config = {
-    iac_vcs_config = {
-      custom_source = {
-        config = {
-          is_private = false
-          repo       = "https://github.com/dummy/test-repo.git"
-        }
-        source_config_dest_kind = "GIT_OTHER"
-      }
-    }
-  }
-
-  tags = [%q]
-
-  context_tags = {
-    env = %q
-  }
-`, tag, ctxVal)
+		  vcs_config = {
+		    iac_vcs_config = {
+		      custom_source = {
+		        config = {
+		          is_private = false
+		          repo       = "https://github.com/dummy/test-repo.git"
+		        }
+		        source_config_dest_kind = "GIT_OTHER"
+		      }
+		    }
+		  }
+		
+		  tags = [%q]
+		
+		  context_tags = {
+		    env = %q
+		  }
+		`, tag, ctxVal)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -315,7 +312,7 @@ func TestAccWorkflowGit_WithTagsAndContextTags(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config("v1", "staging")),
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", gitCallback("v1", "staging")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "tags.0", "v1"),
@@ -323,7 +320,7 @@ func TestAccWorkflowGit_WithTagsAndContextTags(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config("v2", "production")),
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", gitCallback("v2", "production")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "tags.0", "v2"),
@@ -351,23 +348,23 @@ func TestAccWorkflowGit_WithApprovers(t *testing.T) {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
-	config := func(numApprovals int) string {
+	gitCallback := func(numApprovals int) string {
 		return fmt.Sprintf(`
-  vcs_config = {
-    iac_vcs_config = {
-      custom_source = {
-        config = {
-          is_private = false
-          repo       = "https://github.com/dummy/test-repo.git"
-        }
-        source_config_dest_kind = "GIT_OTHER"
-      }
-    }
-  }
-
-  approvers                    = ["approver@example.com"]
-  number_of_approvals_required = %d
-`, numApprovals)
+		  vcs_config = {
+		    iac_vcs_config = {
+		      custom_source = {
+		        config = {
+		          is_private = false
+		          repo       = "https://github.com/dummy/test-repo.git"
+		        }
+		        source_config_dest_kind = "GIT_OTHER"
+		      }
+		    }
+		  }
+		
+		  approvers                    = ["approver@example.com"]
+		  number_of_approvals_required = %d
+		`, numApprovals)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -378,7 +375,7 @@ func TestAccWorkflowGit_WithApprovers(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config(1)),
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", gitCallback(1)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "approvers.0", "approver@example.com"),
@@ -386,7 +383,7 @@ func TestAccWorkflowGit_WithApprovers(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config(2)),
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", gitCallback(2)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "number_of_approvals_required", "2"),
@@ -413,28 +410,28 @@ func TestAccWorkflowGit_WithUserSchedules(t *testing.T) {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
-	config := func(cron string) string {
+	gitCallback := func(cron string) string {
 		return fmt.Sprintf(`
-  vcs_config = {
-    iac_vcs_config = {
-      custom_source = {
-        config = {
-          is_private = false
-          repo       = "https://github.com/dummy/test-repo.git"
-        }
-        source_config_dest_kind = "GIT_OTHER"
-      }
-    }
-  }
-
-  user_schedules = [
-    {
-      cron  = %q
-      state = "ENABLED"
-      desc  = "Runs on schedule"
-    }
-  ]
-`, cron)
+		  vcs_config = {
+		    iac_vcs_config = {
+		      custom_source = {
+		        config = {
+		          is_private = false
+		          repo       = "https://github.com/dummy/test-repo.git"
+		        }
+		        source_config_dest_kind = "GIT_OTHER"
+		      }
+		    }
+		  }
+		
+		  user_schedules = [
+		    {
+		      cron  = %q
+		      state = "ENABLED"
+		      desc  = "Runs on schedule"
+		    }
+		  ]
+		`, cron)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -445,7 +442,7 @@ func TestAccWorkflowGit_WithUserSchedules(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config("0 8 ? * MON *")),
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", gitCallback("0 8 ? * MON *")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "user_schedules.0.cron", "0 8 ? * MON *"),
@@ -453,7 +450,7 @@ func TestAccWorkflowGit_WithUserSchedules(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config("0 9 ? * MON *")),
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", gitCallback("0 9 ? * MON *")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "user_schedules.0.cron", "0 9 ? * MON *"),
@@ -482,53 +479,53 @@ func TestAccWorkflowGit_WithVcsTriggers_Push(t *testing.T) {
 
 	configPush := func(planOnly bool) string {
 		return fmt.Sprintf(`
-  vcs_config = {
-    iac_vcs_config = {
-      custom_source = {
-        config = {
-          is_private = false
-          repo       = "https://github.com/dummy/test-repo.git"
-        }
-        source_config_dest_kind = "GITHUB_COM"
-      }
-    }
-  }
-
-  vcs_triggers = {
-    tracked_branch = "main"
-    plan_only      = %t
-
-    push = {
-      createWfRun = { enabled = true }
-    }
-  }
-`, planOnly)
+		  vcs_config = {
+		    iac_vcs_config = {
+		      custom_source = {
+		        config = {
+		          is_private = false
+		          repo       = "https://github.com/dummy/test-repo.git"
+		        }
+		        source_config_dest_kind = "GITHUB_COM"
+		      }
+		    }
+		  }
+		
+		  vcs_triggers = {
+		    tracked_branch = "main"
+		    plan_only      = %t
+		
+		    push = {
+		      createWfRun = { enabled = true }
+		    }
+		  }
+		`, planOnly)
 	}
 
 	configPushWithFilters := func(patterns string) string {
 		return fmt.Sprintf(`
-  vcs_config = {
-    iac_vcs_config = {
-      custom_source = {
-        config = {
-          is_private = false
-          repo       = "https://github.com/dummy/test-repo.git"
-        }
-        source_config_dest_kind = "GITHUB_COM"
-      }
-    }
-  }
-
-  vcs_triggers = {
-    tracked_branch        = "main"
-    file_triggers_enabled = true
-    file_trigger_patterns = %s
-
-    push = {
-      createWfRun = { enabled = true }
-    }
-  }
-`, patterns)
+		  vcs_config = {
+		    iac_vcs_config = {
+		      custom_source = {
+		        config = {
+		          is_private = false
+		          repo       = "https://github.com/dummy/test-repo.git"
+		        }
+		        source_config_dest_kind = "GITHUB_COM"
+		      }
+		    }
+		  }
+		
+		  vcs_triggers = {
+		    tracked_branch        = "main"
+		    file_triggers_enabled = true
+		    file_trigger_patterns = %s
+		
+		    push = {
+		      createWfRun = { enabled = true }
+		    }
+		  }
+		`, patterns)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -592,72 +589,72 @@ func TestAccWorkflowGit_WithVcsTriggers_PullRequest(t *testing.T) {
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
 	configWithBoth := `
-  vcs_config = {
-    iac_vcs_config = {
-      custom_source = {
-        config = {
-          is_private = false
-          repo       = "https://github.com/dummy/test-repo.git"
-        }
-        source_config_dest_kind = "GITHUB_COM"
-      }
-    }
-  }
-
-  vcs_triggers = {
-    tracked_branch = "main"
-
-    pull_request_opened = {
-      createWfRun = { enabled = true }
-    }
-    pull_request_modified = {
-      createWfRun = { enabled = true }
-    }
-  }
-`
+		  vcs_config = {
+		    iac_vcs_config = {
+		      custom_source = {
+		        config = {
+		          is_private = false
+		          repo       = "https://github.com/dummy/test-repo.git"
+		        }
+		        source_config_dest_kind = "GITHUB_COM"
+		      }
+		    }
+		  }
+		
+		  vcs_triggers = {
+		    tracked_branch = "main"
+		
+		    pull_request_opened = {
+		      createWfRun = { enabled = true }
+		    }
+		    pull_request_modified = {
+		      createWfRun = { enabled = true }
+		    }
+		  }
+		`
 
 	configOpenedOnly := `
-  vcs_config = {
-    iac_vcs_config = {
-      custom_source = {
-        config = {
-          is_private = false
-          repo       = "https://github.com/dummy/test-repo.git"
-        }
-        source_config_dest_kind = "GITHUB_COM"
-      }
-    }
-  }
-
-  vcs_triggers = {
-    tracked_branch = "main"
-
-    pull_request_opened = {
-      createWfRun = { enabled = true }
-    }
-  }
-`
+		  vcs_config = {
+		    iac_vcs_config = {
+		      custom_source = {
+		        config = {
+		          is_private = false
+		          repo       = "https://github.com/dummy/test-repo.git"
+		        }
+		        source_config_dest_kind = "GITHUB_COM"
+		      }
+		    }
+		  }
+		
+		  vcs_triggers = {
+		    tracked_branch = "main"
+		
+		    pull_request_opened = {
+		      createWfRun = { enabled = true }
+		    }
+		  }
+		`
 
 	configAllPR := func(enabled bool) string {
 		return fmt.Sprintf(`
-  vcs_config = {
-    iac_vcs_config = {
-      custom_source = {
-        config = {
-          is_private = false
-          repo       = "https://github.com/dummy/test-repo.git"
-        }
-        source_config_dest_kind = "GITHUB_COM"
-      }
-    }
-  }
-
-  vcs_triggers = {
-    all_pull_requests = {
-      createWfRun = { enabled = %t }
-    }
-  }
-`, enabled)
+		  vcs_config = {
+		    iac_vcs_config = {
+		      custom_source = {
+		        config = {
+		          is_private = false
+		          repo       = "https://github.com/dummy/test-repo.git"
+		        }
+		        source_config_dest_kind = "GITHUB_COM"
+		      }
+		    }
+		  }
+		
+		  vcs_triggers = {
+		    all_pull_requests = {
+		      createWfRun = { enabled = %t }
+		    }
+		  }
+		`, enabled)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -719,26 +716,26 @@ func TestAccWorkflowGit_WithVcsTriggers_CreateTag(t *testing.T) {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
-	config := func(enabled bool) string {
+	gitCallback := func(enabled bool) string {
 		return fmt.Sprintf(`
-  vcs_config = {
-    iac_vcs_config = {
-      custom_source = {
-        config = {
-          is_private = false
-          repo       = "https://github.com/dummy/test-repo.git"
-        }
-        source_config_dest_kind = "GITHUB_COM"
-      }
-    }
-  }
-
-  vcs_triggers = {
-    create_tag = {
-      createWfRun = { enabled = %t }
-    }
-  }
-`, enabled)
+		  vcs_config = {
+		    iac_vcs_config = {
+		      custom_source = {
+		        config = {
+		          is_private = false
+		          repo       = "https://github.com/dummy/test-repo.git"
+		        }
+		        source_config_dest_kind = "GITHUB_COM"
+		      }
+		    }
+		  }
+		
+		  vcs_triggers = {
+		    create_tag = {
+		      createWfRun = { enabled = %t }
+		    }
+		  }
+		`, enabled)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -749,14 +746,14 @@ func TestAccWorkflowGit_WithVcsTriggers_CreateTag(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config(true)),
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", gitCallback(true)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_triggers.create_tag.createWfRun.enabled", "true"),
 				),
 			},
 			{
-				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config(false)),
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", gitCallback(false)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_triggers.create_tag.createWfRun.enabled", "false"),
@@ -788,19 +785,19 @@ func TestAccWorkflowGit_InNestedWorkflowGroup(t *testing.T) {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
-	config := `
-  vcs_config = {
-    iac_vcs_config = {
-      custom_source = {
-        config = {
-          is_private = false
-          repo       = "https://github.com/dummy/test-repo.git"
-        }
-        source_config_dest_kind = "GIT_OTHER"
-      }
-    }
-  }
-`
+	gitCallback := `
+		  vcs_config = {
+		    iac_vcs_config = {
+		      custom_source = {
+		        config = {
+		          is_private = false
+		          repo       = "https://github.com/dummy/test-repo.git"
+		        }
+		        source_config_dest_kind = "GIT_OTHER"
+		      }
+		    }
+		  }
+		`
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -810,7 +807,7 @@ func TestAccWorkflowGit_InNestedWorkflowGroup(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowGit(childWfGrpName, id, "CUSTOM", config),
+				Config: testAccWorkflowGit(childWfGrpName, id, "CUSTOM", gitCallback),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "workflow_group_id", childWfGrpName),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
@@ -838,28 +835,28 @@ func TestAccWorkflowGit_WithIacInputData(t *testing.T) {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
-	config := func(schemaType, dataExpr string) string {
+	gitCallback := func(schemaType, dataExpr string) string {
 		return fmt.Sprintf(`
-  vcs_config = {
-    iac_vcs_config = {
-      custom_source = {
-        config = {
-          is_private = false
-          repo       = "https://github.com/dummy/test-repo.git"
-        }
-        source_config_dest_kind = "GIT_OTHER"
-      }
-    }
-    iac_input_data = {
-      schema_type = %q
-      data        = %s
-    }
-  }
-
-  terraform_config = {
-    terraform_version = "1.5.0"
-  }
-`, schemaType, dataExpr)
+		  vcs_config = {
+		    iac_vcs_config = {
+		      custom_source = {
+		        config = {
+		          is_private = false
+		          repo       = "https://github.com/dummy/test-repo.git"
+		        }
+		        source_config_dest_kind = "GIT_OTHER"
+		      }
+		    }
+		    iac_input_data = {
+		      schema_type = %q
+		      data        = %s
+		    }
+		  }
+		
+		  terraform_config = {
+		    terraform_version = "1.5.0"
+		  }
+		`, schemaType, dataExpr)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -870,7 +867,7 @@ func TestAccWorkflowGit_WithIacInputData(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowGit(wfGrpName, id, "TERRAFORM", config("RAW_JSON", `jsonencode({"env" = "staging"})`)),
+				Config: testAccWorkflowGit(wfGrpName, id, "TERRAFORM", gitCallback("RAW_JSON", `jsonencode({"env" = "staging"})`)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_config.iac_input_data.schema_type", "RAW_JSON"),
@@ -878,7 +875,7 @@ func TestAccWorkflowGit_WithIacInputData(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccWorkflowGit(wfGrpName, id, "TERRAFORM", config("RAW_JSON", `jsonencode({"env" = "production"})`)),
+				Config: testAccWorkflowGit(wfGrpName, id, "TERRAFORM", gitCallback("RAW_JSON", `jsonencode({"env" = "production"})`)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "vcs_config.iac_input_data.data", `{"env":"production"}`),
@@ -906,41 +903,41 @@ func TestAccWorkflowGit_WithRunnerConstraints(t *testing.T) {
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
 	configShared := `
-  vcs_config = {
-    iac_vcs_config = {
-      custom_source = {
-        config = {
-          is_private = false
-          repo       = "https://github.com/dummy/test-repo.git"
-        }
-        source_config_dest_kind = "GIT_OTHER"
-      }
-    }
-  }
-
-  runner_constraints = {
-    type = "shared"
-  }
-`
+		  vcs_config = {
+		    iac_vcs_config = {
+		      custom_source = {
+		        config = {
+		          is_private = false
+		          repo       = "https://github.com/dummy/test-repo.git"
+		        }
+		        source_config_dest_kind = "GIT_OTHER"
+		      }
+		    }
+		  }
+		
+		  runner_constraints = {
+		    type = "shared"
+		  }
+		`
 
 	configWithNames := `
-  vcs_config = {
-    iac_vcs_config = {
-      custom_source = {
-        config = {
-          is_private = false
-          repo       = "https://github.com/dummy/test-repo.git"
-        }
-        source_config_dest_kind = "GIT_OTHER"
-      }
-    }
-  }
-
-  runner_constraints = {
-    type  = "private"
-    names = ["runner-1"]
-  }
-`
+		  vcs_config = {
+		    iac_vcs_config = {
+		      custom_source = {
+		        config = {
+		          is_private = false
+		          repo       = "https://github.com/dummy/test-repo.git"
+		        }
+		        source_config_dest_kind = "GIT_OTHER"
+		      }
+		    }
+		  }
+		
+		  runner_constraints = {
+		    type  = "private"
+		    names = ["runner-1"]
+		  }
+		`
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -985,30 +982,30 @@ func TestAccWorkflowGit_WithMiniSteps_WfChaining(t *testing.T) {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
-	config := func(payloadExpr string) string {
+	gitCallback := func(payloadExpr string) string {
 		return fmt.Sprintf(`
-  vcs_config = {
-    iac_vcs_config = {
-      custom_source = {
-        config = {
-          is_private = false
-          repo       = "https://github.com/dummy/test-repo.git"
-        }
-        source_config_dest_kind = "GITHUB_COM"
-      }
-    }
-  }
-
-  mini_steps = {
-    wf_chaining = {
-      errored = [{
-        workflow_group_id    = "kk"
-        workflow_id          = "retest-of-bug-cewgh6dt-i7vp-0vo474rl"
-        workflow_run_payload = %s
-      }]
-    }
-  }
-`, payloadExpr)
+		  vcs_config = {
+		    iac_vcs_config = {
+		      custom_source = {
+		        config = {
+		          is_private = false
+		          repo       = "https://github.com/dummy/test-repo.git"
+		        }
+		        source_config_dest_kind = "GITHUB_COM"
+		      }
+		    }
+		  }
+		
+		  mini_steps = {
+		    wf_chaining = {
+		      errored = [{
+		        workflow_group_id    = "kk"
+		        workflow_id          = "retest-of-bug-cewgh6dt-i7vp-0vo474rl"
+		        workflow_run_payload = %s
+		      }]
+		    }
+		  }
+		`, payloadExpr)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -1019,7 +1016,7 @@ func TestAccWorkflowGit_WithMiniSteps_WfChaining(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config(`jsonencode({"test" = "value"})`)),
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", gitCallback(`jsonencode({"test" = "value"})`)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "mini_steps.wf_chaining.errored.0.workflow_group_id", "kk"),
@@ -1028,7 +1025,7 @@ func TestAccWorkflowGit_WithMiniSteps_WfChaining(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", config(`jsonencode({"test" = "updated"})`)),
+				Config: testAccWorkflowGit(wfGrpName, id, "CUSTOM", gitCallback(`jsonencode({"test" = "updated"})`)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "id", id),
 					resource.TestCheckResourceAttr("stackguardian_workflow_git.test", "mini_steps.wf_chaining.errored.0.workflow_run_payload", `{"test":"updated"}`),

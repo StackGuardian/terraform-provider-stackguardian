@@ -17,27 +17,25 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-var stepTemplateOrg = config.Get().OrgName
-
 func getStepTemplateTestClient() *sgclient.Client {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
-	cfg := config.Get()
+
 	return sgclient.NewClient(
-		sgoption.WithApiKey(cfg.FormatApiKey()),
-		sgoption.WithBaseURL(cfg.ApiUri),
+		sgoption.WithApiKey(config.Get().FormatApiKey()),
+		sgoption.WithBaseURL(config.Get().ApiUri),
 		sgoption.WithHTTPHeader(customHeader),
 	)
 }
 
 func deleteStepTemplateFixture(templateId string) {
 	client := getStepTemplateTestClient()
-	_ = client.WorkflowStepTemplate.DeleteWorkflowStepTemplate(context.TODO(), stepTemplateOrg, templateId)
+	_ = client.WorkflowStepTemplate.DeleteWorkflowStepTemplate(context.TODO(), config.Get().OrgName, templateId)
 }
 
 func deleteStepTemplateRevisionFixture(revisionId string) {
 	client := getStepTemplateTestClient()
-	_ = client.WorkflowStepTemplateRevision.DeleteWorkflowStepTemplateRevision(context.TODO(), stepTemplateOrg, revisionId, true)
+	_ = client.WorkflowStepTemplateRevision.DeleteWorkflowStepTemplateRevision(context.TODO(), config.Get().OrgName, revisionId, true)
 }
 
 // deprecateStepTemplateRevisionFixture deprecates a revision so it can be deleted (required
@@ -48,7 +46,7 @@ func deprecateStepTemplateRevisionFixture(revisionId string) {
 	client := getStepTemplateTestClient()
 	effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
 	message := "This revision is deprecated"
-	_, _ = client.WorkflowStepTemplateRevision.UpdateWorkflowStepTemplateRevision(context.TODO(), stepTemplateOrg, revisionId, &workflowsteptemplaterevision.UpdateWorkflowStepTemplateRevisionModel{
+	_, _ = client.WorkflowStepTemplateRevision.UpdateWorkflowStepTemplateRevision(context.TODO(), config.Get().OrgName, revisionId, &workflowsteptemplaterevision.UpdateWorkflowStepTemplateRevisionModel{
 		Deprecation: sgsdkgo.Optional(workflowsteptemplaterevision.Deprecation{
 			EffectiveDate: &effectiveDate,
 			Message:       &message,

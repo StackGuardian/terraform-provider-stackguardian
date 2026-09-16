@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
@@ -16,15 +16,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
-
 // deleteConnectorByResourceName is a safety-net cleanup for a test that fails before
 // Terraform's own destroy step runs. A connector's id is server-generated when the config
 // doesn't set one explicitly, so this looks it up by resource_name via ListAllConnectors
 // before deleting. Best-effort: errors and no-matches are ignored.
 func deleteConnectorByResourceName(resourceName string) {
 	client := acctest.SGClient()
-	resp, err := client.Connectors.ListAllConnectors(context.TODO(), org, &sgsdkgo.ListAllConnectorsRequest{
+	resp, err := client.Connectors.ListAllConnectors(context.TODO(), config.Get().OrgName, &sgsdkgo.ListAllConnectorsRequest{
 		ResourceNames: sgsdkgo.String(resourceName),
 	})
 	if err != nil {
@@ -32,7 +30,7 @@ func deleteConnectorByResourceName(resourceName string) {
 	}
 	for _, c := range resp.Msg {
 		if c != nil && c.Msg != nil {
-			client.Connectors.DeleteConnector(context.TODO(), c.Msg.Id, org)
+			client.Connectors.DeleteConnector(context.TODO(), c.Msg.Id, config.Get().OrgName)
 		}
 	}
 }
@@ -40,7 +38,7 @@ func deleteConnectorByResourceName(resourceName string) {
 // deleteConnectorByID is a safety-net cleanup for a test with an explicit, known id.
 func deleteConnectorByID(id string) {
 	client := acctest.SGClient()
-	client.Connectors.DeleteConnector(context.TODO(), id, org)
+	client.Connectors.DeleteConnector(context.TODO(), id, config.Get().OrgName)
 }
 
 const (

@@ -32,10 +32,9 @@ func TestAccPreCheck(t *testing.T) {
 }
 
 func SGClient() *sgclient.Client {
-	cfg := config.Get()
 	client := sgclient.NewClient(
-		sgoption.WithBaseURL(cfg.ApiUri),
-		sgoption.WithApiKey(cfg.FormatApiKey()),
+		sgoption.WithBaseURL(config.Get().ApiUri),
+		sgoption.WithApiKey(config.Get().FormatApiKey()),
 	)
 
 	return client

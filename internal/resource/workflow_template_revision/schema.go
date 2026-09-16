@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
-	workflowtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
+	wft "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -290,6 +290,10 @@ var mount_point = map[string]schema.Attribute{
 	"read_only": schema.BoolAttribute{
 		MarkdownDescription: constants.MountPointReadOnly,
 		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.Bool{
+			boolplanmodifier.UseStateForUnknown(),
+		},
 	},
 }
 var wfStepsConfig = schema.NestedAttributeObject{
@@ -433,7 +437,7 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 						},
 						"type": schema.StringAttribute{
 							MarkdownDescription: constants.InputSchemaType,
-							Optional:            true,
+							Required:            true,
 						},
 						"encoded_data": schema.StringAttribute{
 							MarkdownDescription: constants.InputSchemaEncodedData,
@@ -569,7 +573,7 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				MarkdownDescription: fmt.Sprintf(constants.RuntimeSource, "revision"),
 				Optional:            true,
 				Computed:            true,
-				Attributes:          workflowtemplate.WorkflowTemplateRuntimeSourceConfig(),
+				Attributes:          wft.WorkflowTemplateRuntimeSourceConfig(),
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseStateForUnknown(),
 				},

@@ -4,16 +4,15 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 var sourceConfigKind = "TERRAFORM"
-var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
 
 // deleteStackTemplateFixture is a safety-net cleanup: Terraform's own destroy step tears the
 // template down in the normal case. This exists so a test that fails before reaching destroy
@@ -22,7 +21,7 @@ var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
 // config doesn't set an explicit id.
 func deleteStackTemplateFixture(id string) {
 	client := acctest.SGClient()
-	client.StackTemplates.DeleteStackTemplate(context.TODO(), org, id)
+	client.StackTemplates.DeleteStackTemplate(context.TODO(), config.Get().OrgName, id)
 }
 
 func TestAccStackTemplate_Basic(t *testing.T) {

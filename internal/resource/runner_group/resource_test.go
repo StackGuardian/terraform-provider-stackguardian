@@ -15,9 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-var azureStorageBackendAccessKey = config.Get().AzureStorageAccessKey
-var org = config.Get().OrgName
-
 // deleteRunnerGroupFixture is a safety-net cleanup: Terraform's own destroy step tears the
 // runner group down in the normal case. This exists so a test that fails before reaching
 // destroy (e.g. a failed assertion) doesn't leave it behind. Errors are ignored — the
@@ -25,7 +22,7 @@ var org = config.Get().OrgName
 // resource_name when the config doesn't set an explicit id.
 func deleteRunnerGroupFixture(id string) {
 	client := acctest.SGClient()
-	client.RunnerGroups.DeleteRunnerGroup(context.TODO(), org, id)
+	client.RunnerGroups.DeleteRunnerGroup(context.TODO(), config.Get().OrgName, id)
 }
 
 var (
@@ -116,7 +113,7 @@ func TestAccRunnerGroupAzureBlobStorage(t *testing.T) {
     azure_blob_storage_account_name = "blobfbitv1"
     type                            = "azure_blob_storage"
   }
-}`, blobRunnerGroupName, azureStorageBackendAccessKey),
+}`, blobRunnerGroupName, config.Get().AzureStorageAccessKey),
 			},
 			{
 				Config: fmt.Sprintf(`resource "stackguardian_runner_group" "example-runner-group2" {
@@ -127,7 +124,7 @@ func TestAccRunnerGroupAzureBlobStorage(t *testing.T) {
     azure_blob_storage_account_name = "blobfbitv1"
     type                            = "azure_blob_storage"
   }
-}`, blobRunnerGroupName, azureStorageBackendAccessKey),
+}`, blobRunnerGroupName, config.Get().AzureStorageAccessKey),
 			},
 		},
 	})
@@ -204,7 +201,7 @@ func TestAccConnectorOptionalId(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(testResource, optionalRunnerGroupID, optionalRunnerGroupName, azureStorageBackendAccessKey),
+				Config: fmt.Sprintf(testResource, optionalRunnerGroupID, optionalRunnerGroupName, config.Get().AzureStorageAccessKey),
 				//Check:  resource.TestCheckResourceAttr("aws-cloud-connector-example2"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
@@ -215,7 +212,7 @@ func TestAccConnectorOptionalId(t *testing.T) {
 				},
 			},
 			{
-				Config: fmt.Sprintf(testUpdateResource, optionalRunnerGroupName, azureStorageBackendAccessKey),
+				Config: fmt.Sprintf(testUpdateResource, optionalRunnerGroupName, config.Get().AzureStorageAccessKey),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"stackguardian_runner_group.example-runner-group3",

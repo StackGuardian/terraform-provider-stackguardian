@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
@@ -90,8 +89,6 @@ resource "stackguardian_role_assignment" "%s" {
 `
 )
 
-var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
-
 // Safety-net cleanup: Terraform's own destroy step tears these down in the
 // normal case. These exist so a test that fails before reaching destroy
 // (e.g. a failed assertion) doesn't leave the workflow group, role, or role
@@ -99,17 +96,17 @@ var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
 // deleted by Terraform's own destroy step.
 func deleteWorkflowGroupFixture(resourceName string) {
 	client := acctest.SGClient()
-	client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), org, resourceName)
+	client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), config.Get().OrgName, resourceName)
 }
 
 func deleteRoleFixture(resourceName string) {
 	client := acctest.SGClient()
-	client.AccessManagement.DeleteRole(context.TODO(), org, resourceName)
+	client.AccessManagement.DeleteRole(context.TODO(), config.Get().OrgName, resourceName)
 }
 
 func deleteRoleAssignmentFixture(userId string) {
 	client := acctest.SGClient()
-	client.AccessManagement.DeleteUser(context.TODO(), org, &sgsdkgo.GetorRemoveUserFromOrganization{UserId: &userId})
+	client.AccessManagement.DeleteUser(context.TODO(), config.Get().OrgName, &sgsdkgo.GetorRemoveUserFromOrganization{UserId: &userId})
 }
 
 func TestAccRoleAssignment(t *testing.T) {

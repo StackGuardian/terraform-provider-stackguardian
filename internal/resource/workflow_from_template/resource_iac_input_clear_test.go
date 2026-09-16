@@ -13,6 +13,7 @@ import (
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
@@ -35,18 +36,18 @@ func setupTemplateWithInputDefaults(t *testing.T, name string) string {
 	t.Cleanup(func() {
 		eff := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
 		msg := "cleanup"
-		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, revisionID,
+		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, revisionID,
 			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
 				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{EffectiveDate: &eff, Message: &msg})})
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, revisionID, true)
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), config.Get().OrgName, name)
 	})
 
-	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(context.TODO(), org, false,
+	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(context.TODO(), config.Get().OrgName, false,
 		&workflowtemplates.CreateWorkflowTemplateRequest{
 			Id: &name, TemplateName: name, SourceConfigKind: &sck,
 			TemplateType: sgsdkgo.TemplateTypeEnum("IAC"), IsPublic: sgsdkgo.IsPublicEnumZero.Ptr(),
-			OwnerOrg: fmt.Sprintf("/orgs/%s", org),
+			OwnerOrg: fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 		})
 	if err != nil && !is409(err) {
 		t.Fatalf("create tpl: %s", err)
@@ -61,10 +62,10 @@ func setupTemplateWithInputDefaults(t *testing.T, name string) string {
 		}
 	}`))
 	isCommitted := true
-	_, err = client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(context.TODO(), org, name,
+	_, err = client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, name,
 		&workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
 			Alias: "v1", SourceConfigKind: &sck, IsPublic: sgsdkgo.IsPublicEnumZero.Ptr(),
-			OwnerOrg: fmt.Sprintf("/orgs/%s", org),
+			OwnerOrg: fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 			InputSchemas: []sgsdkgo.InputSchemas{
 				{
 					Type:        sgsdkgo.InputSchemasTypeEnumFormJsonschema,
@@ -77,15 +78,15 @@ func setupTemplateWithInputDefaults(t *testing.T, name string) string {
 		t.Fatalf("create rev: %s", err)
 	}
 
-	if _, err := client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, revisionID,
+	if _, err := client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, revisionID,
 		&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne)}); err != nil {
 		t.Fatalf("publish rev: %s", err)
 	}
-	if _, err := client.WorkflowTemplates.UpdateWorkflowTemplate(context.TODO(), org, name,
+	if _, err := client.WorkflowTemplates.UpdateWorkflowTemplate(context.TODO(), config.Get().OrgName, name,
 		&workflowtemplates.UpdateWorkflowTemplateRequest{IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne)}); err != nil {
 		t.Fatalf("publish tpl: %s", err)
 	}
-	return fmt.Sprintf("/%s/%s:1", org, name)
+	return fmt.Sprintf("/%s/%s:1", config.Get().OrgName, name)
 }
 
 // TestAccWorkflowUsingTemplate_ExplicitEmptyIacInputData verifies WFT-CLEAR-002: a template
