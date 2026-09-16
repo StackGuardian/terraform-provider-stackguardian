@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"net/http"
 	"testing"
 	"time"
@@ -291,7 +292,7 @@ func setupTerraformRevision(t *testing.T, name string) string {
 // by the data source Read so it feeds workflow_from_template without a perpetual diff — this
 // assertion is the guard for that normalization.
 func TestAccWorkflowTemplateRevisionDataSource_Terraform(t *testing.T) {
-	revisionID := setupTerraformRevision(t, "tf-ds-wtr-tftpl")
+	revisionID := setupTerraformRevision(t, fmt.Sprintf("tf-ds-wtr-tftpl-%d", rand.IntN(101)+100))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -302,10 +303,10 @@ func TestAccWorkflowTemplateRevisionDataSource_Terraform(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(`
-data "stackguardian_workflow_template_revision" "tf" {
-  id = %q
-}
-`, revisionID),
+					data "stackguardian_workflow_template_revision" "tf" {
+					  id = %q
+					}
+					`, revisionID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackguardian_workflow_template_revision.tf", "source_config_kind", "TERRAFORM"),
 					// terraform_config (the largest nested object) flattens fully. terraform_version
