@@ -4,6 +4,8 @@ import (
 	"context"
 	"os"
 	"testing"
+
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 )
 
 // TestSweepOrphans deletes resources left behind by an earlier acceptance run.
@@ -32,10 +34,9 @@ func TestSweepOrphans(t *testing.T) {
 		}
 	}
 
-	org := os.Getenv("STACKGUARDIAN_ORG_NAME")
-	report := Sweep(context.Background(), SGClient(), org)
+	report := Sweep(context.Background(), SGClient(), config.Get().OrgName)
 
-	t.Logf("org %s\n%s", org, report)
+	t.Logf("org %s\n%s", config.Get().OrgName, report)
 
 	if report.DryRun && len(report.Swept) > 0 {
 		t.Logf("nothing was deleted: set SG_ACC_SWEEP_APPLY=1 to remove the %d resource(s) above",

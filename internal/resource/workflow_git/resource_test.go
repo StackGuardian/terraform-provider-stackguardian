@@ -16,16 +16,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-var org = config.Get().OrgName
-
 func getClient() *sgclient.Client {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
-	cfg := config.Get()
 	return sgclient.NewClient(
-		sgoption.WithApiKey(cfg.FormatApiKey()),
-		sgoption.WithBaseURL(cfg.ApiUri),
+		sgoption.WithApiKey(config.Get().FormatApiKey()),
+		sgoption.WithBaseURL(config.Get().ApiUri),
 		sgoption.WithHTTPHeader(customHeader),
 	)
 }
@@ -39,21 +36,21 @@ func createWorkflowGroupFixture(wfGrpName string) error {
 	}
 	if len(parts) > 1 {
 		parent := strings.Join(parts[:len(parts)-1], "/")
-		_, err := client.WorkflowGroups.CreateChildWorkflowGroup(context.TODO(), org, parent, payload)
+		_, err := client.WorkflowGroups.CreateChildWorkflowGroup(context.TODO(), config.Get().OrgName, parent, payload)
 		return err
 	}
-	_, err := client.WorkflowGroups.CreateWorkflowGroup(context.TODO(), org, payload)
+	_, err := client.WorkflowGroups.CreateWorkflowGroup(context.TODO(), config.Get().OrgName, payload)
 	return err
 }
 
 func deleteWorkflowGroupFixture(wfGrpName string) {
 	client := getClient()
-	_, _ = client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), org, wfGrpName)
+	_, _ = client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), config.Get().OrgName, wfGrpName)
 }
 
 func deleteWorkflowGitFixture(wfGrpName, workflowName string) {
 	client := getClient()
-	_, _ = client.Workflows.DeleteWorkflow(context.TODO(), org, workflowName, wfGrpName)
+	_, _ = client.Workflows.DeleteWorkflow(context.TODO(), config.Get().OrgName, workflowName, wfGrpName)
 }
 
 func testAccWorkflowGit(wfGrpName, resourceName, wfType, additionalConfig string) string {

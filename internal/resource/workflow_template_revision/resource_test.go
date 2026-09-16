@@ -18,14 +18,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-var org = config.Get().OrgName
-
 func GetClient() *sgclient.Client {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
-	cfg := config.Get()
-	client := sgclient.NewClient(sgoption.WithApiKey(cfg.FormatApiKey()), sgoption.WithBaseURL(cfg.ApiUri), sgoption.WithHTTPHeader(customHeader))
+	client := sgclient.NewClient(
+		sgoption.WithApiKey(config.Get().FormatApiKey()),
+		sgoption.WithBaseURL(config.Get().ApiUri),
+		sgoption.WithHTTPHeader(customHeader))
 
 	return client
 }
@@ -37,7 +37,7 @@ func SampleCreateWorkflowPayload(templateName, sourceConfigKind string) *workflo
 		SourceConfigKind: (*workflowtemplates.WorkflowTemplateSourceConfigKindEnum)(&sourceConfigKind),
 		TemplateType:     sgsdkgo.TemplateTypeEnum("IAC"),
 		IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
-		OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+		OwnerOrg:         fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 	}
 	return &sampleCreateWorkflowTemplatePayload
 }
@@ -47,7 +47,7 @@ func createWorkflowTemplateFixture(templateName, sourceConfigKind string) error 
 
 	templatePayload := SampleCreateWorkflowPayload(templateName, sourceConfigKind)
 
-	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(context.TODO(), org, false, templatePayload)
+	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(context.TODO(), config.Get().OrgName, false, templatePayload)
 	if err != nil {
 		return err
 	}
@@ -57,13 +57,13 @@ func createWorkflowTemplateFixture(templateName, sourceConfigKind string) error 
 func deleteWorkflowTemplateFixture(templateId string) {
 	client := GetClient()
 
-	_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateId)
+	_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), config.Get().OrgName, templateId)
 }
 
 func deleteWorkflowTemplateRevisionFixture(revisionId string) {
 	client := GetClient()
 
-	_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionId, true)
+	_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, revisionId, true)
 }
 
 // deprecateWorkflowTemplateRevisionFixture deprecates a revision so it can be deleted
@@ -74,7 +74,7 @@ func deprecateWorkflowTemplateRevisionFixture(revisionId string) {
 	client := GetClient()
 	effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
 	message := "This revision is deprecated"
-	_, _ = client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, revisionId, &workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
+	_, _ = client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, revisionId, &workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
 		Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{
 			EffectiveDate: &effectiveDate,
 			Message:       &message,

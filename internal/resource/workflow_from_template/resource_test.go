@@ -23,16 +23,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-var org = config.Get().OrgName
-
 func getClient() *sgclient.Client {
-	customHeader := http.Header{}
-	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
-	cfg := config.Get()
+	customH := http.Header{}
+	customH.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
 	return sgclient.NewClient(
-		sgoption.WithApiKey(cfg.FormatApiKey()),
-		sgoption.WithBaseURL(cfg.ApiUri),
-		sgoption.WithHTTPHeader(customHeader),
+		sgoption.WithApiKey(config.Get().FormatApiKey()),
+		sgoption.WithBaseURL(config.Get().ApiUri),
+		sgoption.WithHTTPHeader(customH),
 	)
 }
 
@@ -45,21 +43,21 @@ func createWorkflowGroupFixture(wfGrpName string) error {
 	}
 	if len(parts) > 1 {
 		parent := strings.Join(parts[:len(parts)-1], "/")
-		_, err := client.WorkflowGroups.CreateChildWorkflowGroup(context.TODO(), org, parent, payload)
+		_, err := client.WorkflowGroups.CreateChildWorkflowGroup(context.TODO(), config.Get().OrgName, parent, payload)
 		return err
 	}
-	_, err := client.WorkflowGroups.CreateWorkflowGroup(context.TODO(), org, payload)
+	_, err := client.WorkflowGroups.CreateWorkflowGroup(context.TODO(), config.Get().OrgName, payload)
 	return err
 }
 
 func deleteWorkflowGroupFixture(wfGrpName string) {
 	client := getClient()
-	_, _ = client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), org, wfGrpName)
+	_, _ = client.WorkflowGroups.DeleteWorkflowGroup(context.TODO(), config.Get().OrgName, wfGrpName)
 }
 
 func deleteWorkflowUsingTemplateFixture(wfGrpName, workflowName string) {
 	client := getClient()
-	_, _ = client.Workflows.DeleteWorkflow(context.TODO(), org, workflowName, wfGrpName)
+	_, _ = client.Workflows.DeleteWorkflow(context.TODO(), config.Get().OrgName, workflowName, wfGrpName)
 }
 
 // setupWorkflowTemplate creates a workflow template + published revision and registers
@@ -83,7 +81,7 @@ func setupWorkflowTemplate(t *testing.T, templateID string) string {
 		effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
 		message := "Test cleanup"
 		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
-			context.TODO(), org, revisionID,
+			context.TODO(), config.Get().OrgName, revisionID,
 			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
 				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{
 					EffectiveDate: &effectiveDate,
@@ -91,20 +89,20 @@ func setupWorkflowTemplate(t *testing.T, templateID string) string {
 				}),
 			},
 		)
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, revisionID, true)
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), config.Get().OrgName, templateID)
 	})
 
 	// 1. Create template (ignore 409 — already exists)
 	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(
-		context.TODO(), org, false,
+		context.TODO(), config.Get().OrgName, false,
 		&workflowtemplates.CreateWorkflowTemplateRequest{
 			Id:               &templateID,
 			TemplateName:     templateID,
 			SourceConfigKind: &sourceConfigKind,
 			TemplateType:     sgsdkgo.TemplateTypeEnum("IAC"),
 			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
-			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 		},
 	)
 	if err != nil && !is409(err) {
@@ -118,12 +116,12 @@ func setupWorkflowTemplate(t *testing.T, templateID string) string {
 	envTextValue := "tmpl-value"
 	tmplTfVersion := "1.5.0"
 	_, err = client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(
-		context.TODO(), org, templateID,
+		context.TODO(), config.Get().OrgName, templateID,
 		&workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
 			Alias:            alias,
 			SourceConfigKind: &sourceConfigKind,
 			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
-			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 			TerraformConfig: &sgsdkgo.TerraformConfig{
 				TerraformVersion: &tmplTfVersion,
 			},
@@ -152,7 +150,7 @@ func setupWorkflowTemplate(t *testing.T, templateID string) string {
 
 	// 3. Publish revision
 	_, err = client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
-		context.TODO(), org, revisionID,
+		context.TODO(), config.Get().OrgName, revisionID,
 		&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
 			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
 		},
@@ -163,7 +161,7 @@ func setupWorkflowTemplate(t *testing.T, templateID string) string {
 
 	// 4. Publish template
 	_, err = client.WorkflowTemplates.UpdateWorkflowTemplate(
-		context.TODO(), org, templateID,
+		context.TODO(), config.Get().OrgName, templateID,
 		&workflowtemplates.UpdateWorkflowTemplateRequest{
 			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
 		},
@@ -172,7 +170,7 @@ func setupWorkflowTemplate(t *testing.T, templateID string) string {
 		t.Fatalf("setupWorkflowTemplate: publish template %q: %s", templateID, err)
 	}
 
-	return fmt.Sprintf("/%s/%s", org, templateID)
+	return fmt.Sprintf("/%s/%s", config.Get().OrgName, templateID)
 }
 
 // addSecondRevision creates and publishes revision :2 of an existing template, with a
@@ -195,7 +193,7 @@ func addSecondRevision(t *testing.T, templateID string) string {
 		effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
 		message := "Test cleanup"
 		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
-			context.TODO(), org, revisionID,
+			context.TODO(), config.Get().OrgName, revisionID,
 			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
 				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{
 					EffectiveDate: &effectiveDate,
@@ -203,19 +201,19 @@ func addSecondRevision(t *testing.T, templateID string) string {
 				}),
 			},
 		)
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, revisionID, true)
 	})
 
 	alias := "v2"
 	envTextValue := "rev2-value"
 	tmplTfVersion := "1.5.7"
 	_, err := client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(
-		context.TODO(), org, templateID,
+		context.TODO(), config.Get().OrgName, templateID,
 		&workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
 			Alias:            alias,
 			SourceConfigKind: &sourceConfigKind,
 			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
-			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 			// Drift ENABLED with a valid 6-field cron (the API validates the cron when
 			// drift_check is true), so it is meaningful and kept by the coupling. rev1 has
 			// no terraform_config drift fields; the upgrade test asserts these re-resolve
@@ -241,7 +239,7 @@ func addSecondRevision(t *testing.T, templateID string) string {
 	}
 
 	_, err = client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
-		context.TODO(), org, revisionID,
+		context.TODO(), config.Get().OrgName, revisionID,
 		&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
 			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
 		},
@@ -250,7 +248,7 @@ func addSecondRevision(t *testing.T, templateID string) string {
 		t.Fatalf("addSecondRevision: publish revision %q: %s", revisionID, err)
 	}
 
-	return fmt.Sprintf("/%s/%s:2", org, templateID)
+	return fmt.Sprintf("/%s/%s:2", config.Get().OrgName, templateID)
 }
 
 func customHeader() http.Header {
@@ -295,13 +293,13 @@ func setupWorkflowStepTemplate(t *testing.T, name string) string {
 	isPrivate := false
 	// createFirstRevision=true so :1 exists and is referenceable immediately.
 	_, err := client.WorkflowStepTemplate.CreateWorkflowStepTemplate(
-		context.TODO(), org, true,
+		context.TODO(), config.Get().OrgName, true,
 		&workflowsteptemplate.CreateWorkflowStepTemplate{
 			TemplateName:     name,
 			TemplateType:     workflowsteptemplate.TemplateTypeWorkflowStepEnum,
 			SourceConfigKind: sourceKind,
 			IsPublic:         &isPublic,
-			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 			RuntimeSource: &workflowsteptemplate.WorkflowStepRuntimeSource{
 				SourceConfigDestKind: workflowsteptemplate.SourceConfigDestKindContainerRegistryEnum,
 				Config: &workflowsteptemplate.WorkflowStepRuntimeSourceConfig{
@@ -316,10 +314,10 @@ func setupWorkflowStepTemplate(t *testing.T, name string) string {
 	}
 
 	t.Cleanup(func() {
-		_ = client.WorkflowStepTemplate.DeleteWorkflowStepTemplate(context.TODO(), org, name)
+		_ = client.WorkflowStepTemplate.DeleteWorkflowStepTemplate(context.TODO(), config.Get().OrgName, name)
 	})
 
-	return fmt.Sprintf("/%s/%s:1", org, name)
+	return fmt.Sprintf("/%s/%s:1", config.Get().OrgName, name)
 }
 
 // setupCustomWorkflowTemplate creates and publishes a CUSTOM-source workflow template
@@ -343,7 +341,7 @@ func setupCustomWorkflowTemplate(t *testing.T, templateID string) string {
 		effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
 		message := "Test cleanup"
 		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
-			context.TODO(), org, revisionID,
+			context.TODO(), config.Get().OrgName, revisionID,
 			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
 				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{
 					EffectiveDate: &effectiveDate,
@@ -351,19 +349,19 @@ func setupCustomWorkflowTemplate(t *testing.T, templateID string) string {
 				}),
 			},
 		)
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, revisionID, true)
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), config.Get().OrgName, templateID)
 	})
 
 	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(
-		context.TODO(), org, false,
+		context.TODO(), config.Get().OrgName, false,
 		&workflowtemplates.CreateWorkflowTemplateRequest{
 			Id:               &templateID,
 			TemplateName:     templateID,
 			SourceConfigKind: &sourceConfigKind,
 			TemplateType:     sgsdkgo.TemplateTypeEnum("IAC"),
 			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
-			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 		},
 	)
 	if err != nil && !is409(err) {
@@ -372,12 +370,12 @@ func setupCustomWorkflowTemplate(t *testing.T, templateID string) string {
 
 	alias := "v1"
 	_, err = client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(
-		context.TODO(), org, templateID,
+		context.TODO(), config.Get().OrgName, templateID,
 		&workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
 			Alias:            alias,
 			SourceConfigKind: &sourceConfigKind,
 			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
-			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 		},
 	)
 	if err != nil && !is409(err) {
@@ -385,7 +383,7 @@ func setupCustomWorkflowTemplate(t *testing.T, templateID string) string {
 	}
 
 	_, err = client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
-		context.TODO(), org, revisionID,
+		context.TODO(), config.Get().OrgName, revisionID,
 		&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
 			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
 		},
@@ -395,7 +393,7 @@ func setupCustomWorkflowTemplate(t *testing.T, templateID string) string {
 	}
 
 	_, err = client.WorkflowTemplates.UpdateWorkflowTemplate(
-		context.TODO(), org, templateID,
+		context.TODO(), config.Get().OrgName, templateID,
 		&workflowtemplates.UpdateWorkflowTemplateRequest{
 			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
 		},
@@ -404,7 +402,7 @@ func setupCustomWorkflowTemplate(t *testing.T, templateID string) string {
 		t.Fatalf("setupCustomWorkflowTemplate: publish template %q: %s", templateID, err)
 	}
 
-	return fmt.Sprintf("/%s/%s", org, templateID)
+	return fmt.Sprintf("/%s/%s", config.Get().OrgName, templateID)
 }
 
 // TestAccWorkflowUsingTemplate_WithWfStepsConfig verifies a user-declared top-level
@@ -640,27 +638,27 @@ func setupTemplateWithWfStepRevision(t *testing.T, name, stepRev string) string 
 	t.Cleanup(func() {
 		eff := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
 		msg := "cleanup"
-		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, revisionID,
+		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, revisionID,
 			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
 				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{EffectiveDate: &eff, Message: &msg})})
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, revisionID, true)
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), config.Get().OrgName, name)
 	})
 
-	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(context.TODO(), org, false,
+	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(context.TODO(), config.Get().OrgName, false,
 		&workflowtemplates.CreateWorkflowTemplateRequest{
 			Id: &name, TemplateName: name, SourceConfigKind: &sck,
 			TemplateType: sgsdkgo.TemplateTypeEnum("IAC"), IsPublic: sgsdkgo.IsPublicEnumZero.Ptr(),
-			OwnerOrg: fmt.Sprintf("/orgs/%s", org),
+			OwnerOrg: fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 		})
 	if err != nil && !is409(err) {
 		t.Fatalf("create tpl: %s", err)
 	}
 	tfVer := "1.5.0"
-	_, err = client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(context.TODO(), org, name,
+	_, err = client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, name,
 		&workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
 			Alias: "v1", SourceConfigKind: &sck, IsPublic: sgsdkgo.IsPublicEnumZero.Ptr(),
-			OwnerOrg: fmt.Sprintf("/orgs/%s", org),
+			OwnerOrg: fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 			TerraformConfig: &sgsdkgo.TerraformConfig{
 				TerraformVersion:         &tfVer,
 				WfStepTemplateRevisionId: &stepRev,
@@ -669,15 +667,15 @@ func setupTemplateWithWfStepRevision(t *testing.T, name, stepRev string) string 
 	if err != nil && !is409(err) {
 		t.Fatalf("create rev: %s", err)
 	}
-	if _, err := client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, revisionID,
+	if _, err := client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, revisionID,
 		&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne)}); err != nil {
 		t.Fatalf("publish rev: %s", err)
 	}
-	if _, err := client.WorkflowTemplates.UpdateWorkflowTemplate(context.TODO(), org, name,
+	if _, err := client.WorkflowTemplates.UpdateWorkflowTemplate(context.TODO(), config.Get().OrgName, name,
 		&workflowtemplates.UpdateWorkflowTemplateRequest{IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne)}); err != nil {
 		t.Fatalf("publish tpl: %s", err)
 	}
-	return fmt.Sprintf("/%s/%s:1", org, name)
+	return fmt.Sprintf("/%s/%s:1", config.Get().OrgName, name)
 }
 
 // TestAccWorkflowUsingTemplate_WfStepRevisionInheritedFromTemplate verifies the
@@ -1560,7 +1558,7 @@ func setupDriftEnabledTemplate(t *testing.T, templateID string) string {
 		effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
 		message := "Test cleanup"
 		client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
-			context.TODO(), org, revisionID,
+			context.TODO(), config.Get().OrgName, revisionID,
 			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
 				Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{
 					EffectiveDate: &effectiveDate,
@@ -1568,19 +1566,19 @@ func setupDriftEnabledTemplate(t *testing.T, templateID string) string {
 				}),
 			},
 		)
-		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, revisionID, true)
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, templateID)
+		client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, revisionID, true)
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), config.Get().OrgName, templateID)
 	})
 
 	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(
-		context.TODO(), org, false,
+		context.TODO(), config.Get().OrgName, false,
 		&workflowtemplates.CreateWorkflowTemplateRequest{
 			Id:               &templateID,
 			TemplateName:     templateID,
 			SourceConfigKind: &sourceConfigKind,
 			TemplateType:     sgsdkgo.TemplateTypeEnum("IAC"),
 			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
-			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 		},
 	)
 	if err != nil && !is409(err) {
@@ -1590,12 +1588,12 @@ func setupDriftEnabledTemplate(t *testing.T, templateID string) string {
 	alias := "v1"
 	tmplTfVersion := "1.5.0"
 	_, err = client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(
-		context.TODO(), org, templateID,
+		context.TODO(), config.Get().OrgName, templateID,
 		&workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
 			Alias:            alias,
 			SourceConfigKind: &sourceConfigKind,
 			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
-			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 			TerraformConfig: &sgsdkgo.TerraformConfig{
 				TerraformVersion: &tmplTfVersion,
 				DriftCheck:       sgsdkgo.Bool(true),
@@ -1608,7 +1606,7 @@ func setupDriftEnabledTemplate(t *testing.T, templateID string) string {
 	}
 
 	_, err = client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(
-		context.TODO(), org, revisionID,
+		context.TODO(), config.Get().OrgName, revisionID,
 		&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
 			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
 		},
@@ -1618,7 +1616,7 @@ func setupDriftEnabledTemplate(t *testing.T, templateID string) string {
 	}
 
 	_, err = client.WorkflowTemplates.UpdateWorkflowTemplate(
-		context.TODO(), org, templateID,
+		context.TODO(), config.Get().OrgName, templateID,
 		&workflowtemplates.UpdateWorkflowTemplateRequest{
 			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
 		},
@@ -1627,7 +1625,7 @@ func setupDriftEnabledTemplate(t *testing.T, templateID string) string {
 		t.Fatalf("setupDriftEnabledTemplate: publish template %q: %s", templateID, err)
 	}
 
-	return fmt.Sprintf("/%s/%s", org, templateID)
+	return fmt.Sprintf("/%s/%s", config.Get().OrgName, templateID)
 }
 
 // TestAccWorkflowUsingTemplate_DriftCronDroppedWhenCheckFalse verifies the
@@ -1739,7 +1737,7 @@ func TestAccWorkflowUsingTemplate_DriftDetection(t *testing.T) {
 					client := getClient()
 					newDesc := "changed-out-of-band"
 					_, err := client.Workflows.UpdateWorkflow(
-						context.TODO(), org, id, wfGrpName,
+						context.TODO(), config.Get().OrgName, id, wfGrpName,
 						sgworkflows.UpgradeModeEnumPreserveSettings.Ptr(),
 						&sgworkflows.PatchedWorkflow{
 							Description: sgsdkgo.Optional(newDesc),

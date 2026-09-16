@@ -4,17 +4,16 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 var sourceConfigKind = "TERRAFORM"
-var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
 
 // deleteWorkflowTemplateFixture is a safety-net cleanup: Terraform's own destroy step tears
 // the template down in the normal case. This exists so a test that fails before reaching
@@ -23,7 +22,7 @@ var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
 // template_name when the config doesn't set an explicit id.
 func deleteWorkflowTemplateFixture(id string) {
 	client := acctest.SGClient()
-	client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, id)
+	client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), config.Get().OrgName, id)
 }
 
 func testAccWorkflowTemplate(name, sourceConfigKind, additionalConfig string) string {

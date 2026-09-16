@@ -12,6 +12,7 @@ import (
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
@@ -37,19 +38,19 @@ func setupTwoRevIdenticalDerivedFields(t *testing.T, name string) (rev1, rev2 st
 		eff := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
 		msg := "cleanup"
 		for _, rev := range []string{name + ":1", name + ":2"} {
-			client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, rev,
+			client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, rev,
 				&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
 					Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{EffectiveDate: &eff, Message: &msg})})
-			client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), org, rev, true)
+			client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, rev, true)
 		}
-		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), org, name)
+		client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), config.Get().OrgName, name)
 	})
 
-	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(context.TODO(), org, false,
+	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(context.TODO(), config.Get().OrgName, false,
 		&workflowtemplates.CreateWorkflowTemplateRequest{
 			Id: &name, TemplateName: name, SourceConfigKind: &sck,
 			TemplateType: sgsdkgo.TemplateTypeEnum("IAC"), IsPublic: sgsdkgo.IsPublicEnumZero.Ptr(),
-			OwnerOrg: fmt.Sprintf("/orgs/%s", org),
+			OwnerOrg: fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 		})
 	if err != nil && !is409(err) {
 		t.Fatalf("create tpl: %s", err)
@@ -65,10 +66,10 @@ func setupTwoRevIdenticalDerivedFields(t *testing.T, name string) (rev1, rev2 st
 	mk := func(alias, tfver string) {
 		d := desc
 		na, c, m := napprovals, cpu, mem
-		_, err := client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(context.TODO(), org, name,
+		_, err := client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, name,
 			&workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
 				Alias: alias, SourceConfigKind: &sck, IsPublic: sgsdkgo.IsPublicEnumZero.Ptr(),
-				OwnerOrg:                  fmt.Sprintf("/orgs/%s", org),
+				OwnerOrg:                  fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 				LongDescription:           &d,
 				Tags:                      []string{"alpha", "beta"},
 				Approvers:                 []string{"akashsuresh0510@gmail.com"},
@@ -117,16 +118,16 @@ func setupTwoRevIdenticalDerivedFields(t *testing.T, name string) (rev1, rev2 st
 	mk("v2", "1.5.7") // only terraform_version differs
 
 	for _, rev := range []string{name + ":1", name + ":2"} {
-		if _, err := client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), org, rev,
+		if _, err := client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, rev,
 			&workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne)}); err != nil {
 			t.Fatalf("publish %s: %s", rev, err)
 		}
 	}
-	if _, err := client.WorkflowTemplates.UpdateWorkflowTemplate(context.TODO(), org, name,
+	if _, err := client.WorkflowTemplates.UpdateWorkflowTemplate(context.TODO(), config.Get().OrgName, name,
 		&workflowtemplates.UpdateWorkflowTemplateRequest{IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne)}); err != nil {
 		t.Fatalf("publish tpl: %s", err)
 	}
-	return fmt.Sprintf("/%s/%s:1", org, name), fmt.Sprintf("/%s/%s:2", org, name)
+	return fmt.Sprintf("/%s/%s:1", config.Get().OrgName, name), fmt.Sprintf("/%s/%s:2", config.Get().OrgName, name)
 }
 
 // TestAccWorkflowUsingTemplate_RevisionUpgradeNoSpuriousDependentUpdate verifies the fix: upgrading test1 :1 -> :2 where

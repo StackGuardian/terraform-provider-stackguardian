@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
@@ -16,8 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
-
 // deletePolicyFixture is a safety-net cleanup: Terraform's own destroy step tears the
 // policy down in the normal case. This exists so a test that fails before reaching destroy
 // (e.g. a failed assertion) doesn't leave it behind. Errors are ignored — the resource may
@@ -25,7 +22,7 @@ var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
 // config doesn't set an explicit id.
 func deletePolicyFixture(id string) {
 	client := acctest.SGClient()
-	client.Policies.DeletePolicy(context.TODO(), org, id)
+	client.Policies.DeletePolicy(context.TODO(), config.Get().OrgName, id)
 }
 
 const (
