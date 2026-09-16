@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Centralized configuration via `github.com/spf13/viper` in `internal/config/config.go`, replacing all `os.Getenv` calls throughout the codebase
+- `ValidateConfig` on `workflow_template` and `workflow_template_revision` resources to enforce `runtime_source` auth/is_private rules at plan time
+- `wf_steps_config` validation on `workflow_template_revision` to reject usage when `source_config_kind` is `TERRAFORM` or `OPENTOFU`
+- `internal/constants/vcs.go` with shared enum constants for VCS provider kinds (`GITHUB_COM`, `GIT_OTHER`, etc.)
+- `acctest.TFStandardErrorPattern` helper that builds regex patterns tolerating Terraform CLI line-wrapping in expected error messages
+- Comprehensive acceptance tests covering every schema attribute on `workflow_template` and `workflow_template_revision`
 
 ### Changed
 
@@ -30,6 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename `stackguardianProviderModel` fields (`Api_key` → `APIKey`, `Api_uri` → `APIUri`, `Org_name` → `OrgName`) and local variables in `Configure()` from snake_case to camelCase for Go naming consistency
 - Fix "Stackguardian" → "StackGuardian" casing in provider log messages, error messages, and comments
 - Replace hardcoded `os.Getenv` calls with `config.Get()` singleton in provider, acctest, and all resource/datasource test files
+- Make `mount_point.read_only` `Computed` with `UseStateForUnknown()` on `workflow_template_revision` to match API behavior
+- Make `input_schemas.type` `Required` (was `Optional`) on `workflow_template_revision` to match actual API behavior
+- Shorten import alias `workflowtemplate` → `wft` across `provider.go`, `datasource.go`, `resource.go`, `model.go`, and `schema.go`
 
 ### Fixed
 
@@ -39,6 +47,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix staticcheck SA4006 unused `diags` in `workflow_template_revision/model.go` and `workflow_template/model.go`
 - Remove unused `charSetAlphaNum` constant in `internal/acctest/random_acc_test_name.go`
 - Fix gofmt alignment in `constants/template.go`, `constants/workflow.go`, `datasources/workflow_template_revision/schema.go`, and `resource/workflow_from_template/model.go`
+- Guard Optional+Computed fields (`LongDescription`, `Notes`, `IsPublic`, `NumberOfApprovalsRequired`) in `WorkflowTemplateRevisionResourceModel.ToAPIModel` against Unknown values, preventing unintended zero-value sends on Create
+- Guard `mount_point.read_only` in `ConvertMountPointsListToAPI` against Unknown values to prevent sending an explicit `false`
+- Replace `os.Getenv("STACKGUARDIAN_ORG_NAME")` with `config.Get().OrgName` in `sweep_test.go`
 
 
 ## [0.1.0] - 2024-03-14
