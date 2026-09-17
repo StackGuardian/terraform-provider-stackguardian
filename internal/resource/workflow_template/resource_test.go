@@ -106,11 +106,23 @@ func TestAccWorkflowTemplate_UpdateWithIsPublicUnchanged(t *testing.T) {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
+	// runtime_source carries a private repo (is_private = true with auth set, per the
+	// is_private/auth validation) so the update also exercises that combination, not just
+	// is_public/description.
 	templateCallback := func(description string) string {
 		return fmt.Sprintf(`
 		  is_public   = "0"
 		  description = %q
-		`, description)
+
+		  runtime_source = {
+			source_config_dest_kind = %q
+			config = {
+			  is_private = true
+			  auth       = "/secrets/tf-provider-test-secret"
+			  repo       = "https://github.com/StackGuardian/tf-null-resource.git"
+			}
+		  }
+		`, description, constants.GitOther)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -127,15 +139,20 @@ func TestAccWorkflowTemplate_UpdateWithIsPublicUnchanged(t *testing.T) {
 					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "template_name", templateName),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "is_public", "0"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "description", "Initial description"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "runtime_source.config.is_private", "true"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "runtime_source.config.auth", "/secrets/tf-provider-test-secret"),
 				),
 			},
-			// Update description only; is_public stays "0" in config on both steps.
+			// Update description only; is_public stays "0" and runtime_source stays
+			// unchanged (repo has RequiresReplace) on both steps.
 			{
 				Config: testAccWorkflowTemplate(templateName, sourceConfigKind, templateCallback("Updated description")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "template_name", templateName),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "is_public", "0"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "description", "Updated description"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "runtime_source.config.is_private", "true"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "runtime_source.config.auth", "/secrets/tf-provider-test-secret"),
 				),
 			},
 			// Delete testing automatically occurs
