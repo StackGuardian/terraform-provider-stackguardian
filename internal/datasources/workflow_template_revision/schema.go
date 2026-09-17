@@ -315,7 +315,7 @@ var runtimeSourceSchema = schema.SingleNestedAttribute{
 	Computed: true,
 	Attributes: map[string]schema.Attribute{
 		"source_config_dest_kind": schema.StringAttribute{
-			MarkdownDescription: constants.RuntimeSourceDestKind,
+			MarkdownDescription: constants.WorkflowTemplateRuntimeSourceDestKind,
 			Computed:            true,
 		},
 		"config": schema.SingleNestedAttribute{
@@ -323,11 +323,11 @@ var runtimeSourceSchema = schema.SingleNestedAttribute{
 			Computed:            true,
 			Attributes: map[string]schema.Attribute{
 				"is_private": schema.BoolAttribute{
-					MarkdownDescription: constants.RuntimeSourceConfigIsPrivate,
+					MarkdownDescription: constants.WorkflowTemplateRuntimeSourceConfigIsPrivate,
 					Computed:            true,
 				},
 				"auth": schema.StringAttribute{
-					MarkdownDescription: constants.RuntimeSourceConfigAuth,
+					MarkdownDescription: constants.WorkflowTemplateRuntimeSourceConfigAuth,
 					Computed:            true,
 				},
 				"git_core_auto_crlf": schema.BoolAttribute{
@@ -533,7 +533,7 @@ func (d *workflowTemplateRevisionDataSource) Schema(_ context.Context, _ datasou
 				},
 			},
 			"wf_steps_config": schema.ListNestedAttribute{
-				MarkdownDescription: constants.WfStepsConfig,
+				MarkdownDescription: constants.WorkflowTemplateRevisionWfStepsConfig,
 				Computed:            true,
 				NestedObject:        wfStepsConfigSchema,
 			},

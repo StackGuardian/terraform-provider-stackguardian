@@ -62,7 +62,7 @@ func (d *workflowTemplateDataSource) Schema(_ context.Context, _ datasource.Sche
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"source_config_dest_kind": schema.StringAttribute{
-						MarkdownDescription: constants.RuntimeSourceDestKind,
+						MarkdownDescription: constants.WorkflowTemplateRuntimeSourceDestKind,
 						Computed:            true,
 					},
 					"config": schema.SingleNestedAttribute{
@@ -70,7 +70,7 @@ func (d *workflowTemplateDataSource) Schema(_ context.Context, _ datasource.Sche
 						Computed:            true,
 						Attributes: map[string]schema.Attribute{
 							"auth": schema.StringAttribute{
-								MarkdownDescription: constants.RuntimeSourceConfigAuth,
+								MarkdownDescription: constants.WorkflowTemplateRuntimeSourceConfigAuth,
 								Computed:            true,
 								Sensitive:           true,
 							},
@@ -87,7 +87,7 @@ func (d *workflowTemplateDataSource) Schema(_ context.Context, _ datasource.Sche
 								Computed:            true,
 							},
 							"is_private": schema.BoolAttribute{
-								MarkdownDescription: constants.RuntimeSourceConfigIsPrivate,
+								MarkdownDescription: constants.WorkflowTemplateRuntimeSourceConfigIsPrivate,
 								Computed:            true,
 							},
 							"ref": schema.StringAttribute{

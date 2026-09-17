@@ -73,7 +73,7 @@ output "revision_template_id" {
 - `user_job_cpu` (Number) Limits to set user job CPU.
 - `user_job_memory` (Number) Limits to set user job memory.
 - `user_schedules` (Attributes List) Configuration for scheduling runs for the workflows. (see [below for nested schema](#nestedatt--user_schedules))
-- `wf_steps_config` (Attributes List) Workflow steps configuration. Valid for custom workflow types. (see [below for nested schema](#nestedatt--wf_steps_config))
+- `wf_steps_config` (Attributes List) Custom run steps for the revision. Not allowed when `source_config_kind` is `TERRAFORM` or `OPENTOFU` — those use fixed, built-in run steps instead. Allowed for every other kind (e.g. `CUSTOM`, `ANSIBLE_PLAYBOOK`, `HELM`, `KUBECTL`, `CLOUDFORMATION`). (see [below for nested schema](#nestedatt--wf_steps_config))
 
 <a id="nestedatt--deployment_platform_config"></a>
 ### Nested Schema for `deployment_platform_config`
@@ -312,18 +312,18 @@ Read-Only:
 Read-Only:
 
 - `config` (Attributes) Configuration for the runtime environment. (see [below for nested schema](#nestedatt--runtime_source--config))
-- `source_config_dest_kind` (String) Which VCS provider hosts the repository. This decides how StackGuardian authenticates and, for `vcs_triggers`, which webhook integration is used. <ul><li>`GITHUB_COM` — github.com. See the [GitHub connector docs](https://docs.stackguardian.io/docs/connectors/vcs/githubcom/).</li><li>`GITHUB_APP_CUSTOM` — GitHub Enterprise, or a GitHub App you manage yourself. See the [GitHub Enterprise docs](https://docs.stackguardian.io/docs/connectors/vcs/github_enterprise/).</li><li>`GITLAB_COM` — gitlab.com. See the [GitLab connector docs](https://docs.stackguardian.io/docs/connectors/vcs/gitlabcom/).</li><li>`BITBUCKET_ORG` — Bitbucket Cloud. See the [Bitbucket connector docs](https://docs.stackguardian.io/docs/connectors/vcs/bitbucket/).</li><li>`AZURE_DEVOPS` — Azure DevOps. See the [Azure DevOps connector docs](https://docs.stackguardian.io/docs/connectors/vcs/azuredevops/).</li><li>`AZURE_DEVOPS_SP` — Azure DevOps authenticated with a service principal.</li><li>`GIT_OTHER` — any other Git host, including public repositories that need no authentication.</li></ul>
+- `source_config_dest_kind` (String) Which VCS provider hosts the repository. This decides how StackGuardian authenticates and, for `vcs_triggers`, which webhook integration is used. <ul><li>`GITHUB_COM` — github.com. See the [GitHub connector docs](https://docs.stackguardian.io/docs/connectors/vcs/githubcom/).</li><li>`GITHUB_APP_CUSTOM` — GitHub Enterprise, or a GitHub App you manage yourself. See the [GitHub Enterprise docs](https://docs.stackguardian.io/docs/connectors/vcs/github_enterprise/).</li><li>`GITLAB_COM` — gitlab.com. See the [GitLab connector docs](https://docs.stackguardian.io/docs/connectors/vcs/gitlabcom/).</li><li>`BITBUCKET_ORG` — Bitbucket Cloud. See the [Bitbucket connector docs](https://docs.stackguardian.io/docs/connectors/vcs/bitbucket/).</li><li>`AZURE_DEVOPS` — Azure DevOps. See the [Azure DevOps connector docs](https://docs.stackguardian.io/docs/connectors/vcs/azuredevops/).</li><li>`AZURE_DEVOPS_SP` — Azure DevOps authenticated with a service principal.</li><li>`GIT_OTHER` — any other Git host, including public repositories that need no authentication.</li></ul> `GIT_OTHER` is the only kind that may omit `auth` for a public repository; every other kind requires it regardless of `is_private`.
 
 <a id="nestedatt--runtime_source--config"></a>
 ### Nested Schema for `runtime_source.config`
 
 Read-Only:
 
-- `auth` (String) Credential for cloning a private repository, as a path-form ID. Either a VCS connector — `/integrations/<connector-name>`, built as `"/integrations/${stackguardian_connector.github.id}"` — for `GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG` and `AZURE_DEVOPS*` sources, or a secret `/secrets/<secret-name>`. `GIT_OTHER` accepts only the secret form. Required when `is_private` is `true`.
+- `auth` (String) Credential for cloning the repository, as a path-form ID. Required whenever `is_private` is `true`, and required unconditionally (regardless of `is_private`) for every `source_config_dest_kind` except `GIT_OTHER` — only `GIT_OTHER` may omit it, for a public repository. When set: `GIT_OTHER` requires a secret, `/secrets/<secret-name>`; every other kind requires a VCS connector, `/integrations/<connector-name>`, built as `"/integrations/${stackguardian_connector.github.id}"`.
 - `git_core_auto_crlf` (Boolean) Whether to automatically handle CRLF line endings.
 - `git_sparse_checkout_config` (String) Git sparse checkout command line git cli options.
 - `include_sub_module` (Boolean) Whether to include git submodules.
-- `is_private` (Boolean) Whether the repository is private. Auth is required if the repository is private
+- `is_private` (Boolean) Whether the repository is private. Setting this to `true` always requires `auth`. Only `GIT_OTHER` supports a fully public, authless repository (`is_private = false` with `auth` unset) — every other `source_config_dest_kind` requires `auth` regardless of this value.
 - `ref` (String) Git reference (branch, tag, or commit hash).
 - `repo` (String) Git repository URL.
 - `working_dir` (String) Working directory within the repository.

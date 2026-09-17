@@ -30,6 +30,12 @@ const (
 	WorkflowTemplateRevisionId           = "Identifier of the revision, in the form `<template-name>:<revision>` (e.g. `my-terraform-template:1`)."
 	WorkflowTemplateRevisionTemplateId   = "Parent workflow template, as its bare `template_name` (e.g. `my-terraform-template`) — not a path. Reference the `stackguardian_workflow_template` resource rather than typing it."
 	WorkflowTemplateRevisionInputSchemas = "JSONSchema Form representation of input JSON data"
+	// WorkflowTemplateRevisionWfStepsConfig documents a rule validated at plan time — see
+	// wfStepsConfigNotAllowedForTerraformDiagnostics in
+	// internal/resource/workflow_template_revision/validation.go. Deliberately not shared
+	// with workflow_from_template/workflow_git's own wf_steps_config attributes, which have
+	// no such client-side check.
+	WorkflowTemplateRevisionWfStepsConfig = "Custom run steps for the revision. Not allowed when `source_config_kind` is `TERRAFORM` or `OPENTOFU` — those use fixed, built-in run steps instead. Allowed for every other kind (e.g. `CUSTOM`, `ANSIBLE_PLAYBOOK`, `HELM`, `KUBECTL`, `CLOUDFORMATION`)."
 )
 
 // Runtime Source attributes (shared)
@@ -45,6 +51,16 @@ const (
 	RuntimeSourceConfigRef              = "Git reference (branch, tag, or commit hash)."
 	RuntimeSourceConfigRepo             = "Git repository URL."
 	RuntimeSourceConfigWorkingDir       = "Working directory within the repository."
+)
+
+// Runtime Source attributes specific to workflow templates and revisions. Unlike the
+// shared Runtime Source attributes above (used by workflow_git and stack_template_revision,
+// where no such rule is enforced), the is_private/auth combination here is validated at plan
+// time — see ValidateRuntimeSourceAuth in internal/resource/workflow_template/validation.go.
+const (
+	WorkflowTemplateRuntimeSourceDestKind        = RuntimeSourceDestKind + " `GIT_OTHER` is the only kind that may omit `auth` for a public repository; every other kind requires it regardless of `is_private`."
+	WorkflowTemplateRuntimeSourceConfigAuth      = "Credential for cloning the repository, as a path-form ID. Required whenever `is_private` is `true`, and required unconditionally (regardless of `is_private`) for every `source_config_dest_kind` except `GIT_OTHER` — only `GIT_OTHER` may omit it, for a public repository. When set: `GIT_OTHER` requires a secret, `/secrets/<secret-name>`; every other kind requires a VCS connector, `/integrations/<connector-name>`, built as `\"/integrations/${stackguardian_connector.github.id}\"`."
+	WorkflowTemplateRuntimeSourceConfigIsPrivate = "Whether the repository is private. Setting this to `true` always requires `auth`. Only `GIT_OTHER` supports a fully public, authless repository (`is_private = false` with `auth` unset) — every other `source_config_dest_kind` requires `auth` regardless of this value."
 )
 
 // VCS Triggers attributes
