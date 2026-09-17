@@ -610,7 +610,7 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				},
 			},
 			"wf_steps_config": schema.ListNestedAttribute{
-				MarkdownDescription: constants.WfStepsConfig,
+				MarkdownDescription: constants.WorkflowTemplateRevisionWfStepsConfig,
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.List{

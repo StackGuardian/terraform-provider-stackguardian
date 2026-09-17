@@ -93,6 +93,56 @@ func TestAccWorkflowTemplate_Basic(t *testing.T) {
 	})
 }
 
+// TestAccWorkflowTemplate_UpdateWithIsPublicUnchanged confirms updating an unrelated field
+// (description) leaves is_public alone when the config keeps it at "0" across both steps.
+// is_public is Optional+Computed with UseStateForUnknown(), so this guards against a
+// nested-attribute-style regression where a field like this drifts or resets on an update
+// that doesn't touch it.
+func TestAccWorkflowTemplate_UpdateWithIsPublicUnchanged(t *testing.T) {
+	templateName := acctest.ResourceName("tf-provider-workflow-template-5")
+
+	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	templateCallback := func(description string) string {
+		return fmt.Sprintf(`
+		  is_public   = "0"
+		  description = %q
+		`, description)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: testAccWorkflowTemplate(templateName, sourceConfigKind, templateCallback("Initial description")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "template_name", templateName),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "is_public", "0"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "description", "Initial description"),
+				),
+			},
+			// Update description only; is_public stays "0" in config on both steps.
+			{
+				Config: testAccWorkflowTemplate(templateName, sourceConfigKind, templateCallback("Updated description")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "template_name", templateName),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "is_public", "0"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "description", "Updated description"),
+				),
+			},
+			// Delete testing automatically occurs
+		},
+	})
+}
+
 func TestAccWorkflowTemplate_WithRuntime(t *testing.T) {
 	templateName := acctest.ResourceName("tf-provider-workflow-template-2")
 

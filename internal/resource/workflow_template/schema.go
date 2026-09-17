@@ -19,7 +19,7 @@ import (
 func WorkflowTemplateRuntimeSourceConfig() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"source_config_dest_kind": schema.StringAttribute{
-			MarkdownDescription: constants.RuntimeSourceDestKind,
+			MarkdownDescription: constants.WorkflowTemplateRuntimeSourceDestKind,
 			Optional:            true,
 		},
 		"config": schema.SingleNestedAttribute{
@@ -27,7 +27,7 @@ func WorkflowTemplateRuntimeSourceConfig() map[string]schema.Attribute {
 			Optional:            true,
 			Attributes: map[string]schema.Attribute{
 				"auth": schema.StringAttribute{
-					MarkdownDescription: constants.RuntimeSourceConfigAuth,
+					MarkdownDescription: constants.WorkflowTemplateRuntimeSourceConfigAuth,
 					Optional:            true,
 				},
 				"git_core_auto_crlf": schema.BoolAttribute{
@@ -47,7 +47,7 @@ func WorkflowTemplateRuntimeSourceConfig() map[string]schema.Attribute {
 					Optional:            true,
 				},
 				"is_private": schema.BoolAttribute{
-					MarkdownDescription: constants.RuntimeSourceConfigIsPrivate,
+					MarkdownDescription: constants.WorkflowTemplateRuntimeSourceConfigIsPrivate,
 					Optional:            true,
 					Computed:            true,
 					PlanModifiers: []planmodifier.Bool{
