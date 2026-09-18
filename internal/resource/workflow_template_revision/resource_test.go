@@ -116,6 +116,7 @@ func testAccWorkflowTemplateRevision(templateID, sourceConfigKind string, userJo
 }
 
 func TestAccWorkflowTemplateRevision_Basic(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := acctest.ResourceName("tf-provider-workflow-template-revision-1")
 	alias := "revision1"
 
@@ -177,6 +178,7 @@ func TestAccWorkflowTemplateRevision_Basic(t *testing.T) {
 }
 
 func TestAccWorkflowTemplateRevision_WithConfig(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := acctest.ResourceName("test-workflow-template-revision")
 	alias := "revision2"
 
@@ -225,6 +227,7 @@ func TestAccWorkflowTemplateRevision_WithConfig(t *testing.T) {
 }
 
 func TestAccWorkflowTemplateRevision_WithDeploymentPlatformConfig(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := acctest.ResourceName("test-workflow-template-revision-dpc")
 	alias := "revision-dpc"
 
@@ -273,6 +276,7 @@ func TestAccWorkflowTemplateRevision_WithDeploymentPlatformConfig(t *testing.T) 
 }
 
 func TestAccWorkflowTemplateRevision_WithEnvironmentVariablesAndContextTags(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := "tf-provider-wftr-envvars"
 	alias := "revision-envvars"
 
@@ -334,6 +338,7 @@ func TestAccWorkflowTemplateRevision_WithEnvironmentVariablesAndContextTags(t *t
 }
 
 func TestAccWorkflowTemplateRevision_WithInputSchemas(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := "tf-provider-wftr-inputschemas"
 	alias := "revision-inputschemas"
 
@@ -389,6 +394,7 @@ func TestAccWorkflowTemplateRevision_WithInputSchemas(t *testing.T) {
 }
 
 func TestAccWorkflowTemplateRevision_WithUserSchedules(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := "tf-provider-wftr-schedules"
 	alias := "revision-schedules"
 
@@ -444,6 +450,7 @@ func TestAccWorkflowTemplateRevision_WithUserSchedules(t *testing.T) {
 }
 
 func TestAccWorkflowTemplateRevision_WithRunnerConstraints(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := "tf-provider-wftr-runner"
 	alias := "revision-runner"
 
@@ -499,6 +506,7 @@ func TestAccWorkflowTemplateRevision_WithRunnerConstraints(t *testing.T) {
 }
 
 func TestAccWorkflowTemplateRevision_WithMiniSteps(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := "tf-provider-wftr-ministeps"
 	alias := "revision-ministeps"
 
@@ -584,6 +592,7 @@ func TestAccWorkflowTemplateRevision_WithMiniSteps(t *testing.T) {
 }
 
 func TestAccWorkflowTemplateRevision_WithRuntimeSource(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := "tf-provider-wftr-runtime"
 	alias := "revision-runtime"
 
@@ -649,6 +658,7 @@ func TestAccWorkflowTemplateRevision_WithRuntimeSource(t *testing.T) {
 }
 
 func TestAccWorkflowTemplateRevision_WithTerraformConfig(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := "tf-provider-wftr-tfconfig"
 	alias := "revision-tfconfig"
 
@@ -736,6 +746,7 @@ func TestAccWorkflowTemplateRevision_WithTerraformConfig(t *testing.T) {
 }
 
 func TestAccWorkflowTemplateRevision_WithWfStepsConfig(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := "tf-provider-wftr-wfsteps"
 	alias := "revision-wfsteps"
 
@@ -825,6 +836,7 @@ func TestAccWorkflowTemplateRevision_WithWfStepsConfig(t *testing.T) {
 }
 
 func TestAccWorkflowTemplateRevision_Lifecycle(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateName := acctest.ResourceName("tf-provider-wf-template-lifecycle")
 	alias := "v1"
 

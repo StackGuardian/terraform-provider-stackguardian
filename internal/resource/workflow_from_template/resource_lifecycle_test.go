@@ -6,13 +6,14 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 // TestAccWorkflowUsingTemplate_WorkflowGroupRequiresReplace verifies that changing
 // workflow_group_id forces a destroy+create (RequiresReplace), since the platform has no
 // operation to move a workflow between groups.
 func TestAccWorkflowUsingTemplate_WorkflowGroupRequiresReplace(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupWorkflowTemplate(t, "tf-wfgrp-replace-tpl") + ":1"
 	wfGrpA := acctest.ResourceName("tf-wfgrp-replace-a")
 	wfGrpB := acctest.ResourceName("tf-wfgrp-replace-b")
@@ -29,7 +30,7 @@ func TestAccWorkflowUsingTemplate_WorkflowGroupRequiresReplace(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks:   []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_1_0)},
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
@@ -60,6 +61,8 @@ func TestAccWorkflowUsingTemplate_WorkflowGroupRequiresReplace(t *testing.T) {
 // deleteWorkflowUsingTemplateFixture call between steps simulates the out-of-band delete;
 // ExpectNonEmptyPlan on the refresh step asserts the resource is planned for recreate.
 func TestAccWorkflowUsingTemplate_ManualDeleteRecreates(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := setupWorkflowTemplate(t, "tf-manualdel-tpl") + ":1"
 	wfGrp := acctest.ResourceName("tf-manualdel-wfgrp")
 	id := acctest.ResourceName("tf-manualdel-wf")
@@ -74,7 +77,7 @@ func TestAccWorkflowUsingTemplate_ManualDeleteRecreates(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks:   []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_1_0)},
+		TerraformVersionChecks:   acctest.VersionChecks(),
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{

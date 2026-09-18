@@ -1,4 +1,12 @@
-name: "Test TF-Provider on API-PROD"
+name: "Test TF-Provider on API-PROD"  # layer 3: acceptance tests across the supported Terraform range
+
+# Runs on pull requests targeting main, i.e. when work is promoted out of develop.
+# These tests create real resources against the StackGuardian API, so unlike the
+# compatibility gate (.github/workflows/compat.yaml) they need credentials and
+# cannot run on forks.
+#
+# The matrix proves the provider actually works on every Terraform version we
+# claim to support, not merely that its schema decodes there.
 
 on:
   push:
@@ -8,16 +16,45 @@ on:
     branches:
       - "main"
     types: [ opened, edited, reopened, synchronize, ready_for_review ]
-  schedule:
-    - cron: "0 4 * * 1"
   workflow_dispatch:
   workflow_call:
+
+# The acceptance tests share one StackGuardian organization and several of them
+# use fixed resource names, so two runs must never overlap. Without this, two
+# pull requests racing each other produce collisions that look like version
+# incompatibilities.
+concurrency:
+  group: "acceptance-tests"
+  cancel-in-progress: false
 
 jobs:
 
   provider-project_test:
-    name: "Test Provider project"
+    name: "Test Provider project (Terraform ${{ matrix.terraform }})"
     runs-on: ubuntu-latest
+    strategy:
+      # Sequential and non-cancelling: the tests share one organization, and a
+      # failure on one version should not hide the result on the others.
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        # The support floor, the newest tested release, and the latest patch of
+        # every minor series in between. Kept in sync with
+        # constants.SupportedTerraformVersions by
+        # TestTerraformMatrixMatchesWorkflows.
+        terraform:
+          - "1.5.7"  # MinTerraformVersion: the support floor
+          - "1.6.6"
+          - "1.7.5"
+          - "1.8.5"
+          - "1.9.8"
+          - "1.10.5"
+          - "1.11.4"
+          - "1.12.2"
+          - "1.13.5"
+          - "1.14.9"
+          - "1.15.9"
+          - "1.16.2"  # MaxTerraformVersion: the newest tested release
     env:
       GOPRIVATE: github.com/StackGuardian/sg-sdk-go
     steps:
@@ -30,14 +67,16 @@ jobs:
         with:
           go-version-file: "go.mod"
 
-      - name: "Install Terraform"
+      - name: "Build Provider"
+        run: make build
+
+      # docs-validate-examples shells out to `terraform init` and `terraform
+      # validate`, so the CLI must be on PATH before the docs check runs.
+      - name: "Install Terraform ${{ matrix.terraform }}"
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
-          terraform_version: "1.14.0"
-
-      - name: "Build Provider"
-        run: make build
+          terraform_version: "${{ matrix.terraform }}"
 
       # Runs before the acceptance tests on purpose. These checks need no
       # credentials and no network, and they finish in a couple of minutes. Behind
@@ -53,32 +92,15 @@ jobs:
           make docs-check;
         shell: bash
 
+      # TF_ACC_TERRAFORM_VERSION makes terraform-plugin-testing download and use
+      # exactly this CLI, so the matrix is the single authority on which version
+      # is under test. The CLI installed above is the same version, which keeps
+      # the matrix authoritative.
       - name: "Test Provider with acceptance tests"
         run: make test-acc
         env:
+          TF_ACC_TERRAFORM_VERSION: "${{ matrix.terraform }}"
           STACKGUARDIAN_API_URI: "${{ secrets.SG_PRD_API_URI }}"
           STACKGUARDIAN_API_KEY: "${{ secrets.SG_PRD_API_KEY }}"
           STACKGUARDIAN_ORG_NAME: "${{ secrets.SG_PRD_ORG_NAME }}"
           TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY: "${{ secrets.TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY }}"
-
-      # - name: "Test Provider with quickstart example"
-      #   run: |
-      #     set -eu -x;
-      #     make install;
-      #     make test-examples-quickstart ARGS="-f local-build";
-      #   shell: bash
-      #   env:
-      #     STACKGUARDIAN_API_KEY: '${{ secrets.SG_PRD_API_KEY }}'
-      #     STACKGUARDIAN_API_URI: '${{ secrets.SG_PRD_API_URI }}'
-      #     STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'
-
-      # - name: "Test Provider with onboarding example"
-      #   run: |
-      #     set -eu -x;
-      #     make install;
-      #     make test-examples-onboarding ARGS="-f local-build";
-      #   shell: bash
-      #   env:
-      #     STACKGUARDIAN_API_KEY: '${{ secrets.SG_PRD_API_KEY }}'
-      #     STACKGUARDIAN_API_URI: '${{ secrets.SG_PRD_API_URI }}'
-      #     STACKGUARDIAN_ORG_NAME: '${{ secrets.SG_PRD_ORG_NAME }}'
