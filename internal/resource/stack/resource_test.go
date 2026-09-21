@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -27,6 +28,11 @@ var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
 // testWfSlotId is the shared workflow slot id used in the stack template
 // revision's workflows_config and Actions (see setupStackTemplateChain).
 const testWfSlotId = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
+
+// secondWfSlotId is a second workflow slot UUID, distinct from testWfSlotId,
+// shared package-wide by every test that needs a multi-slot stack template
+// revision (setupStackTemplateChainNoActions / setupSecondStackTemplateRevisionTwoSlots).
+const secondWfSlotId = "3f7c9e2a-5b1d-4e6f-8a2c-9d4b6e1f0a3c"
 
 func getClient() *sgclient.Client {
 	return sgclient.NewClient(
@@ -225,8 +231,7 @@ func setupStackWorkflowTemplate(t *testing.T, templateID string) string {
 // setupStackTemplateChainWithFields is setupStackTemplateChain's general
 // form: it additionally sets description/tags/contextTags on the revision
 // when the corresponding argument is non-nil/non-empty. Used by the
-// per-attribute resolution-scenario tests (resource_description_test.go,
-// resource_tags_test.go, resource_context_tags_test.go) to produce a
+// per-attribute resolution-scenario tests (resource_attributes_test.go) to produce a
 // template revision that DOES supply a value for the one attribute under
 // test. setupStackTemplateChain itself is unchanged (still the zero-value
 // case) and just delegates here. Publishes directly with no staged
@@ -412,7 +417,26 @@ func setupStackDependencyChain(t *testing.T, wfGrpName, wfTemplateName, stackTem
 // resources. No actions here — that has its own test; apply/plan come from
 // the stack template revision instead. additionalConfig is inserted verbatim
 // into the resource body.
+//
+// workflows_config is Required and must declare exactly the workflow slots
+// the referenced revision defines, in order (validateWorkflowsConfigMatchesRevision).
+// Every fixture used by additionalConfig-only callers here
+// (setupStackDependencyChain/setupStackTemplateChain and
+// setupSecondStackTemplateRevision) wires exactly one slot, testWfSlotId, so
+// that's injected automatically unless additionalConfig already declares its
+// own workflows_config — needed by callers against a multi-slot fixture
+// (setupStackTemplateChainNoActions) or a workflows_config value under test.
 func testAccStackConfig(wfGrpName, stackTemplateRevisionID, id, additionalConfig string) string {
+	if !strings.Contains(additionalConfig, "workflows_config") {
+		additionalConfig = fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      { id = %q }
+    ]
+  }
+
+  %s`, testWfSlotId, additionalConfig)
+	}
 	return fmt.Sprintf(`
 resource "stackguardian_stack" "test" {
   workflow_group_id = %q
@@ -422,6 +446,297 @@ resource "stackguardian_stack" "test" {
   %s
 }
 `, wfGrpName, id, stackTemplateRevisionID, additionalConfig)
+}
+
+// setupStackTemplateChainNoActions creates and publishes a stack template +
+// revision :1 via the SDK, like setupStackTemplateChain, but wires TWO
+// workflow slots (testWfSlotId, secondWfSlotId — both pointing at the same
+// workflow template) instead of one, and defines no Actions of its own at
+// all. Used by tests that need a template supplying neither apply/plan/destroy
+// NOR a dependency chain to inherit, so the only source for them is the API's
+// own create-time default (the provider no longer synthesizes one itself —
+// see expandActionsMap), and by tests that need a second workflow slot to
+// exercise workflows_config against a multi-slot revision.
+// Registers cleanup. Returns the bare revision id ("<name>:1").
+func setupStackTemplateChainNoActions(t *testing.T, stackTemplateID, workflowTemplateID string) string {
+	t.Helper()
+	client := getClient()
+	revisionID := fmt.Sprintf("%s:1", stackTemplateID)
+	sourceConfigKind := stacktemplates.StackTemplateSourceConfigKindTerraform
+
+	t.Cleanup(func() {
+		logCleanupErr(t, fmt.Sprintf("deprecate stack template revision %q", revisionID), deprecateStackTemplateRevisionFixture(revisionID))
+		logCleanupErr(t, fmt.Sprintf("delete stack template revision %q", revisionID), deleteStackTemplateRevisionFixture(revisionID))
+		logCleanupErr(t, fmt.Sprintf("delete stack template %q", stackTemplateID), deleteStackTemplateFixture(stackTemplateID))
+	})
+
+	_, err := client.StackTemplates.CreateStackTemplate(
+		context.TODO(), org, false,
+		&stacktemplates.CreateStackTemplateRequest{
+			Id:               &stackTemplateID,
+			TemplateName:     stackTemplateID,
+			SourceConfigKind: &sourceConfigKind,
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+		},
+	)
+	if err != nil && !is409(err) {
+		t.Fatalf("setupStackTemplateChainNoActions: create stack template %q: %s", stackTemplateID, err)
+	}
+
+	prefixedWorkflowTemplateID := fmt.Sprintf("/%s/%s", org, workflowTemplateID)
+	prefixedWorkflowRevisionID := fmt.Sprintf("/%s/%s:1", org, workflowTemplateID)
+	useMarketplace := true
+	managedState := true
+	tfVersion := "1.5.7"
+
+	makeSlot := func(slotId, resourceName string) *stacktemplaterevisions.StackTemplateRevisionWorkflow {
+		return &stacktemplaterevisions.StackTemplateRevisionWorkflow{
+			Id:           sgsdkgo.String(slotId),
+			TemplateId:   &prefixedWorkflowTemplateID,
+			ResourceName: sgsdkgo.String(resourceName),
+			VcsConfig: &sgsdkgo.VcsConfig{
+				IacVcsConfig: &sgsdkgo.IacvcsConfig{
+					UseMarketplaceTemplate: &useMarketplace,
+					IacTemplateId:          &prefixedWorkflowRevisionID,
+				},
+			},
+			TerraformConfig: &sgsdkgo.TerraformConfig{
+				ManagedTerraformState: &managedState,
+				TerraformVersion:      &tfVersion,
+			},
+		}
+	}
+
+	_, err = client.StackTemplateRevisions.CreateStackTemplateRevision(
+		context.TODO(), org, stackTemplateID,
+		&stacktemplaterevisions.CreateStackTemplateRevisionRequest{
+			Alias:            "v1",
+			SourceConfigKind: &sourceConfigKind,
+			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			WorkflowsConfig: &stacktemplaterevisions.StackTemplateRevisionWorkflowsConfig{
+				Workflows: []*stacktemplaterevisions.StackTemplateRevisionWorkflow{
+					makeSlot(testWfSlotId, "wf-1"),
+					makeSlot(secondWfSlotId, "wf-2"),
+				},
+			},
+			// Deliberately no Actions — the template supplies none of its own, so
+			// apply/plan/destroy can only come from the API's own create-time default.
+		},
+	)
+	if err != nil && !is409(err) {
+		t.Fatalf("setupStackTemplateChainNoActions: create revision for %q: %s", stackTemplateID, err)
+	}
+
+	_, err = client.StackTemplateRevisions.UpdateStackTemplateRevision(
+		context.TODO(), org, revisionID,
+		&stacktemplaterevisions.UpdateStackTemplateRevisionRequest{
+			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
+		},
+	)
+	if err != nil {
+		t.Fatalf("setupStackTemplateChainNoActions: publish revision %q: %s", revisionID, err)
+	}
+
+	_, err = client.StackTemplates.UpdateStackTemplate(
+		context.TODO(), org, stackTemplateID,
+		&stacktemplates.UpdateStackTemplateRequest{
+			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
+		},
+	)
+	if err != nil {
+		t.Fatalf("setupStackTemplateChainNoActions: publish template %q: %s", stackTemplateID, err)
+	}
+
+	return revisionID
+}
+
+// setupSecondStackTemplateRevisionWithFields is setupSecondStackTemplateRevision's general
+// form: additionally sets tags/contextTags/actions on revision :2. actions must be non-empty —
+// the API rejects publishing a stack template revision with an empty Actions map ("Stack actions
+// are empty"). setupSecondStackTemplateRevision delegates here with tags/contextTags nil and its
+// own fixed apply/plan Actions map.
+func setupSecondStackTemplateRevisionWithFields(t *testing.T, stackTemplateID, workflowTemplateID, description string, numberOfApprovalsRequired *int, tags []string, contextTags map[string]string, actions map[string]*sgsdkgo.Actions) string {
+	t.Helper()
+	client := getClient()
+	revisionID := fmt.Sprintf("%s:2", stackTemplateID)
+	sourceConfigKind := stacktemplates.StackTemplateSourceConfigKindTerraform
+
+	t.Cleanup(func() {
+		logCleanupErr(t, fmt.Sprintf("deprecate stack template revision %q", revisionID), deprecateStackTemplateRevisionFixture(revisionID))
+		logCleanupErr(t, fmt.Sprintf("delete stack template revision %q", revisionID), deleteStackTemplateRevisionFixture(revisionID))
+	})
+
+	prefixedWorkflowTemplateID := fmt.Sprintf("/%s/%s", org, workflowTemplateID)
+	prefixedWorkflowRevisionID := fmt.Sprintf("/%s/%s:1", org, workflowTemplateID)
+	useMarketplace := true
+	managedState := true
+	tfVersion := "1.5.7"
+
+	_, err := client.StackTemplateRevisions.CreateStackTemplateRevision(
+		context.TODO(), org, stackTemplateID,
+		&stacktemplaterevisions.CreateStackTemplateRevisionRequest{
+			Alias:            "v2",
+			SourceConfigKind: &sourceConfigKind,
+			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			LongDescription:  &description,
+			Tags:             tags,
+			ContextTags:      contextTags,
+			WorkflowsConfig: &stacktemplaterevisions.StackTemplateRevisionWorkflowsConfig{
+				Workflows: []*stacktemplaterevisions.StackTemplateRevisionWorkflow{
+					{
+						Id:                        sgsdkgo.String(testWfSlotId),
+						TemplateId:                &prefixedWorkflowTemplateID,
+						ResourceName:              sgsdkgo.String("wf-1"),
+						NumberOfApprovalsRequired: numberOfApprovalsRequired,
+						VcsConfig: &sgsdkgo.VcsConfig{
+							IacVcsConfig: &sgsdkgo.IacvcsConfig{
+								UseMarketplaceTemplate: &useMarketplace,
+								IacTemplateId:          &prefixedWorkflowRevisionID,
+							},
+						},
+						TerraformConfig: &sgsdkgo.TerraformConfig{
+							ManagedTerraformState: &managedState,
+							TerraformVersion:      &tfVersion,
+						},
+					},
+				},
+			},
+			Actions: actions,
+		},
+	)
+	if err != nil && !is409(err) {
+		t.Fatalf("setupSecondStackTemplateRevisionWithFields: create revision for %q: %s", stackTemplateID, err)
+	}
+
+	_, err = client.StackTemplateRevisions.UpdateStackTemplateRevision(
+		context.TODO(), org, revisionID,
+		&stacktemplaterevisions.UpdateStackTemplateRevisionRequest{
+			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
+		},
+	)
+	if err != nil {
+		t.Fatalf("setupSecondStackTemplateRevisionWithFields: publish revision %q: %s", revisionID, err)
+	}
+
+	return revisionID
+}
+
+// setupSecondStackTemplateRevision creates and publishes revision :2 of an
+// existing stack template (already created by setupStackTemplateChain), with
+// the given description and wired to the same workflow slot/template as
+// revision :1, and its own fixed apply/plan Actions verbatim.
+// numberOfApprovalsRequired, if non-nil, is set on that workflow slot — used
+// to test workflows_config's revision-based re-resolution
+// (reResolveWorkflowsConfigOnRevisionChange), since revision :1 never sets it.
+// Registers cleanup. Returns the bare revision id ("<name>:2").
+func setupSecondStackTemplateRevision(t *testing.T, stackTemplateID, workflowTemplateID, description string, numberOfApprovalsRequired *int) string {
+	t.Helper()
+	return setupSecondStackTemplateRevisionWithFields(t, stackTemplateID, workflowTemplateID, description, numberOfApprovalsRequired, nil, nil, defaultSecondRevisionActions())
+}
+
+// setupSecondStackTemplateRevisionTwoSlots creates and publishes revision :2
+// of an existing stack template (already created by setupStackTemplateChain /
+// setupStackDependencyChain, whose revision :1 wires only testWfSlotId),
+// adding a second workflow slot (secondWfSlotId) alongside it — both pointing
+// at the same workflow template. Used by
+// TestAccStack_WorkflowsConfigAddSecondWorkflowOverride to exercise
+// workflows_config growing across a genuine revision change: declaring an
+// extra slot workflows_config against a STATIC revision is no longer
+// possible (see validateWorkflowsConfigMatchesRevision), so growth can now
+// only come from the referenced revision itself defining more slots.
+// Registers cleanup. Returns the bare revision id ("<name>:2").
+func setupSecondStackTemplateRevisionTwoSlots(t *testing.T, stackTemplateID, workflowTemplateID string) string {
+	t.Helper()
+	client := getClient()
+	revisionID := fmt.Sprintf("%s:2", stackTemplateID)
+	sourceConfigKind := stacktemplates.StackTemplateSourceConfigKindTerraform
+
+	t.Cleanup(func() {
+		logCleanupErr(t, fmt.Sprintf("deprecate stack template revision %q", revisionID), deprecateStackTemplateRevisionFixture(revisionID))
+		logCleanupErr(t, fmt.Sprintf("delete stack template revision %q", revisionID), deleteStackTemplateRevisionFixture(revisionID))
+	})
+
+	prefixedWorkflowTemplateID := fmt.Sprintf("/%s/%s", org, workflowTemplateID)
+	prefixedWorkflowRevisionID := fmt.Sprintf("/%s/%s:1", org, workflowTemplateID)
+	useMarketplace := true
+	managedState := true
+	tfVersion := "1.5.7"
+
+	makeSlot := func(slotId, resourceName string) *stacktemplaterevisions.StackTemplateRevisionWorkflow {
+		return &stacktemplaterevisions.StackTemplateRevisionWorkflow{
+			Id:           sgsdkgo.String(slotId),
+			TemplateId:   &prefixedWorkflowTemplateID,
+			ResourceName: sgsdkgo.String(resourceName),
+			VcsConfig: &sgsdkgo.VcsConfig{
+				IacVcsConfig: &sgsdkgo.IacvcsConfig{
+					UseMarketplaceTemplate: &useMarketplace,
+					IacTemplateId:          &prefixedWorkflowRevisionID,
+				},
+			},
+			TerraformConfig: &sgsdkgo.TerraformConfig{
+				ManagedTerraformState: &managedState,
+				TerraformVersion:      &tfVersion,
+			},
+		}
+	}
+
+	_, err := client.StackTemplateRevisions.CreateStackTemplateRevision(
+		context.TODO(), org, stackTemplateID,
+		&stacktemplaterevisions.CreateStackTemplateRevisionRequest{
+			Alias:            "v2",
+			SourceConfigKind: &sourceConfigKind,
+			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			WorkflowsConfig: &stacktemplaterevisions.StackTemplateRevisionWorkflowsConfig{
+				Workflows: []*stacktemplaterevisions.StackTemplateRevisionWorkflow{
+					makeSlot(testWfSlotId, "wf-1"),
+					makeSlot(secondWfSlotId, "wf-2"),
+				},
+			},
+			Actions: defaultSecondRevisionActions(),
+		},
+	)
+	if err != nil && !is409(err) {
+		t.Fatalf("setupSecondStackTemplateRevisionTwoSlots: create revision for %q: %s", stackTemplateID, err)
+	}
+
+	_, err = client.StackTemplateRevisions.UpdateStackTemplateRevision(
+		context.TODO(), org, revisionID,
+		&stacktemplaterevisions.UpdateStackTemplateRevisionRequest{
+			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
+		},
+	)
+	if err != nil {
+		t.Fatalf("setupSecondStackTemplateRevisionTwoSlots: publish revision %q: %s", revisionID, err)
+	}
+
+	return revisionID
+}
+
+// defaultSecondRevisionActions returns the fixed apply/plan Actions map used
+// by setupSecondStackTemplateRevision's default revision :2, and reused
+// directly by the per-attribute "retained when template has none" tests
+// (resource_attributes_stack_upgrade_test.go) that need a revision :2 with
+// actions of its own alongside the one field under test.
+func defaultSecondRevisionActions() map[string]*sgsdkgo.Actions {
+	applyAction := sgsdkgo.ActionEnumApply
+	planAction := sgsdkgo.ActionEnumPlan
+	return map[string]*sgsdkgo.Actions{
+		"apply": {
+			Name: "apply",
+			Order: map[string]*sgsdkgo.ActionOrder{
+				testWfSlotId: {Parameters: &sgsdkgo.StackActionParameters{TerraformAction: &sgsdkgo.TerraformAction{Action: &applyAction}}},
+			},
+		},
+		"plan": {
+			Name: "plan",
+			Order: map[string]*sgsdkgo.ActionOrder{
+				testWfSlotId: {Parameters: &sgsdkgo.StackActionParameters{TerraformAction: &sgsdkgo.TerraformAction{Action: &planAction}}},
+			},
+		},
+	}
 }
 
 // --- Tests ---
@@ -510,13 +825,121 @@ func TestAccStack_Import(t *testing.T) {
 	})
 }
 
+// TestAccStack_IdRequiresReplace verifies that changing id forces a
+// destroy-and-recreate (the SDK's PatchedStack has no Id field, so there's no
+// other way to apply a change) rather than an in-place update, and that the
+// new id is correctly applied afterward.
+func TestAccStack_IdRequiresReplace(t *testing.T) {
+	wfGrpName := "tf-provider-stack-idreplace-wfgrp"
+	wfTemplateName := "tf-provider-stack-idreplace-wftmpl"
+	stackTemplateName := "tf-provider-stack-idreplace-stmpl"
+	id1 := "tf-provider-stack-idreplace-a"
+	id2 := "tf-provider-stack-idreplace-b"
+
+	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id1)
+	// Safety net for the post-replace id too — the chain's own registration
+	// only knows about id1.
+	t.Cleanup(func() { deleteStackFixture(wfGrpName, id2) })
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id1, ""),
+				Check:  resource.TestCheckResourceAttr("stackguardian_stack.test", "id", id1),
+			},
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id2, ""),
+				Check:  resource.TestCheckResourceAttr("stackguardian_stack.test", "id", id2),
+			},
+		},
+	})
+}
+
+// TestAccStack_ReadRemovesOnNotFound verifies that a stack deleted
+// out-of-band (API 404 on the next Read) is removed from Terraform state
+// instead of erroring, leaving a non-empty plan (a pending create) since the
+// config still declares the resource.
+func TestAccStack_ReadRemovesOnNotFound(t *testing.T) {
+	wfGrpName := "tf-provider-stack-read404-wfgrp"
+	wfTemplateName := "tf-provider-stack-read404-wftmpl"
+	stackTemplateName := "tf-provider-stack-read404-stmpl"
+	id := "tf-provider-stack-read404"
+
+	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, ""),
+			},
+			{
+				PreConfig: func() {
+					if err := deleteStackFixture(wfGrpName, id); err != nil {
+						t.Fatalf("failed to delete stack out-of-band: %s", err)
+					}
+				},
+				RefreshState:       true,
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
+
+// TestAccStack_DeleteAlreadyGone verifies that deleting a stack that's
+// already gone (API 404) is treated as a successful delete instead of
+// erroring (isStackNotFound in resource.go), by deleting it out-of-band and
+// then dropping it from Terraform config entirely so a real Delete() call is
+// issued against an already-gone stack.
+func TestAccStack_DeleteAlreadyGone(t *testing.T) {
+	wfGrpName := "tf-provider-stack-del404-wfgrp"
+	wfTemplateName := "tf-provider-stack-del404-wftmpl"
+	stackTemplateName := "tf-provider-stack-del404-stmpl"
+	id := "tf-provider-stack-del404"
+
+	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, ""),
+			},
+			{
+				PreConfig: func() {
+					if err := deleteStackFixture(wfGrpName, id); err != nil {
+						t.Fatalf("failed to delete stack out-of-band: %s", err)
+					}
+				},
+				// Resource removed from config entirely: Terraform issues a real
+				// Delete() call against a stack that's already gone.
+				Config: `# stack intentionally removed from config`,
+			},
+		},
+	})
+}
+
 // --- Remaining cases (not yet implemented) ---
 //
-// Covered, split across resource_root_test.go /
-// resource_actions_test.go / resource_workflows_test.go:
+// Covered, split across resource_attributes_test.go /
+// resource_attributes_stack_upgrade_test.go / resource_workflows_test.go:
 //   - id RequiresReplace; template_group_id round trip + re-resolution on
 //     revision change; Read removes state on 404; Delete treats 404 as
-//     success (resource.go's isStackNotFound, added alongside its test).
+//     success (resource.go's isStackNotFound, added alongside its test —
+//     all four above, in this file).
 //   - workflows_config.workflows[]: minimal entry + Optional+Computed guard
 //     regression; invalid wf_type/parallel_execution diagnostics;
 //     three-way terraform_config precedence merge; vcs_config.iac_vcs_config
