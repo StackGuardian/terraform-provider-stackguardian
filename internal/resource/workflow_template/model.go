@@ -165,14 +165,27 @@ func (m RuntimeSourceModel) ToAPIModel(ctx context.Context) (*workflowtemplates.
 		}
 
 		runtimeSource.Config = &workflowtemplates.RuntimeSourceConfig{
-			IsPrivate:               configModel.IsPrivate.ValueBoolPointer(),
 			Auth:                    configModel.Auth.ValueStringPointer(),
-			GitCoreAutoCRLF:         configModel.GitCoreAutoCrlf.ValueBoolPointer(),
 			GitSparseCheckoutConfig: configModel.GitSparseCheckoutConfig.ValueStringPointer(),
 			IncludeSubModule:        configModel.IncludeSubModule.ValueBoolPointer(),
-			Ref:                     configModel.Ref.ValueStringPointer(),
 			Repo:                    configModel.Repo.ValueString(),
 			WorkingDir:              configModel.WorkingDir.ValueStringPointer(),
+		}
+
+		// is_private, git_core_auto_crlf, and ref are Optional+Computed: when unset in
+		// config they are Unknown (not Null) on Create, and ValueBoolPointer()/
+		// ValueStringPointer() return a pointer to the zero value for Unknown rather than
+		// nil. Since these API fields are pointer types with `omitempty`, a non-nil
+		// zero-value pointer is still marshaled, so the guard is required to actually omit
+		// the field.
+		if !configModel.IsPrivate.IsNull() && !configModel.IsPrivate.IsUnknown() {
+			runtimeSource.Config.IsPrivate = configModel.IsPrivate.ValueBoolPointer()
+		}
+		if !configModel.GitCoreAutoCrlf.IsNull() && !configModel.GitCoreAutoCrlf.IsUnknown() {
+			runtimeSource.Config.GitCoreAutoCRLF = configModel.GitCoreAutoCrlf.ValueBoolPointer()
+		}
+		if !configModel.Ref.IsNull() && !configModel.Ref.IsUnknown() {
+			runtimeSource.Config.Ref = configModel.Ref.ValueStringPointer()
 		}
 	}
 	return runtimeSource, nil

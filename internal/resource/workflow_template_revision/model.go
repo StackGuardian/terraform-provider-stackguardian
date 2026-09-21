@@ -837,6 +837,7 @@ func ConvertRuntimeSourceToAPI(ctx context.Context, runtimeSourceObj types.Objec
 		}
 
 		runtimeSource.Config = &workflowtemplates.RuntimeSourceConfigUpdate{
+			Auth:                    configModel.Auth.ValueStringPointer(),
 			GitCoreAutoCRLF:         configModel.GitCoreAutoCrlf.ValueBoolPointer(),
 			GitSparseCheckoutConfig: configModel.GitSparseCheckoutConfig.ValueStringPointer(),
 			IncludeSubModule:        configModel.IncludeSubModule.ValueBoolPointer(),
@@ -865,16 +866,42 @@ func ConvertTerraformConfigToAPI(ctx context.Context, terraformConfigObj types.O
 		return nil, diag_tc
 	}
 
-	terraformConfig := &sgsdkgo.TerraformConfig{
-		TerraformVersion:       terraformConfigModel.TerraformVersion.ValueStringPointer(),
-		DriftCheck:             terraformConfigModel.DriftCheck.ValueBoolPointer(),
-		DriftCron:              terraformConfigModel.DriftCron.ValueStringPointer(),
-		ManagedTerraformState:  terraformConfigModel.ManagedTerraformState.ValueBoolPointer(),
-		ApprovalPreApply:       terraformConfigModel.ApprovalPreApply.ValueBoolPointer(),
-		TerraformPlanOptions:   terraformConfigModel.TerraformPlanOptions.ValueStringPointer(),
-		TerraformInitOptions:   terraformConfigModel.TerraformInitOptions.ValueStringPointer(),
-		Timeout:                expanders.IntPtr(terraformConfigModel.Timeout.ValueInt64Pointer()),
-		RunPreInitHooksOnDrift: terraformConfigModel.RunPreInitHooksOnDrift.ValueBoolPointer(),
+	terraformConfig := &sgsdkgo.TerraformConfig{}
+
+	// Every field set below maps to a schema attribute that is Optional+Computed with
+	// UseStateForUnknown(): when unset in config it is Unknown (not Null) on Create, and
+	// ValueStringPointer()/ValueBoolPointer()/ValueInt64Pointer() return a pointer to the
+	// zero value for Unknown rather than nil. The SDK's TerraformConfig fields are all
+	// pointer types with `omitempty`, so a non-nil zero-value pointer is still marshaled —
+	// e.g. an unset drift_cron would be sent as an explicit "", which the API rejects
+	// ("This field may not be blank") — so each field needs this guard to actually be
+	// omitted.
+	if !terraformConfigModel.TerraformVersion.IsNull() && !terraformConfigModel.TerraformVersion.IsUnknown() {
+		terraformConfig.TerraformVersion = terraformConfigModel.TerraformVersion.ValueStringPointer()
+	}
+	if !terraformConfigModel.DriftCheck.IsNull() && !terraformConfigModel.DriftCheck.IsUnknown() {
+		terraformConfig.DriftCheck = terraformConfigModel.DriftCheck.ValueBoolPointer()
+	}
+	if !terraformConfigModel.DriftCron.IsNull() && !terraformConfigModel.DriftCron.IsUnknown() {
+		terraformConfig.DriftCron = terraformConfigModel.DriftCron.ValueStringPointer()
+	}
+	if !terraformConfigModel.ManagedTerraformState.IsNull() && !terraformConfigModel.ManagedTerraformState.IsUnknown() {
+		terraformConfig.ManagedTerraformState = terraformConfigModel.ManagedTerraformState.ValueBoolPointer()
+	}
+	if !terraformConfigModel.ApprovalPreApply.IsNull() && !terraformConfigModel.ApprovalPreApply.IsUnknown() {
+		terraformConfig.ApprovalPreApply = terraformConfigModel.ApprovalPreApply.ValueBoolPointer()
+	}
+	if !terraformConfigModel.TerraformPlanOptions.IsNull() && !terraformConfigModel.TerraformPlanOptions.IsUnknown() {
+		terraformConfig.TerraformPlanOptions = terraformConfigModel.TerraformPlanOptions.ValueStringPointer()
+	}
+	if !terraformConfigModel.TerraformInitOptions.IsNull() && !terraformConfigModel.TerraformInitOptions.IsUnknown() {
+		terraformConfig.TerraformInitOptions = terraformConfigModel.TerraformInitOptions.ValueStringPointer()
+	}
+	if !terraformConfigModel.Timeout.IsNull() && !terraformConfigModel.Timeout.IsUnknown() {
+		terraformConfig.Timeout = expanders.IntPtr(terraformConfigModel.Timeout.ValueInt64Pointer())
+	}
+	if !terraformConfigModel.RunPreInitHooksOnDrift.IsNull() && !terraformConfigModel.RunPreInitHooksOnDrift.IsUnknown() {
+		terraformConfig.RunPreInitHooksOnDrift = terraformConfigModel.RunPreInitHooksOnDrift.ValueBoolPointer()
 	}
 
 	// Convert TerraformBinPath (MountPoints)
@@ -1360,7 +1387,8 @@ func BuildAPIModelToWorkflowTemplateRevisionModel(ctx context.Context, apiRespon
 	}
 	model.Deprecation = deprecationTerraType
 
-	// Handle Tags
+	// Handle Tags. tags is Optional+Computed, so an explicitly-configured empty list must
+	// round-trip as an empty list, not null — see ListOfStringToTerraformList's doc comment.
 	tagsTerraType, diags := flatteners.ListOfStringToTerraformList(apiResponse.Tags)
 	if diags.HasError() {
 		return nil, diags
