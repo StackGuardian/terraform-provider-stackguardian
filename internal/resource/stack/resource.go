@@ -227,39 +227,61 @@ func (r *stackResource) resolveWorkflowTemplates(ctx context.Context, plan Stack
 	return result, diags
 }
 
-// ModifyPlan handles a template_group_id change. When it changes, the
-// Optional+Computed fields the user did NOT declare must be re-resolved
-// against the new revision. Without this, UseStateForUnknown carries the OLD
-// revision's values forward (they were never unknown), so the merge never
-// runs for them. Setting those fields to concrete resolved values here lets
-// plan == apply. Fields the user declared in config are left untouched.
+// ModifyPlan validates workflows_config against the referenced stack template
+// revision on every Create/Update, and additionally handles a
+// template_group_id change: when it changes, the Optional+Computed fields the
+// user did NOT declare must be re-resolved against the new revision. Without
+// that re-resolution, UseStateForUnknown carries the OLD revision's values
+// forward (they were never unknown), so the merge never runs for them.
+// Setting those fields to concrete resolved values here lets plan == apply.
+// Fields the user declared in config are left untouched.
 //
-// Covers description/tags/context_tags/actions (stack-level) and
-// workflows_config's per-workflow template-derived fields. actions the user
-// declared in config has no re-resolution to do, but is validated here: a
-// reference to a workflow the new revision dropped is an error, not a silent
-// carry-forward.
+// The revision-change branch covers description/tags/context_tags/actions
+// (stack-level) and workflows_config's per-workflow template-derived fields.
+// actions the user declared in config has no re-resolution to do, but is
+// validated here: a reference to a workflow the new revision dropped is an
+// error, not a silent carry-forward.
 func (r *stackResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
-		return // create or destroy — no revision transition to handle
+	if req.Plan.Raw.IsNull() {
+		return // destroy — nothing to validate
 	}
 
-	var plan, state, config StackResourceModel
+	var plan, config StackResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if plan.TemplateGroupId.ValueString() == state.TemplateGroupId.ValueString() || plan.TemplateGroupId.ValueString() == "" {
-		return // no revision change
+	isCreate := req.State.Raw.IsNull()
+	var state StackResourceModel
+	if !isCreate {
+		resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	if plan.TemplateGroupId.IsUnknown() {
+		return // template not resolved yet — nothing to validate against
 	}
 
 	tpl, d := r.fetchTemplateRevision(ctx, plan)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() || tpl == nil {
 		return
+	}
+
+	// workflows_config is Required precisely so every workflow slot the
+	// template revision defines is always declared, in order — checked on
+	// every Create/Update, not just a revision change.
+	resp.Diagnostics.Append(validateWorkflowsConfigMatchesRevision(ctx, plan.WorkflowsConfig, tpl)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if isCreate || plan.TemplateGroupId.ValueString() == state.TemplateGroupId.ValueString() {
+		return // create has its own resolution path; same revision needs no re-resolution
 	}
 
 	resp.Diagnostics.Append(validateActionsAgainstRevision(ctx, config.Actions, plan.WorkflowsConfig, tpl)...)
