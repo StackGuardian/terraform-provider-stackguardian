@@ -61,7 +61,6 @@ func setupTemplateWithInputDefaults(t *testing.T, name string) string {
 			"region": {"type": "string", "default": "eu"}
 		}
 	}`))
-	isCommitted := true
 	_, err = client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, name,
 		&workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
 			Alias: "v1", SourceConfigKind: &sck, IsPublic: sgsdkgo.IsPublicEnumZero.Ptr(),

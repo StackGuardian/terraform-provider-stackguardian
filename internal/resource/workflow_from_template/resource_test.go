@@ -1773,7 +1773,7 @@ func TestAccWorkflowUsingTemplate_DriftDetectionOnTemplateDefault(t *testing.T) 
 
 	// The user declares nothing beyond the template reference. environment_variables is
 	// entirely template-resolved (TMPL_VAR/tmpl-value, from setupWorkflowTemplate).
-	config := ``
+	tfconfig := ``
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -1783,7 +1783,7 @@ func TestAccWorkflowUsingTemplate_DriftDetectionOnTemplateDefault(t *testing.T) 
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, config),
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, tfconfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Never declared by the user; resolved from the template on create and
 					// persisted into state as a real (non-null) value.
@@ -1800,7 +1800,7 @@ func TestAccWorkflowUsingTemplate_DriftDetectionOnTemplateDefault(t *testing.T) 
 				PreConfig: func() {
 					client := getClient()
 					_, err := client.Workflows.UpdateWorkflow(
-						context.TODO(), org, id, wfGrpName,
+						context.TODO(), config.Get().OrgName, id, wfGrpName,
 						sgworkflows.UpgradeModeEnumPreserveSettings.Ptr(),
 						&sgworkflows.PatchedWorkflow{
 							EnvironmentVariables: sgsdkgo.Optional([]*sgsdkgo.EnvVars{

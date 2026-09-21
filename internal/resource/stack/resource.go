@@ -60,7 +60,7 @@ func (r *stackResource) Configure(_ context.Context, req resource.ConfigureReque
 	}
 
 	r.client = provider.Client
-	r.org_name = provider.Org_name
+	r.org_name = provider.OrgName
 }
 
 // ImportState imports a stack using "workflow_group_id/id".
