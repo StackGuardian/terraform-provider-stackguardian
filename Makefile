@@ -35,6 +35,9 @@ test:
 test-acc:
 	TF_ACC=1 go test -parallel=1 $(TEST) -v $(TESTARGS) -timeout=15m
 
+test-acc-local:
+	set -a; . ./.env; set +a; TF_ACC=1 go test -parallel=1 $(TEST) -v $(TESTARGS) -timeout=15m
+
 # Reports resources an earlier acceptance run left behind. Read-only: it lists
 # what carries the test prefix and deletes nothing.
 test-acc-sweep:

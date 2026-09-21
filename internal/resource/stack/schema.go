@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -502,19 +503,14 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Required:            true,
 			},
 			"workflows_config": schema.SingleNestedAttribute{
-				MarkdownDescription: "Workflows configuration for the stack.",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
-				},
+				MarkdownDescription: "Workflows configuration for the stack. Required — every workflow slot defined on the stack template revision (`template_group_id`) must be declared in `workflows.*.id`; the provider rejects a plan that omits one.",
+				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"workflows": schema.ListNestedAttribute{
-						MarkdownDescription: "List of workflows in the stack.",
-						Optional:            true,
-						Computed:            true,
-						PlanModifiers: []planmodifier.List{
-							listplanmodifier.UseStateForUnknown(),
+						MarkdownDescription: "List of workflows in the stack. Must include every workflow slot id defined on the referenced stack template revision.",
+						Required:            true,
+						Validators: []validator.List{
+							listvalidator.SizeAtLeast(1),
 						},
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{

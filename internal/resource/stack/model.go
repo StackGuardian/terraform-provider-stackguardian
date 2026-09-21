@@ -3,6 +3,8 @@ package stack
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	"github.com/StackGuardian/sg-sdk-go/stacktemplaterevisions"
@@ -2975,6 +2977,102 @@ func validateActionsAgainstRevision(ctx context.Context, actions types.Map, work
 			}
 		}
 	}
+	return diags
+}
+
+// validateWorkflowsConfigMatchesRevision errors unless workflows_config.workflows
+// declares exactly the workflow slots the referenced stack template revision
+// defines, in the same order. Called from ModifyPlan on every Create/Update,
+// not just a revision change, so no apply can ever leave workflows_config out
+// of sync with the revision it's pinned to.
+//
+// Why this needs to be enforced at all, rather than left to the old
+// Optional+Computed "inherit whatever the template has" behavior:
+//
+//  1. Completeness — workflows_config is Required specifically so a stack's
+//     HCL is a self-contained description of every workflow it manages, not
+//     something you have to go cross-reference the stack template revision
+//     to discover. Under the old Optional+Computed behavior, a template
+//     revision could gain a new workflow slot and a stack referencing it
+//     would silently start managing that workflow too, with nothing in the
+//     stack's own config ever having declared it. Requiring an exact-set
+//     match turns "the template grew a slot you haven't looked at" into an
+//     explicit plan-time error pointing at the missing id, instead of a
+//     silent, invisible change in what the stack does.
+//  2. Order — the API's own default action generation chains
+//     apply/plan/destroy dependencies across workflows in the template
+//     revision's own declaration order (see
+//     TestAccStack_ActionsGeneratedFromTemplate's dependency-chain
+//     assertions in resource_attributes_test.go). Letting workflows_config
+//     declare the same slots in a different order would desynchronize the
+//     stack's own listing from the order actions/dependency-chaining is
+//     actually derived from, with no corresponding diff ever showing up to
+//     explain why generated dependencies don't match the order the user
+//     wrote things down in. Pinning the declared order to the revision's own
+//     order keeps the two from ever silently drifting apart.
+//
+// tpl's own workflow list, in the order the API returns it, is the source of
+// truth for both checks.
+func validateWorkflowsConfigMatchesRevision(ctx context.Context, workflowsConfig types.Object, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	if tpl == nil || tpl.WorkflowsConfig == nil {
+		return diags
+	}
+
+	var required []string
+	for _, w := range tpl.WorkflowsConfig.Workflows {
+		if w != nil && w.Id != nil {
+			required = append(required, *w.Id)
+		}
+	}
+	if len(required) == 0 {
+		return diags
+	}
+
+	if workflowsConfig.IsNull() || workflowsConfig.IsUnknown() {
+		return diags
+	}
+	var wfc WorkflowsConfigModel
+	if d := workflowsConfig.As(ctx, &wfc, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); d.HasError() {
+		diags.Append(d...)
+		return diags
+	}
+	if wfc.Workflows.IsNull() || wfc.Workflows.IsUnknown() {
+		diags.AddError(
+			"workflows_config.workflows does not match the stack template revision",
+			fmt.Sprintf("The stack template revision defines %d workflow slot(s) (%s), but workflows_config.workflows is empty.",
+				len(required), strings.Join(required, ", ")),
+		)
+		return diags
+	}
+	var wfModels []WorkflowInStackModel
+	if d := wfc.Workflows.ElementsAs(ctx, &wfModels, false); d.HasError() {
+		diags.Append(d...)
+		return diags
+	}
+
+	declared := make([]string, 0, len(wfModels))
+	for _, wm := range wfModels {
+		if wm.Id.IsNull() || wm.Id.IsUnknown() {
+			// id is Required on each entry; an unresolved value means the plan
+			// isn't final yet — nothing to compare against until it is.
+			return diags
+		}
+		declared = append(declared, wm.Id.ValueString())
+	}
+
+	if slices.Equal(declared, required) {
+		return diags
+	}
+
+	diags.AddError(
+		"workflows_config.workflows does not match the stack template revision",
+		fmt.Sprintf(
+			"workflows_config.workflows must declare exactly the workflow slots defined by the stack template revision, in the same order.\n\nExpected: %s\nGot:      %s",
+			strings.Join(required, ", "), strings.Join(declared, ", "),
+		),
+	)
 	return diags
 }
 

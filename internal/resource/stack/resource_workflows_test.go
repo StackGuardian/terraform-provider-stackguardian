@@ -10,6 +10,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
+// TODO: ModifyPlan's revision-change branch (resource.go) only re-resolves
+// actions when it's left unset in config AND the new revision defines its
+// own actions (reResolveOnRevisionChange's doc comment in model.go). When
+// actions is unset but the new revision has none of its own, plan.Actions is
+// currently left untouched — carried forward from the old revision's already-
+// resolved value — instead of being re-resolved (e.g. back to whatever the
+// API would generate). It should be re-resolved whenever actions isn't
+// provided in the resource config, regardless of what the new revision does.
+// No test currently covers this gap.
+
 // TestAccStack_WorkflowsConfigMinimalEntry verifies a minimal workflow entry
 // (only the Required id) creates successfully, and doubles as a regression
 // test for the Optional+Computed guard fix: omitted fields must resolve to
@@ -98,6 +108,76 @@ func TestAccStack_WorkflowsConfigInvalidEnums(t *testing.T) {
 			{
 				Config:      testAccStackConfig(wfGrpName, revision, id, workflowConfig("parallel_execution", "sideways")),
 				ExpectError: regexp.MustCompile("Invalid parallel_execution"),
+			},
+		},
+	})
+}
+
+// TestAccStack_WorkflowsConfigMismatchRejected verifies
+// validateWorkflowsConfigMatchesRevision (model.go) rejects
+// workflows_config.workflows whenever it doesn't exactly match the
+// referenced stack template revision's own slot list, in both directions of
+// mismatch that check guards against: a missing slot, and the same slots
+// declared out of order. See that function's doc comment for why both are
+// enforced (completeness, so a template's slot never silently goes
+// undeclared; order, so the stack's own listing can't drift out of sync with
+// the order the API's default action-chaining derives from). Each step's
+// apply fails before anything is created, so they can safely share one
+// resource address across steps (mirrors TestAccStack_WorkflowsConfigInvalidEnums).
+func TestAccStack_WorkflowsConfigMismatchRejected(t *testing.T) {
+	wfGrpName := "tf-provider-stack-wfmismatch-wfgrp"
+	wfTemplateName := "tf-provider-stack-wfmismatch-wftmpl"
+	stackTemplateName := "tf-provider-stack-wfmismatch-stmpl"
+	id := "tf-provider-stack-wfmismatch"
+
+	t.Cleanup(func() {
+		logCleanupErr(t, fmt.Sprintf("delete workflow group %q", wfGrpName), deleteWorkflowGroupFixture(wfGrpName))
+	})
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil && !is409(err) {
+		t.Fatalf("TestAccStack_WorkflowsConfigMismatchRejected: create workflow group %q: %s", wfGrpName, err)
+	}
+	workflowTemplateID := setupStackWorkflowTemplate(t, wfTemplateName)
+	// setupStackTemplateChainNoActions wires two slots — testWfSlotId then
+	// secondWfSlotId, in that order — so both directions of mismatch can be
+	// exercised against a single fixture.
+	revision := setupStackTemplateChainNoActions(t, stackTemplateName, workflowTemplateID)
+	t.Cleanup(func() { deleteStackFixture(wfGrpName, id) })
+
+	missingSlot := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      { id = %q }
+    ]
+  }
+`, testWfSlotId)
+
+	wrongOrder := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      { id = %q },
+      { id = %q }
+    ]
+  }
+`, secondWfSlotId, testWfSlotId)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				// The revision defines testWfSlotId AND secondWfSlotId — declaring
+				// only one is a missing slot, not a valid partial subset.
+				Config:      testAccStackConfig(wfGrpName, revision, id, missingSlot),
+				ExpectError: regexp.MustCompile("does not match the stack template revision"),
+			},
+			{
+				// The same two slots, declared in the opposite order from the
+				// revision's own declaration order.
+				Config:      testAccStackConfig(wfGrpName, revision, id, wrongOrder),
+				ExpectError: regexp.MustCompile("does not match the stack template revision"),
 			},
 		},
 	})
@@ -433,86 +513,6 @@ func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.approvers.#", "0"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.#", "0"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.context_tags.%", "0"),
-				),
-			},
-		},
-	})
-}
-
-// TestAccStack_WorkflowsConfigAddWorkflowSlot verifies that adding a second
-// entry to workflows_config.workflows[] on an already-existing stack applies
-// correctly — the existing slot's data must be undisturbed, and the new slot
-// must appear with its own values — then that removing it again shrinks the
-// list back down cleanly. setupStackTemplateChainNoActions wires two workflow
-// slots (testWfSlotId, secondWfSlotId) on the template so both are available
-// to declare; this is the one workflows_config scenario no other test covers:
-// the workflows list itself changing shape via update, not just values within
-// an already-declared slot.
-func TestAccStack_WorkflowsConfigAddWorkflowSlot(t *testing.T) {
-	wfGrpName := "tf-provider-stack-wfadd-wfgrp"
-	wfTemplateName := "tf-provider-stack-wfadd-wftmpl"
-	stackTemplateName := "tf-provider-stack-wfadd-stmpl"
-	id := "tf-provider-stack-wfadd"
-
-	t.Cleanup(func() {
-		logCleanupErr(t, fmt.Sprintf("delete workflow group %q", wfGrpName), deleteWorkflowGroupFixture(wfGrpName))
-	})
-	if err := createWorkflowGroupFixture(wfGrpName); err != nil && !is409(err) {
-		t.Fatalf("TestAccStack_WorkflowsConfigAddWorkflowSlot: create workflow group %q: %s", wfGrpName, err)
-	}
-	workflowTemplateID := setupStackWorkflowTemplate(t, wfTemplateName)
-	revision := setupStackTemplateChainNoActions(t, stackTemplateName, workflowTemplateID)
-	t.Cleanup(func() { deleteStackFixture(wfGrpName, id) })
-
-	oneSlot := fmt.Sprintf(`
-  workflows_config = {
-    workflows = [
-      { id = %q, tags = ["first"] }
-    ]
-  }
-`, testWfSlotId)
-
-	twoSlots := fmt.Sprintf(`
-  workflows_config = {
-    workflows = [
-      { id = %q, tags = ["first"] },
-      { id = %q, tags = ["second"] }
-    ]
-  }
-`, testWfSlotId, secondWfSlotId)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctest.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_1_0),
-		},
-		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
-		Steps: []resource.TestStep{
-			{
-				Config: testAccStackConfig(wfGrpName, revision, id, oneSlot),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.#", "1"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", testWfSlotId),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.tags.0", "first"),
-				),
-			},
-			{
-				// Add a second slot — the first slot's data must be undisturbed,
-				// and the new slot must appear with its own values.
-				Config: testAccStackConfig(wfGrpName, revision, id, twoSlots),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.#", "2"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.tags.0", "first"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.1.id", secondWfSlotId),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.1.tags.0", "second"),
-				),
-			},
-			{
-				// Remove the second slot again — must shrink back to one cleanly.
-				Config: testAccStackConfig(wfGrpName, revision, id, oneSlot),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.#", "1"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", testWfSlotId),
 				),
 			},
 		},
