@@ -2,6 +2,7 @@ package workflowtemplate
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
@@ -110,6 +111,99 @@ func ValidateRuntimeSourceAuth(ctx context.Context, runtimeSourceObj types.Objec
 				"auth must start with /integration for this source_config_dest_kind.",
 			)
 		}
+	}
+
+	return diags
+}
+
+// ValidateSourceConfigKindUnchanged errors if source_config_kind differs between planKind and
+// stateKind. Shared by workflow_template and workflow_template_revision's ModifyPlan —
+// source_config_kind is immutable on an existing resource: the API has no endpoint to change
+// it in place, and replacing the resource would change its identity (a new template, or a new
+// revision number), breaking anything that references the old one. resourceLabel names the
+// resource in the error message (e.g. "workflow template", "revision") and resourceTypeName
+// gives the Terraform type to create instead (e.g. "stackguardian_workflow_template").
+func ValidateSourceConfigKindUnchanged(planKind, stateKind types.String, resourceLabel, resourceTypeName string) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	if planKind.IsUnknown() || planKind.ValueString() == stateKind.ValueString() {
+		return diags
+	}
+
+	diags.AddAttributeError(
+		path.Root("source_config_kind"),
+		"source_config_kind cannot be changed",
+		fmt.Sprintf(
+			"source_config_kind is immutable on an existing %s (changed from %q to %q). Create a new %s with the desired source_config_kind instead.",
+			resourceLabel, stateKind.ValueString(), planKind.ValueString(), resourceTypeName,
+		),
+	)
+	return diags
+}
+
+// runtimeSourceRepo extracts runtime_source.config.repo from runtimeSourceObj, or a null
+// types.String if runtime_source (or its config) is null/unknown.
+func runtimeSourceRepo(ctx context.Context, runtimeSourceObj types.Object) (types.String, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	if runtimeSourceObj.IsNull() || runtimeSourceObj.IsUnknown() {
+		return types.StringNull(), diags
+	}
+
+	var rs RuntimeSourceModel
+	d := runtimeSourceObj.As(ctx, &rs, basetypes.ObjectAsOptions{
+		UnhandledNullAsEmpty:    true,
+		UnhandledUnknownAsEmpty: true,
+	})
+	diags.Append(d...)
+	if diags.HasError() || rs.Config.IsNull() || rs.Config.IsUnknown() {
+		return types.StringNull(), diags
+	}
+
+	var cfg RuntimeSourceConfigModel
+	d = rs.Config.As(ctx, &cfg, basetypes.ObjectAsOptions{
+		UnhandledNullAsEmpty:    true,
+		UnhandledUnknownAsEmpty: true,
+	})
+	diags.Append(d...)
+	if diags.HasError() {
+		return types.StringNull(), diags
+	}
+
+	return cfg.Repo, diags
+}
+
+// ValidateRuntimeSourceRepoUnchanged errors if runtime_source.config.repo differs between
+// planRuntimeSource and stateRuntimeSource. Shared by workflow_template and
+// workflow_template_revision's ModifyPlan — repo cannot be changed on an existing template
+// or revision, published or not: the API has no endpoint to change it in place, and
+// replacing the resource would change its identity (a new template, or a new revision
+// number), breaking anything that references the old one. See
+// constants.WorkflowTemplateRuntimeSourceConfigRepo.
+func ValidateRuntimeSourceRepoUnchanged(ctx context.Context, planRuntimeSource, stateRuntimeSource types.Object) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	planRepo, d := runtimeSourceRepo(ctx, planRuntimeSource)
+	diags.Append(d...)
+	if diags.HasError() || planRepo.IsUnknown() {
+		return diags
+	}
+
+	stateRepo, d := runtimeSourceRepo(ctx, stateRuntimeSource)
+	diags.Append(d...)
+	if diags.HasError() {
+		return diags
+	}
+
+	if planRepo.ValueString() != stateRepo.ValueString() {
+		diags.AddAttributeError(
+			path.Root("runtime_source").AtName("config").AtName("repo"),
+			"runtime_source.config.repo cannot be changed",
+			fmt.Sprintf(
+				"runtime_source.config.repo is immutable on an existing resource (changed from %q to %q). Create a new resource with the desired repo instead.",
+				stateRepo.ValueString(), planRepo.ValueString(),
+			),
+		)
 	}
 
 	return diags

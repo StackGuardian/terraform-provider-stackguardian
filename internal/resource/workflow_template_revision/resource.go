@@ -7,7 +7,7 @@ import (
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
-	wft "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -18,6 +18,7 @@ var (
 	_ resource.ResourceWithConfigure      = &workflowTemplateRevisionResource{}
 	_ resource.ResourceWithImportState    = &workflowTemplateRevisionResource{}
 	_ resource.ResourceWithValidateConfig = &workflowTemplateRevisionResource{}
+	_ resource.ResourceWithModifyPlan     = &workflowTemplateRevisionResource{}
 )
 
 type workflowTemplateRevisionResource struct {
@@ -81,7 +82,33 @@ func (r *workflowTemplateRevisionResource) ValidateConfig(ctx context.Context, r
 		resp.Diagnostics.Append(wfStepsConfigNotAllowedForTerraformDiagnostics(templateModel.SourceConfigKind.ValueString(), hasWfStepsConfig)...)
 	}
 
-	resp.Diagnostics.Append(wft.ValidateRuntimeSourceAuth(ctx, templateModel.RuntimeSource, path.Root("runtime_source"))...)
+	resp.Diagnostics.Append(workflowtemplate.ValidateRuntimeSourceAuth(ctx, templateModel.RuntimeSource, path.Root("runtime_source"))...)
+}
+
+// ModifyPlan rejects a change to source_config_kind or runtime_source.config.repo
+// on Update. Neither an in-place update nor a RequiresReplace
+// destroy-and-recreate is appropriate for either: the API has no endpoint to
+// change either in place, and replacing the revision would change its
+// identity (a new revision number), breaking anything (a stack, another
+// workflow, a downstream revision) pinned to the old one. Rejecting the
+// change outright forces the user to create a new revision explicitly
+// instead of either of those — regardless of whether the revision is
+// published.
+func (r *workflowTemplateRevisionResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+		return // create or destroy — no prior state to compare against
+	}
+
+	var plan, state WorkflowTemplateRevisionResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(workflowtemplate.ValidateSourceConfigKindUnchanged(plan.SourceConfigKind, state.SourceConfigKind, "revision", "stackguardian_workflow_template_revision")...)
+
+	resp.Diagnostics.Append(workflowtemplate.ValidateRuntimeSourceRepoUnchanged(ctx, plan.RuntimeSource, state.RuntimeSource)...)
 }
 
 // Create creates the resource and sets the initial Terraform state.

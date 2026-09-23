@@ -4,7 +4,7 @@ package constants
 const (
 	TemplateRevisionAlias                    string = "Alias for the template revision"
 	TemplateRevisionNotes                    string = "Notes for the revision"
-	TemplateRevisionIsPublic                 string = `Whether this **revision** is published and available to be referenced. Distinct from ` + "`is_public`" + ` on the parent template, which controls cross-organization sharing. Options: <span style="background-color: #eff0f0; color: #e53835;">"1"</span>, <span style="background-color: #eff0f0; color: #e53835;">"0"</span>`
+	TemplateRevisionIsPublic                 string = `Whether this **revision** is published and available to be referenced. Distinct from ` + "`is_public`" + ` on the parent template, which controls cross-organization sharing. Once set to ` + "`\"1\"`" + `, only ` + "`description`, `alias`, `notes`, and `deprecation`" + ` may still be changed — every other attribute is rejected by the API. Options: <span style="background-color: #eff0f0; color: #e53835;">"1"</span>, <span style="background-color: #eff0f0; color: #e53835;">"0"</span>`
 	TemplateRevisionDeprecation              string = "Marking a template revision for deprecation"
 	TemplateRevisionDeprecationEffectiveDate string = "Effective date for after which revision will be deprecated"
 	TemplateRevisionDeprecationMessage       string = "Message shown to users who reference this revision after it has been deprecated. Use it to point them at the replacement revision."
@@ -13,7 +13,7 @@ const (
 
 // Common attributes shared between workflow template and revision
 const (
-	SourceConfigKind string = "What this template deploys, which decides how StackGuardian runs it. <ul><li>`TERRAFORM` / `OPENTOFU` — Terraform or OpenTofu configuration.</li><li>`ANSIBLE_PLAYBOOK` — an Ansible playbook.</li><li>`HELM` — a Helm chart.</li><li>`KUBECTL` — Kubernetes manifests applied with kubectl.</li><li>`CLOUDFORMATION` — an AWS CloudFormation stack.</li><li>`CUSTOM` — anything else, typically a public repository run with your own steps.</li></ul>"
+	SourceConfigKind string = "What this template deploys, which decides how StackGuardian runs it. **Cannot be changed** after creation. <ul><li>`TERRAFORM` / `OPENTOFU` — Terraform or OpenTofu configuration.</li><li>`ANSIBLE_PLAYBOOK` — an Ansible playbook.</li><li>`HELM` — a Helm chart.</li><li>`KUBECTL` — Kubernetes manifests applied with kubectl.</li><li>`CLOUDFORMATION` — an AWS CloudFormation stack.</li><li>`CUSTOM` — anything else, typically a public repository run with your own steps.</li></ul>"
 	ContextTags      string = "Context tags for %s"
 )
 
@@ -61,6 +61,7 @@ const (
 	WorkflowTemplateRuntimeSourceDestKind        = RuntimeSourceDestKind + " `GIT_OTHER` is the only kind that may omit `auth` for a public repository; every other kind requires it regardless of `is_private`."
 	WorkflowTemplateRuntimeSourceConfigAuth      = "Credential for cloning the repository, as a path-form ID. Required whenever `is_private` is `true`, and required unconditionally (regardless of `is_private`) for every `source_config_dest_kind` except `GIT_OTHER` — only `GIT_OTHER` may omit it, for a public repository. When set: `GIT_OTHER` requires a secret, `/secrets/<secret-name>`; every other kind requires a VCS connector, `/integrations/<connector-name>`, built as `\"/integrations/${stackguardian_connector.github.id}\"`."
 	WorkflowTemplateRuntimeSourceConfigIsPrivate = "Whether the repository is private. Setting this to `true` always requires `auth`. Only `GIT_OTHER` supports a fully public, authless repository (`is_private = false` with `auth` unset) — every other `source_config_dest_kind` requires `auth` regardless of this value."
+	WorkflowTemplateRuntimeSourceConfigRepo      = "Git repository URL. **Cannot be changed** after creation."
 )
 
 // VCS Triggers attributes

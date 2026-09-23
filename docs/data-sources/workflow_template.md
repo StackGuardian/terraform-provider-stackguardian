@@ -48,7 +48,7 @@ output "workflow_template_output" {
 - `owner_org` (String) Organization the template belongs to.
 - `runtime_source` (Attributes) Runtime source configuration for the template. (see [below for nested schema](#nestedatt--runtime_source))
 - `shared_orgs_list` (List of String) List of organizations the template is shared with.
-- `source_config_kind` (String) What this template deploys, which decides how StackGuardian runs it. <ul><li>`TERRAFORM` / `OPENTOFU` — Terraform or OpenTofu configuration.</li><li>`ANSIBLE_PLAYBOOK` — an Ansible playbook.</li><li>`HELM` — a Helm chart.</li><li>`KUBECTL` — Kubernetes manifests applied with kubectl.</li><li>`CLOUDFORMATION` — an AWS CloudFormation stack.</li><li>`CUSTOM` — anything else, typically a public repository run with your own steps.</li></ul>
+- `source_config_kind` (String) What this template deploys, which decides how StackGuardian runs it. **Cannot be changed** after creation. <ul><li>`TERRAFORM` / `OPENTOFU` — Terraform or OpenTofu configuration.</li><li>`ANSIBLE_PLAYBOOK` — an Ansible playbook.</li><li>`HELM` — a Helm chart.</li><li>`KUBECTL` — Kubernetes manifests applied with kubectl.</li><li>`CLOUDFORMATION` — an AWS CloudFormation stack.</li><li>`CUSTOM` — anything else, typically a public repository run with your own steps.</li></ul>
 - `tags` (List of String) A list of tags associated with the workflow template. A maximum of 10 tags are allowed.
 - `template_name` (String) Name of the workflow template.
 - `template_type` (String) Type of the template.
@@ -73,7 +73,7 @@ Read-Only:
 - `include_sub_module` (Boolean) Whether to include git submodules.
 - `is_private` (Boolean) Whether the repository is private. Setting this to `true` always requires `auth`. Only `GIT_OTHER` supports a fully public, authless repository (`is_private = false` with `auth` unset) — every other `source_config_dest_kind` requires `auth` regardless of this value.
 - `ref` (String) Git reference (branch, tag, or commit hash).
-- `repo` (String) Git repository URL.
+- `repo` (String) Git repository URL. **Cannot be changed** after creation.
 - `working_dir` (String) Working directory within the repository.
 
 

@@ -95,7 +95,7 @@ func (d *workflowTemplateDataSource) Schema(_ context.Context, _ datasource.Sche
 								Computed:            true,
 							},
 							"repo": schema.StringAttribute{
-								MarkdownDescription: constants.RuntimeSourceConfigRepo,
+								MarkdownDescription: constants.WorkflowTemplateRuntimeSourceConfigRepo,
 								Computed:            true,
 							},
 							"working_dir": schema.StringAttribute{

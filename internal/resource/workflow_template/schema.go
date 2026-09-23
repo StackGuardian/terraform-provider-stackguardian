@@ -63,11 +63,8 @@ func WorkflowTemplateRuntimeSourceConfig() map[string]schema.Attribute {
 					},
 				},
 				"repo": schema.StringAttribute{
-					MarkdownDescription: constants.RuntimeSourceConfigRepo,
+					MarkdownDescription: constants.WorkflowTemplateRuntimeSourceConfigRepo,
 					Required:            true,
-					PlanModifiers: []planmodifier.String{
-						stringplanmodifier.RequiresReplace(),
-					},
 				},
 				"working_dir": schema.StringAttribute{
 					MarkdownDescription: constants.RuntimeSourceConfigWorkingDir,
@@ -95,6 +92,9 @@ func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRe
 			"owner_org": schema.StringAttribute{
 				MarkdownDescription: constants.WorkflowTemplateOwnerOrg,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"template_name": schema.StringAttribute{
 				MarkdownDescription: constants.WorkflowTemplateName,
@@ -177,6 +177,9 @@ func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRe
 							},
 						},
 					},
+				},
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
 				},
 			},
 		},

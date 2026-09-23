@@ -8,7 +8,7 @@ import (
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/expanders"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/flatteners"
-	wft "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -574,7 +574,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) 
 
 	// Handle RuntimeSource
 	if !m.RuntimeSource.IsNull() && !m.RuntimeSource.IsUnknown() {
-		var runtimeSourceModel wft.RuntimeSourceModel
+		var runtimeSourceModel workflowtemplate.RuntimeSourceModel
 		diags := m.RuntimeSource.As(ctx, &runtimeSourceModel, basetypes.ObjectAsOptions{
 			UnhandledNullAsEmpty:    true,
 			UnhandledUnknownAsEmpty: true,
@@ -732,7 +732,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Con
 
 	// Handle RuntimeSource
 	if !m.RuntimeSource.IsNull() && !m.RuntimeSource.IsUnknown() {
-		runtimeSource, diags := ConvertRuntimeSourceToAPI(ctx, m.RuntimeSource)
+		runtimeSource, diags := workflowtemplate.ConvertRuntimeSourceToUpdateAPI(ctx, m.RuntimeSource)
 		if diags.HasError() {
 			return nil, diags
 		}
@@ -805,51 +805,6 @@ func (m *WorkflowTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Con
 }
 
 // Helper functions for type conversion
-func ConvertRuntimeSourceToAPI(ctx context.Context, runtimeSourceObj types.Object) (*workflowtemplates.RuntimeSourceUpdate, diag.Diagnostics) {
-	if runtimeSourceObj.IsNull() || runtimeSourceObj.IsUnknown() {
-		return nil, nil
-	}
-
-	var runtimeSourceModel RuntimeSourceModel
-	diags := runtimeSourceObj.As(ctx, &runtimeSourceModel, basetypes.ObjectAsOptions{
-		UnhandledNullAsEmpty:    true,
-		UnhandledUnknownAsEmpty: true,
-	})
-	if diags.HasError() {
-		return nil, diags
-	}
-
-	runtimeSource := &workflowtemplates.RuntimeSourceUpdate{}
-
-	if !runtimeSourceModel.SourceConfigDestKind.IsNull() && !runtimeSourceModel.SourceConfigDestKind.IsUnknown() {
-		runtimeSource.SourceConfigDestKind = workflowtemplates.SourceConfigDestKindEnum(runtimeSourceModel.SourceConfigDestKind.ValueString()).Ptr()
-	}
-
-	// Convert config
-	if !runtimeSourceModel.Config.IsNull() && !runtimeSourceModel.Config.IsUnknown() {
-		var configModel RuntimeSourceConfigModel
-		diag_cfg := runtimeSourceModel.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
-			UnhandledNullAsEmpty:    true,
-			UnhandledUnknownAsEmpty: true,
-		})
-		if diag_cfg.HasError() {
-			return nil, diag_cfg
-		}
-
-		runtimeSource.Config = &workflowtemplates.RuntimeSourceConfigUpdate{
-			Auth:                    configModel.Auth.ValueStringPointer(),
-			GitCoreAutoCRLF:         configModel.GitCoreAutoCrlf.ValueBoolPointer(),
-			GitSparseCheckoutConfig: configModel.GitSparseCheckoutConfig.ValueStringPointer(),
-			IncludeSubModule:        configModel.IncludeSubModule.ValueBoolPointer(),
-			IsPrivate:               configModel.IsPrivate.ValueBoolPointer(),
-			Ref:                     configModel.Ref.ValueStringPointer(),
-			WorkingDir:              configModel.WorkingDir.ValueStringPointer(),
-		}
-	}
-
-	return runtimeSource, nil
-}
-
 func ConvertTerraformConfigToAPI(ctx context.Context, terraformConfigObj types.Object) (*sgsdkgo.TerraformConfig, diag.Diagnostics) {
 	if terraformConfigObj.IsNull() || terraformConfigObj.IsUnknown() {
 		return nil, nil

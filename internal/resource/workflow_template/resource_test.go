@@ -10,6 +10,7 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
@@ -295,6 +296,49 @@ func TestAccWorkflowTemplate_WithVCSTriggers(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "vcs_triggers.create_tag.create_revision.enabled", "false"),
 				),
+			},
+		},
+	})
+}
+
+// TestAccWorkflowTemplate_IdRequiresReplace verifies that a
+// practitioner-supplied id forces a destroy-and-recreate when changed — id
+// has stringplanmodifier.RequiresReplace() (schema.go) alongside
+// UseStateForUnknown(). template_name stays fixed across both steps so only
+// id itself differs, isolating this from template_name's own behavior.
+func TestAccWorkflowTemplate_IdRequiresReplace(t *testing.T) {
+	name1 := acctest.ResourceName("tf-provider-workflow-template-id-replace-a")
+	name2 := acctest.ResourceName("tf-provider-workflow-template-id-replace-b")
+
+	t.Cleanup(func() { deleteWorkflowTemplateFixture(name1) })
+	t.Cleanup(func() { deleteWorkflowTemplateFixture(name2) })
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	config := func(id string) string {
+		return fmt.Sprintf(`id = %q`, id)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowTemplate(name1, sourceConfigKind, config(name1)),
+				Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "id", name1),
+			},
+			{
+				Config: testAccWorkflowTemplate(name1, sourceConfigKind, config(name2)),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackguardian_workflow_template.test", plancheck.ResourceActionReplace),
+					},
+				},
+				Check: resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "id", name2),
 			},
 		},
 	})
