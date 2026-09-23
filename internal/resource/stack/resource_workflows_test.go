@@ -185,6 +185,32 @@ func TestAccStack_WorkflowsConfigMismatchRejected(t *testing.T) {
 	})
 }
 
+// TODO: TestAccStack_WorkflowsConfigMismatchRejected only exercises the CREATE-time call to
+// validateWorkflowsConfigMatchesRevision — both its steps fail before anything is ever
+// created, so a fresh resource.go's Create() is the only call site actually proven to reject
+// a mismatch. The check now also runs from two other call sites (see the "ModifyPlan only
+// re-validates..." comments in resource.go's Update()/ModifyPlan, added when the
+// double-fetch-per-apply was eliminated), and neither is covered by a live test yet:
+//   - Update() with NO revision change: create a stack successfully with a valid
+//     workflows_config, then apply an update that changes workflows_config into a mismatch
+//     (a slot removed, or reordered) while template_group_id stays the same — must still be
+//     rejected, not silently accepted just because the resource already exists.
+//   - ModifyPlan's revision-change branch: create successfully against revision1, then switch
+//     template_group_id to a revision2 whose own slot list, if carried over verbatim from
+//     revision1's declared workflows_config, would now be a missing-slot or wrong-order
+//     mismatch against revision2 — must be rejected at plan time, mirroring
+//     TestAccStack_ActionsRevisionRemovedWorkflow's pattern in resource_stack_upgrade_test.go.
+//
+// Why order specifically has to match (not just membership): the platform's own default
+// action generation (an unset "actions" attribute — see TestAccStack_ActionsGeneratedFromTemplate)
+// chains apply/plan/destroy dependencies ACROSS workflows in the stack template revision's own
+// declaration order — first workflow has no dependency, second depends on the first, and so
+// on (reversed for destroy). If workflows_config.workflows[] could list the same slots in a
+// different order than the revision declares them, the stack's own visible listing would
+// silently disagree with the order those generated dependencies are actually chained in, with
+// nothing in the diff ever explaining why. Pinning the declared order to the revision's own
+// order is what keeps the two from ever drifting apart.
+
 // TestAccStack_WorkflowsConfigPrecedenceMerge exercises the three-way
 // precedence merge for a workflow slot's terraform_config: workflow template
 // revision default (lowest, terraform_version 1.5.0 — see
