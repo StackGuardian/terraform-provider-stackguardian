@@ -518,6 +518,13 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									MarkdownDescription: "UUID of the workflow slot as defined in the stack template.",
 									Required:            true,
 								},
+								"workflow_id": schema.StringAttribute{
+									MarkdownDescription: "Resource id the platform assigns to this workflow, derived from the resolved template name and the slot id.",
+									Computed:            true,
+									PlanModifiers: []planmodifier.String{
+										stringplanmodifier.UseStateForUnknown(),
+									},
+								},
 								"resource_name": schema.StringAttribute{
 									MarkdownDescription: "Name of the workflow resource.",
 									Optional:            true,
