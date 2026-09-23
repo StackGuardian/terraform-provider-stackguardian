@@ -144,3 +144,17 @@ func TestAccStack_WorkflowsConfigAddSecondWorkflowOverride(t *testing.T) {
 		},
 	})
 }
+
+// TODO: TestAccStack_WorkflowsConfigAddSecondWorkflowOverride only covers a pure grow
+// (revision1 -> revision2 adds a slot, keeping revision1's slot) and a pure shrink
+// (revision2 -> revision1 drops it again) — the list length always changes by one, and the
+// slot(s) already declared are never themselves removed. No test covers a revision change
+// that SWAPS slots in the same step — the new revision both drops a previously-declared
+// workflow AND introduces a different, new one, so workflows_config.workflows[] keeps the
+// same length but its membership changes entirely. Add a test for this once the above is
+// verified live: a revision1 with slot A, a revision2 with slot B instead of A (same slot
+// count), switch from revision1 to revision2 and confirm slot A's workflow is actually
+// removed/cleaned up (not orphaned) while slot B's is correctly created and populated —
+// exercising both the "remove" and "add" halves of reResolveWorkflowsConfigOnRevisionChange
+// and validateWorkflowsConfigMatchesRevision's exact-match check together, rather than each
+// in isolation the way the existing grow/shrink test does.
