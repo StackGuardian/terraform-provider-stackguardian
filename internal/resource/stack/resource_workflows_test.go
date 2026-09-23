@@ -1,8 +1,10 @@
 package stack_test
 
 import (
+	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
@@ -514,6 +516,85 @@ func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.user_schedules.#", "0"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.context_tags.%", "0"),
 				),
+			},
+		},
+	})
+}
+
+// TestAccStack_WorkflowsConfigDriftRestoredAfterOutOfBandDelete verifies that deleting the
+// live workflow behind a workflows_config.workflows[] entry directly (not the stack itself)
+// is detected as drift on the next refresh, and that re-applying the SAME, unchanged config
+// restores it — the platform recreates the missing workflow to match the declared
+// workflows_config, rather than the provider erroring or silently leaving it gone.
+//
+// workflow_id (the newly-added computed field, model.go's computeWorkflowId) is what makes
+// this test possible without any extra lookup: it's derived purely from the resolved
+// iac_template_id and the workflow's own declared uuid (workflows_config.workflows[].id),
+// so this test computes the exact same value independently and uses it to delete the live
+// workflow directly via client.Workflows.DeleteWorkflow — the stack resource itself is
+// untouched by that call.
+func TestAccStack_WorkflowsConfigDriftRestoredAfterOutOfBandDelete(t *testing.T) {
+	wfGrpName := "tf-provider-stack-wfdrift-wfgrp"
+	wfTemplateName := "tf-provider-stack-wfdrift-wftmpl"
+	stackTemplateName := "tf-provider-stack-wfdrift-stmpl"
+	id := "tf-provider-stack-wfdrift"
+
+	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+
+	// Mirrors computeWorkflowId's formula (model.go): "<template-name>-<first octet of the
+	// declared workflow uuid>". wfTemplateName is already the bare template name
+	// (setupStackWorkflowTemplate's own id), so no org/revision stripping is needed here.
+	expectedWorkflowId := fmt.Sprintf("%s-%s", wfTemplateName, strings.SplitN(testWfSlotId, "-", 2)[0])
+
+	config := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      { id = %q }
+    ]
+  }
+`, testWfSlotId)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.workflow_id", expectedWorkflowId),
+					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.resource_name"),
+				),
+			},
+			{
+				// Delete the live workflow directly — the stack resource itself is never
+				// touched by this call, so Terraform's own state has no idea this happened
+				// until the refresh below re-reads the stack.
+				PreConfig: func() {
+					if _, err := getClient().Workflows.DeleteWorkflow(context.TODO(), org, expectedWorkflowId, wfGrpName); err != nil {
+						t.Fatalf("failed to delete workflow %q out-of-band: %s", expectedWorkflowId, err)
+					}
+				},
+				RefreshState:       true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				// Same config, a real apply — the provider must restore the missing
+				// workflow to match workflows_config, not error or leave it gone.
+				Config: testAccStackConfig(wfGrpName, revision, id, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.#", "1"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", testWfSlotId),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.workflow_id", expectedWorkflowId),
+					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.resource_name"),
+				),
+			},
+			{
+				// And the restored state round trips with no diff.
+				Config:   testAccStackConfig(wfGrpName, revision, id, config),
+				PlanOnly: true,
 			},
 		},
 	})

@@ -415,6 +415,7 @@ func (MinistepsModel) AttributeTypes() map[string]attr.Type {
 // WorkflowInStackModel corresponds to sgsdkgo.StackWorkflowsConfigWorkflow.
 type WorkflowInStackModel struct {
 	Id                        types.String `tfsdk:"id"`
+	WorkflowId                types.String `tfsdk:"workflow_id"`
 	ResourceName              types.String `tfsdk:"resource_name"`
 	Description               types.String `tfsdk:"description"`
 	Tags                      types.List   `tfsdk:"tags"`
@@ -438,6 +439,7 @@ type WorkflowInStackModel struct {
 func (WorkflowInStackModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"id":                           types.StringType,
+		"workflow_id":                  types.StringType,
 		"resource_name":                types.StringType,
 		"description":                  types.StringType,
 		"tags":                         types.ListType{ElemType: types.StringType},
@@ -1997,6 +1999,26 @@ func mergeWorkflowWithWorkflowTemplateDefaults(wf *sgsdkgo.StackWorkflowsConfigW
 // WorkflowsConfig converters
 // ---------------------------------------------------------------------------
 
+// computeWorkflowId predicts the workflow resource id the platform assigns for a slot,
+// matching the platform's own generation scheme: "<template-name>-<first octet of the
+// stack workflow UUID>", where <template-name> is the bare name segment of the resolved
+// iac_template_id ("/<org>/<name>:<revision>" -> "<name>"). Computed client-side rather than
+// server-assigned so it's known immediately and can be sent on both create and update.
+func computeWorkflowId(templateId, stackWorkflowUUID string) string {
+	name := templateId
+	if i := strings.LastIndex(name, "/"); i >= 0 {
+		name = name[i+1:]
+	}
+	if i := strings.Index(name, ":"); i >= 0 {
+		name = name[:i]
+	}
+	shortId := stackWorkflowUUID
+	if i := strings.Index(shortId, "-"); i >= 0 {
+		shortId = shortId[:i]
+	}
+	return name + "-" + shortId
+}
+
 func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) (*sgsdkgo.StackWorkflowsConfig, diag.Diagnostics) {
 	if wfc.IsNull() || wfc.IsUnknown() {
 		return nil, nil
@@ -2152,6 +2174,14 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 		// revision the matched slot points to.
 		mergeWorkflowWithWorkflowTemplateDefaults(wf, workflowTemplates[wm.Id.ValueString()])
 
+		// workflow_id is computed here, not merged from a template layer: it's
+		// derived purely from this slot's own id and the iac_template_id the two
+		// merge layers above just resolved onto wf.VcsConfig.
+		if wf.VcsConfig != nil && wf.VcsConfig.IacVcsConfig != nil && wf.VcsConfig.IacVcsConfig.IacTemplateId != nil && wf.Id != nil {
+			workflowId := computeWorkflowId(*wf.VcsConfig.IacVcsConfig.IacTemplateId, *wf.Id)
+			wf.WorkflowId = &workflowId
+		}
+
 		workflows[i] = wf
 	}
 	return &sgsdkgo.StackWorkflowsConfig{Workflows: workflows}, nil
@@ -2254,6 +2284,7 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 		}
 		wm := WorkflowInStackModel{
 			Id:                       flatteners.StringPtr(wf.Id),
+			WorkflowId:               flatteners.StringPtr(wf.WorkflowId),
 			ResourceName:             flatteners.StringPtr(wf.ResourceName),
 			Description:              flatteners.StringPtr(wf.Description),
 			Tags:                     tagsList,
@@ -3156,11 +3187,16 @@ func reResolveOnRevisionChange(ctx context.Context, plan *StackResourceModel, co
 // workflowTemplates) is sufficient for them. runner_constraints is the
 // exception: its SDK field exists on both template layers, but neither is
 // ever actually authored with a value there in practice — it's assigned by
-// the server at workflow-creation time, not derived from any template. Re-
-// deriving it the same way as everything else would always produce nil,
-// silently wiping out the server-assigned value on every revision change —
-// so it's preserved from the plan's current (already-resolved) value instead
-// whenever the fresh re-expand comes back empty.
+// the server at workflow-creation time, not derived from any template. Once
+// expandWorkflowsConfig's own merge chain (config, then the stack template,
+// then the workflow template — see mergeWorkflowWithStackTemplateOverride /
+// mergeWorkflowWithWorkflowTemplateDefaults) has confirmed none of those three
+// have a value, the loop below tries one more source — priorRunnerConstraints,
+// the plan's already-resolved value — and only once ALL FOUR sources come up
+// empty does it fall back to the platform's own known create-time default
+// (mirrors workflow_from_template's identical fix for this identical field,
+// model.go:2616-2634 there — confirmed live: an unset runner_constraints
+// resolves to {type: "shared"}, not to nothing).
 func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackResourceModel, config StackResourceModel, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
@@ -3168,15 +3204,7 @@ func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackRe
 		return diags
 	}
 
-	// While creating a workflow, if runner_constraints isn't provided the platform assigns it a
-	// default value — neither the stack template nor the workflow template ever actually
-	// declares one. So when upgrading the revision, if the new revision also doesn't have one,
-	// we need to preserve the value received when the stack (and therefore the workflow) was
-	// created, rather than let the fresh re-expand below reset it to nil: since it never comes
-	// from a template, re-deriving it the same way as every other field here would silently wipe
-	// out that server-assigned value on every revision change, even though the plan already
-	// carries it forward correctly via UseStateForUnknown.
-	priorRunnerConstraints, d := runnerConstraintsBySlotId(ctx, plan.WorkflowsConfig)
+	priorRunnerConstraints, d := runnerConstraintsByWorkflowUUID(ctx, plan.WorkflowsConfig)
 	diags.Append(d...)
 	if diags.HasError() {
 		return diags
@@ -3197,7 +3225,11 @@ func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackRe
 		}
 		if rc, ok := priorRunnerConstraints[*wf.Id]; ok {
 			wf.RunnerConstraints = rc
+			continue
 		}
+		// No prior value to preserve — mirror the platform's own create-time default
+		// instead of a guessed-empty value that won't match the real apply result.
+		wf.RunnerConstraints = &sgsdkgo.RunnerConstraints{Type: sgsdkgo.RunnerConstraintsTypeEnumShared.Ptr()}
 	}
 
 	wfcObj, d := flattenWorkflowsConfig(ctx, fresh)
@@ -3205,17 +3237,21 @@ func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackRe
 	if diags.HasError() {
 		return diags
 	}
+
 	plan.WorkflowsConfig = wfcObj
 
 	return diags
 }
 
-// runnerConstraintsBySlotId extracts each workflow slot's currently-resolved
+// runnerConstraintsByWorkflowUUID extracts each workflow's currently-resolved
 // runner_constraints (user-declared, or carried forward via UseStateForUnknown
 // from a server-assigned default) from a workflows_config object, keyed by
-// slot id. Used by reResolveWorkflowsConfigOnRevisionChange to preserve a
-// value that has no genuine template source across a revision change.
-func runnerConstraintsBySlotId(ctx context.Context, workflowsConfig types.Object) (map[string]*sgsdkgo.RunnerConstraints, diag.Diagnostics) {
+// that workflow's own workflowUUID (WorkflowInStackModel.Id — the id the
+// stack template revision declared for it, NOT the newly-added WorkflowId
+// field, which is the platform-assigned resource id). Used by
+// reResolveWorkflowsConfigOnRevisionChange to preserve a value that has no
+// genuine template source across a revision change.
+func runnerConstraintsByWorkflowUUID(ctx context.Context, workflowsConfig types.Object) (map[string]*sgsdkgo.RunnerConstraints, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	result := make(map[string]*sgsdkgo.RunnerConstraints)
 	if workflowsConfig.IsNull() || workflowsConfig.IsUnknown() {
