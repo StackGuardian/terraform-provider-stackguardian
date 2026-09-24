@@ -123,6 +123,10 @@ func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRe
 				MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow template"),
 				ElementType:         types.StringType,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"context_tags": schema.MapAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.ContextTags, "workflow template"),

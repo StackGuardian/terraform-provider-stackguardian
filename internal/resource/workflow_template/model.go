@@ -195,7 +195,7 @@ func (m *WorkflowTemplateResourceModel) ToAPIModel(ctx context.Context) (*workfl
 		tags, diags_tags := expanders.StringList(ctx, m.Tags)
 		diag.Append(diags_tags...)
 		if !diag.HasError() {
-			apiModel.Tags = tags
+			apiModel.Tags = &tags
 		}
 	}
 
@@ -204,7 +204,7 @@ func (m *WorkflowTemplateResourceModel) ToAPIModel(ctx context.Context) (*workfl
 		sharedOrgs, diags_shared := expanders.StringList(ctx, m.SharedOrgsList)
 		diag.Append(diags_shared...)
 		if !diag.HasError() {
-			apiModel.SharedOrgsList = sharedOrgs
+			apiModel.SharedOrgsList = &sharedOrgs
 		}
 	}
 
@@ -360,30 +360,20 @@ func BuildAPIModelToWorkflowTemplateModel(apiResponse *workflowtemplates.ReadWor
 	}
 
 	// Convert Tags
-	if apiResponse.Tags != nil {
-		var tags []types.String
-		for _, tag := range apiResponse.Tags {
-			tags = append(tags, flatteners.String(tag))
-		}
-		tagsList, diags_tags := types.ListValueFrom(context.Background(), types.StringType, tags)
-		diag.Append(diags_tags...)
-		model.Tags = tagsList
-	} else {
-		model.Tags = types.ListNull(types.StringType)
+	tagsList, diags_tags := flatteners.ListOfStringToTerraformList(apiResponse.Tags)
+	diag.Append(diags_tags...)
+	if diag.HasError() {
+		return nil, diag
 	}
+	model.Tags = tagsList
 
 	// Convert SharedOrgsList
-	if apiResponse.SharedOrgsList != nil {
-		var sharedOrgs []types.String
-		for _, org := range apiResponse.SharedOrgsList {
-			sharedOrgs = append(sharedOrgs, flatteners.String(org))
-		}
-		sharedOrgsList, diags_shared := types.ListValueFrom(context.Background(), types.StringType, sharedOrgs)
-		diag.Append(diags_shared...)
-		model.SharedOrgsList = sharedOrgsList
-	} else {
-		model.SharedOrgsList = types.ListNull(types.StringType)
+	sharedOrgsList, diags_shared := flatteners.ListOfStringToTerraformList(apiResponse.SharedOrgsList)
+	diag.Append(diags_shared...)
+	if diag.HasError() {
+		return nil, diag
 	}
+	model.SharedOrgsList = sharedOrgsList
 
 	// Convert ContextTags
 	if apiResponse.ContextTags != nil {

@@ -1,12 +1,17 @@
 package workflowtemplate_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 	"testing"
 
+	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
+	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
@@ -303,6 +308,186 @@ func TestAccWorkflowTemplate_RepoRejectedOnChange(t *testing.T) {
 			{
 				Config:      testAccWorkflowTemplate(templateName, sourceConfigKind, config("https://github.com/StackGuardian/terraform-provider-stackguardian.git")),
 				ExpectError: regexp.MustCompile("runtime_source.config.repo cannot be changed"),
+			},
+		},
+	})
+}
+
+// TestAccWorkflowTemplate_EmptyStringListsRoundTrip verifies that an explicitly empty
+// tags or shared_orgs_list is stored and read back as an empty list, not null, on both
+// create and update. `field = []` plans as a known empty list, so reading it back as
+// null fails with "Provider produced inconsistent result after apply".
+func TestAccWorkflowTemplate_EmptyStringListsRoundTrip(t *testing.T) {
+	cases := []struct {
+		name      string
+		field     string
+		populated string // non-empty value set before the update to []
+		onUpdate  bool   // false: [] at create; true: populated at create, [] on update
+	}{
+		{name: "tags_create", field: "tags"},
+		{name: "tags_update", field: "tags", populated: `["tf-provider-test"]`, onUpdate: true},
+		{name: "shared_orgs_list_create", field: "shared_orgs_list"},
+		{name: "shared_orgs_list_update", field: "shared_orgs_list", populated: `["sg-provider-test-shared-org"]`, onUpdate: true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			templateName := acctest.ResourceName("tf-provider-workflow-template-empty-" + tc.name)
+
+			t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })
+
+			customHeader := http.Header{}
+			customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+			emptyStep := resource.TestStep{
+				Config: testAccWorkflowTemplate(templateName, sourceConfigKind, fmt.Sprintf("%s = []", tc.field)),
+				Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template.test", tc.field+".#", "0"),
+			}
+
+			steps := []resource.TestStep{emptyStep}
+			if tc.onUpdate {
+				steps = []resource.TestStep{
+					{
+						Config: testAccWorkflowTemplate(templateName, sourceConfigKind, fmt.Sprintf("%s = %s", tc.field, tc.populated)),
+						Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template.test", tc.field+".#", "1"),
+					},
+					emptyStep,
+				}
+			}
+
+			resource.Test(t, resource.TestCase{
+				PreCheck: func() { acctest.TestAccPreCheck(t) },
+				TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+					tfversion.SkipBelow(tfversion.Version1_1_0),
+				},
+				ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+				Steps:                    steps,
+			})
+		})
+	}
+}
+
+// TestAccWorkflowTemplate_CoreEmptyStringListBehavior calls the API through the SDK,
+// without Terraform, to pin down the core behavior the provider relies on for empty lists:
+//   - create without Tags: core stores its default, so GET returns Tags = [] (why tags is
+//     Optional+Computed);
+//   - create without SharedOrgsList: core stores nothing, so GET omits it;
+//   - create with SharedOrgsList = []: the SDK sends [] and GET returns it;
+//   - update with Tags = [] and SharedOrgsList = []: core stores and returns [] for both.
+func TestAccWorkflowTemplate_CoreEmptyStringListBehavior(t *testing.T) {
+	if os.Getenv("TF_ACC") == "" {
+		t.Skip("acceptance test: set TF_ACC=1 to run")
+	}
+	acctest.TestAccPreCheck(t)
+
+	ctx := context.Background()
+	client := acctest.SGClient()
+	org := config.Get().OrgName
+	templateName := acctest.ResourceName("tf-provider-workflow-template-core-empty")
+
+	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })
+
+	kind := workflowtemplates.WorkflowTemplateSourceConfigKindEnum(sourceConfigKind)
+	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(ctx, org, false, &workflowtemplates.CreateWorkflowTemplateRequest{
+		TemplateName:     templateName,
+		OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+		SourceConfigKind: &kind,
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	read, err := client.WorkflowTemplates.ReadWorkflowTemplate(ctx, org, templateName)
+	if err != nil {
+		t.Fatalf("read after create: %v", err)
+	}
+	if read.Msg.Tags == nil {
+		t.Errorf("after create without Tags: GET omitted Tags, expected core to default it to []")
+	} else if len(read.Msg.Tags) != 0 {
+		t.Errorf("after create without Tags: got Tags = %v, want []", read.Msg.Tags)
+	}
+	if read.Msg.SharedOrgsList != nil {
+		t.Errorf("after create without SharedOrgsList: got SharedOrgsList = %#v, expected GET to omit it", read.Msg.SharedOrgsList)
+	}
+
+	emptyTemplateName := acctest.ResourceName("tf-provider-workflow-template-core-empty-explicit")
+	t.Cleanup(func() { deleteWorkflowTemplateFixture(emptyTemplateName) })
+
+	_, err = client.WorkflowTemplates.CreateWorkflowTemplate(ctx, org, false, &workflowtemplates.CreateWorkflowTemplateRequest{
+		TemplateName:     emptyTemplateName,
+		OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+		SourceConfigKind: &kind,
+		SharedOrgsList:   &[]string{},
+	})
+	if err != nil {
+		t.Fatalf("create with SharedOrgsList = []: %v", err)
+	}
+
+	emptyRead, err := client.WorkflowTemplates.ReadWorkflowTemplate(ctx, org, emptyTemplateName)
+	if err != nil {
+		t.Fatalf("read after create with SharedOrgsList = []: %v", err)
+	}
+	if emptyRead.Msg.SharedOrgsList == nil || len(emptyRead.Msg.SharedOrgsList) != 0 {
+		t.Errorf("after create with SharedOrgsList = []: got %#v, want []", emptyRead.Msg.SharedOrgsList)
+	}
+
+	_, err = client.WorkflowTemplates.UpdateWorkflowTemplate(ctx, org, templateName, &workflowtemplates.UpdateWorkflowTemplateRequest{
+		Tags:           sgsdkgo.Optional([]string{}),
+		SharedOrgsList: sgsdkgo.Optional([]string{}),
+	})
+	if err != nil {
+		t.Fatalf("update: %v", err)
+	}
+
+	read, err = client.WorkflowTemplates.ReadWorkflowTemplate(ctx, org, templateName)
+	if err != nil {
+		t.Fatalf("read after update: %v", err)
+	}
+	if read.Msg.Tags == nil || len(read.Msg.Tags) != 0 {
+		t.Errorf("after update with Tags = []: got %#v, want []", read.Msg.Tags)
+	}
+	if read.Msg.SharedOrgsList == nil || len(read.Msg.SharedOrgsList) != 0 {
+		t.Errorf("after update with SharedOrgsList = []: got %#v, want []", read.Msg.SharedOrgsList)
+	}
+}
+
+// TestAccWorkflowTemplate_OmittedTags verifies that leaving tags out works now that an
+// API [] reads back as []. Core stores a default of [] when the create request has no
+// Tags; tags is Optional+Computed, so the plan leaves it unknown and accepts that [].
+// A second step removes tags after they were set: UseStateForUnknown carries the state
+// value forward, so the old tags stay (set `tags = []` to clear them).
+func TestAccWorkflowTemplate_OmittedTags(t *testing.T) {
+	templateName := acctest.ResourceName("tf-provider-workflow-template-omitted-tags")
+
+	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowTemplate(templateName, sourceConfigKind, ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "template_name", templateName),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "tags.#", "0"),
+				),
+			},
+			{
+				Config: testAccWorkflowTemplate(templateName, sourceConfigKind, `tags = ["tf-provider-test"]`),
+				Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "tags.0", "tf-provider-test"),
+			},
+			{
+				Config: testAccWorkflowTemplate(templateName, sourceConfigKind, `description = "tags omitted"`),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "description", "tags omitted"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "tags.0", "tf-provider-test"),
+				),
 			},
 		},
 	})
