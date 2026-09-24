@@ -218,14 +218,12 @@ func ValidateRuntimeSourceRepoUnchanged(ctx context.Context, plan tfsdk.Plan, st
 		return diags
 	}
 
+	// The update request has no repo field, so any difference would be dropped silently.
 	if planRepo.ValueString() != stateRepo.ValueString() {
 		diags.AddAttributeError(
 			runtimeSourceRepoPath,
 			"runtime_source.config.repo cannot be changed",
-			fmt.Sprintf(
-				"runtime_source.config.repo is immutable on an existing resource (changed from %q to %q). Create a new resource with the desired repo instead.",
-				stateRepo.ValueString(), planRepo.ValueString(),
-			),
+			"runtime_source.config.repo can only be set when the resource is created; it cannot be added, removed or changed afterwards. Create a new resource with the desired repo instead.",
 		)
 	}
 

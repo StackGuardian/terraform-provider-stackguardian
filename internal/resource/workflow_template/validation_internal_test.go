@@ -260,11 +260,15 @@ func TestValidateRuntimeSourceRepoUnchanged(t *testing.T) {
 		{name: "null runtime_source on both sides is fine", plan: repoNullRuntimeSource, state: repoNullRuntimeSource},
 		{
 			name: "changed repo is rejected", plan: repoKnown, planRepo: repoB, state: repoKnown, stateRepo: repoA,
-			wantError: `runtime_source.config.repo is immutable on an existing resource (changed from "` + repoA + `" to "` + repoB + `")`,
+			wantError: `runtime_source.config.repo can only be set when the resource is created; it cannot be added, removed or changed afterwards.`,
 		},
 		{
 			name: "removed runtime_source is rejected", plan: repoNullRuntimeSource, state: repoKnown, stateRepo: repoA,
-			wantError: `(changed from "` + repoA + `" to "")`,
+			wantError: `runtime_source.config.repo can only be set when the resource is created; it cannot be added, removed or changed afterwards.`,
+		},
+		{
+			name: "adding a repo to a resource created without one is rejected", plan: repoKnown, planRepo: repoA, state: repoNullRuntimeSource,
+			wantError: `runtime_source.config.repo can only be set when the resource is created; it cannot be added, removed or changed afterwards.`,
 		},
 	}
 

@@ -12,11 +12,17 @@
 // UpdateAllowedFieldsWithOtherAttributesUnchangedWhilePublished sweeps the same attributes
 // expecting success when they're present but held constant across the update.
 //
-// The provider doesn't enforce any of this client-side — nothing in ValidateConfig or
-// ToUpdateAPIModel treats a published revision differently — so both are contract tests
-// against the live API's own behavior, not tests of provider logic: they exist to catch
-// drift if the API's rule is ever loosened, tightened, or the provider starts/stops sending
-// a field it shouldn't.
+// The provider doesn't enforce the published-revision rule client-side — nothing in
+// ValidateConfig or ToUpdateAPIModel treats a published revision differently — so for most
+// attributes both tests are contract tests against the live API's own behavior, not tests of
+// provider logic: they exist to catch drift if the API's rule is ever loosened, tightened, or
+// the provider starts/stops sending a field it shouldn't.
+//
+// Two exceptions: source_config_kind and runtime_source.config.repo are immutable on every
+// revision, published or not, and ModifyPlan rejects a change to either at plan time
+// ("source_config_kind cannot be changed", "runtime_source.config.repo cannot be changed").
+// Their cases in DisallowedFieldUpdatesWhilePublished never reach the API, so they check the
+// provider's rejection rather than the backend's.
 //
 // A second, unrelated reason every test here ends with a deprecation step: Terraform's own
 // post-test destroy calls Delete() directly, with no deprecation logic of its own, and the
