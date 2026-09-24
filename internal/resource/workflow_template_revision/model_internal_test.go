@@ -15,15 +15,20 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
-// topLevelListPaths returns the path of every top-level list attribute in attrs.
-// Lists nested inside objects (terraform_config, runner_constraints, mini_steps) are
-// held by shared SDK structs whose []T fields still drop [] and are not covered yet.
-func topLevelListPaths(attrs map[string]schema.Attribute) []path.Path {
+// listAttributePaths returns the path of every list attribute in attrs that can be set
+// without creating list elements: top-level lists and lists inside single nested objects
+// (terraform_config, runner_constraints, mini_steps). Lists nested inside list elements
+// (e.g. wf_steps_config[*].mount_points) are skipped because reaching them needs an element
+// to exist.
+func listAttributePaths(attrs map[string]schema.Attribute, parent path.Path) []path.Path {
 	var paths []path.Path
 	for name, a := range attrs {
-		switch a.(type) {
+		p := parent.AtName(name)
+		switch a := a.(type) {
 		case schema.ListAttribute, schema.ListNestedAttribute:
-			paths = append(paths, path.Root(name))
+			paths = append(paths, p)
+		case schema.SingleNestedAttribute:
+			paths = append(paths, listAttributePaths(a.Attributes, p)...)
 		}
 	}
 	return paths
@@ -69,8 +74,8 @@ func revisionPayloads(t *testing.T, ctx context.Context, sch schema.Schema, list
 	return create, update
 }
 
-// TestEmptyListAttributesReachThePayload checks, for every top-level list attribute in
-// the workflow_template_revision schema, that `attr = []` produces a different create and
+// TestEmptyListAttributesReachThePayload checks, for every list attribute in the
+// workflow_template_revision schema (top-level and inside nested objects), that `attr = []` produces a different create and
 // update request body than leaving the attribute null. If the two bodies are identical,
 // the explicit empty list was dropped (typically by `omitempty` on a []T SDK field), so
 // core never stores it, GET omits it, and it reads back as null against the [] plan —
@@ -82,7 +87,7 @@ func TestEmptyListAttributesReachThePayload(t *testing.T) {
 	(&workflowTemplateRevisionResource{}).Schema(ctx, resource.SchemaRequest{}, &schemaResp)
 	sch := schemaResp.Schema
 
-	for _, p := range topLevelListPaths(sch.Attributes) {
+	for _, p := range listAttributePaths(sch.Attributes, path.Empty()) {
 		t.Run(p.String(), func(t *testing.T) {
 			attrType, diags := sch.TypeAtPath(ctx, p)
 			if diags.HasError() {

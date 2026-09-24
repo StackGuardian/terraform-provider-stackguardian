@@ -1,6 +1,10 @@
 package expanders
 
-import "reflect"
+import (
+	"reflect"
+
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+)
 
 // Pointer returns a pointer to v for SDK request fields declared as *T, or nil when v is
 // itself nil (a nil slice, map, pointer, interface, chan or func). Returning nil matters
@@ -19,4 +23,11 @@ func Pointer[T any](v T) *T {
 		}
 	}
 	return &v
+}
+
+// PointerWithDiags is Pointer for converters that also return diagnostics, so a call such as
+// `field, diags = expanders.PointerWithDiags(convertXxxToAPI(ctx, list))` can wrap the
+// converter's two results directly.
+func PointerWithDiags[T any](v T, diags diag.Diagnostics) (*T, diag.Diagnostics) {
+	return Pointer(v), diags
 }

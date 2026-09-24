@@ -788,11 +788,11 @@ func convertTerraformConfigToAPI(ctx context.Context, obj types.Object) (*sgsdkg
 		if diags.HasError() {
 			return nil, diags
 		}
-		tc.TerraformBinPath = mps
+		tc.TerraformBinPath = expanders.Pointer(mps)
 	}
 	for _, pair := range []struct {
 		list *types.List
-		dest *[]sgsdkgo.WfStepsConfig
+		dest **[]sgsdkgo.WfStepsConfig
 	}{
 		{&m.PostApplyWfStepsConfig, &tc.PostApplyWfStepsConfig},
 		{&m.PreApplyWfStepsConfig, &tc.PreApplyWfStepsConfig},
@@ -804,12 +804,12 @@ func convertTerraformConfigToAPI(ctx context.Context, obj types.Object) (*sgsdkg
 			if diags.HasError() {
 				return nil, diags
 			}
-			*pair.dest = steps
+			*pair.dest = expanders.Pointer(steps)
 		}
 	}
 	for _, pair := range []struct {
 		list *types.List
-		dest *[]string
+		dest **[]string
 	}{
 		{&m.PreInitHooks, &tc.PreInitHooks},
 		{&m.PrePlanHooks, &tc.PrePlanHooks},
@@ -822,7 +822,7 @@ func convertTerraformConfigToAPI(ctx context.Context, obj types.Object) (*sgsdkg
 			if diags.HasError() {
 				return nil, diags
 			}
-			*pair.dest = hooks
+			*pair.dest = expanders.Pointer(hooks)
 		}
 	}
 	return tc, nil
@@ -861,7 +861,7 @@ func convertRunnerConstraintsToAPI(ctx context.Context, obj types.Object) (*sgsd
 	}
 	return &sgsdkgo.RunnerConstraints{
 		Type:  (*sgsdkgo.RunnerConstraintsTypeEnum)(m.Type.ValueStringPointer()),
-		Names: names,
+		Names: expanders.Pointer(names),
 	}, nil
 }
 
@@ -1661,7 +1661,7 @@ func terraformConfigFromAPI(tc *sgsdkgo.TerraformConfig) (types.Object, diag.Dia
 	}
 	strListNull := types.ListNull(types.StringType)
 
-	binPath, diags := mountPointsFromAPI(tc.TerraformBinPath)
+	binPath, diags := mountPointsFromAPI(flatteners.PointerValue(tc.TerraformBinPath))
 	if diags.HasError() {
 		return nullObj, diags
 	}
@@ -1670,19 +1670,19 @@ func terraformConfigFromAPI(tc *sgsdkgo.TerraformConfig) (types.Object, diag.Dia
 		return wfStepsConfigFromAPI(steps)
 	}
 
-	postApply, diags := makeWfStepsList(tc.PostApplyWfStepsConfig)
+	postApply, diags := makeWfStepsList(flatteners.PointerValue(tc.PostApplyWfStepsConfig))
 	if diags.HasError() {
 		return nullObj, diags
 	}
-	preApply, diags := makeWfStepsList(tc.PreApplyWfStepsConfig)
+	preApply, diags := makeWfStepsList(flatteners.PointerValue(tc.PreApplyWfStepsConfig))
 	if diags.HasError() {
 		return nullObj, diags
 	}
-	prePlan, diags := makeWfStepsList(tc.PrePlanWfStepsConfig)
+	prePlan, diags := makeWfStepsList(flatteners.PointerValue(tc.PrePlanWfStepsConfig))
 	if diags.HasError() {
 		return nullObj, diags
 	}
-	postPlan, diags := makeWfStepsList(tc.PostPlanWfStepsConfig)
+	postPlan, diags := makeWfStepsList(flatteners.PointerValue(tc.PostPlanWfStepsConfig))
 	if diags.HasError() {
 		return nullObj, diags
 	}
@@ -1698,23 +1698,23 @@ func terraformConfigFromAPI(tc *sgsdkgo.TerraformConfig) (types.Object, diag.Dia
 		return types.ListValue(types.StringType, elems)
 	}
 
-	preInit, diags := makeStringList(tc.PreInitHooks)
+	preInit, diags := makeStringList(flatteners.PointerValue(tc.PreInitHooks))
 	if diags.HasError() {
 		return nullObj, diags
 	}
-	prePlan2, diags := makeStringList(tc.PrePlanHooks)
+	prePlan2, diags := makeStringList(flatteners.PointerValue(tc.PrePlanHooks))
 	if diags.HasError() {
 		return nullObj, diags
 	}
-	postPlan2, diags := makeStringList(tc.PostPlanHooks)
+	postPlan2, diags := makeStringList(flatteners.PointerValue(tc.PostPlanHooks))
 	if diags.HasError() {
 		return nullObj, diags
 	}
-	preApply2, diags := makeStringList(tc.PreApplyHooks)
+	preApply2, diags := makeStringList(flatteners.PointerValue(tc.PreApplyHooks))
 	if diags.HasError() {
 		return nullObj, diags
 	}
-	postApply2, diags := makeStringList(tc.PostApplyHooks)
+	postApply2, diags := makeStringList(flatteners.PointerValue(tc.PostApplyHooks))
 	if diags.HasError() {
 		return nullObj, diags
 	}

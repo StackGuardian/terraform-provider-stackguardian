@@ -233,23 +233,23 @@ func (m MinistepsEmailModel) ToAPIModel(ctx context.Context) (*workflowtemplater
 	email := &workflowtemplaterevisions.MinistepsNotificationsEmail{}
 	var diags diag.Diagnostics
 
-	email.APPROVAL_REQUIRED, diags = convertNotificationRecipientsToAPI(ctx, m.ApprovalRequired)
+	email.APPROVAL_REQUIRED, diags = expanders.PointerWithDiags(convertNotificationRecipientsToAPI(ctx, m.ApprovalRequired))
 	if diags.HasError() {
 		return nil, diags
 	}
-	email.CANCELLED, diags = convertNotificationRecipientsToAPI(ctx, m.Cancelled)
+	email.CANCELLED, diags = expanders.PointerWithDiags(convertNotificationRecipientsToAPI(ctx, m.Cancelled))
 	if diags.HasError() {
 		return nil, diags
 	}
-	email.COMPLETED, diags = convertNotificationRecipientsToAPI(ctx, m.Completed)
+	email.COMPLETED, diags = expanders.PointerWithDiags(convertNotificationRecipientsToAPI(ctx, m.Completed))
 	if diags.HasError() {
 		return nil, diags
 	}
-	email.DRIFT_DETECTED, diags = convertNotificationRecipientsToAPI(ctx, m.DriftDetected)
+	email.DRIFT_DETECTED, diags = expanders.PointerWithDiags(convertNotificationRecipientsToAPI(ctx, m.DriftDetected))
 	if diags.HasError() {
 		return nil, diags
 	}
-	email.ERRORED, diags = convertNotificationRecipientsToAPI(ctx, m.Errored)
+	email.ERRORED, diags = expanders.PointerWithDiags(convertNotificationRecipientsToAPI(ctx, m.Errored))
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -309,23 +309,23 @@ func (m MinistepsWebhooksContainerModel) ToAPIModel(ctx context.Context) (*workf
 	webhooks := &workflowtemplaterevisions.MinistepsWebhooks{}
 	var diags diag.Diagnostics
 
-	webhooks.APPROVAL_REQUIRED, diags = convertWebhookToAPI(ctx, m.ApprovalRequired)
+	webhooks.APPROVAL_REQUIRED, diags = expanders.PointerWithDiags(convertWebhookToAPI(ctx, m.ApprovalRequired))
 	if diags.HasError() {
 		return nil, diags
 	}
-	webhooks.CANCELLED, diags = convertWebhookToAPI(ctx, m.Cancelled)
+	webhooks.CANCELLED, diags = expanders.PointerWithDiags(convertWebhookToAPI(ctx, m.Cancelled))
 	if diags.HasError() {
 		return nil, diags
 	}
-	webhooks.COMPLETED, diags = convertWebhookToAPI(ctx, m.Completed)
+	webhooks.COMPLETED, diags = expanders.PointerWithDiags(convertWebhookToAPI(ctx, m.Completed))
 	if diags.HasError() {
 		return nil, diags
 	}
-	webhooks.DRIFT_DETECTED, diags = convertWebhookToAPI(ctx, m.DriftDetected)
+	webhooks.DRIFT_DETECTED, diags = expanders.PointerWithDiags(convertWebhookToAPI(ctx, m.DriftDetected))
 	if diags.HasError() {
 		return nil, diags
 	}
-	webhooks.ERRORED, diags = convertWebhookToAPI(ctx, m.Errored)
+	webhooks.ERRORED, diags = expanders.PointerWithDiags(convertWebhookToAPI(ctx, m.Errored))
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -348,11 +348,11 @@ func (m MinistepsWfChainingContainerModel) ToAPIModel(ctx context.Context) (*wor
 	chaining := &workflowtemplaterevisions.MinistepsWorkflowChaining{}
 	var diags diag.Diagnostics
 
-	chaining.COMPLETED, diags = convertWorkflowChainingToAPI(ctx, m.Completed)
+	chaining.COMPLETED, diags = expanders.PointerWithDiags(convertWorkflowChainingToAPI(ctx, m.Completed))
 	if diags.HasError() {
 		return nil, diags
 	}
-	chaining.ERRORED, diags = convertWorkflowChainingToAPI(ctx, m.Errored)
+	chaining.ERRORED, diags = expanders.PointerWithDiags(convertWorkflowChainingToAPI(ctx, m.Errored))
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -450,7 +450,7 @@ func (m RunnerConstraintsModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Runner
 	}
 	return &sgsdkgo.RunnerConstraints{
 		Type:  (*sgsdkgo.RunnerConstraintsTypeEnum)(m.Type.ValueStringPointer()),
-		Names: names,
+		Names: expanders.Pointer(names),
 	}, nil
 }
 
@@ -812,12 +812,12 @@ func (m TerraformConfigModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Terrafor
 		if diags.HasError() {
 			return nil, diags
 		}
-		cfg.TerraformBinPath = mountPoints
+		cfg.TerraformBinPath = expanders.Pointer(mountPoints)
 	}
 
 	for _, pair := range []struct {
 		src  types.List
-		dest *[]sgsdkgo.WfStepsConfig
+		dest **[]sgsdkgo.WfStepsConfig
 	}{
 		{m.PostApplyWfStepsConfig, &cfg.PostApplyWfStepsConfig},
 		{m.PreApplyWfStepsConfig, &cfg.PreApplyWfStepsConfig},
@@ -829,13 +829,13 @@ func (m TerraformConfigModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Terrafor
 			if diags.HasError() {
 				return nil, diags
 			}
-			*pair.dest = steps
+			*pair.dest = expanders.Pointer(steps)
 		}
 	}
 
 	for _, pair := range []struct {
 		src  types.List
-		dest *[]string
+		dest **[]string
 	}{
 		{m.PreInitHooks, &cfg.PreInitHooks},
 		{m.PrePlanHooks, &cfg.PrePlanHooks},
@@ -848,7 +848,7 @@ func (m TerraformConfigModel) ToAPIModel(ctx context.Context) (*sgsdkgo.Terrafor
 			if diags.HasError() {
 				return nil, diags
 			}
-			*pair.dest = hooks
+			*pair.dest = expanders.Pointer(hooks)
 		}
 	}
 
@@ -1600,7 +1600,7 @@ func convertRunnerConstraintsFromAPI(ctx context.Context, rc *sgsdkgo.RunnerCons
 		return nullObj, nil
 	}
 
-	namesList, diags := flatteners.ListOfStringToTerraformList(rc.Names)
+	namesList, diags := flatteners.ListOfStringToTerraformList(flatteners.PointerValue(rc.Names))
 	if diags.HasError() {
 		return nullObj, diags
 	}
@@ -1746,23 +1746,23 @@ func convertMinistepsFromAPI(ctx context.Context, ministeps *workflowtemplaterev
 			emailModel := MinistepsEmailModel{}
 			var diags diag.Diagnostics
 
-			emailModel.ApprovalRequired, diags = convertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.APPROVAL_REQUIRED)
+			emailModel.ApprovalRequired, diags = convertNotificationRecipientsFromAPI(ctx, flatteners.PointerValue(ministeps.Notifications.Email.APPROVAL_REQUIRED))
 			if diags.HasError() {
 				return nullObj, diags
 			}
-			emailModel.Cancelled, diags = convertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.CANCELLED)
+			emailModel.Cancelled, diags = convertNotificationRecipientsFromAPI(ctx, flatteners.PointerValue(ministeps.Notifications.Email.CANCELLED))
 			if diags.HasError() {
 				return nullObj, diags
 			}
-			emailModel.Completed, diags = convertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.COMPLETED)
+			emailModel.Completed, diags = convertNotificationRecipientsFromAPI(ctx, flatteners.PointerValue(ministeps.Notifications.Email.COMPLETED))
 			if diags.HasError() {
 				return nullObj, diags
 			}
-			emailModel.DriftDetected, diags = convertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.DRIFT_DETECTED)
+			emailModel.DriftDetected, diags = convertNotificationRecipientsFromAPI(ctx, flatteners.PointerValue(ministeps.Notifications.Email.DRIFT_DETECTED))
 			if diags.HasError() {
 				return nullObj, diags
 			}
-			emailModel.Errored, diags = convertNotificationRecipientsFromAPI(ctx, ministeps.Notifications.Email.ERRORED)
+			emailModel.Errored, diags = convertNotificationRecipientsFromAPI(ctx, flatteners.PointerValue(ministeps.Notifications.Email.ERRORED))
 			if diags.HasError() {
 				return nullObj, diags
 			}
@@ -1789,23 +1789,23 @@ func convertMinistepsFromAPI(ctx context.Context, ministeps *workflowtemplaterev
 		webhooksModel := MinistepsWebhooksContainerModel{}
 		var diags diag.Diagnostics
 
-		webhooksModel.ApprovalRequired, diags = convertWebhookFromAPI(ctx, ministeps.Webhooks.APPROVAL_REQUIRED)
+		webhooksModel.ApprovalRequired, diags = convertWebhookFromAPI(ctx, flatteners.PointerValue(ministeps.Webhooks.APPROVAL_REQUIRED))
 		if diags.HasError() {
 			return nullObj, diags
 		}
-		webhooksModel.Cancelled, diags = convertWebhookFromAPI(ctx, ministeps.Webhooks.CANCELLED)
+		webhooksModel.Cancelled, diags = convertWebhookFromAPI(ctx, flatteners.PointerValue(ministeps.Webhooks.CANCELLED))
 		if diags.HasError() {
 			return nullObj, diags
 		}
-		webhooksModel.Completed, diags = convertWebhookFromAPI(ctx, ministeps.Webhooks.COMPLETED)
+		webhooksModel.Completed, diags = convertWebhookFromAPI(ctx, flatteners.PointerValue(ministeps.Webhooks.COMPLETED))
 		if diags.HasError() {
 			return nullObj, diags
 		}
-		webhooksModel.DriftDetected, diags = convertWebhookFromAPI(ctx, ministeps.Webhooks.DRIFT_DETECTED)
+		webhooksModel.DriftDetected, diags = convertWebhookFromAPI(ctx, flatteners.PointerValue(ministeps.Webhooks.DRIFT_DETECTED))
 		if diags.HasError() {
 			return nullObj, diags
 		}
-		webhooksModel.Errored, diags = convertWebhookFromAPI(ctx, ministeps.Webhooks.ERRORED)
+		webhooksModel.Errored, diags = convertWebhookFromAPI(ctx, flatteners.PointerValue(ministeps.Webhooks.ERRORED))
 		if diags.HasError() {
 			return nullObj, diags
 		}
@@ -1823,11 +1823,11 @@ func convertMinistepsFromAPI(ctx context.Context, ministeps *workflowtemplaterev
 		chainingModel := MinistepsWfChainingContainerModel{}
 		var diags diag.Diagnostics
 
-		chainingModel.Completed, diags = convertWorkflowChainingFromAPI(ctx, ministeps.WfChaining.COMPLETED)
+		chainingModel.Completed, diags = convertWorkflowChainingFromAPI(ctx, flatteners.PointerValue(ministeps.WfChaining.COMPLETED))
 		if diags.HasError() {
 			return nullObj, diags
 		}
-		chainingModel.Errored, diags = convertWorkflowChainingFromAPI(ctx, ministeps.WfChaining.ERRORED)
+		chainingModel.Errored, diags = convertWorkflowChainingFromAPI(ctx, flatteners.PointerValue(ministeps.WfChaining.ERRORED))
 		if diags.HasError() {
 			return nullObj, diags
 		}
@@ -1986,61 +1986,61 @@ func convertTerraformConfigFromAPI(ctx context.Context, cfg *sgsdkgo.TerraformCo
 		WfStepTemplateRevisionId: flatteners.StringPtr(cfg.WfStepTemplateRevisionId),
 	}
 
-	terraformBinPath, diags := convertMountPointsFromAPI(ctx, cfg.TerraformBinPath)
+	terraformBinPath, diags := convertMountPointsFromAPI(ctx, flatteners.PointerValue(cfg.TerraformBinPath))
 	if diags.HasError() {
 		return nullObj, diags
 	}
 	m.TerraformBinPath = terraformBinPath
 
-	postApply, diags := convertWfStepsConfigListFromAPI(ctx, cfg.PostApplyWfStepsConfig)
+	postApply, diags := convertWfStepsConfigListFromAPI(ctx, flatteners.PointerValue(cfg.PostApplyWfStepsConfig))
 	if diags.HasError() {
 		return nullObj, diags
 	}
 	m.PostApplyWfStepsConfig = postApply
 
-	preApply, diags := convertWfStepsConfigListFromAPI(ctx, cfg.PreApplyWfStepsConfig)
+	preApply, diags := convertWfStepsConfigListFromAPI(ctx, flatteners.PointerValue(cfg.PreApplyWfStepsConfig))
 	if diags.HasError() {
 		return nullObj, diags
 	}
 	m.PreApplyWfStepsConfig = preApply
 
-	prePlan, diags := convertWfStepsConfigListFromAPI(ctx, cfg.PrePlanWfStepsConfig)
+	prePlan, diags := convertWfStepsConfigListFromAPI(ctx, flatteners.PointerValue(cfg.PrePlanWfStepsConfig))
 	if diags.HasError() {
 		return nullObj, diags
 	}
 	m.PrePlanWfStepsConfig = prePlan
 
-	postPlan, diags := convertWfStepsConfigListFromAPI(ctx, cfg.PostPlanWfStepsConfig)
+	postPlan, diags := convertWfStepsConfigListFromAPI(ctx, flatteners.PointerValue(cfg.PostPlanWfStepsConfig))
 	if diags.HasError() {
 		return nullObj, diags
 	}
 	m.PostPlanWfStepsConfig = postPlan
 
-	preInitHooks, diags := flatteners.ListOfStringToTerraformList(cfg.PreInitHooks)
+	preInitHooks, diags := flatteners.ListOfStringToTerraformList(flatteners.PointerValue(cfg.PreInitHooks))
 	if diags.HasError() {
 		return nullObj, diags
 	}
 	m.PreInitHooks = preInitHooks
 
-	prePlanHooks, diags := flatteners.ListOfStringToTerraformList(cfg.PrePlanHooks)
+	prePlanHooks, diags := flatteners.ListOfStringToTerraformList(flatteners.PointerValue(cfg.PrePlanHooks))
 	if diags.HasError() {
 		return nullObj, diags
 	}
 	m.PrePlanHooks = prePlanHooks
 
-	postPlanHooks, diags := flatteners.ListOfStringToTerraformList(cfg.PostPlanHooks)
+	postPlanHooks, diags := flatteners.ListOfStringToTerraformList(flatteners.PointerValue(cfg.PostPlanHooks))
 	if diags.HasError() {
 		return nullObj, diags
 	}
 	m.PostPlanHooks = postPlanHooks
 
-	preApplyHooks, diags := flatteners.ListOfStringToTerraformList(cfg.PreApplyHooks)
+	preApplyHooks, diags := flatteners.ListOfStringToTerraformList(flatteners.PointerValue(cfg.PreApplyHooks))
 	if diags.HasError() {
 		return nullObj, diags
 	}
 	m.PreApplyHooks = preApplyHooks
 
-	postApplyHooks, diags := flatteners.ListOfStringToTerraformList(cfg.PostApplyHooks)
+	postApplyHooks, diags := flatteners.ListOfStringToTerraformList(flatteners.PointerValue(cfg.PostApplyHooks))
 	if diags.HasError() {
 		return nullObj, diags
 	}
@@ -2359,34 +2359,34 @@ func mergeTerraformConfig(user, tpl *sgsdkgo.TerraformConfig) *sgsdkgo.Terraform
 	if user.RunPostPlanHooksOnDrift == nil {
 		user.RunPostPlanHooksOnDrift = tpl.RunPostPlanHooksOnDrift
 	}
-	if len(user.TerraformBinPath) == 0 {
+	if len(flatteners.PointerValue(user.TerraformBinPath)) == 0 {
 		user.TerraformBinPath = tpl.TerraformBinPath
 	}
-	if len(user.PostApplyWfStepsConfig) == 0 {
+	if len(flatteners.PointerValue(user.PostApplyWfStepsConfig)) == 0 {
 		user.PostApplyWfStepsConfig = tpl.PostApplyWfStepsConfig
 	}
-	if len(user.PreApplyWfStepsConfig) == 0 {
+	if len(flatteners.PointerValue(user.PreApplyWfStepsConfig)) == 0 {
 		user.PreApplyWfStepsConfig = tpl.PreApplyWfStepsConfig
 	}
-	if len(user.PrePlanWfStepsConfig) == 0 {
+	if len(flatteners.PointerValue(user.PrePlanWfStepsConfig)) == 0 {
 		user.PrePlanWfStepsConfig = tpl.PrePlanWfStepsConfig
 	}
-	if len(user.PostPlanWfStepsConfig) == 0 {
+	if len(flatteners.PointerValue(user.PostPlanWfStepsConfig)) == 0 {
 		user.PostPlanWfStepsConfig = tpl.PostPlanWfStepsConfig
 	}
-	if len(user.PreInitHooks) == 0 {
+	if len(flatteners.PointerValue(user.PreInitHooks)) == 0 {
 		user.PreInitHooks = tpl.PreInitHooks
 	}
-	if len(user.PrePlanHooks) == 0 {
+	if len(flatteners.PointerValue(user.PrePlanHooks)) == 0 {
 		user.PrePlanHooks = tpl.PrePlanHooks
 	}
-	if len(user.PostPlanHooks) == 0 {
+	if len(flatteners.PointerValue(user.PostPlanHooks)) == 0 {
 		user.PostPlanHooks = tpl.PostPlanHooks
 	}
-	if len(user.PreApplyHooks) == 0 {
+	if len(flatteners.PointerValue(user.PreApplyHooks)) == 0 {
 		user.PreApplyHooks = tpl.PreApplyHooks
 	}
-	if len(user.PostApplyHooks) == 0 {
+	if len(flatteners.PointerValue(user.PostApplyHooks)) == 0 {
 		user.PostApplyHooks = tpl.PostApplyHooks
 	}
 

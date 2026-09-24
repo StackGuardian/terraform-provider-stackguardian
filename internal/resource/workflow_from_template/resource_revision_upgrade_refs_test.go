@@ -97,7 +97,7 @@ func setupTwoRevIdenticalDerivedFields(t *testing.T, name string) (rev1, rev2 st
 				Ministeps: &workflowtemplaterevisions.Ministeps{
 					Notifications: &workflowtemplaterevisions.MinistepsNotifications{
 						Email: &workflowtemplaterevisions.MinistepsNotificationsEmail{
-							COMPLETED: []workflowtemplaterevisions.MinistepsNotificationRecepients{
+							COMPLETED: &[]workflowtemplaterevisions.MinistepsNotificationRecepients{
 								{Recipients: []string{"akashsuresh0510@gmail.com"}},
 							},
 						},
