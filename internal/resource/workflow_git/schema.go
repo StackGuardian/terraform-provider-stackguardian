@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -124,6 +125,10 @@ func (r *workflowGitResource) Schema(_ context.Context, _ resource.SchemaRequest
 				MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow"),
 				ElementType:         types.StringType,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"user_schedules": schema.ListNestedAttribute{
 				MarkdownDescription: constants.WfUserSchedules,
@@ -164,6 +169,10 @@ func (r *workflowGitResource) Schema(_ context.Context, _ resource.SchemaRequest
 				MarkdownDescription: constants.WfApprovers,
 				ElementType:         types.StringType,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"number_of_approvals_required": schema.Int64Attribute{
 				MarkdownDescription: constants.WfNumberOfApprovals,

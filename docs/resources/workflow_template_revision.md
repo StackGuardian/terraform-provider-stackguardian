@@ -75,8 +75,8 @@ resource "stackguardian_workflow_template_revision" "detailed" {
 
 ### Required
 
-- `source_config_kind` (String) What this template deploys, which decides how StackGuardian runs it. <ul><li>`TERRAFORM` / `OPENTOFU` — Terraform or OpenTofu configuration.</li><li>`ANSIBLE_PLAYBOOK` — an Ansible playbook.</li><li>`HELM` — a Helm chart.</li><li>`KUBECTL` — Kubernetes manifests applied with kubectl.</li><li>`CLOUDFORMATION` — an AWS CloudFormation stack.</li><li>`CUSTOM` — anything else, typically a public repository run with your own steps.</li></ul>
-- `template_id` (String) Parent workflow template, as its bare `template_name` (e.g. `my-terraform-template`) — not a path. Reference the `stackguardian_workflow_template` resource rather than typing it.
+- `source_config_kind` (String) What this template deploys, which decides how StackGuardian runs it. **Cannot be changed** after creation. <ul><li>`TERRAFORM` / `OPENTOFU` — Terraform or OpenTofu configuration.</li><li>`ANSIBLE_PLAYBOOK` — an Ansible playbook.</li><li>`HELM` — a Helm chart.</li><li>`KUBECTL` — Kubernetes manifests applied with kubectl.</li><li>`CLOUDFORMATION` — an AWS CloudFormation stack.</li><li>`CUSTOM` — anything else, typically a public repository run with your own steps.</li></ul>
+- `template_id` (String) Parent workflow template, as its bare `template_name` (e.g. `my-terraform-template`) — not a path. Reference the `stackguardian_workflow_template` resource rather than typing it. **Cannot be changed** after creation; create a new revision under the other template instead.
 - `user_job_cpu` (Number) Limits to set user job CPU.
 - `user_job_memory` (Number) Limits to set user job memory.
 
@@ -90,7 +90,7 @@ resource "stackguardian_workflow_template_revision" "detailed" {
 - `description` (String) A brief description of the workflow template revision. Must be less than 256 characters.
 - `environment_variables` (Attributes List) Environment variables made available to the workflow during its runs. (see [below for nested schema](#nestedatt--environment_variables))
 - `input_schemas` (Attributes List) JSONSchema Form representation of input JSON data (see [below for nested schema](#nestedatt--input_schemas))
-- `is_public` (String) Whether this **revision** is published and available to be referenced. Distinct from `is_public` on the parent template, which controls cross-organization sharing. Options: <span style="background-color: #eff0f0; color: #e53835;">"1"</span>, <span style="background-color: #eff0f0; color: #e53835;">"0"</span>
+- `is_public` (String) Whether this **revision** is published and available to be referenced. Distinct from `is_public` on the parent template, which controls cross-organization sharing. Once set to `"1"`, only `description`, `alias`, `notes`, and `deprecation` may still be changed — every other attribute is rejected by the API. Options: <span style="background-color: #eff0f0; color: #e53835;">"1"</span>, <span style="background-color: #eff0f0; color: #e53835;">"0"</span>
 - `mini_steps` (Attributes) Actions that are required to be performed once workflow execution is complete (see [below for nested schema](#nestedatt--mini_steps))
 - `notes` (String) Notes for the revision
 - `number_of_approvals_required` (Number) Number of approvals required.
@@ -382,7 +382,7 @@ Optional:
 
 Required:
 
-- `repo` (String) Git repository URL.
+- `repo` (String) Git repository URL. **Cannot be changed** after creation.
 
 Optional:
 

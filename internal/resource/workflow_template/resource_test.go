@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
@@ -246,33 +247,22 @@ func TestAccWorkflowTemplate_WithContextTagsAndSharedOrgs(t *testing.T) {
 	})
 }
 
-func TestAccWorkflowTemplate_WithVCSTriggers(t *testing.T) {
-	templateName := "tf-provider-workflow-template-4"
+// TestAccWorkflowTemplate_IdRejectedOnChange verifies that changing a
+// practitioner-supplied id on an existing template is rejected at plan time
+// (ModifyPlan, resource.go) instead of destroying and recreating the template,
+// which would delete every revision underneath it. template_name stays fixed
+// across both steps so only id itself differs.
+func TestAccWorkflowTemplate_IdRejectedOnChange(t *testing.T) {
+	name1 := acctest.ResourceName("tf-provider-workflow-template-id-rejected-a")
+	name2 := acctest.ResourceName("tf-provider-workflow-template-id-rejected-b")
+
+	t.Cleanup(func() { deleteWorkflowTemplateFixture(name1) })
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
-	templateCallback := func(enabled bool) string {
-		return fmt.Sprintf(`
-		  runtime_source = {
-			source_config_dest_kind = "GITHUB_COM"
-			config = {
-			  is_private = true
-			  auth       = "/integrations/tf-provider-test-connector"
-			  repo       = "https://github.com/StackGuardian/tf-null-resource.git"
-			}
-		  }
-		
-		  vcs_triggers = {
-			type = "GITHUB_COM"
-		
-			create_tag = {
-			  create_revision = {
-				enabled = %t
-			  }
-			}
-		  }
-		`, enabled)
+	config := func(id string) string {
+		return fmt.Sprintf(`id = %q`, id)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -283,18 +273,12 @@ func TestAccWorkflowTemplate_WithVCSTriggers(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowTemplate(templateName, sourceConfigKind, templateCallback(true)),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "template_name", templateName),
-					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "vcs_triggers.type", constants.GithubCom),
-					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "vcs_triggers.create_tag.create_revision.enabled", "true"),
-				),
+				Config: testAccWorkflowTemplate(name1, sourceConfigKind, config(name1)),
+				Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "id", name1),
 			},
 			{
-				Config: testAccWorkflowTemplate(templateName, sourceConfigKind, templateCallback(false)),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "vcs_triggers.create_tag.create_revision.enabled", "false"),
-				),
+				Config:      testAccWorkflowTemplate(name1, sourceConfigKind, config(name2)),
+				ExpectError: regexp.MustCompile("id cannot be changed"),
 			},
 		},
 	})

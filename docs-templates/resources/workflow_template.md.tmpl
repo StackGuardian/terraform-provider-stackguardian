@@ -19,12 +19,6 @@ variables, execution settings — lives in a
 created from a specific revision through
 [`stackguardian_workflow_from_template`](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/resources/workflow_from_template).
 
-## Tag-triggered revisions
-
-The `vcs_triggers` block on a template is not the same as the one on a workflow: on a tag push it
-creates a **new template revision** from the tagged commit. It does not start a workflow run. The
-repository comes from `runtime_source`.
-
 ## Example Usage
 
 {{tffile "docs-examples/resources/workflow_template/resource.tf"}}

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
-	wft "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
+	workflowtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -361,9 +361,6 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 			"template_id": schema.StringAttribute{
 				MarkdownDescription: constants.WorkflowTemplateRevisionTemplateId,
 				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.Description, "workflow template revision"),
@@ -573,7 +570,7 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 				MarkdownDescription: fmt.Sprintf(constants.RuntimeSource, "revision"),
 				Optional:            true,
 				Computed:            true,
-				Attributes:          wft.WorkflowTemplateRuntimeSourceConfig(),
+				Attributes:          workflowtemplate.WorkflowTemplateRuntimeSourceConfig(),
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseStateForUnknown(),
 				},

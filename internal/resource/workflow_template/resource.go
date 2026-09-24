@@ -16,6 +16,7 @@ var (
 	_ resource.ResourceWithConfigure      = &workflowTemplateResource{}
 	_ resource.ResourceWithImportState    = &workflowTemplateResource{}
 	_ resource.ResourceWithValidateConfig = &workflowTemplateResource{}
+	_ resource.ResourceWithModifyPlan     = &workflowTemplateResource{}
 )
 
 type workflowTemplateResource struct {
@@ -72,6 +73,28 @@ func (r *workflowTemplateResource) ValidateConfig(ctx context.Context, req resou
 	}
 
 	resp.Diagnostics.Append(ValidateRuntimeSourceAuth(ctx, templateModel.RuntimeSource, path.Root("runtime_source"))...)
+}
+
+// ModifyPlan rejects a change to id, source_config_kind or runtime_source.config.repo
+// on Update. The API has no endpoint to change any of them in place, and replacing
+// the template would delete every revision underneath it — far more
+// disruptive than any of these fields warrants. Rejecting the change outright
+// forces the user to create a new template explicitly instead.
+func (r *workflowTemplateResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+		return // create or destroy — no prior state to compare against
+	}
+
+	var plan, state WorkflowTemplateResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(validateIdUnchanged(plan.Id, state.Id)...)
+	resp.Diagnostics.Append(ValidateSourceConfigKindUnchanged(plan.SourceConfigKind, state.SourceConfigKind, "workflow template", "stackguardian_workflow_template")...)
+	resp.Diagnostics.Append(ValidateRuntimeSourceRepoUnchanged(ctx, req.Plan, req.State)...)
 }
 
 // Create creates the resource and sets the initial Terraform state.

@@ -24,7 +24,6 @@ type WorkflowTemplateResourceModel struct {
 	SharedOrgsList   types.List   `tfsdk:"shared_orgs_list"`
 	Tags             types.List   `tfsdk:"tags"`
 	ContextTags      types.Map    `tfsdk:"context_tags"`
-	VCSTriggers      types.Object `tfsdk:"vcs_triggers"`
 }
 
 type RuntimeSourceModel struct {
@@ -65,92 +64,15 @@ func (RuntimeSourceConfigModel) AttributeTypes() map[string]attr.Type {
 	}
 }
 
-type VCSTriggersModel struct {
-	Type      types.String `tfsdk:"type"`
-	CreateTag types.Object `tfsdk:"create_tag"`
-}
-
-type VCSTriggersCreateRevisionModel struct {
-	Enabled types.Bool `tfsdk:"enabled"`
-}
-
-func (VCSTriggersCreateRevisionModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"enabled": types.BoolType,
-	}
-}
-
-type VCSTriggersCreateTagModel struct {
-	CreateRevision types.Object `tfsdk:"create_revision"`
-}
-
-func (VCSTriggersCreateTagModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"create_revision": types.ObjectType{AttrTypes: VCSTriggersCreateRevisionModel{}.AttributeTypes()},
-	}
-}
-
-func (VCSTriggersModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"type": types.StringType,
-		"create_tag": types.ObjectType{
-			AttrTypes: VCSTriggersCreateTagModel{}.AttributeTypes(),
-		},
-	}
-}
-
-func VCSTriggersToAPIModel(ctx context.Context, m types.Object) (*workflowtemplates.VCSTriggers, diag.Diagnostics) {
-	var vcsTriggersModel VCSTriggersModel
-	if m.IsNull() || m.IsUnknown() {
-		return nil, nil
-	}
-
-	diags := m.As(ctx, &vcsTriggersModel, basetypes.ObjectAsOptions{
-		UnhandledNullAsEmpty:    true,
-		UnhandledUnknownAsEmpty: true,
-	})
-	if diags.HasError() {
-		return nil, diags
-	}
-
-	vcsTriggers := &workflowtemplates.VCSTriggers{}
-	if !vcsTriggersModel.Type.IsNull() && !vcsTriggersModel.Type.IsUnknown() {
-		vcsTriggers.Type = workflowtemplates.VCSTriggersTypeEnum(vcsTriggersModel.Type.ValueString()).Ptr()
-	}
-
-	// Convert create_tag
-	if !vcsTriggersModel.CreateTag.IsNull() && !vcsTriggersModel.CreateTag.IsUnknown() {
-		var createTagModel VCSTriggersCreateTagModel
-		createTagAPIModel := workflowtemplates.VCSTriggersCreateTag{}
-		diags := vcsTriggersModel.CreateTag.As(ctx, &createTagModel, basetypes.ObjectAsOptions{
-			UnhandledNullAsEmpty:    true,
-			UnhandledUnknownAsEmpty: true,
-		})
-		if diags.HasError() {
-			return nil, diags
-		}
-
-		if !createTagModel.CreateRevision.IsNull() && !createTagModel.CreateRevision.IsUnknown() {
-			var createRevision VCSTriggersCreateRevisionModel
-			diags := createTagModel.CreateRevision.As(ctx, &createRevision, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
-			if diags.HasError() {
-				return nil, diags
-			}
-
-			vcsCreateRevisionAPIModel := workflowtemplates.VCSTriggersCreateTagCreateRevision{
-				Enabled: createRevision.Enabled.ValueBoolPointer(),
-			}
-			createTagAPIModel.CreateRevision = &vcsCreateRevisionAPIModel
-		}
-		vcsTriggers.CreateTag = &createTagAPIModel
-	}
-
-	return vcsTriggers, nil
-}
-
 func (m RuntimeSourceModel) ToAPIModel(ctx context.Context) (*workflowtemplates.RuntimeSource, diag.Diagnostics) {
-	runtimeSource := &workflowtemplates.RuntimeSource{
-		SourceConfigDestKind: workflowtemplates.SourceConfigDestKindEnum(m.SourceConfigDestKind.ValueString()).Ptr(),
+	runtimeSource := &workflowtemplates.RuntimeSource{}
+
+	// source_config_dest_kind is Optional (not Computed), but ValueString() still
+	// returns "" for a Null value, and .Ptr() always produces a non-nil pointer — so
+	// without this guard an omitted value would be sent to the API as an explicit
+	// empty string instead of being left out of the payload.
+	if !m.SourceConfigDestKind.IsNull() && !m.SourceConfigDestKind.IsUnknown() {
+		runtimeSource.SourceConfigDestKind = workflowtemplates.SourceConfigDestKindEnum(m.SourceConfigDestKind.ValueString()).Ptr()
 	}
 
 	// Convert config
@@ -165,17 +87,91 @@ func (m RuntimeSourceModel) ToAPIModel(ctx context.Context) (*workflowtemplates.
 		}
 
 		runtimeSource.Config = &workflowtemplates.RuntimeSourceConfig{
-			IsPrivate:               configModel.IsPrivate.ValueBoolPointer(),
 			Auth:                    configModel.Auth.ValueStringPointer(),
-			GitCoreAutoCRLF:         configModel.GitCoreAutoCrlf.ValueBoolPointer(),
 			GitSparseCheckoutConfig: configModel.GitSparseCheckoutConfig.ValueStringPointer(),
 			IncludeSubModule:        configModel.IncludeSubModule.ValueBoolPointer(),
-			Ref:                     configModel.Ref.ValueStringPointer(),
 			Repo:                    configModel.Repo.ValueString(),
 			WorkingDir:              configModel.WorkingDir.ValueStringPointer(),
 		}
+
+		// is_private, git_core_auto_crlf, and ref are Optional+Computed: when unset in
+		// config they are Unknown (not Null) on Create, and ValueBoolPointer()/
+		// ValueStringPointer() return a pointer to the zero value for Unknown rather than
+		// nil. Since these API fields are pointer types with `omitempty`, a non-nil
+		// zero-value pointer is still marshaled, so the guard is required to actually omit
+		// the field.
+		if !configModel.IsPrivate.IsNull() && !configModel.IsPrivate.IsUnknown() {
+			runtimeSource.Config.IsPrivate = configModel.IsPrivate.ValueBoolPointer()
+		}
+		if !configModel.GitCoreAutoCrlf.IsNull() && !configModel.GitCoreAutoCrlf.IsUnknown() {
+			runtimeSource.Config.GitCoreAutoCRLF = configModel.GitCoreAutoCrlf.ValueBoolPointer()
+		}
+		if !configModel.Ref.IsNull() && !configModel.Ref.IsUnknown() {
+			runtimeSource.Config.Ref = configModel.Ref.ValueStringPointer()
+		}
 	}
 	return runtimeSource, nil
+}
+
+// runtimeSourceConfigToUpdate maps a Create-shaped *RuntimeSourceConfig (already
+// null/unknown-guarded by RuntimeSourceModel.ToAPIModel above) to the Update-shaped
+// *RuntimeSourceConfigUpdate. No guards needed here — cfg's fields are already nil
+// exactly where they should be omitted. repo has no Update-shaped equivalent (the SDK
+// has no way to change it — see ValidateRuntimeSourceRepoUnchanged), so it's dropped.
+func runtimeSourceConfigToUpdate(cfg *workflowtemplates.RuntimeSourceConfig) *workflowtemplates.RuntimeSourceConfigUpdate {
+	if cfg == nil {
+		return nil
+	}
+	return &workflowtemplates.RuntimeSourceConfigUpdate{
+		Auth:                    cfg.Auth,
+		GitCoreAutoCRLF:         cfg.GitCoreAutoCRLF,
+		GitSparseCheckoutConfig: cfg.GitSparseCheckoutConfig,
+		IncludeSubModule:        cfg.IncludeSubModule,
+		IsPrivate:               cfg.IsPrivate,
+		Ref:                     cfg.Ref,
+		WorkingDir:              cfg.WorkingDir,
+	}
+}
+
+// ConvertRuntimeSourceToAPI converts a runtime_source types.Object to
+// *workflowtemplates.RuntimeSource for a Create request. It returns nil for a null or
+// unknown object and otherwise delegates to RuntimeSourceModel.ToAPIModel. Shared by
+// workflow_template and workflow_template_revision's ToAPIModel, and the base of
+// ConvertRuntimeSourceToUpdateAPI, so Create and Update convert runtime_source the same way.
+func ConvertRuntimeSourceToAPI(ctx context.Context, runtimeSourceObj types.Object) (*workflowtemplates.RuntimeSource, diag.Diagnostics) {
+	if runtimeSourceObj.IsNull() || runtimeSourceObj.IsUnknown() {
+		return nil, nil
+	}
+
+	var m RuntimeSourceModel
+	diags := runtimeSourceObj.As(ctx, &m, basetypes.ObjectAsOptions{
+		UnhandledNullAsEmpty:    true,
+		UnhandledUnknownAsEmpty: true,
+	})
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return m.ToAPIModel(ctx)
+}
+
+// ConvertRuntimeSourceToUpdateAPI converts a runtime_source types.Object to
+// *workflowtemplates.RuntimeSourceUpdate for an Update request, by reusing
+// ConvertRuntimeSourceToAPI's Create-path conversion (see RuntimeSourceModel.ToAPIModel
+// for why the is_private/git_core_auto_crlf/ref guards are needed) and mapping the result
+// through runtimeSourceConfigToUpdate, rather than re-deriving the same guards a second
+// time in a separately-maintained function. Shared by workflow_template and
+// workflow_template_revision's ToUpdateAPIModel.
+func ConvertRuntimeSourceToUpdateAPI(ctx context.Context, runtimeSourceObj types.Object) (*workflowtemplates.RuntimeSourceUpdate, diag.Diagnostics) {
+	rs, diags := ConvertRuntimeSourceToAPI(ctx, runtimeSourceObj)
+	if diags.HasError() || rs == nil {
+		return nil, diags
+	}
+
+	return &workflowtemplates.RuntimeSourceUpdate{
+		SourceConfigDestKind: rs.SourceConfigDestKind,
+		Config:               runtimeSourceConfigToUpdate(rs.Config),
+	}, diags
 }
 
 func (m *WorkflowTemplateResourceModel) ToAPIModel(ctx context.Context) (*workflowtemplates.CreateWorkflowTemplateRequest, diag.Diagnostics) {
@@ -185,6 +181,14 @@ func (m *WorkflowTemplateResourceModel) ToAPIModel(ctx context.Context) (*workfl
 		TemplateName:     m.TemplateName.ValueString(),
 		OwnerOrg:         m.OwnerOrg.ValueString(),
 		ShortDescription: m.ShortDescription.ValueStringPointer(),
+	}
+
+	// id is Optional+Computed: a practitioner-supplied value must reach the API so the
+	// created resource's id matches what was planned. Without this, the server always
+	// assigns its own id, and Terraform's post-apply consistency check fails whenever
+	// the config sets id explicitly (it differs from the auto-assigned value).
+	if !m.Id.IsNull() && !m.Id.IsUnknown() {
+		apiModel.Id = m.Id.ValueStringPointer()
 	}
 
 	if !m.SourceConfigKind.IsNull() && !m.SourceConfigKind.IsUnknown() {
@@ -224,28 +228,11 @@ func (m *WorkflowTemplateResourceModel) ToAPIModel(ctx context.Context) (*workfl
 	}
 
 	// Convert RuntimeSource
-	if !m.RuntimeSource.IsNull() && !m.RuntimeSource.IsUnknown() {
-		var runtimeSourceModel RuntimeSourceModel
-		diags := m.RuntimeSource.As(ctx, &runtimeSourceModel, basetypes.ObjectAsOptions{
-			UnhandledNullAsEmpty:    true,
-			UnhandledUnknownAsEmpty: true,
-		})
-		if diags.HasError() {
-			return nil, diags
-		}
-		runtimeSourceApiModel, diags := runtimeSourceModel.ToAPIModel(ctx)
-		if diags.HasError() {
-			return nil, diags
-		}
-		apiModel.RuntimeSource = runtimeSourceApiModel
-	}
-
-	// Convert VCSTriggers
-	vcsTriggersAPIModel, diags := VCSTriggersToAPIModel(ctx, m.VCSTriggers)
+	runtimeSource, diags := ConvertRuntimeSourceToAPI(ctx, m.RuntimeSource)
 	if diags.HasError() {
 		return nil, diags
 	}
-	apiModel.VCSTriggers = vcsTriggersAPIModel
+	apiModel.RuntimeSource = runtimeSource
 
 	return apiModel, diag
 }
@@ -292,40 +279,9 @@ func (m *WorkflowTemplateResourceModel) ToUpdateAPIModel(ctx context.Context) (*
 
 	// Convert RuntimeSource
 	if !m.RuntimeSource.IsNull() && !m.RuntimeSource.IsUnknown() {
-		var runtimeSourceModel RuntimeSourceModel
-		diag_rt := m.RuntimeSource.As(ctx, &runtimeSourceModel, basetypes.ObjectAsOptions{
-			UnhandledNullAsEmpty:    true,
-			UnhandledUnknownAsEmpty: true,
-		})
-		if diag_rt.HasError() {
-			return nil, diag_rt
-		}
-
-		runtimeSource := &workflowtemplates.RuntimeSourceUpdate{}
-
-		if !runtimeSourceModel.SourceConfigDestKind.IsNull() && !runtimeSourceModel.SourceConfigDestKind.IsUnknown() {
-			runtimeSource.SourceConfigDestKind = workflowtemplates.SourceConfigDestKindEnum(runtimeSourceModel.SourceConfigDestKind.ValueString()).Ptr()
-		}
-
-		// Convert config
-		if !runtimeSourceModel.Config.IsNull() && !runtimeSourceModel.Config.IsUnknown() {
-			var configModel RuntimeSourceConfigModel
-			diag_cfg := runtimeSourceModel.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
-				UnhandledNullAsEmpty:    true,
-				UnhandledUnknownAsEmpty: true,
-			})
-			if diag_cfg.HasError() {
-				return nil, diag_cfg
-			}
-
-			runtimeSource.Config = &workflowtemplates.RuntimeSourceConfigUpdate{
-				IsPrivate:               configModel.IsPrivate.ValueBoolPointer(),
-				GitCoreAutoCRLF:         configModel.GitCoreAutoCrlf.ValueBoolPointer(),
-				GitSparseCheckoutConfig: configModel.GitSparseCheckoutConfig.ValueStringPointer(),
-				IncludeSubModule:        configModel.IncludeSubModule.ValueBoolPointer(),
-				Ref:                     configModel.Ref.ValueStringPointer(),
-				WorkingDir:              configModel.WorkingDir.ValueStringPointer(),
-			}
+		runtimeSource, diags := ConvertRuntimeSourceToUpdateAPI(ctx, m.RuntimeSource)
+		if diags.HasError() {
+			return nil, diags
 		}
 		apiModel.RuntimeSource = sgsdkgo.Optional(*runtimeSource)
 	} else {
@@ -343,70 +299,7 @@ func (m *WorkflowTemplateResourceModel) ToUpdateAPIModel(ctx context.Context) (*
 		apiModel.SharedOrgsList = sgsdkgo.Null[[]string]()
 	}
 
-	// convert VCSTriggers
-	vcsTriggersAPIModel, diags := VCSTriggersToAPIModel(ctx, m.VCSTriggers)
-	if diags.HasError() {
-		return nil, diags
-	}
-	if vcsTriggersAPIModel != nil {
-		apiModel.VCSTriggers = sgsdkgo.Optional(*vcsTriggersAPIModel)
-	} else {
-		apiModel.VCSTriggers = sgsdkgo.Null[workflowtemplates.VCSTriggers]()
-	}
-
 	return apiModel, diag
-}
-
-func VCSTriggersToTerraType(vcsTriggers *workflowtemplates.VCSTriggers) (types.Object, diag.Diagnostics) {
-	nullObject := types.ObjectNull(VCSTriggersModel{}.AttributeTypes())
-	if vcsTriggers == nil {
-		return nullObject, nil
-	}
-
-	vcsTriggersModel := VCSTriggersModel{}
-	if vcsTriggers.Type != nil {
-		vcsTriggersModel.Type = flatteners.String(string(*vcsTriggers.Type))
-	} else {
-		vcsTriggersModel.Type = types.StringNull()
-	}
-
-	if vcsTriggers.CreateTag != nil {
-		createTagModel := VCSTriggersCreateTagModel{}
-		if vcsTriggers.CreateTag.CreateRevision != nil {
-			createRevisionModel := VCSTriggersCreateRevisionModel{}
-			if vcsTriggers.CreateTag.CreateRevision.Enabled != nil {
-				createRevisionModel.Enabled = flatteners.BoolPtr(vcsTriggers.CreateTag.CreateRevision.Enabled)
-			} else {
-				createRevisionModel.Enabled = types.BoolNull()
-			}
-			createRevisionTerraType, diags := types.ObjectValueFrom(context.TODO(), VCSTriggersCreateRevisionModel{}.AttributeTypes(), &createRevisionModel)
-			if diags.HasError() {
-				return nullObject, diags
-			}
-
-			createTagModel = VCSTriggersCreateTagModel{
-				CreateRevision: createRevisionTerraType,
-			}
-		} else {
-			createTagModel.CreateRevision = types.ObjectNull(VCSTriggersCreateRevisionModel{}.AttributeTypes())
-		}
-
-		createTagTerraType, diags := types.ObjectValueFrom(context.Background(), VCSTriggersCreateTagModel{}.AttributeTypes(), &createTagModel)
-		if diags.HasError() {
-			return nullObject, diags
-		}
-
-		vcsTriggersModel.CreateTag = createTagTerraType
-	} else {
-		vcsTriggersModel.CreateTag = types.ObjectNull(VCSTriggersCreateTagModel{}.AttributeTypes())
-	}
-
-	vcsTriggersTerraType, diags := types.ObjectValueFrom(context.Background(), VCSTriggersModel{}.AttributeTypes(), vcsTriggersModel)
-	if diags.HasError() {
-		return nullObject, diags
-	}
-
-	return vcsTriggersTerraType, nil
 }
 
 func RuntimeSourceToTerraType(runtimeSource *workflowtemplates.RuntimeSource) (types.Object, diag.Diagnostics) {
@@ -466,30 +359,20 @@ func BuildAPIModelToWorkflowTemplateModel(apiResponse *workflowtemplates.ReadWor
 	}
 
 	// Convert Tags
-	if apiResponse.Tags != nil {
-		var tags []types.String
-		for _, tag := range apiResponse.Tags {
-			tags = append(tags, flatteners.String(tag))
-		}
-		tagsList, diags_tags := types.ListValueFrom(context.Background(), types.StringType, tags)
-		diag.Append(diags_tags...)
-		model.Tags = tagsList
-	} else {
-		model.Tags = types.ListNull(types.StringType)
+	tagsList, diags_tags := flatteners.ListOfStringToTerraformList(apiResponse.Tags)
+	diag.Append(diags_tags...)
+	if diag.HasError() {
+		return nil, diag
 	}
+	model.Tags = tagsList
 
 	// Convert SharedOrgsList
-	if apiResponse.SharedOrgsList != nil {
-		var sharedOrgs []types.String
-		for _, org := range apiResponse.SharedOrgsList {
-			sharedOrgs = append(sharedOrgs, flatteners.String(org))
-		}
-		sharedOrgsList, diags_shared := types.ListValueFrom(context.Background(), types.StringType, sharedOrgs)
-		diag.Append(diags_shared...)
-		model.SharedOrgsList = sharedOrgsList
-	} else {
-		model.SharedOrgsList = types.ListNull(types.StringType)
+	sharedOrgsList, diags_shared := flatteners.ListOfStringToTerraformList(apiResponse.SharedOrgsList)
+	diag.Append(diags_shared...)
+	if diag.HasError() {
+		return nil, diag
 	}
+	model.SharedOrgsList = sharedOrgsList
 
 	// Convert ContextTags
 	if apiResponse.ContextTags != nil {
@@ -510,13 +393,6 @@ func BuildAPIModelToWorkflowTemplateModel(apiResponse *workflowtemplates.ReadWor
 		return nil, diags
 	}
 	model.RuntimeSource = runtimeSourceTerraType
-
-	// Convert VCSTriggers
-	vcsTriggersTerraType, diags := VCSTriggersToTerraType(apiResponse.VCSTriggers)
-	if diags.HasError() {
-		return nil, diags
-	}
-	model.VCSTriggers = vcsTriggersTerraType
 
 	return model, diag
 }

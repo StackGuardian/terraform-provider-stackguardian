@@ -23,12 +23,6 @@ variables, execution settings — lives in a
 created from a specific revision through
 [`stackguardian_workflow_from_template`](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/resources/workflow_from_template).
 
-## Tag-triggered revisions
-
-The `vcs_triggers` block on a template is not the same as the one on a workflow: on a tag push it
-creates a **new template revision** from the tagged commit. It does not start a workflow run. The
-repository comes from `runtime_source`.
-
 ## Example Usage
 
 ```terraform
@@ -62,7 +56,7 @@ resource "stackguardian_workflow_template" "with_runtime" {
 
 ### Required
 
-- `source_config_kind` (String) What this template deploys, which decides how StackGuardian runs it. <ul><li>`TERRAFORM` / `OPENTOFU` — Terraform or OpenTofu configuration.</li><li>`ANSIBLE_PLAYBOOK` — an Ansible playbook.</li><li>`HELM` — a Helm chart.</li><li>`KUBECTL` — Kubernetes manifests applied with kubectl.</li><li>`CLOUDFORMATION` — an AWS CloudFormation stack.</li><li>`CUSTOM` — anything else, typically a public repository run with your own steps.</li></ul>
+- `source_config_kind` (String) What this template deploys, which decides how StackGuardian runs it. **Cannot be changed** after creation. <ul><li>`TERRAFORM` / `OPENTOFU` — Terraform or OpenTofu configuration.</li><li>`ANSIBLE_PLAYBOOK` — an Ansible playbook.</li><li>`HELM` — a Helm chart.</li><li>`KUBECTL` — Kubernetes manifests applied with kubectl.</li><li>`CLOUDFORMATION` — an AWS CloudFormation stack.</li><li>`CUSTOM` — anything else, typically a public repository run with your own steps.</li></ul>
 - `template_name` (String) Name of the workflow template.
 
 ### Optional
@@ -74,7 +68,6 @@ resource "stackguardian_workflow_template" "with_runtime" {
 - `runtime_source` (Attributes) Runtime source configuration for the template. (see [below for nested schema](#nestedatt--runtime_source))
 - `shared_orgs_list` (List of String) List of organizations the template is shared with.
 - `tags` (List of String) A list of tags associated with the workflow template. A maximum of 10 tags are allowed.
-- `vcs_triggers` (Attributes) VCS trigger configuration for the template. On a tag push, StackGuardian creates a new `stackguardian_workflow_template_revision` from the tagged commit — it does not start a workflow run. The repository is taken from `runtime_source`. (see [below for nested schema](#nestedatt--vcs_triggers))
 
 ### Read-Only
 
@@ -93,7 +86,7 @@ Optional:
 
 Required:
 
-- `repo` (String) Git repository URL.
+- `repo` (String) Git repository URL. **Cannot be changed** after creation.
 
 Optional:
 
@@ -104,31 +97,6 @@ Optional:
 - `is_private` (Boolean) Whether the repository is private. Setting this to `true` always requires `auth`. Only `GIT_OTHER` supports a fully public, authless repository (`is_private = false` with `auth` unset) — every other `source_config_dest_kind` requires `auth` regardless of this value.
 - `ref` (String) Git reference (branch, tag, or commit hash).
 - `working_dir` (String) Working directory within the repository.
-
-
-
-<a id="nestedatt--vcs_triggers"></a>
-### Nested Schema for `vcs_triggers`
-
-Required:
-
-- `create_tag` (Attributes) Trigger configuration on tag creation in VCS (see [below for nested schema](#nestedatt--vcs_triggers--create_tag))
-- `type` (String) Which VCS platform the webhook is registered with. <ul><li>`GITHUB_COM` — github.com.</li><li>`GITHUB_APP_CUSTOM` — GitHub Enterprise, or a GitHub App you manage yourself.</li><li>`GITLAB_COM` — gitlab.com.</li></ul>Must match the provider hosting the repository in `runtime_source`.
-
-<a id="nestedatt--vcs_triggers--create_tag"></a>
-### Nested Schema for `vcs_triggers.create_tag`
-
-Required:
-
-- `create_revision` (Attributes) Create new revision on tag creation (see [below for nested schema](#nestedatt--vcs_triggers--create_tag--create_revision))
-
-<a id="nestedatt--vcs_triggers--create_tag--create_revision"></a>
-### Nested Schema for `vcs_triggers.create_tag.create_revision`
-
-Optional:
-
-- `enabled` (Boolean) Whether to create revision when tag is created.
-
 
 
 

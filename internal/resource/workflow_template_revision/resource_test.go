@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -222,6 +223,131 @@ func TestAccWorkflowTemplateRevision_WithConfig(t *testing.T) {
 			// Delete testing automatically occurs
 		},
 	})
+}
+
+// TestAccWorkflowTemplateRevision_ApproversExplicitEmptyList verifies that setting
+// approvers to an explicit empty list ([]) round-trips as a real empty list, not
+// null. approvers is plain Optional (no Computed/UseStateForUnknown), so an
+// explicit [] always plans as a known, non-null, zero-length value regardless of
+// prior state. flatteners.ListOfStringToTerraformList used to collapse ANY
+// zero-length slice (nil or an explicit empty one — the API doesn't distinguish)
+// to null; that collapsed a real, non-null empty response into null, so Read()
+// disagreed with the plan's known-empty value and Terraform failed with "Provider
+// produced inconsistent result after apply" instead of the final PlanOnly step
+// ever running clean. Fixed by making ListOfStringToTerraformList preserve a
+// non-nil empty slice as [] and only collapse a true nil slice to null.
+func TestAccWorkflowTemplateRevision_ApproversExplicitEmptyList(t *testing.T) {
+	templateID := acctest.ResourceName("tf-provider-wftr-approvers-empty")
+	alias := "revision-approvers-empty"
+
+	registerWorkflowTemplateCleanup(t, templateID, 1)
+
+	err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	withApprovers := fmt.Sprintf(`
+		  alias     = %q
+		  approvers = ["approver1", "approver2"]
+		`, alias)
+
+	withEmptyApprovers := fmt.Sprintf(`
+		  alias     = %q
+		  approvers = []
+		`, alias)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, withApprovers),
+				Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "approvers.#", "2"),
+			},
+			{
+				// Explicit empty value, not omission — a real update to [], which
+				// must apply cleanly as a known, zero-length list.
+				Config: testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, withEmptyApprovers),
+				Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "approvers.#", "0"),
+			},
+			{
+				// Round trips with no diff — proves Read() settles on the same
+				// known-empty value the plan predicted, not null.
+				Config:   testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, withEmptyApprovers),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccWorkflowTemplateRevision_EmptyTopLevelListsOnCreate verifies that every
+// top-level list attribute set to an explicit empty list ([]) at create round-trips as a
+// real empty list, not null. CreateWorkflowTemplateRevisionsRequest tags these `omitzero`,
+// which only drops a nil slice, so an explicit [] is sent; with `omitempty` the field never
+// reached core, GET omitted it, and it read back as null against the [] plan ("Provider produced
+// inconsistent result after apply"). TestAccWorkflowTemplateRevision_ApproversExplicitEmptyList
+// covers the update path.
+func TestAccWorkflowTemplateRevision_EmptyTopLevelListsOnCreate(t *testing.T) {
+	// wf_steps_config is rejected in any form for TERRAFORM/OPENTOFU (see ValidateConfig), so
+	// its case runs on CUSTOM; every other list uses TERRAFORM.
+	fields := map[string]string{
+		"approvers":                  "TERRAFORM",
+		"tags":                       "TERRAFORM",
+		"environment_variables":      "TERRAFORM",
+		"input_schemas":              "TERRAFORM",
+		"user_schedules":             "TERRAFORM",
+		"deployment_platform_config": "TERRAFORM",
+		"wf_steps_config":            "CUSTOM",
+	}
+
+	for field, sourceConfigKind := range fields {
+		t.Run(field, func(t *testing.T) {
+			templateID := acctest.ResourceName("tf-provider-wftr-empty-" + strings.ReplaceAll(field, "_", "-"))
+			alias := "revision-empty-list"
+
+			registerWorkflowTemplateCleanup(t, templateID, 1)
+
+			err := createWorkflowTemplateFixture(templateID, sourceConfigKind)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			customHeader := http.Header{}
+			customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+			config := testAccWorkflowTemplateRevision(templateID, sourceConfigKind, 500, 1024, fmt.Sprintf(`
+			  alias  = %q
+			  %s = []
+			`, alias, field))
+
+			resource.Test(t, resource.TestCase{
+				PreCheck: func() { acctest.TestAccPreCheck(t) },
+				TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+					tfversion.SkipBelow(tfversion.Version1_1_0),
+				},
+				ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+				Steps: []resource.TestStep{
+					{
+						Config: config,
+						Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", field+".#", "0"),
+					},
+					{
+						// Round trips with no diff — Read() settles on the same known-empty
+						// value the plan predicted, not null.
+						Config:   config,
+						PlanOnly: true,
+					},
+				},
+			})
+		})
+	}
 }
 
 func TestAccWorkflowTemplateRevision_WithDeploymentPlatformConfig(t *testing.T) {

@@ -63,11 +63,8 @@ func WorkflowTemplateRuntimeSourceConfig() map[string]schema.Attribute {
 					},
 				},
 				"repo": schema.StringAttribute{
-					MarkdownDescription: constants.RuntimeSourceConfigRepo,
+					MarkdownDescription: constants.WorkflowTemplateRuntimeSourceConfigRepo,
 					Required:            true,
-					PlanModifiers: []planmodifier.String{
-						stringplanmodifier.RequiresReplace(),
-					},
 				},
 				"working_dir": schema.StringAttribute{
 					MarkdownDescription: constants.RuntimeSourceConfigWorkingDir,
@@ -89,12 +86,14 @@ func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRe
 				Optional:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
-					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"owner_org": schema.StringAttribute{
 				MarkdownDescription: constants.WorkflowTemplateOwnerOrg,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"template_name": schema.StringAttribute{
 				MarkdownDescription: constants.WorkflowTemplateName,
@@ -124,6 +123,10 @@ func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRe
 				MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow template"),
 				ElementType:         types.StringType,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"context_tags": schema.MapAttribute{
 				MarkdownDescription: fmt.Sprintf(constants.ContextTags, "workflow template"),
@@ -150,33 +153,6 @@ func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRe
 				Attributes:          WorkflowTemplateRuntimeSourceConfig(),
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"vcs_triggers": schema.SingleNestedAttribute{
-				MarkdownDescription: constants.TemplateVCSTriggers,
-				Optional:            true,
-				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"type": schema.StringAttribute{
-						MarkdownDescription: constants.VCSTriggersType,
-						Required:            true,
-					},
-					"create_tag": schema.SingleNestedAttribute{
-						MarkdownDescription: constants.VCSTriggersCreateTag,
-						Required:            true,
-						Attributes: map[string]schema.Attribute{
-							"create_revision": schema.SingleNestedAttribute{
-								MarkdownDescription: constants.VCSTriggersCreateTagRevision,
-								Required:            true,
-								Attributes: map[string]schema.Attribute{
-									"enabled": schema.BoolAttribute{
-										MarkdownDescription: constants.VCSTriggersCreateTagRevisionEnabled,
-										Optional:            true,
-									},
-								},
-							},
-						},
-					},
 				},
 			},
 		},

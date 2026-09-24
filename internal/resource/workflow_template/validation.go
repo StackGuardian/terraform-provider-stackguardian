@@ -2,11 +2,13 @@ package workflowtemplate
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
@@ -110,6 +112,119 @@ func ValidateRuntimeSourceAuth(ctx context.Context, runtimeSourceObj types.Objec
 				"auth must start with /integration for this source_config_dest_kind.",
 			)
 		}
+	}
+
+	return diags
+}
+
+// validateIdUnchanged errors if id differs between plan and state. The API cannot rename a
+// template, and replacing it would delete every revision underneath it, so the change is
+// rejected. Unknown plan values are skipped; an id removed from config keeps its state value
+// through UseStateForUnknown, so it never reaches here as a change.
+func validateIdUnchanged(planId, stateId types.String) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	if planId.IsUnknown() || planId.ValueString() == stateId.ValueString() {
+		return diags
+	}
+
+	diags.AddAttributeError(
+		path.Root("id"),
+		"id cannot be changed",
+		fmt.Sprintf(
+			"id is immutable on an existing workflow template (changed from %q to %q). Create a new stackguardian_workflow_template with the desired id instead.",
+			stateId.ValueString(), planId.ValueString(),
+		),
+	)
+	return diags
+}
+
+// ValidateSourceConfigKindUnchanged errors if source_config_kind differs between planKind and
+// stateKind. Shared by workflow_template and workflow_template_revision's ModifyPlan —
+// source_config_kind is immutable on an existing resource: the API has no endpoint to change
+// it in place, and replacing the resource would change its identity (a new template, or a new
+// revision number), breaking anything that references the old one. resourceLabel names the
+// resource in the error message (e.g. "workflow template", "revision") and resourceTypeName
+// gives the Terraform type to create instead (e.g. "stackguardian_workflow_template").
+func ValidateSourceConfigKindUnchanged(planKind, stateKind types.String, resourceLabel, resourceTypeName string) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	if planKind.IsUnknown() || planKind.ValueString() == stateKind.ValueString() {
+		return diags
+	}
+
+	diags.AddAttributeError(
+		path.Root("source_config_kind"),
+		"source_config_kind cannot be changed",
+		fmt.Sprintf(
+			"source_config_kind is immutable on an existing %s (changed from %q to %q). Create a new %s with the desired source_config_kind instead.",
+			resourceLabel, stateKind.ValueString(), planKind.ValueString(), resourceTypeName,
+		),
+	)
+	return diags
+}
+
+// runtimeSourceRepoPath is runtime_source.config.repo, the same on workflow_template and
+// workflow_template_revision.
+var runtimeSourceRepoPath = path.Root("runtime_source").AtName("config").AtName("repo")
+
+// runtimeSourceRepo reads runtime_source.config.repo from data (a tfsdk.Plan or tfsdk.State).
+// It returns unknown when repo or either parent is unknown, and null when either parent is
+// null. The parents are checked explicitly because GetAttribute (framework v1.19) returns
+// null, not unknown, for a child of an unknown parent.
+func runtimeSourceRepo(ctx context.Context, data interface {
+	GetAttribute(context.Context, path.Path, interface{}) diag.Diagnostics
+}) (types.String, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	for _, parent := range []path.Path{runtimeSourceRepoPath.ParentPath().ParentPath(), runtimeSourceRepoPath.ParentPath()} {
+		var obj types.Object
+		diags.Append(data.GetAttribute(ctx, parent, &obj)...)
+		if diags.HasError() {
+			return types.StringNull(), diags
+		}
+		if obj.IsUnknown() {
+			return types.StringUnknown(), diags
+		}
+		if obj.IsNull() {
+			return types.StringNull(), diags
+		}
+	}
+
+	var repo types.String
+	diags.Append(data.GetAttribute(ctx, runtimeSourceRepoPath, &repo)...)
+	return repo, diags
+}
+
+// ValidateRuntimeSourceRepoUnchanged errors if runtime_source.config.repo differs between
+// plan and state. Shared by workflow_template and workflow_template_revision's ModifyPlan —
+// repo cannot be changed on an existing template or revision, published or not: the API has
+// no endpoint to change it in place, and replacing the resource would change its identity
+// (a new template, or a new revision number), breaking anything that references the old one.
+// See constants.WorkflowTemplateRuntimeSourceConfigRepo. A plan repo that is unknown — or
+// whose runtime_source or config is unknown — is skipped rather than compared as "".
+func ValidateRuntimeSourceRepoUnchanged(ctx context.Context, plan tfsdk.Plan, state tfsdk.State) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	planRepo, d := runtimeSourceRepo(ctx, plan)
+	diags.Append(d...)
+	if diags.HasError() || planRepo.IsUnknown() {
+		return diags
+	}
+
+	stateRepo, d := runtimeSourceRepo(ctx, state)
+	diags.Append(d...)
+	if diags.HasError() {
+		return diags
+	}
+
+	// The update request has no repo field, so any difference would be dropped silently.
+	if planRepo.ValueString() != stateRepo.ValueString() {
+		diags.AddAttributeError(
+			runtimeSourceRepoPath,
+			"runtime_source.config.repo cannot be changed",
+			"runtime_source.config.repo can only be set when the resource is created; it cannot be added, removed or changed afterwards. Create a new resource with the desired repo instead.",
+		)
 	}
 
 	return diags

@@ -4,7 +4,7 @@ package constants
 const (
 	TemplateRevisionAlias                    string = "Alias for the template revision"
 	TemplateRevisionNotes                    string = "Notes for the revision"
-	TemplateRevisionIsPublic                 string = `Whether this **revision** is published and available to be referenced. Distinct from ` + "`is_public`" + ` on the parent template, which controls cross-organization sharing. Options: <span style="background-color: #eff0f0; color: #e53835;">"1"</span>, <span style="background-color: #eff0f0; color: #e53835;">"0"</span>`
+	TemplateRevisionIsPublic                 string = `Whether this **revision** is published and available to be referenced. Distinct from ` + "`is_public`" + ` on the parent template, which controls cross-organization sharing. Once set to ` + "`\"1\"`" + `, only ` + "`description`, `alias`, `notes`, and `deprecation`" + ` may still be changed — every other attribute is rejected by the API. Options: <span style="background-color: #eff0f0; color: #e53835;">"1"</span>, <span style="background-color: #eff0f0; color: #e53835;">"0"</span>`
 	TemplateRevisionDeprecation              string = "Marking a template revision for deprecation"
 	TemplateRevisionDeprecationEffectiveDate string = "Effective date for after which revision will be deprecated"
 	TemplateRevisionDeprecationMessage       string = "Message shown to users who reference this revision after it has been deprecated. Use it to point them at the replacement revision."
@@ -13,7 +13,7 @@ const (
 
 // Common attributes shared between workflow template and revision
 const (
-	SourceConfigKind string = "What this template deploys, which decides how StackGuardian runs it. <ul><li>`TERRAFORM` / `OPENTOFU` — Terraform or OpenTofu configuration.</li><li>`ANSIBLE_PLAYBOOK` — an Ansible playbook.</li><li>`HELM` — a Helm chart.</li><li>`KUBECTL` — Kubernetes manifests applied with kubectl.</li><li>`CLOUDFORMATION` — an AWS CloudFormation stack.</li><li>`CUSTOM` — anything else, typically a public repository run with your own steps.</li></ul>"
+	SourceConfigKind string = "What this template deploys, which decides how StackGuardian runs it. **Cannot be changed** after creation. <ul><li>`TERRAFORM` / `OPENTOFU` — Terraform or OpenTofu configuration.</li><li>`ANSIBLE_PLAYBOOK` — an Ansible playbook.</li><li>`HELM` — a Helm chart.</li><li>`KUBECTL` — Kubernetes manifests applied with kubectl.</li><li>`CLOUDFORMATION` — an AWS CloudFormation stack.</li><li>`CUSTOM` — anything else, typically a public repository run with your own steps.</li></ul>"
 	ContextTags      string = "Context tags for %s"
 )
 
@@ -28,7 +28,7 @@ const (
 // Workflow Template Revision attributes
 const (
 	WorkflowTemplateRevisionId           = "Identifier of the revision, in the form `<template-name>:<revision>` (e.g. `my-terraform-template:1`)."
-	WorkflowTemplateRevisionTemplateId   = "Parent workflow template, as its bare `template_name` (e.g. `my-terraform-template`) — not a path. Reference the `stackguardian_workflow_template` resource rather than typing it."
+	WorkflowTemplateRevisionTemplateId   = "Parent workflow template, as its bare `template_name` (e.g. `my-terraform-template`) — not a path. Reference the `stackguardian_workflow_template` resource rather than typing it. **Cannot be changed** after creation; create a new revision under the other template instead."
 	WorkflowTemplateRevisionInputSchemas = "JSONSchema Form representation of input JSON data"
 	// WorkflowTemplateRevisionWfStepsConfig documents a rule validated at plan time — see
 	// wfStepsConfigNotAllowedForTerraformDiagnostics in
@@ -61,21 +61,12 @@ const (
 	WorkflowTemplateRuntimeSourceDestKind        = RuntimeSourceDestKind + " `GIT_OTHER` is the only kind that may omit `auth` for a public repository; every other kind requires it regardless of `is_private`."
 	WorkflowTemplateRuntimeSourceConfigAuth      = "Credential for cloning the repository, as a path-form ID. Required whenever `is_private` is `true`, and required unconditionally (regardless of `is_private`) for every `source_config_dest_kind` except `GIT_OTHER` — only `GIT_OTHER` may omit it, for a public repository. When set: `GIT_OTHER` requires a secret, `/secrets/<secret-name>`; every other kind requires a VCS connector, `/integrations/<connector-name>`, built as `\"/integrations/${stackguardian_connector.github.id}\"`."
 	WorkflowTemplateRuntimeSourceConfigIsPrivate = "Whether the repository is private. Setting this to `true` always requires `auth`. Only `GIT_OTHER` supports a fully public, authless repository (`is_private = false` with `auth` unset) — every other `source_config_dest_kind` requires `auth` regardless of this value."
+	WorkflowTemplateRuntimeSourceConfigRepo      = "Git repository URL. **Cannot be changed** after creation."
 )
 
 // VCS Triggers attributes
 const (
-	VCSTriggers     = "Webhook triggers for this workflow. Supported when the repository is on `GITHUB_COM`, `GITHUB_APP_CUSTOM` or `GITLAB_COM`.<br><br>**Requires** `vcs_config.iac_vcs_config.custom_source.config.is_private` to be `true` and `...config.auth` to name a `stackguardian_connector` with access — StackGuardian has to authenticate to register the webhook. See the [VCS connector docs](https://docs.stackguardian.io/docs/connectors/vcs/)." + "`source_config_dest_kind`" + ` is <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, or <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>. **Requires** ` + "`vcs_config.iac_vcs_config.custom_source.config.is_private`" + ` to be ` + "`true`" + ` and ` + "`vcs_config.iac_vcs_config.custom_source.config.auth`" + ` to be set with a valid connector ID.`
-	VCSTriggersType = "Which VCS platform the webhook is registered with. <ul><li>`GITHUB_COM` — github.com.</li><li>`GITHUB_APP_CUSTOM` — GitHub Enterprise, or a GitHub App you manage yourself.</li><li>`GITLAB_COM` — gitlab.com.</li></ul>Must match the provider hosting the repository in `runtime_source`."
-	// TemplateVCSTriggers documents the `vcs_triggers` block on `stackguardian_workflow_template`.
-	// It is deliberately separate from VCSTriggers above: a workflow template has no `vcs_config`
-	// attribute (it uses `runtime_source`), and its only trigger creates a new *template revision*
-	// on tag push rather than starting a workflow run.
-	TemplateVCSTriggers                 = `VCS trigger configuration for the template. On a tag push, StackGuardian creates a new ` + "`stackguardian_workflow_template_revision`" + ` from the tagged commit — it does not start a workflow run. The repository is taken from ` + "`runtime_source`" + `.`
-	VCSTriggersCreateTag                = "Trigger configuration on tag creation in VCS"
-	VCSTriggersCreateTagRevision        = "Create new revision on tag creation"
-	VCSTriggersCreateTagRevisionEnabled = "Whether to create revision when tag is created."
-
+	VCSTriggers                    = "Webhook triggers for this workflow. Supported when the repository is on `GITHUB_COM`, `GITHUB_APP_CUSTOM` or `GITLAB_COM`.<br><br>**Requires** `vcs_config.iac_vcs_config.custom_source.config.is_private` to be `true` and `...config.auth` to name a `stackguardian_connector` with access — StackGuardian has to authenticate to register the webhook. See the [VCS connector docs](https://docs.stackguardian.io/docs/connectors/vcs/)." + "`source_config_dest_kind`" + ` is <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, or <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>. **Requires** ` + "`vcs_config.iac_vcs_config.custom_source.config.is_private`" + ` to be ` + "`true`" + ` and ` + "`vcs_config.iac_vcs_config.custom_source.config.auth`" + ` to be set with a valid connector ID.`
 	VCSTriggersTrackedBranch       = "The branch that push and pull request events must target to trigger a workflow run. For push events, the pushed-to branch must equal this value. For pull request events, the PR's base (target) branch must equal this value — unless `all_pull_requests.createWfRun.enabled` is `true`, which bypasses this check entirely. If omitted, falls back to the branch set in the workflow's VCS config, then to the repository's default branch."
 	VCSTriggersApprovalPreApply    = "When `true`, workflow runs triggered by push or tag events run `apply` but require manual approval before the apply executes. Has no effect on pull request events — those always run `plan` regardless. Ignored when `plan_only` is `true`; `plan_only` takes precedence."
 	VCSTriggersPlanOnly            = "When `true`, all workflow runs triggered by push or tag events execute `plan` instead of `apply`. Takes precedence over `approval_pre_apply` — setting both to `true` results in `plan` only, with no apply or approval step. Has no effect on pull request events — those always run `plan` regardless."

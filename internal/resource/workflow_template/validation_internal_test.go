@@ -6,8 +6,12 @@ import (
 	"testing"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
 // mustRuntimeSourceObject builds a runtime_source types.Object with the given
@@ -143,6 +147,151 @@ func TestValidateRuntimeSourceAuth(t *testing.T) {
 			}
 			if !found {
 				t.Fatalf("expected an error containing %q, got: %v", tc.wantError, diags)
+			}
+		})
+	}
+}
+
+func TestValidateIdUnchanged(t *testing.T) {
+	cases := []struct {
+		name      string
+		plan      types.String
+		state     types.String
+		wantError string // substring expected in the diagnostic's detail; "" means no error
+	}{
+		{
+			name:      "unchanged id is fine",
+			plan:      types.StringValue("template-a"),
+			state:     types.StringValue("template-a"),
+			wantError: "",
+		},
+		{
+			name:      "unknown plan value is skipped",
+			plan:      types.StringUnknown(),
+			state:     types.StringValue("template-a"),
+			wantError: "",
+		},
+		{
+			name:      "changed id is rejected",
+			plan:      types.StringValue("template-b"),
+			state:     types.StringValue("template-a"),
+			wantError: `id is immutable on an existing workflow template (changed from "template-a" to "template-b")`,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			diags := validateIdUnchanged(tc.plan, tc.state)
+
+			if tc.wantError == "" {
+				if diags.HasError() {
+					t.Fatalf("expected no error, got: %v", diags)
+				}
+				return
+			}
+
+			if !diags.HasError() {
+				t.Fatalf("expected error containing %q, got none", tc.wantError)
+			}
+			if detail := diags.Errors()[0].Detail(); !strings.Contains(detail, tc.wantError) {
+				t.Fatalf("expected error containing %q, got %q", tc.wantError, detail)
+			}
+		})
+	}
+}
+
+// repoTestValue describes how runtime_source is populated in a plan or state for
+// TestValidateRuntimeSourceRepoUnchanged.
+type repoTestValue int
+
+const (
+	repoNullRuntimeSource    repoTestValue = iota // runtime_source = null
+	repoUnknownRuntimeSource                      // runtime_source known after apply
+	repoUnknownConfig                             // runtime_source.config known after apply
+	repoUnknownRepo                               // runtime_source.config.repo known after apply
+	repoKnown                                     // runtime_source.config.repo = the given string
+)
+
+func repoTestData(t *testing.T, ctx context.Context, kind repoTestValue, repo string) (tfsdk.Plan, tfsdk.State) {
+	t.Helper()
+
+	var schemaResp resource.SchemaResponse
+	(&workflowTemplateResource{}).Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	sch := schemaResp.Schema
+
+	plan := tfsdk.Plan{Schema: sch, Raw: tftypes.NewValue(sch.Type().TerraformType(ctx), nil)}
+
+	var diags diag.Diagnostics
+	runtimeSourcePath := path.Root("runtime_source")
+	switch kind {
+	case repoNullRuntimeSource:
+	case repoUnknownRuntimeSource:
+		diags = plan.SetAttribute(ctx, runtimeSourcePath, types.ObjectUnknown(RuntimeSourceModel{}.AttributeTypes()))
+	case repoUnknownConfig:
+		diags = plan.SetAttribute(ctx, runtimeSourcePath.AtName("config"), types.ObjectUnknown(RuntimeSourceConfigModel{}.AttributeTypes()))
+	case repoUnknownRepo:
+		diags = plan.SetAttribute(ctx, runtimeSourceRepoPath, types.StringUnknown())
+	case repoKnown:
+		diags = plan.SetAttribute(ctx, runtimeSourceRepoPath, types.StringValue(repo))
+	}
+	if diags.HasError() {
+		t.Fatalf("building test data: %v", diags)
+	}
+
+	return plan, tfsdk.State{Schema: plan.Schema, Raw: plan.Raw}
+}
+
+func TestValidateRuntimeSourceRepoUnchanged(t *testing.T) {
+	const repoA = "https://github.com/StackGuardian/tf-null-resource.git"
+	const repoB = "https://github.com/StackGuardian/terraform-provider-stackguardian.git"
+
+	cases := []struct {
+		name      string
+		plan      repoTestValue
+		planRepo  string
+		state     repoTestValue
+		stateRepo string
+		wantError string // substring expected in the diagnostic's detail; "" means no error
+	}{
+		{name: "unchanged repo is fine", plan: repoKnown, planRepo: repoA, state: repoKnown, stateRepo: repoA},
+		{name: "unknown runtime_source is skipped", plan: repoUnknownRuntimeSource, state: repoKnown, stateRepo: repoA},
+		{name: "unknown runtime_source.config is skipped", plan: repoUnknownConfig, state: repoKnown, stateRepo: repoA},
+		{name: "unknown repo is skipped", plan: repoUnknownRepo, state: repoKnown, stateRepo: repoA},
+		{name: "null runtime_source on both sides is fine", plan: repoNullRuntimeSource, state: repoNullRuntimeSource},
+		{
+			name: "changed repo is rejected", plan: repoKnown, planRepo: repoB, state: repoKnown, stateRepo: repoA,
+			wantError: `runtime_source.config.repo can only be set when the resource is created; it cannot be added, removed or changed afterwards.`,
+		},
+		{
+			name: "removed runtime_source is rejected", plan: repoNullRuntimeSource, state: repoKnown, stateRepo: repoA,
+			wantError: `runtime_source.config.repo can only be set when the resource is created; it cannot be added, removed or changed afterwards.`,
+		},
+		{
+			name: "adding a repo to a resource created without one is rejected", plan: repoKnown, planRepo: repoA, state: repoNullRuntimeSource,
+			wantError: `runtime_source.config.repo can only be set when the resource is created; it cannot be added, removed or changed afterwards.`,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			plan, _ := repoTestData(t, ctx, tc.plan, tc.planRepo)
+			_, state := repoTestData(t, ctx, tc.state, tc.stateRepo)
+
+			diags := ValidateRuntimeSourceRepoUnchanged(ctx, plan, state)
+
+			if tc.wantError == "" {
+				if diags.HasError() {
+					t.Fatalf("expected no error, got: %v", diags)
+				}
+				return
+			}
+
+			if !diags.HasError() {
+				t.Fatalf("expected error containing %q, got none", tc.wantError)
+			}
+			if detail := diags.Errors()[0].Detail(); !strings.Contains(detail, tc.wantError) {
+				t.Fatalf("expected error containing %q, got %q", tc.wantError, detail)
 			}
 		})
 	}
