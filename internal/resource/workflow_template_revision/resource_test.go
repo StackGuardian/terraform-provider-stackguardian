@@ -295,24 +295,26 @@ func TestAccWorkflowTemplateRevision_ApproversExplicitEmptyList(t *testing.T) {
 // inconsistent result after apply"). TestAccWorkflowTemplateRevision_ApproversExplicitEmptyList
 // covers the update path.
 func TestAccWorkflowTemplateRevision_EmptyTopLevelListsOnCreate(t *testing.T) {
-	fields := []string{
-		"approvers",
-		"tags",
-		"environment_variables",
-		"input_schemas",
-		"user_schedules",
-		"deployment_platform_config",
-		"wf_steps_config",
+	// wf_steps_config is rejected in any form for TERRAFORM/OPENTOFU (see ValidateConfig), so
+	// its case runs on CUSTOM; every other list uses TERRAFORM.
+	fields := map[string]string{
+		"approvers":                  "TERRAFORM",
+		"tags":                       "TERRAFORM",
+		"environment_variables":      "TERRAFORM",
+		"input_schemas":              "TERRAFORM",
+		"user_schedules":             "TERRAFORM",
+		"deployment_platform_config": "TERRAFORM",
+		"wf_steps_config":            "CUSTOM",
 	}
 
-	for _, field := range fields {
+	for field, sourceConfigKind := range fields {
 		t.Run(field, func(t *testing.T) {
 			templateID := acctest.ResourceName("tf-provider-wftr-empty-" + strings.ReplaceAll(field, "_", "-"))
 			alias := "revision-empty-list"
 
 			registerWorkflowTemplateCleanup(t, templateID, 1)
 
-			err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
+			err := createWorkflowTemplateFixture(templateID, sourceConfigKind)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -320,7 +322,7 @@ func TestAccWorkflowTemplateRevision_EmptyTopLevelListsOnCreate(t *testing.T) {
 			customHeader := http.Header{}
 			customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
-			config := testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, fmt.Sprintf(`
+			config := testAccWorkflowTemplateRevision(templateID, sourceConfigKind, 500, 1024, fmt.Sprintf(`
 			  alias  = %q
 			  %s = []
 			`, alias, field))
