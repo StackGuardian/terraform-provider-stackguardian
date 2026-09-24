@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
@@ -247,17 +247,16 @@ func TestAccWorkflowTemplate_WithContextTagsAndSharedOrgs(t *testing.T) {
 	})
 }
 
-// TestAccWorkflowTemplate_IdRequiresReplace verifies that a
-// practitioner-supplied id forces a destroy-and-recreate when changed — id
-// has stringplanmodifier.RequiresReplace() (schema.go) alongside
-// UseStateForUnknown(). template_name stays fixed across both steps so only
-// id itself differs, isolating this from template_name's own behavior.
-func TestAccWorkflowTemplate_IdRequiresReplace(t *testing.T) {
-	name1 := acctest.ResourceName("tf-provider-workflow-template-id-replace-a")
-	name2 := acctest.ResourceName("tf-provider-workflow-template-id-replace-b")
+// TestAccWorkflowTemplate_IdRejectedOnChange verifies that changing a
+// practitioner-supplied id on an existing template is rejected at plan time
+// (ModifyPlan, resource.go) instead of destroying and recreating the template,
+// which would delete every revision underneath it. template_name stays fixed
+// across both steps so only id itself differs.
+func TestAccWorkflowTemplate_IdRejectedOnChange(t *testing.T) {
+	name1 := acctest.ResourceName("tf-provider-workflow-template-id-rejected-a")
+	name2 := acctest.ResourceName("tf-provider-workflow-template-id-rejected-b")
 
 	t.Cleanup(func() { deleteWorkflowTemplateFixture(name1) })
-	t.Cleanup(func() { deleteWorkflowTemplateFixture(name2) })
 
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
@@ -278,13 +277,8 @@ func TestAccWorkflowTemplate_IdRequiresReplace(t *testing.T) {
 				Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "id", name1),
 			},
 			{
-				Config: testAccWorkflowTemplate(name1, sourceConfigKind, config(name2)),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction("stackguardian_workflow_template.test", plancheck.ResourceActionReplace),
-					},
-				},
-				Check: resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "id", name2),
+				Config:      testAccWorkflowTemplate(name1, sourceConfigKind, config(name2)),
+				ExpectError: regexp.MustCompile("id cannot be changed"),
 			},
 		},
 	})

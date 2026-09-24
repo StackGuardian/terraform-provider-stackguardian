@@ -147,3 +147,51 @@ func TestValidateRuntimeSourceAuth(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateIdUnchanged(t *testing.T) {
+	cases := []struct {
+		name      string
+		plan      types.String
+		state     types.String
+		wantError string // substring expected in the diagnostic's detail; "" means no error
+	}{
+		{
+			name:      "unchanged id is fine",
+			plan:      types.StringValue("template-a"),
+			state:     types.StringValue("template-a"),
+			wantError: "",
+		},
+		{
+			name:      "unknown plan value is skipped",
+			plan:      types.StringUnknown(),
+			state:     types.StringValue("template-a"),
+			wantError: "",
+		},
+		{
+			name:      "changed id is rejected",
+			plan:      types.StringValue("template-b"),
+			state:     types.StringValue("template-a"),
+			wantError: `id is immutable on an existing workflow template (changed from "template-a" to "template-b")`,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			diags := validateIdUnchanged(tc.plan, tc.state)
+
+			if tc.wantError == "" {
+				if diags.HasError() {
+					t.Fatalf("expected no error, got: %v", diags)
+				}
+				return
+			}
+
+			if !diags.HasError() {
+				t.Fatalf("expected error containing %q, got none", tc.wantError)
+			}
+			if detail := diags.Errors()[0].Detail(); !strings.Contains(detail, tc.wantError) {
+				t.Fatalf("expected error containing %q, got %q", tc.wantError, detail)
+			}
+		})
+	}
+}

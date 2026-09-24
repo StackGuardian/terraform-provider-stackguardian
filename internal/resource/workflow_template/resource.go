@@ -75,10 +75,10 @@ func (r *workflowTemplateResource) ValidateConfig(ctx context.Context, req resou
 	resp.Diagnostics.Append(ValidateRuntimeSourceAuth(ctx, templateModel.RuntimeSource, path.Root("runtime_source"))...)
 }
 
-// ModifyPlan rejects a change to source_config_kind or runtime_source.config.repo
-// on Update. The API has no endpoint to change either in place, and replacing
+// ModifyPlan rejects a change to id, source_config_kind or runtime_source.config.repo
+// on Update. The API has no endpoint to change any of them in place, and replacing
 // the template would delete every revision underneath it — far more
-// disruptive than either field warrants. Rejecting the change outright
+// disruptive than any of these fields warrants. Rejecting the change outright
 // forces the user to create a new template explicitly instead.
 func (r *workflowTemplateResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
@@ -92,6 +92,7 @@ func (r *workflowTemplateResource) ModifyPlan(ctx context.Context, req resource.
 		return
 	}
 
+	resp.Diagnostics.Append(validateIdUnchanged(plan.Id, state.Id)...)
 	resp.Diagnostics.Append(ValidateSourceConfigKindUnchanged(plan.SourceConfigKind, state.SourceConfigKind, "workflow template", "stackguardian_workflow_template")...)
 	resp.Diagnostics.Append(ValidateRuntimeSourceRepoUnchanged(ctx, plan.RuntimeSource, state.RuntimeSource)...)
 }

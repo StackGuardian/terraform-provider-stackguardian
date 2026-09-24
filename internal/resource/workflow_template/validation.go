@@ -116,6 +116,28 @@ func ValidateRuntimeSourceAuth(ctx context.Context, runtimeSourceObj types.Objec
 	return diags
 }
 
+// validateIdUnchanged errors if id differs between plan and state. The API cannot rename a
+// template, and replacing it would delete every revision underneath it, so the change is
+// rejected. Unknown plan values are skipped; an id removed from config keeps its state value
+// through UseStateForUnknown, so it never reaches here as a change.
+func validateIdUnchanged(planId, stateId types.String) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	if planId.IsUnknown() || planId.ValueString() == stateId.ValueString() {
+		return diags
+	}
+
+	diags.AddAttributeError(
+		path.Root("id"),
+		"id cannot be changed",
+		fmt.Sprintf(
+			"id is immutable on an existing workflow template (changed from %q to %q). Create a new stackguardian_workflow_template with the desired id instead.",
+			stateId.ValueString(), planId.ValueString(),
+		),
+	)
+	return diags
+}
+
 // ValidateSourceConfigKindUnchanged errors if source_config_kind differs between planKind and
 // stateKind. Shared by workflow_template and workflow_template_revision's ModifyPlan —
 // source_config_kind is immutable on an existing resource: the API has no endpoint to change
