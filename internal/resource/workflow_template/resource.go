@@ -94,7 +94,7 @@ func (r *workflowTemplateResource) ModifyPlan(ctx context.Context, req resource.
 
 	resp.Diagnostics.Append(validateIdUnchanged(plan.Id, state.Id)...)
 	resp.Diagnostics.Append(ValidateSourceConfigKindUnchanged(plan.SourceConfigKind, state.SourceConfigKind, "workflow template", "stackguardian_workflow_template")...)
-	resp.Diagnostics.Append(ValidateRuntimeSourceRepoUnchanged(ctx, plan.RuntimeSource, state.RuntimeSource)...)
+	resp.Diagnostics.Append(ValidateRuntimeSourceRepoUnchanged(ctx, req.Plan, req.State)...)
 }
 
 // Create creates the resource and sets the initial Terraform state.
