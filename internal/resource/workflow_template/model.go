@@ -133,14 +133,12 @@ func runtimeSourceConfigToUpdate(cfg *workflowtemplates.RuntimeSourceConfig) *wo
 	}
 }
 
-// ConvertRuntimeSourceToUpdateAPI converts a runtime_source types.Object to
-// *workflowtemplates.RuntimeSourceUpdate for an Update request, by reusing
-// RuntimeSourceModel.ToAPIModel's guarded Create-path conversion (see its own doc
-// comment for why the is_private/git_core_auto_crlf/ref guards are needed) and mapping
-// the result through runtimeSourceConfigToUpdate, rather than re-deriving the same
-// guards a second time in a separately-maintained function. Shared by workflow_template
-// and workflow_template_revision's ToUpdateAPIModel.
-func ConvertRuntimeSourceToUpdateAPI(ctx context.Context, runtimeSourceObj types.Object) (*workflowtemplates.RuntimeSourceUpdate, diag.Diagnostics) {
+// ConvertRuntimeSourceToAPI converts a runtime_source types.Object to
+// *workflowtemplates.RuntimeSource for a Create request. It returns nil for a null or
+// unknown object and otherwise delegates to RuntimeSourceModel.ToAPIModel. Shared by
+// workflow_template and workflow_template_revision's ToAPIModel, and the base of
+// ConvertRuntimeSourceToUpdateAPI, so Create and Update convert runtime_source the same way.
+func ConvertRuntimeSourceToAPI(ctx context.Context, runtimeSourceObj types.Object) (*workflowtemplates.RuntimeSource, diag.Diagnostics) {
 	if runtimeSourceObj.IsNull() || runtimeSourceObj.IsUnknown() {
 		return nil, nil
 	}
@@ -154,8 +152,19 @@ func ConvertRuntimeSourceToUpdateAPI(ctx context.Context, runtimeSourceObj types
 		return nil, diags
 	}
 
-	rs, diags := m.ToAPIModel(ctx)
-	if diags.HasError() {
+	return m.ToAPIModel(ctx)
+}
+
+// ConvertRuntimeSourceToUpdateAPI converts a runtime_source types.Object to
+// *workflowtemplates.RuntimeSourceUpdate for an Update request, by reusing
+// ConvertRuntimeSourceToAPI's Create-path conversion (see RuntimeSourceModel.ToAPIModel
+// for why the is_private/git_core_auto_crlf/ref guards are needed) and mapping the result
+// through runtimeSourceConfigToUpdate, rather than re-deriving the same guards a second
+// time in a separately-maintained function. Shared by workflow_template and
+// workflow_template_revision's ToUpdateAPIModel.
+func ConvertRuntimeSourceToUpdateAPI(ctx context.Context, runtimeSourceObj types.Object) (*workflowtemplates.RuntimeSourceUpdate, diag.Diagnostics) {
+	rs, diags := ConvertRuntimeSourceToAPI(ctx, runtimeSourceObj)
+	if diags.HasError() || rs == nil {
 		return nil, diags
 	}
 
@@ -219,21 +228,11 @@ func (m *WorkflowTemplateResourceModel) ToAPIModel(ctx context.Context) (*workfl
 	}
 
 	// Convert RuntimeSource
-	if !m.RuntimeSource.IsNull() && !m.RuntimeSource.IsUnknown() {
-		var runtimeSourceModel RuntimeSourceModel
-		diags := m.RuntimeSource.As(ctx, &runtimeSourceModel, basetypes.ObjectAsOptions{
-			UnhandledNullAsEmpty:    true,
-			UnhandledUnknownAsEmpty: true,
-		})
-		if diags.HasError() {
-			return nil, diags
-		}
-		runtimeSourceApiModel, diags := runtimeSourceModel.ToAPIModel(ctx)
-		if diags.HasError() {
-			return nil, diags
-		}
-		apiModel.RuntimeSource = runtimeSourceApiModel
+	runtimeSource, diags := ConvertRuntimeSourceToAPI(ctx, m.RuntimeSource)
+	if diags.HasError() {
+		return nil, diags
 	}
+	apiModel.RuntimeSource = runtimeSource
 
 	return apiModel, diag
 }

@@ -573,21 +573,11 @@ func (m *WorkflowTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) 
 	}
 
 	// Handle RuntimeSource
-	if !m.RuntimeSource.IsNull() && !m.RuntimeSource.IsUnknown() {
-		var runtimeSourceModel workflowtemplate.RuntimeSourceModel
-		diags := m.RuntimeSource.As(ctx, &runtimeSourceModel, basetypes.ObjectAsOptions{
-			UnhandledNullAsEmpty:    true,
-			UnhandledUnknownAsEmpty: true,
-		})
-		if diags.HasError() {
-			return nil, diags
-		}
-		runtimeSource, diags := runtimeSourceModel.ToAPIModel(ctx)
-		if diags.HasError() {
-			return nil, diags
-		}
-		apiModel.RuntimeSource = runtimeSource
+	runtimeSource, diags := workflowtemplate.ConvertRuntimeSourceToAPI(ctx, m.RuntimeSource)
+	if diags.HasError() {
+		return nil, diags
 	}
+	apiModel.RuntimeSource = runtimeSource
 
 	// Handle TerraformConfig
 	if !m.TerraformConfig.IsNull() && !m.TerraformConfig.IsUnknown() {
