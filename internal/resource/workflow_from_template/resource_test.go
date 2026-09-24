@@ -125,7 +125,7 @@ func setupWorkflowTemplate(t *testing.T, templateID string) string {
 			TerraformConfig: &sgsdkgo.TerraformConfig{
 				TerraformVersion: &tmplTfVersion,
 			},
-			EnvironmentVariables: &[]sgsdkgo.EnvVars{
+			EnvironmentVariables: []sgsdkgo.EnvVars{
 				{
 					Kind: sgsdkgo.EnvVarsKindEnumPlainText,
 					Config: &sgsdkgo.EnvVarConfig{
@@ -134,7 +134,7 @@ func setupWorkflowTemplate(t *testing.T, templateID string) string {
 					},
 				},
 			},
-			UserSchedules: &[]workflowtemplaterevisions.UserSchedules{
+			UserSchedules: []workflowtemplaterevisions.UserSchedules{
 				{
 					Cron:  "0 8 ? * MON *",
 					State: workflowtemplaterevisions.UserSchedulesStateEnumEnabled,
@@ -223,7 +223,7 @@ func addSecondRevision(t *testing.T, templateID string) string {
 				DriftCheck:       sgsdkgo.Bool(true),
 				DriftCron:        sgsdkgo.String("0 */6 * * ? *"),
 			},
-			EnvironmentVariables: &[]sgsdkgo.EnvVars{
+			EnvironmentVariables: []sgsdkgo.EnvVars{
 				{
 					Kind: sgsdkgo.EnvVarsKindEnumPlainText,
 					Config: &sgsdkgo.EnvVarConfig{

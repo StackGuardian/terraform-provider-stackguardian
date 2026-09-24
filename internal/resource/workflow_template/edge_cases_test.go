@@ -417,7 +417,7 @@ func TestAccWorkflowTemplate_CoreEmptyStringListBehavior(t *testing.T) {
 		TemplateName:     emptyTemplateName,
 		OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
 		SourceConfigKind: &kind,
-		SharedOrgsList:   &[]string{},
+		SharedOrgsList:   []string{},
 	})
 	if err != nil {
 		t.Fatalf("create with SharedOrgsList = []: %v", err)

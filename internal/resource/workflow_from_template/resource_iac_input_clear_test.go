@@ -66,7 +66,7 @@ func setupTemplateWithInputDefaults(t *testing.T, name string) string {
 		&workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
 			Alias: "v1", SourceConfigKind: &sck, IsPublic: sgsdkgo.IsPublicEnumZero.Ptr(),
 			OwnerOrg: fmt.Sprintf("/orgs/%s", config.Get().OrgName),
-			InputSchemas: &[]sgsdkgo.InputSchemas{
+			InputSchemas: []sgsdkgo.InputSchemas{
 				{
 					Type:        sgsdkgo.InputSchemasTypeEnumFormJsonschema,
 					EncodedData: &formSchema,

@@ -204,7 +204,7 @@ func (m *WorkflowTemplateResourceModel) ToAPIModel(ctx context.Context) (*workfl
 		tags, diags_tags := expanders.StringList(ctx, m.Tags)
 		diag.Append(diags_tags...)
 		if !diag.HasError() {
-			apiModel.Tags = expanders.Pointer(tags)
+			apiModel.Tags = tags
 		}
 	}
 
@@ -213,7 +213,7 @@ func (m *WorkflowTemplateResourceModel) ToAPIModel(ctx context.Context) (*workfl
 		sharedOrgs, diags_shared := expanders.StringList(ctx, m.SharedOrgsList)
 		diag.Append(diags_shared...)
 		if !diag.HasError() {
-			apiModel.SharedOrgsList = expanders.Pointer(sharedOrgs)
+			apiModel.SharedOrgsList = sharedOrgs
 		}
 	}
 

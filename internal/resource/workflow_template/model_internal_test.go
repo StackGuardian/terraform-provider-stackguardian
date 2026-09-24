@@ -53,10 +53,10 @@ func TestBuildAPIModelToWorkflowTemplateModel_StringLists(t *testing.T) {
 }
 
 // TestToAPIModel_EmptyStringListsSentInCreateRequest verifies that `tags = []` and
-// `shared_orgs_list = []` reach the API on create. CreateWorkflowTemplateRequest holds
-// both as *[]string, so `omitempty` only drops a nil pointer and an empty list is
-// encoded as []. With plain []string, encoding/json would leave both keys out and core
-// would never store the empty value.
+// `shared_orgs_list = []` reach the API on create. ToAPIModel must produce an empty,
+// non-nil slice for both, and CreateWorkflowTemplateRequest tags them `omitzero`, which
+// only drops a nil slice, so the empty list is encoded as []. With `omitempty`,
+// encoding/json would leave both keys out and core would never store the empty value.
 func TestToAPIModel_EmptyStringListsSentInCreateRequest(t *testing.T) {
 	ctx := context.Background()
 	empty := types.ListValueMust(types.StringType, []attr.Value{})
@@ -79,11 +79,11 @@ func TestToAPIModel_EmptyStringListsSentInCreateRequest(t *testing.T) {
 		t.Fatalf("unexpected diagnostics: %v", diags)
 	}
 
-	if req.Tags == nil || len(*req.Tags) != 0 {
-		t.Fatalf("ToAPIModel Tags: got %#v, want &[]string{}", req.Tags)
+	if req.Tags == nil || len(req.Tags) != 0 {
+		t.Fatalf("ToAPIModel Tags: got %#v, want []string{}", req.Tags)
 	}
-	if req.SharedOrgsList == nil || len(*req.SharedOrgsList) != 0 {
-		t.Fatalf("ToAPIModel SharedOrgsList: got %#v, want &[]string{}", req.SharedOrgsList)
+	if req.SharedOrgsList == nil || len(req.SharedOrgsList) != 0 {
+		t.Fatalf("ToAPIModel SharedOrgsList: got %#v, want []string{}", req.SharedOrgsList)
 	}
 
 	body, err := json.Marshal(req)

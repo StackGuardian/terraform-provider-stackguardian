@@ -289,9 +289,9 @@ func TestAccWorkflowTemplateRevision_ApproversExplicitEmptyList(t *testing.T) {
 
 // TestAccWorkflowTemplateRevision_EmptyTopLevelListsOnCreate verifies that every
 // top-level list attribute set to an explicit empty list ([]) at create round-trips as a
-// real empty list, not null. CreateWorkflowTemplateRevisionsRequest holds these as *[]T,
-// so `omitempty` sends [] instead of dropping it; with plain []T the field never reached
-// core, GET omitted it, and it read back as null against the [] plan ("Provider produced
+// real empty list, not null. CreateWorkflowTemplateRevisionsRequest tags these `omitzero`,
+// which only drops a nil slice, so an explicit [] is sent; with `omitempty` the field never
+// reached core, GET omitted it, and it read back as null against the [] plan ("Provider produced
 // inconsistent result after apply"). TestAccWorkflowTemplateRevision_ApproversExplicitEmptyList
 // covers the update path.
 func TestAccWorkflowTemplateRevision_EmptyTopLevelListsOnCreate(t *testing.T) {
