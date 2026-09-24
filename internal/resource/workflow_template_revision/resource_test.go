@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -284,6 +285,67 @@ func TestAccWorkflowTemplateRevision_ApproversExplicitEmptyList(t *testing.T) {
 			},
 		},
 	})
+}
+
+// TestAccWorkflowTemplateRevision_EmptyTopLevelListsOnCreate verifies that every
+// top-level list attribute set to an explicit empty list ([]) at create round-trips as a
+// real empty list, not null. CreateWorkflowTemplateRevisionsRequest holds these as *[]T,
+// so `omitempty` sends [] instead of dropping it; with plain []T the field never reached
+// core, GET omitted it, and it read back as null against the [] plan ("Provider produced
+// inconsistent result after apply"). TestAccWorkflowTemplateRevision_ApproversExplicitEmptyList
+// covers the update path.
+func TestAccWorkflowTemplateRevision_EmptyTopLevelListsOnCreate(t *testing.T) {
+	fields := []string{
+		"approvers",
+		"tags",
+		"environment_variables",
+		"input_schemas",
+		"user_schedules",
+		"deployment_platform_config",
+		"wf_steps_config",
+	}
+
+	for _, field := range fields {
+		t.Run(field, func(t *testing.T) {
+			templateID := acctest.ResourceName("tf-provider-wftr-empty-" + strings.ReplaceAll(field, "_", "-"))
+			alias := "revision-empty-list"
+
+			registerWorkflowTemplateCleanup(t, templateID, 1)
+
+			err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			customHeader := http.Header{}
+			customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+			config := testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, fmt.Sprintf(`
+			  alias  = %q
+			  %s = []
+			`, alias, field))
+
+			resource.Test(t, resource.TestCase{
+				PreCheck: func() { acctest.TestAccPreCheck(t) },
+				TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+					tfversion.SkipBelow(tfversion.Version1_1_0),
+				},
+				ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+				Steps: []resource.TestStep{
+					{
+						Config: config,
+						Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", field+".#", "0"),
+					},
+					{
+						// Round trips with no diff — Read() settles on the same known-empty
+						// value the plan predicted, not null.
+						Config:   config,
+						PlanOnly: true,
+					},
+				},
+			})
+		})
+	}
 }
 
 func TestAccWorkflowTemplateRevision_WithDeploymentPlatformConfig(t *testing.T) {

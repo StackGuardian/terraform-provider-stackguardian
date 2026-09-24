@@ -2249,19 +2249,19 @@ func mergeTemplateDefaults(m WorkflowUsingTemplateResourceModel, wf *sgworkflows
 	// Suppressible list/map fields are *core.Optional on the SDK struct. The merge only
 	// runs when the user is absent() (omitted), and the template value is always concrete,
 	// so wrap it with sgsdkgo.Optional(...) so it serializes to the request.
-	if absent(m.Tags) && len(tpl.Tags) > 0 {
-		wf.Tags = sgsdkgo.Optional(tpl.Tags)
+	if absent(m.Tags) && len(flatteners.PointerValue(tpl.Tags)) > 0 {
+		wf.Tags = sgsdkgo.Optional(flatteners.PointerValue(tpl.Tags))
 	}
-	if absent(m.Approvers) && len(tpl.Approvers) > 0 {
-		wf.Approvers = sgsdkgo.Optional(tpl.Approvers)
+	if absent(m.Approvers) && len(flatteners.PointerValue(tpl.Approvers)) > 0 {
+		wf.Approvers = sgsdkgo.Optional(flatteners.PointerValue(tpl.Approvers))
 	}
 	if absent(m.ContextTags) && len(tpl.ContextTags) > 0 {
 		wf.ContextTags = sgsdkgo.Optional(tpl.ContextTags)
 	}
-	if absent(m.UserSchedules) && len(tpl.UserSchedules) > 0 {
-		schedules := make([]*sgsdkgo.UserSchedules, len(tpl.UserSchedules))
-		for i := range tpl.UserSchedules {
-			t := tpl.UserSchedules[i]
+	if tplSchedules := flatteners.PointerValue(tpl.UserSchedules); absent(m.UserSchedules) && len(tplSchedules) > 0 {
+		schedules := make([]*sgsdkgo.UserSchedules, len(tplSchedules))
+		for i := range tplSchedules {
+			t := tplSchedules[i]
 			cron := t.Cron
 			state := sgsdkgo.StateEnum(t.State)
 			schedules[i] = &sgsdkgo.UserSchedules{
@@ -2273,24 +2273,24 @@ func mergeTemplateDefaults(m WorkflowUsingTemplateResourceModel, wf *sgworkflows
 		}
 		wf.UserSchedules = sgsdkgo.Optional(schedules)
 	}
-	if absent(m.DeploymentPlatformConfig) && len(tpl.DeploymentPlatformConfig) > 0 {
-		wf.DeploymentPlatformConfig = sgsdkgo.Optional(tpl.DeploymentPlatformConfig)
+	if absent(m.DeploymentPlatformConfig) && len(flatteners.PointerValue(tpl.DeploymentPlatformConfig)) > 0 {
+		wf.DeploymentPlatformConfig = sgsdkgo.Optional(flatteners.PointerValue(tpl.DeploymentPlatformConfig))
 	}
 
 	// EnvironmentVariables: template stores value slice, workflow uses pointer slice.
-	if absent(m.EnvironmentVariables) && len(tpl.EnvironmentVariables) > 0 {
-		ptrs := make([]*sgsdkgo.EnvVars, len(tpl.EnvironmentVariables))
-		for i := range tpl.EnvironmentVariables {
-			ptrs[i] = &tpl.EnvironmentVariables[i]
+	if tplEnvVars := flatteners.PointerValue(tpl.EnvironmentVariables); absent(m.EnvironmentVariables) && len(tplEnvVars) > 0 {
+		ptrs := make([]*sgsdkgo.EnvVars, len(tplEnvVars))
+		for i := range tplEnvVars {
+			ptrs[i] = &tplEnvVars[i]
 		}
 		wf.EnvironmentVariables = sgsdkgo.Optional(ptrs)
 	}
 
 	// WfStepsConfig: template stores value slice, workflow uses pointer slice.
-	if absent(m.WfStepsConfig) && len(tpl.WfStepsConfig) > 0 {
-		ptrs := make([]*sgsdkgo.WfStepsConfig, len(tpl.WfStepsConfig))
-		for i := range tpl.WfStepsConfig {
-			ptrs[i] = &tpl.WfStepsConfig[i]
+	if tplWfSteps := flatteners.PointerValue(tpl.WfStepsConfig); absent(m.WfStepsConfig) && len(tplWfSteps) > 0 {
+		ptrs := make([]*sgsdkgo.WfStepsConfig, len(tplWfSteps))
+		for i := range tplWfSteps {
+			ptrs[i] = &tplWfSteps[i]
 		}
 		wf.WfStepsConfig = sgsdkgo.Optional(ptrs)
 	}
@@ -2400,7 +2400,7 @@ func templateDefaultInputData(tpl *workflowtemplaterevisions.ReadWorkflowTemplat
 	// authoritative source the platform uses (the RAW_JSON entry can be stale and miss
 	// inputs added in later revisions). Mirrors core's
 	// extract_defaults_from_form_jsonschema so the result matches what the API stores.
-	for _, s := range tpl.InputSchemas {
+	for _, s := range flatteners.PointerValue(tpl.InputSchemas) {
 		if s.Type != sgsdkgo.InputSchemasTypeEnumFormJsonschema || s.EncodedData == nil {
 			continue
 		}
@@ -2567,7 +2567,7 @@ func reResolveOnRevisionChange(ctx context.Context, plan *WorkflowUsingTemplateR
 		plan.Description = flatteners.StringPtrDefault(tpl.LongDescription)
 	}
 	if config.Tags.IsNull() {
-		tags, d := flatteners.ListOfStringToTerraformList(tpl.Tags)
+		tags, d := flatteners.ListOfStringToTerraformList(flatteners.PointerValue(tpl.Tags))
 		diags.Append(d...)
 		if diags.HasError() {
 			return diags
@@ -2575,7 +2575,7 @@ func reResolveOnRevisionChange(ctx context.Context, plan *WorkflowUsingTemplateR
 		plan.Tags = knownEmptyListIfNull(tags, types.StringType)
 	}
 	if config.Approvers.IsNull() {
-		approvers, d := flatteners.ListOfStringToTerraformList(tpl.Approvers)
+		approvers, d := flatteners.ListOfStringToTerraformList(flatteners.PointerValue(tpl.Approvers))
 		diags.Append(d...)
 		if diags.HasError() {
 			return diags
@@ -2591,7 +2591,7 @@ func reResolveOnRevisionChange(ctx context.Context, plan *WorkflowUsingTemplateR
 		plan.ContextTags = knownEmptyMapIfNull(contextTags)
 	}
 	if config.EnvironmentVariables.IsNull() {
-		envVarsList, d := convertEnvironmentVariablesFromAPI(ctx, tpl.EnvironmentVariables)
+		envVarsList, d := convertEnvironmentVariablesFromAPI(ctx, flatteners.PointerValue(tpl.EnvironmentVariables))
 		diags.Append(d...)
 		if diags.HasError() {
 			return diags
@@ -2638,7 +2638,7 @@ func reResolveOnRevisionChange(ctx context.Context, plan *WorkflowUsingTemplateR
 	// passes it through unchanged, so flattening it through convertDeploymentPlatformConfigFromAPI
 	// + knownEmptyListIfNull (matching Read) yields the concrete plan value.
 	if config.DeploymentPlatformConfig.IsNull() {
-		dpc, d := convertDeploymentPlatformConfigFromAPI(ctx, tpl.DeploymentPlatformConfig)
+		dpc, d := convertDeploymentPlatformConfigFromAPI(ctx, flatteners.PointerValue(tpl.DeploymentPlatformConfig))
 		diags.Append(d...)
 		if diags.HasError() {
 			return diags
@@ -2665,7 +2665,7 @@ func reResolveOnRevisionChange(ctx context.Context, plan *WorkflowUsingTemplateR
 	// concrete plan value, matching apply byte-for-byte. Verified with a live round-trip test on
 	// a CUSTOM template carrying steps (WfStepsConfigRevisionUpgradeNoSpuriousDependentUpdate).
 	if config.WfStepsConfig.IsNull() {
-		wfSteps, d := convertWfStepsConfigListFromAPI(ctx, tpl.WfStepsConfig)
+		wfSteps, d := convertWfStepsConfigListFromAPI(ctx, flatteners.PointerValue(tpl.WfStepsConfig))
 		diags.Append(d...)
 		if diags.HasError() {
 			return diags

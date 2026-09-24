@@ -72,8 +72,8 @@ func setupPopulatedRevision(t *testing.T, name, stepTemplateID string) string {
 			Alias: "v1", SourceConfigKind: &sck, IsPublic: sgsdkgo.IsPublicEnumZero.Ptr(),
 			OwnerOrg:                  fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 			LongDescription:           &desc,
-			Tags:                      []string{"alpha", "beta"},
-			Approvers:                 []string{"akashsuresh0510@gmail.com"},
+			Tags:                      &[]string{"alpha", "beta"},
+			Approvers:                 &[]string{"akashsuresh0510@gmail.com"},
 			ContextTags:               map[string]string{"env": "test"},
 			NumberOfApprovalsRequired: &napprovals,
 			UserJobCPU:                &cpu,
@@ -81,7 +81,7 @@ func setupPopulatedRevision(t *testing.T, name, stepTemplateID string) string {
 			RunnerConstraints: &sgsdkgo.RunnerConstraints{
 				Type: sgsdkgo.RunnerConstraintsTypeEnumShared.Ptr(),
 			},
-			DeploymentPlatformConfig: []*workflowtemplaterevisions.DeploymentPlatformConfig{
+			DeploymentPlatformConfig: &[]*workflowtemplaterevisions.DeploymentPlatformConfig{
 				{
 					Kind: workflowtemplaterevisions.DeploymentPlatformConfigKindEnumAzureOidc,
 					Config: workflowtemplaterevisions.DeploymentPlatformConfigConfig{
@@ -90,13 +90,13 @@ func setupPopulatedRevision(t *testing.T, name, stepTemplateID string) string {
 					},
 				},
 			},
-			EnvironmentVariables: []sgsdkgo.EnvVars{
+			EnvironmentVariables: &[]sgsdkgo.EnvVars{
 				{
 					Kind:   sgsdkgo.EnvVarsKindEnumPlainText,
 					Config: &sgsdkgo.EnvVarConfig{VarName: "DS_VAR", TextValue: &envText},
 				},
 			},
-			WfStepsConfig: []sgsdkgo.WfStepsConfig{
+			WfStepsConfig: &[]sgsdkgo.WfStepsConfig{
 				{
 					Name:             sgsdkgo.String("step-one"),
 					WfStepTemplateId: &stepTemplateID,
@@ -261,7 +261,7 @@ func setupTerraformRevision(t *testing.T, name string) string {
 				DriftCron:             &driftCron,
 				ManagedTerraformState: &managed,
 			},
-			EnvironmentVariables: []sgsdkgo.EnvVars{
+			EnvironmentVariables: &[]sgsdkgo.EnvVars{
 				{
 					Kind:   sgsdkgo.EnvVarsKindEnumPlainText,
 					Config: &sgsdkgo.EnvVarConfig{VarName: "test1", TextValue: &envText},

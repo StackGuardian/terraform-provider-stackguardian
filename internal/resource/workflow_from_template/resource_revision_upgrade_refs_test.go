@@ -71,8 +71,8 @@ func setupTwoRevIdenticalDerivedFields(t *testing.T, name string) (rev1, rev2 st
 				Alias: alias, SourceConfigKind: &sck, IsPublic: sgsdkgo.IsPublicEnumZero.Ptr(),
 				OwnerOrg:                  fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 				LongDescription:           &d,
-				Tags:                      []string{"alpha", "beta"},
-				Approvers:                 []string{"akashsuresh0510@gmail.com"},
+				Tags:                      &[]string{"alpha", "beta"},
+				Approvers:                 &[]string{"akashsuresh0510@gmail.com"},
 				ContextTags:               map[string]string{"env": "test", "team": "core"},
 				NumberOfApprovalsRequired: &na,
 				UserJobCPU:                &c,
@@ -85,7 +85,7 @@ func setupTwoRevIdenticalDerivedFields(t *testing.T, name string) (rev1, rev2 st
 				// (kind + config.integration_id + config.profile_name). Uses a pre-existing
 				// QA integration so no cloud-connector fixture is needed. Proves the populated
 				// DPC round-trips (plan == apply) and keeps a dependent NoOp on upgrade.
-				DeploymentPlatformConfig: []*workflowtemplaterevisions.DeploymentPlatformConfig{
+				DeploymentPlatformConfig: &[]*workflowtemplaterevisions.DeploymentPlatformConfig{
 					{
 						Kind: workflowtemplaterevisions.DeploymentPlatformConfigKindEnumAzureOidc,
 						Config: workflowtemplaterevisions.DeploymentPlatformConfigConfig{
@@ -103,7 +103,7 @@ func setupTwoRevIdenticalDerivedFields(t *testing.T, name string) (rev1, rev2 st
 						},
 					},
 				},
-				EnvironmentVariables: []sgsdkgo.EnvVars{
+				EnvironmentVariables: &[]sgsdkgo.EnvVars{
 					{
 						Kind:   sgsdkgo.EnvVarsKindEnumPlainText,
 						Config: &sgsdkgo.EnvVarConfig{VarName: "STABLE_VAR", TextValue: &envText},

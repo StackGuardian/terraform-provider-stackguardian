@@ -515,7 +515,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) 
 	if diags.HasError() {
 		return nil, diags
 	}
-	apiModel.UserSchedules = userSchedules
+	apiModel.UserSchedules = expanders.Pointer(userSchedules)
 
 	// Handle Tags
 	if !m.Tags.IsNull() && !m.Tags.IsUnknown() {
@@ -523,7 +523,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) 
 		if diags.HasError() {
 			return nil, diags
 		}
-		apiModel.Tags = tags
+		apiModel.Tags = expanders.Pointer(tags)
 	}
 
 	// Handle ContextTags
@@ -542,7 +542,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) 
 		if diags.HasError() {
 			return nil, diags
 		}
-		apiModel.Approvers = approvers
+		apiModel.Approvers = expanders.Pointer(approvers)
 	}
 
 	// Handle EnvironmentVariables
@@ -551,7 +551,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) 
 		if diags.HasError() {
 			return nil, diags
 		}
-		apiModel.EnvironmentVariables = envVars
+		apiModel.EnvironmentVariables = expanders.Pointer(envVars)
 	}
 
 	// Handle InputSchemas
@@ -560,7 +560,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) 
 		if diags.HasError() {
 			return nil, diags
 		}
-		apiModel.InputSchemas = inputSchemas
+		apiModel.InputSchemas = expanders.Pointer(inputSchemas)
 	}
 
 	// Handle MiniSteps
@@ -604,7 +604,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) 
 		if diags.HasError() {
 			return nil, diags
 		}
-		apiModel.DeploymentPlatformConfig = deploymentPlatformConfig
+		apiModel.DeploymentPlatformConfig = expanders.Pointer(deploymentPlatformConfig)
 	}
 
 	// Handle WfStepsConfig
@@ -613,7 +613,7 @@ func (m *WorkflowTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) 
 		if diags.HasError() {
 			return nil, diags
 		}
-		apiModel.WfStepsConfig = wfStepsConfigs
+		apiModel.WfStepsConfig = expanders.Pointer(wfStepsConfigs)
 	}
 
 	return apiModel, nil
@@ -1344,7 +1344,7 @@ func BuildAPIModelToWorkflowTemplateRevisionModel(ctx context.Context, apiRespon
 
 	// Handle Tags. tags is Optional+Computed, so an explicitly-configured empty list must
 	// round-trip as an empty list, not null — see ListOfStringToTerraformList's doc comment.
-	tagsTerraType, diags := flatteners.ListOfStringToTerraformList(apiResponse.Tags)
+	tagsTerraType, diags := flatteners.ListOfStringToTerraformList(flatteners.PointerValue(apiResponse.Tags))
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -1362,7 +1362,7 @@ func BuildAPIModelToWorkflowTemplateRevisionModel(ctx context.Context, apiRespon
 	}
 
 	// Handle Approvers
-	approverstTerraType, diags := flatteners.ListOfStringToTerraformList(apiResponse.Approvers)
+	approverstTerraType, diags := flatteners.ListOfStringToTerraformList(flatteners.PointerValue(apiResponse.Approvers))
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -1397,21 +1397,21 @@ func BuildAPIModelToWorkflowTemplateRevisionModel(ctx context.Context, apiRespon
 	model.TerraformConfig = terraformConfig
 
 	// Handle DeploymentPlatformConfig
-	deploymentConfig, diags := ConvertDeploymentPlatformConfigFromAPI(ctx, apiResponse.DeploymentPlatformConfig)
+	deploymentConfig, diags := ConvertDeploymentPlatformConfigFromAPI(ctx, flatteners.PointerValue(apiResponse.DeploymentPlatformConfig))
 	if diags.HasError() {
 		return nil, diags
 	}
 	model.DeploymentPlatformConfig = deploymentConfig
 
 	// Handle EnvironmentVariables
-	envVars, diags := ConvertEnvironmentVariablesFromAPI(ctx, apiResponse.EnvironmentVariables)
+	envVars, diags := ConvertEnvironmentVariablesFromAPI(ctx, flatteners.PointerValue(apiResponse.EnvironmentVariables))
 	if diags.HasError() {
 		return nil, diags
 	}
 	model.EnvironmentVariables = envVars
 
 	// Handle InputSchemas
-	inputSchemas, diags := ConvertInputSchemasFromAPI(ctx, apiResponse.InputSchemas)
+	inputSchemas, diags := ConvertInputSchemasFromAPI(ctx, flatteners.PointerValue(apiResponse.InputSchemas))
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -1432,14 +1432,14 @@ func BuildAPIModelToWorkflowTemplateRevisionModel(ctx context.Context, apiRespon
 	model.RunnerConstraints = runnerConstraints
 
 	// Handle UserSchedules
-	userSchedules, diags := ConvertUserSchedulesFromAPI(ctx, apiResponse.UserSchedules)
+	userSchedules, diags := ConvertUserSchedulesFromAPI(ctx, flatteners.PointerValue(apiResponse.UserSchedules))
 	if diags.HasError() {
 		return nil, diags
 	}
 	model.UserSchedules = userSchedules
 
 	// Handle WfStepsConfig
-	wfStepsConfig, diags := ConvertWfStepsConfigListFromAPI(ctx, apiResponse.WfStepsConfig)
+	wfStepsConfig, diags := ConvertWfStepsConfigListFromAPI(ctx, flatteners.PointerValue(apiResponse.WfStepsConfig))
 	if diags.HasError() {
 		return nil, diags
 	}

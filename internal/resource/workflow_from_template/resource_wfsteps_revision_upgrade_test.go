@@ -13,6 +13,7 @@ import (
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/expanders"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
@@ -106,7 +107,7 @@ func setupTwoRevIdenticalWfStepsConfig(t *testing.T, name, stepTemplateID string
 				Alias: alias, SourceConfigKind: &sck, IsPublic: sgsdkgo.IsPublicEnumZero.Ptr(),
 				OwnerOrg:      fmt.Sprintf("/orgs/%s", config.Get().OrgName),
 				Notes:         notes, // only-differing field -> real revision change
-				WfStepsConfig: steps(),
+				WfStepsConfig: expanders.Pointer(steps()),
 			})
 		if err != nil && !is409(err) {
 			t.Fatalf("create rev %s: %s", alias, err)
