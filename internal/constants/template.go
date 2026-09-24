@@ -28,7 +28,7 @@ const (
 // Workflow Template Revision attributes
 const (
 	WorkflowTemplateRevisionId           = "Identifier of the revision, in the form `<template-name>:<revision>` (e.g. `my-terraform-template:1`)."
-	WorkflowTemplateRevisionTemplateId   = "Parent workflow template, as its bare `template_name` (e.g. `my-terraform-template`) — not a path. Reference the `stackguardian_workflow_template` resource rather than typing it."
+	WorkflowTemplateRevisionTemplateId   = "Parent workflow template, as its bare `template_name` (e.g. `my-terraform-template`) — not a path. Reference the `stackguardian_workflow_template` resource rather than typing it. **Cannot be changed** after creation; create a new revision under the other template instead."
 	WorkflowTemplateRevisionInputSchemas = "JSONSchema Form representation of input JSON data"
 	// WorkflowTemplateRevisionWfStepsConfig documents a rule validated at plan time — see
 	// wfStepsConfigNotAllowedForTerraformDiagnostics in

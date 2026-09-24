@@ -85,10 +85,10 @@ func (r *workflowTemplateRevisionResource) ValidateConfig(ctx context.Context, r
 	resp.Diagnostics.Append(workflowtemplate.ValidateRuntimeSourceAuth(ctx, templateModel.RuntimeSource, path.Root("runtime_source"))...)
 }
 
-// ModifyPlan rejects a change to source_config_kind or runtime_source.config.repo
-// on Update. Neither an in-place update nor a RequiresReplace
-// destroy-and-recreate is appropriate for either: the API has no endpoint to
-// change either in place, and replacing the revision would change its
+// ModifyPlan rejects a change to template_id, source_config_kind or
+// runtime_source.config.repo on Update. Neither an in-place update nor a RequiresReplace
+// destroy-and-recreate is appropriate for any of them: the API has no endpoint to
+// change them in place, and replacing the revision would change its
 // identity (a new revision number), breaking anything (a stack, another
 // workflow, a downstream revision) pinned to the old one. Rejecting the
 // change outright forces the user to create a new revision explicitly
@@ -105,6 +105,8 @@ func (r *workflowTemplateRevisionResource) ModifyPlan(ctx context.Context, req r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	resp.Diagnostics.Append(validateTemplateIdUnchanged(plan.TemplateId, state.TemplateId)...)
 
 	resp.Diagnostics.Append(workflowtemplate.ValidateSourceConfigKindUnchanged(plan.SourceConfigKind, state.SourceConfigKind, "revision", "stackguardian_workflow_template_revision")...)
 

@@ -500,6 +500,49 @@ func TestAccWorkflowTemplateRevision_SourceConfigKindRejectedOnChange(t *testing
 	})
 }
 
+// TestAccWorkflowTemplateRevision_TemplateIdRejectedOnChange verifies that
+// pointing an existing revision at a different parent template is rejected at
+// plan time (ModifyPlan, resource.go) instead of destroying and recreating the
+// revision under the new template. The second template only exists as the
+// target of the rejected change, so it never gets a revision.
+func TestAccWorkflowTemplateRevision_TemplateIdRejectedOnChange(t *testing.T) {
+	templateID := acctest.ResourceName("tf-provider-wftr-tid-rejected-a")
+	otherTemplateID := acctest.ResourceName("tf-provider-wftr-tid-rejected-b")
+	alias := "revision-template-id-rejected"
+
+	registerWorkflowTemplateCleanup(t, templateID, 1)
+	registerWorkflowTemplateCleanup(t, otherTemplateID, 0)
+
+	for _, id := range []string{templateID, otherTemplateID} {
+		if err := createWorkflowTemplateFixture(id, "TERRAFORM"); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	config := fmt.Sprintf(`alias = %q`, alias)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, config),
+				Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "template_id", templateID),
+			},
+			{
+				Config:      testAccWorkflowTemplateRevision(otherTemplateID, "TERRAFORM", 500, 1024, config),
+				ExpectError: regexp.MustCompile("template_id cannot be changed"),
+			},
+		},
+	})
+}
+
 // TestAccWorkflowTemplateRevision_NumberOfApprovalsRequiredUpdate verifies
 // number_of_approvals_required (Optional+Computed, UseStateForUnknown())
 // applies on a genuine update — TestAccWorkflowTemplateRevision_WithConfig
