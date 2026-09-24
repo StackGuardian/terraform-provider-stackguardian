@@ -106,32 +106,6 @@ func (d *workflowTemplateDataSource) Schema(_ context.Context, _ datasource.Sche
 					},
 				},
 			},
-			"vcs_triggers": schema.SingleNestedAttribute{
-				MarkdownDescription: "VCS trigger configuration for the template.",
-				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"type": schema.StringAttribute{
-						MarkdownDescription: constants.VCSTriggersType,
-						Computed:            true,
-					},
-					"create_tag": schema.SingleNestedAttribute{
-						MarkdownDescription: constants.VCSTriggersCreateTag,
-						Computed:            true,
-						Attributes: map[string]schema.Attribute{
-							"create_revision": schema.SingleNestedAttribute{
-								MarkdownDescription: constants.VCSTriggersCreateTagRevision,
-								Computed:            true,
-								Attributes: map[string]schema.Attribute{
-									"enabled": schema.BoolAttribute{
-										MarkdownDescription: constants.VCSTriggersCreateTagRevisionEnabled,
-										Computed:            true,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
 		},
 	}
 }

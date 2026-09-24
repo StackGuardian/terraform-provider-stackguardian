@@ -52,7 +52,6 @@ output "workflow_template_output" {
 - `tags` (List of String) A list of tags associated with the workflow template. A maximum of 10 tags are allowed.
 - `template_name` (String) Name of the workflow template.
 - `template_type` (String) Type of the template.
-- `vcs_triggers` (Attributes) VCS trigger configuration for the template. (see [below for nested schema](#nestedatt--vcs_triggers))
 
 <a id="nestedatt--runtime_source"></a>
 ### Nested Schema for `runtime_source`
@@ -75,31 +74,6 @@ Read-Only:
 - `ref` (String) Git reference (branch, tag, or commit hash).
 - `repo` (String) Git repository URL. **Cannot be changed** after creation.
 - `working_dir` (String) Working directory within the repository.
-
-
-
-<a id="nestedatt--vcs_triggers"></a>
-### Nested Schema for `vcs_triggers`
-
-Read-Only:
-
-- `create_tag` (Attributes) Trigger configuration on tag creation in VCS (see [below for nested schema](#nestedatt--vcs_triggers--create_tag))
-- `type` (String) Which VCS platform the webhook is registered with. <ul><li>`GITHUB_COM` — github.com.</li><li>`GITHUB_APP_CUSTOM` — GitHub Enterprise, or a GitHub App you manage yourself.</li><li>`GITLAB_COM` — gitlab.com.</li></ul>Must match the provider hosting the repository in `runtime_source`.
-
-<a id="nestedatt--vcs_triggers--create_tag"></a>
-### Nested Schema for `vcs_triggers.create_tag`
-
-Read-Only:
-
-- `create_revision` (Attributes) Create new revision on tag creation (see [below for nested schema](#nestedatt--vcs_triggers--create_tag--create_revision))
-
-<a id="nestedatt--vcs_triggers--create_tag--create_revision"></a>
-### Nested Schema for `vcs_triggers.create_tag.create_revision`
-
-Read-Only:
-
-- `enabled` (Boolean) Whether to create revision when tag is created.
-
 
 
 

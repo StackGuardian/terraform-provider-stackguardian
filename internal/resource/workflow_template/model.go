@@ -24,7 +24,6 @@ type WorkflowTemplateResourceModel struct {
 	SharedOrgsList   types.List   `tfsdk:"shared_orgs_list"`
 	Tags             types.List   `tfsdk:"tags"`
 	ContextTags      types.Map    `tfsdk:"context_tags"`
-	VCSTriggers      types.Object `tfsdk:"vcs_triggers"`
 }
 
 type RuntimeSourceModel struct {
@@ -63,89 +62,6 @@ func (RuntimeSourceConfigModel) AttributeTypes() map[string]attr.Type {
 		"repo":                       types.StringType,
 		"working_dir":                types.StringType,
 	}
-}
-
-type VCSTriggersModel struct {
-	Type      types.String `tfsdk:"type"`
-	CreateTag types.Object `tfsdk:"create_tag"`
-}
-
-type VCSTriggersCreateRevisionModel struct {
-	Enabled types.Bool `tfsdk:"enabled"`
-}
-
-func (VCSTriggersCreateRevisionModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"enabled": types.BoolType,
-	}
-}
-
-type VCSTriggersCreateTagModel struct {
-	CreateRevision types.Object `tfsdk:"create_revision"`
-}
-
-func (VCSTriggersCreateTagModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"create_revision": types.ObjectType{AttrTypes: VCSTriggersCreateRevisionModel{}.AttributeTypes()},
-	}
-}
-
-func (VCSTriggersModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"type": types.StringType,
-		"create_tag": types.ObjectType{
-			AttrTypes: VCSTriggersCreateTagModel{}.AttributeTypes(),
-		},
-	}
-}
-
-func VCSTriggersToAPIModel(ctx context.Context, m types.Object) (*workflowtemplates.VCSTriggers, diag.Diagnostics) {
-	var vcsTriggersModel VCSTriggersModel
-	if m.IsNull() || m.IsUnknown() {
-		return nil, nil
-	}
-
-	diags := m.As(ctx, &vcsTriggersModel, basetypes.ObjectAsOptions{
-		UnhandledNullAsEmpty:    true,
-		UnhandledUnknownAsEmpty: true,
-	})
-	if diags.HasError() {
-		return nil, diags
-	}
-
-	vcsTriggers := &workflowtemplates.VCSTriggers{}
-	if !vcsTriggersModel.Type.IsNull() && !vcsTriggersModel.Type.IsUnknown() {
-		vcsTriggers.Type = workflowtemplates.VCSTriggersTypeEnum(vcsTriggersModel.Type.ValueString()).Ptr()
-	}
-
-	// Convert create_tag
-	if !vcsTriggersModel.CreateTag.IsNull() && !vcsTriggersModel.CreateTag.IsUnknown() {
-		var createTagModel VCSTriggersCreateTagModel
-		createTagAPIModel := workflowtemplates.VCSTriggersCreateTag{}
-		diags := vcsTriggersModel.CreateTag.As(ctx, &createTagModel, basetypes.ObjectAsOptions{
-			UnhandledNullAsEmpty:    true,
-			UnhandledUnknownAsEmpty: true,
-		})
-		if diags.HasError() {
-			return nil, diags
-		}
-
-		if !createTagModel.CreateRevision.IsNull() && !createTagModel.CreateRevision.IsUnknown() {
-			var createRevision VCSTriggersCreateRevisionModel
-			diags := createTagModel.CreateRevision.As(ctx, &createRevision, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
-			if diags.HasError() {
-				return nil, diags
-			}
-
-			vcsCreateRevisionAPIModel := workflowtemplates.VCSTriggersCreateTagCreateRevision{
-				Enabled: createRevision.Enabled.ValueBoolPointer(),
-			}
-			createTagAPIModel.CreateRevision = &vcsCreateRevisionAPIModel
-		}
-		vcsTriggers.CreateTag = &createTagAPIModel
-	}
-
-	return vcsTriggers, nil
 }
 
 func (m RuntimeSourceModel) ToAPIModel(ctx context.Context) (*workflowtemplates.RuntimeSource, diag.Diagnostics) {
@@ -319,13 +235,6 @@ func (m *WorkflowTemplateResourceModel) ToAPIModel(ctx context.Context) (*workfl
 		apiModel.RuntimeSource = runtimeSourceApiModel
 	}
 
-	// Convert VCSTriggers
-	vcsTriggersAPIModel, diags := VCSTriggersToAPIModel(ctx, m.VCSTriggers)
-	if diags.HasError() {
-		return nil, diags
-	}
-	apiModel.VCSTriggers = vcsTriggersAPIModel
-
 	return apiModel, diag
 }
 
@@ -391,70 +300,7 @@ func (m *WorkflowTemplateResourceModel) ToUpdateAPIModel(ctx context.Context) (*
 		apiModel.SharedOrgsList = sgsdkgo.Null[[]string]()
 	}
 
-	// convert VCSTriggers
-	vcsTriggersAPIModel, diags := VCSTriggersToAPIModel(ctx, m.VCSTriggers)
-	if diags.HasError() {
-		return nil, diags
-	}
-	if vcsTriggersAPIModel != nil {
-		apiModel.VCSTriggers = sgsdkgo.Optional(*vcsTriggersAPIModel)
-	} else {
-		apiModel.VCSTriggers = sgsdkgo.Null[workflowtemplates.VCSTriggers]()
-	}
-
 	return apiModel, diag
-}
-
-func VCSTriggersToTerraType(vcsTriggers *workflowtemplates.VCSTriggers) (types.Object, diag.Diagnostics) {
-	nullObject := types.ObjectNull(VCSTriggersModel{}.AttributeTypes())
-	if vcsTriggers == nil {
-		return nullObject, nil
-	}
-
-	vcsTriggersModel := VCSTriggersModel{}
-	if vcsTriggers.Type != nil {
-		vcsTriggersModel.Type = flatteners.String(string(*vcsTriggers.Type))
-	} else {
-		vcsTriggersModel.Type = types.StringNull()
-	}
-
-	if vcsTriggers.CreateTag != nil {
-		createTagModel := VCSTriggersCreateTagModel{}
-		if vcsTriggers.CreateTag.CreateRevision != nil {
-			createRevisionModel := VCSTriggersCreateRevisionModel{}
-			if vcsTriggers.CreateTag.CreateRevision.Enabled != nil {
-				createRevisionModel.Enabled = flatteners.BoolPtr(vcsTriggers.CreateTag.CreateRevision.Enabled)
-			} else {
-				createRevisionModel.Enabled = types.BoolNull()
-			}
-			createRevisionTerraType, diags := types.ObjectValueFrom(context.TODO(), VCSTriggersCreateRevisionModel{}.AttributeTypes(), &createRevisionModel)
-			if diags.HasError() {
-				return nullObject, diags
-			}
-
-			createTagModel = VCSTriggersCreateTagModel{
-				CreateRevision: createRevisionTerraType,
-			}
-		} else {
-			createTagModel.CreateRevision = types.ObjectNull(VCSTriggersCreateRevisionModel{}.AttributeTypes())
-		}
-
-		createTagTerraType, diags := types.ObjectValueFrom(context.Background(), VCSTriggersCreateTagModel{}.AttributeTypes(), &createTagModel)
-		if diags.HasError() {
-			return nullObject, diags
-		}
-
-		vcsTriggersModel.CreateTag = createTagTerraType
-	} else {
-		vcsTriggersModel.CreateTag = types.ObjectNull(VCSTriggersCreateTagModel{}.AttributeTypes())
-	}
-
-	vcsTriggersTerraType, diags := types.ObjectValueFrom(context.Background(), VCSTriggersModel{}.AttributeTypes(), vcsTriggersModel)
-	if diags.HasError() {
-		return nullObject, diags
-	}
-
-	return vcsTriggersTerraType, nil
 }
 
 func RuntimeSourceToTerraType(runtimeSource *workflowtemplates.RuntimeSource) (types.Object, diag.Diagnostics) {
@@ -558,13 +404,6 @@ func BuildAPIModelToWorkflowTemplateModel(apiResponse *workflowtemplates.ReadWor
 		return nil, diags
 	}
 	model.RuntimeSource = runtimeSourceTerraType
-
-	// Convert VCSTriggers
-	vcsTriggersTerraType, diags := VCSTriggersToTerraType(apiResponse.VCSTriggers)
-	if diags.HasError() {
-		return nil, diags
-	}
-	model.VCSTriggers = vcsTriggersTerraType
 
 	return model, diag
 }
