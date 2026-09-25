@@ -1855,15 +1855,16 @@ func userSchedulesFromWorkflowTemplate(items []workflowtemplaterevisions.UserSch
 
 // mergeWorkflowWithStackTemplateOverride fills wf's still-nil fields from
 // stackTplWf, the matching workflow slot on the stack template revision — the
-// middle precedence layer. Slice/map fields on wf are *pointers* to
-// slice/map (see StackWorkflowsConfigWorkflow), guarded with == nil rather
-// than len() == 0: expandWorkflowsConfig only ever sets one to non-nil when
-// the user explicitly declared it (even []/{}), so == nil correctly means
-// "user left this unset" — a len() == 0 guard couldn't tell that apart from
-// an explicit empty value and would overwrite it. Filling from the template
-// only happens when the template's own (plain, non-pointer) value is
-// non-empty — an empty template value is left as "unset" too, rather than
-// forcing an explicit-empty pointer with nothing behind it.
+// middle precedence layer. Slice/map fields on wf are guarded with == nil
+// rather than len() == 0: expandWorkflowsConfig only ever sets one to non-nil
+// when the user explicitly declared it (even []/{} — see
+// StackWorkflowsConfigWorkflow's own doc comment on why omitzero preserves
+// that distinction through marshaling), so == nil correctly means "user left
+// this unset" — a len() == 0 guard couldn't tell that apart from an explicit
+// empty value and would overwrite it. Filling from the template only happens
+// when the template's own value is non-empty — an empty template value is
+// left as "unset" too, rather than forcing an explicit-empty value with
+// nothing behind it.
 // vcs_config.iac_vcs_config is a special case: it is unconditionally
 // overwritten (never merely filled), because it is Computed-only on the stack
 // resource and the stack template is its ONLY source of truth, never
@@ -1883,23 +1884,23 @@ func mergeWorkflowWithStackTemplateOverride(wf *sgsdkgo.StackWorkflowsConfigWork
 		wf.ParallelExecution = stackTplWf.ParallelExecution
 	}
 	if wf.WfStepsConfig == nil && len(stackTplWf.WfStepsConfig) > 0 {
-		wf.WfStepsConfig = &stackTplWf.WfStepsConfig
+		wf.WfStepsConfig = stackTplWf.WfStepsConfig
 	}
 	wf.TerraformConfig = mergeTerraformConfig(wf.TerraformConfig, stackTplWf.TerraformConfig)
 	if wf.EnvironmentVariables == nil && len(stackTplWf.EnvironmentVariables) > 0 {
-		wf.EnvironmentVariables = &stackTplWf.EnvironmentVariables
+		wf.EnvironmentVariables = stackTplWf.EnvironmentVariables
 	}
 	if wf.DeploymentPlatformConfig == nil && len(stackTplWf.DeploymentPlatformConfig) > 0 {
-		wf.DeploymentPlatformConfig = &stackTplWf.DeploymentPlatformConfig
+		wf.DeploymentPlatformConfig = stackTplWf.DeploymentPlatformConfig
 	}
 	if wf.UserSchedules == nil && len(stackTplWf.UserSchedules) > 0 {
-		wf.UserSchedules = &stackTplWf.UserSchedules
+		wf.UserSchedules = stackTplWf.UserSchedules
 	}
 	if wf.MiniSteps == nil {
 		wf.MiniSteps = stackTplWf.MiniSteps
 	}
 	if wf.Approvers == nil && len(stackTplWf.Approvers) > 0 {
-		wf.Approvers = &stackTplWf.Approvers
+		wf.Approvers = stackTplWf.Approvers
 	}
 	if wf.NumberOfApprovalsRequired == nil {
 		wf.NumberOfApprovalsRequired = stackTplWf.NumberOfApprovalsRequired
@@ -1963,34 +1964,34 @@ func mergeWorkflowWithWorkflowTemplateDefaults(wf *sgsdkgo.StackWorkflowsConfigW
 		wf.RunnerConstraints = workflowTpl.RunnerConstraints
 	}
 	if wf.Tags == nil && len(workflowTpl.Tags) > 0 {
-		wf.Tags = &workflowTpl.Tags
+		wf.Tags = workflowTpl.Tags
 	}
 	if wf.Approvers == nil && len(workflowTpl.Approvers) > 0 {
-		wf.Approvers = &workflowTpl.Approvers
+		wf.Approvers = workflowTpl.Approvers
 	}
 	if wf.ContextTags == nil {
 		if ct := contextTagsFromTemplate(workflowTpl.ContextTags); len(ct) > 0 {
-			wf.ContextTags = &ct
+			wf.ContextTags = ct
 		}
 	}
 	if wf.WfStepsConfig == nil {
 		if steps := wfStepsConfigPtrSlice(workflowTpl.WfStepsConfig); len(steps) > 0 {
-			wf.WfStepsConfig = &steps
+			wf.WfStepsConfig = steps
 		}
 	}
 	if wf.EnvironmentVariables == nil {
 		if envVars := envVarsPtrSliceFromValues(workflowTpl.EnvironmentVariables); len(envVars) > 0 {
-			wf.EnvironmentVariables = &envVars
+			wf.EnvironmentVariables = envVars
 		}
 	}
 	if wf.DeploymentPlatformConfig == nil {
 		if dpc := deploymentPlatformConfigFromWorkflowTemplate(workflowTpl.DeploymentPlatformConfig); len(dpc) > 0 {
-			wf.DeploymentPlatformConfig = &dpc
+			wf.DeploymentPlatformConfig = dpc
 		}
 	}
 	if wf.UserSchedules == nil {
 		if us := userSchedulesFromWorkflowTemplate(workflowTpl.UserSchedules); len(us) > 0 {
-			wf.UserSchedules = &us
+			wf.UserSchedules = us
 		}
 	}
 }
@@ -2078,7 +2079,7 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 			if diags.HasError() {
 				return nil, diags
 			}
-			wf.Tags = &tags
+			wf.Tags = tags
 		}
 		if !wm.WfType.IsNull() && !wm.WfType.IsUnknown() {
 			wfType, err := sgsdkgo.NewWfTypeEnumFromString(wm.WfType.ValueString())
@@ -2099,7 +2100,7 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 			if diags.HasError() {
 				return nil, diags
 			}
-			wf.WfStepsConfig = &steps
+			wf.WfStepsConfig = steps
 		}
 		if !wm.TerraformConfig.IsNull() && !wm.TerraformConfig.IsUnknown() {
 			tc, diags := expandTerraformConfig(ctx, wm.TerraformConfig)
@@ -2113,14 +2114,14 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 			if diags.HasError() {
 				return nil, diags
 			}
-			wf.EnvironmentVariables = &envVars
+			wf.EnvironmentVariables = envVars
 		}
 		if !wm.DeploymentPlatformConfig.IsNull() && !wm.DeploymentPlatformConfig.IsUnknown() {
 			dpcs, diags := expandDeploymentPlatformConfig(ctx, wm.DeploymentPlatformConfig)
 			if diags.HasError() {
 				return nil, diags
 			}
-			wf.DeploymentPlatformConfig = &dpcs
+			wf.DeploymentPlatformConfig = dpcs
 		}
 		if !wm.VcsConfig.IsNull() && !wm.VcsConfig.IsUnknown() {
 			vcs, diags := expandVcsConfig(ctx, wm.VcsConfig)
@@ -2134,7 +2135,7 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 			if diags.HasError() {
 				return nil, diags
 			}
-			wf.Approvers = &approvers
+			wf.Approvers = approvers
 		}
 		if !wm.RunnerConstraints.IsNull() && !wm.RunnerConstraints.IsUnknown() {
 			rc, diags := expandRunnerConstraints(ctx, wm.RunnerConstraints)
@@ -2148,7 +2149,7 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 			if diags.HasError() {
 				return nil, diags
 			}
-			wf.UserSchedules = &us
+			wf.UserSchedules = us
 		}
 		if !wm.MiniSteps.IsNull() && !wm.MiniSteps.IsUnknown() {
 			ms, diags := expandMiniSteps(ctx, wm.MiniSteps)
@@ -2162,7 +2163,7 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 			if diags.HasError() {
 				return nil, diags
 			}
-			wf.ContextTags = &ct
+			wf.ContextTags = ct
 		}
 
 		// Layer 2: fill whatever the user left unset from the matching stack
@@ -2203,7 +2204,7 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 		if wf == nil {
 			continue
 		}
-		wfSteps, diags := flattenWfStepsConfig(ctx, deref(wf.WfStepsConfig))
+		wfSteps, diags := flattenWfStepsConfig(ctx, wf.WfStepsConfig)
 		if diags.HasError() {
 			return nullObj, diags
 		}
@@ -2212,12 +2213,12 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 		if diags.HasError() {
 			return nullObj, diags
 		}
-		envVars, diags := flattenEnvironmentVariables(ctx, deref(wf.EnvironmentVariables))
+		envVars, diags := flattenEnvironmentVariables(ctx, wf.EnvironmentVariables)
 		if diags.HasError() {
 			return nullObj, diags
 		}
 		envVars = knownEmptyListIfNull(envVars, types.ObjectType{AttrTypes: EnvironmentVariableModel{}.AttributeTypes()})
-		dpcs, diags := flattenDeploymentPlatformConfig(ctx, deref(wf.DeploymentPlatformConfig))
+		dpcs, diags := flattenDeploymentPlatformConfig(ctx, wf.DeploymentPlatformConfig)
 		if diags.HasError() {
 			return nullObj, diags
 		}
@@ -2226,7 +2227,7 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 		if diags.HasError() {
 			return nullObj, diags
 		}
-		us, diags := flattenWfUserSchedules(ctx, deref(wf.UserSchedules))
+		us, diags := flattenWfUserSchedules(ctx, wf.UserSchedules)
 		if diags.HasError() {
 			return nullObj, diags
 		}
@@ -2245,7 +2246,7 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 			return nullObj, diags
 		}
 		msObj = knownEmptyObjectIfNull(msObj, MinistepsModel{}.AttributeTypes())
-		ctMap, diags := flattenContextTags(ctx, deref(wf.ContextTags))
+		ctMap, diags := flattenContextTags(ctx, wf.ContextTags)
 		if diags.HasError() {
 			return nullObj, diags
 		}
@@ -2253,7 +2254,7 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 
 		tagsList := types.ListNull(types.StringType)
 		if wf.Tags != nil {
-			l, diags := types.ListValueFrom(ctx, types.StringType, *wf.Tags)
+			l, diags := types.ListValueFrom(ctx, types.StringType, wf.Tags)
 			if diags.HasError() {
 				return nullObj, diags
 			}
@@ -2262,7 +2263,7 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 		tagsList = knownEmptyListIfNull(tagsList, types.StringType)
 		approversList := types.ListNull(types.StringType)
 		if wf.Approvers != nil {
-			l, diags := types.ListValueFrom(ctx, types.StringType, *wf.Approvers)
+			l, diags := types.ListValueFrom(ctx, types.StringType, wf.Approvers)
 			if diags.HasError() {
 				return nullObj, diags
 			}
@@ -2657,19 +2658,6 @@ func flattenActionsMap(ctx context.Context, actions map[string]*sgsdkgo.Actions)
 // ---------------------------------------------------------------------------
 // ToAPIModel / ToUpdateAPIModel / BuildAPIModelToStackModel
 // ---------------------------------------------------------------------------
-
-// deref returns the zero value of T when p is nil, otherwise *p. Used to read
-// StackWorkflowsConfigWorkflow's pointer-to-slice/map fields (see its own
-// doc comment) back into the plain slice/map the existing flatten helpers
-// expect — a nil pointer and an empty slice/map are both "nothing to
-// flatten" from a Read perspective.
-func deref[T any](p *T) T {
-	var zero T
-	if p == nil {
-		return zero
-	}
-	return *p
-}
 
 // knownEmptyListIfNull returns a known empty list (of elemType) when in is null,
 // otherwise returns in unchanged. Computed list attributes must hold a known value
