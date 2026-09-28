@@ -313,48 +313,52 @@ func (WfStepsConfigModel) AttributeTypes() map[string]attr.Type {
 }
 
 type TerraformConfigModel struct {
-	TerraformVersion       types.String `tfsdk:"terraform_version"`
-	DriftCheck             types.Bool   `tfsdk:"drift_check"`
-	DriftCron              types.String `tfsdk:"drift_cron"`
-	ManagedTerraformState  types.Bool   `tfsdk:"managed_terraform_state"`
-	ApprovalPreApply       types.Bool   `tfsdk:"approval_pre_apply"`
-	TerraformPlanOptions   types.String `tfsdk:"terraform_plan_options"`
-	TerraformInitOptions   types.String `tfsdk:"terraform_init_options"`
-	TerraformBinPath       types.List   `tfsdk:"terraform_bin_path"`
-	Timeout                types.Int64  `tfsdk:"timeout"`
-	PostApplyWfStepsConfig types.List   `tfsdk:"post_apply_wf_steps_config"`
-	PreApplyWfStepsConfig  types.List   `tfsdk:"pre_apply_wf_steps_config"`
-	PrePlanWfStepsConfig   types.List   `tfsdk:"pre_plan_wf_steps_config"`
-	PostPlanWfStepsConfig  types.List   `tfsdk:"post_plan_wf_steps_config"`
-	PreInitHooks           types.List   `tfsdk:"pre_init_hooks"`
-	PrePlanHooks           types.List   `tfsdk:"pre_plan_hooks"`
-	PostPlanHooks          types.List   `tfsdk:"post_plan_hooks"`
-	PreApplyHooks          types.List   `tfsdk:"pre_apply_hooks"`
-	PostApplyHooks         types.List   `tfsdk:"post_apply_hooks"`
-	RunPreInitHooksOnDrift types.Bool   `tfsdk:"run_pre_init_hooks_on_drift"`
+	TerraformVersion        types.String `tfsdk:"terraform_version"`
+	DriftCheck              types.Bool   `tfsdk:"drift_check"`
+	DriftCron               types.String `tfsdk:"drift_cron"`
+	ManagedTerraformState   types.Bool   `tfsdk:"managed_terraform_state"`
+	ApprovalPreApply        types.Bool   `tfsdk:"approval_pre_apply"`
+	TerraformPlanOptions    types.String `tfsdk:"terraform_plan_options"`
+	TerraformInitOptions    types.String `tfsdk:"terraform_init_options"`
+	TerraformBinPath        types.List   `tfsdk:"terraform_bin_path"`
+	Timeout                 types.Int64  `tfsdk:"timeout"`
+	PostApplyWfStepsConfig  types.List   `tfsdk:"post_apply_wf_steps_config"`
+	PreApplyWfStepsConfig   types.List   `tfsdk:"pre_apply_wf_steps_config"`
+	PrePlanWfStepsConfig    types.List   `tfsdk:"pre_plan_wf_steps_config"`
+	PostPlanWfStepsConfig   types.List   `tfsdk:"post_plan_wf_steps_config"`
+	PreInitHooks            types.List   `tfsdk:"pre_init_hooks"`
+	PrePlanHooks            types.List   `tfsdk:"pre_plan_hooks"`
+	PostPlanHooks           types.List   `tfsdk:"post_plan_hooks"`
+	PreApplyHooks           types.List   `tfsdk:"pre_apply_hooks"`
+	PostApplyHooks          types.List   `tfsdk:"post_apply_hooks"`
+	RunPreInitHooksOnDrift  types.Bool   `tfsdk:"run_pre_init_hooks_on_drift"`
+	RunPrePlanHooksOnDrift  types.Bool   `tfsdk:"run_pre_plan_hooks_on_drift"`
+	RunPostPlanHooksOnDrift types.Bool   `tfsdk:"run_post_plan_hooks_on_drift"`
 }
 
 func (TerraformConfigModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
-		"terraform_version":           types.StringType,
-		"drift_check":                 types.BoolType,
-		"drift_cron":                  types.StringType,
-		"managed_terraform_state":     types.BoolType,
-		"approval_pre_apply":          types.BoolType,
-		"terraform_plan_options":      types.StringType,
-		"terraform_init_options":      types.StringType,
-		"terraform_bin_path":          types.ListType{ElemType: types.ObjectType{AttrTypes: MountPointModel{}.AttributeTypes()}},
-		"timeout":                     types.Int64Type,
-		"post_apply_wf_steps_config":  types.ListType{ElemType: types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}},
-		"pre_apply_wf_steps_config":   types.ListType{ElemType: types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}},
-		"pre_plan_wf_steps_config":    types.ListType{ElemType: types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}},
-		"post_plan_wf_steps_config":   types.ListType{ElemType: types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}},
-		"pre_init_hooks":              types.ListType{ElemType: types.StringType},
-		"pre_plan_hooks":              types.ListType{ElemType: types.StringType},
-		"post_plan_hooks":             types.ListType{ElemType: types.StringType},
-		"pre_apply_hooks":             types.ListType{ElemType: types.StringType},
-		"post_apply_hooks":            types.ListType{ElemType: types.StringType},
-		"run_pre_init_hooks_on_drift": types.BoolType,
+		"terraform_version":            types.StringType,
+		"drift_check":                  types.BoolType,
+		"drift_cron":                   types.StringType,
+		"managed_terraform_state":      types.BoolType,
+		"approval_pre_apply":           types.BoolType,
+		"terraform_plan_options":       types.StringType,
+		"terraform_init_options":       types.StringType,
+		"terraform_bin_path":           types.ListType{ElemType: types.ObjectType{AttrTypes: MountPointModel{}.AttributeTypes()}},
+		"timeout":                      types.Int64Type,
+		"post_apply_wf_steps_config":   types.ListType{ElemType: types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}},
+		"pre_apply_wf_steps_config":    types.ListType{ElemType: types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}},
+		"pre_plan_wf_steps_config":     types.ListType{ElemType: types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}},
+		"post_plan_wf_steps_config":    types.ListType{ElemType: types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}},
+		"pre_init_hooks":               types.ListType{ElemType: types.StringType},
+		"pre_plan_hooks":               types.ListType{ElemType: types.StringType},
+		"post_plan_hooks":              types.ListType{ElemType: types.StringType},
+		"pre_apply_hooks":              types.ListType{ElemType: types.StringType},
+		"post_apply_hooks":             types.ListType{ElemType: types.StringType},
+		"run_pre_init_hooks_on_drift":  types.BoolType,
+		"run_pre_plan_hooks_on_drift":  types.BoolType,
+		"run_post_plan_hooks_on_drift": types.BoolType,
 	}
 }
 
@@ -847,6 +851,12 @@ func ConvertTerraformConfigToAPI(ctx context.Context, terraformConfigObj types.O
 	}
 	if !terraformConfigModel.RunPreInitHooksOnDrift.IsNull() && !terraformConfigModel.RunPreInitHooksOnDrift.IsUnknown() {
 		terraformConfig.RunPreInitHooksOnDrift = terraformConfigModel.RunPreInitHooksOnDrift.ValueBoolPointer()
+	}
+	if !terraformConfigModel.RunPrePlanHooksOnDrift.IsNull() && !terraformConfigModel.RunPrePlanHooksOnDrift.IsUnknown() {
+		terraformConfig.RunPrePlanHooksOnDrift = terraformConfigModel.RunPrePlanHooksOnDrift.ValueBoolPointer()
+	}
+	if !terraformConfigModel.RunPostPlanHooksOnDrift.IsNull() && !terraformConfigModel.RunPostPlanHooksOnDrift.IsUnknown() {
+		terraformConfig.RunPostPlanHooksOnDrift = terraformConfigModel.RunPostPlanHooksOnDrift.ValueBoolPointer()
 	}
 
 	// Convert TerraformBinPath (MountPoints)
@@ -1530,15 +1540,17 @@ func ConvertTerraformConfigFromAPI(ctx context.Context, terraformConfig *sgsdkgo
 	}
 
 	terraformConfigModel := TerraformConfigModel{
-		TerraformVersion:       flatteners.StringPtr(terraformConfig.TerraformVersion),
-		DriftCheck:             flatteners.BoolPtr(terraformConfig.DriftCheck),
-		DriftCron:              flatteners.StringPtr(terraformConfig.DriftCron),
-		ManagedTerraformState:  flatteners.BoolPtr(terraformConfig.ManagedTerraformState),
-		ApprovalPreApply:       flatteners.BoolPtr(terraformConfig.ApprovalPreApply),
-		TerraformPlanOptions:   flatteners.StringPtr(terraformConfig.TerraformPlanOptions),
-		TerraformInitOptions:   flatteners.StringPtr(terraformConfig.TerraformInitOptions),
-		Timeout:                flatteners.Int64Ptr(terraformConfig.Timeout),
-		RunPreInitHooksOnDrift: flatteners.BoolPtr(terraformConfig.RunPreInitHooksOnDrift),
+		TerraformVersion:        flatteners.StringPtr(terraformConfig.TerraformVersion),
+		DriftCheck:              flatteners.BoolPtr(terraformConfig.DriftCheck),
+		DriftCron:               flatteners.StringPtr(terraformConfig.DriftCron),
+		ManagedTerraformState:   flatteners.BoolPtr(terraformConfig.ManagedTerraformState),
+		ApprovalPreApply:        flatteners.BoolPtr(terraformConfig.ApprovalPreApply),
+		TerraformPlanOptions:    flatteners.StringPtr(terraformConfig.TerraformPlanOptions),
+		TerraformInitOptions:    flatteners.StringPtr(terraformConfig.TerraformInitOptions),
+		Timeout:                 flatteners.Int64Ptr(terraformConfig.Timeout),
+		RunPreInitHooksOnDrift:  flatteners.BoolPtr(terraformConfig.RunPreInitHooksOnDrift),
+		RunPrePlanHooksOnDrift:  flatteners.BoolPtr(terraformConfig.RunPrePlanHooksOnDrift),
+		RunPostPlanHooksOnDrift: flatteners.BoolPtr(terraformConfig.RunPostPlanHooksOnDrift),
 	}
 
 	// terraform bin path

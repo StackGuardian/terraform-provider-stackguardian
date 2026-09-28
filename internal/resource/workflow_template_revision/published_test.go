@@ -11,6 +11,9 @@
 // every non-allowed attribute expecting the API to reject an actual change to it, while
 // UpdateAllowedFieldsWithOtherAttributesUnchangedWhilePublished sweeps the same attributes
 // expecting success when they're present but held constant across the update.
+// AttributeUpdatesWhileUnpublished is the control for both: it applies the same changes
+// (attributeChangeCases) to an unpublished revision and expects each to succeed, showing the
+// rejections come from the revision being published rather than from the changes themselves.
 //
 // The provider doesn't enforce the published-revision rule client-side — nothing in
 // ValidateConfig or ToUpdateAPIModel treats a published revision differently — so for most
@@ -61,37 +64,42 @@ func deprecationConfigBlock(deprecated bool) string {
   }`, deprecationEffectiveDate)
 }
 
-// TestAccWorkflowTemplateRevision_DisallowedFieldUpdatesWhilePublished is a table-driven
-// sweep asserting the API rejects an actual *change* to every attribute other than
-// description/alias/notes/deprecation on a published revision. See the file-level doc
-// comment for why this exists.
-//
-// The exact error text the API returns isn't pinned down here — ExpectError only asserts
-// that apply fails, not what it says. Tighten each case's pattern with acctest.ErrorPattern
-// once the real message is known from a live run.
-func TestAccWorkflowTemplateRevision_DisallowedFieldUpdatesWhilePublished(t *testing.T) {
-	const (
-		baseCPU    = 500
-		baseMemory = 1024
-	)
+// Baseline user_job_cpu / user_job_memory for the attribute-change sweeps.
+const (
+	baseCPU    = 500
+	baseMemory = 1024
+)
 
-	type testCase struct {
-		name string
-		// sourceConfigKind applies to both steps unless changedSourceConfigKind is set.
-		// Defaults to TERRAFORM.
-		sourceConfigKind        string
-		changedSourceConfigKind string // overrides sourceConfigKind on the rejected step only
-		changedUserJobCPU       int    // overrides baseCPU on the rejected step only
-		changedUserJobMemory    int    // overrides baseMemory on the rejected step only
-		changedConfig           string // HCL merged into the baseline config on the rejected step
-	}
+// attributeChangeCase is one attribute changed from a baseline revision (alias, is_public,
+// description and notes only) to a new value.
+type attributeChangeCase struct {
+	name string
+	// sourceConfigKind applies to both steps unless changedSourceConfigKind is set.
+	// Defaults to TERRAFORM.
+	sourceConfigKind        string
+	changedSourceConfigKind string // overrides sourceConfigKind on the change step only
+	changedUserJobCPU       int    // overrides baseCPU on the change step only
+	changedUserJobMemory    int    // overrides baseMemory on the change step only
+	changedConfig           string // HCL merged into the baseline config on the change step
+	// immutable marks a change the provider rejects at plan time on every revision,
+	// published or not (ModifyPlan), so it can't succeed on an unpublished revision either.
+	immutable bool
+	// checkAttr / checkValue confirm the change was applied when the update succeeds.
+	checkAttr  string
+	checkValue string
+}
 
-	cases := []testCase{
-		{name: "tags", changedConfig: `tags = ["should-not-apply"]`},
+// attributeChangeCases lists a change to every attribute other than
+// description/alias/notes/deprecation. DisallowedFieldUpdatesWhilePublished expects each to
+// be rejected on a published revision; AttributeUpdatesWhileUnpublished expects each
+// (except the immutable ones) to succeed on an unpublished revision.
+func attributeChangeCases() []attributeChangeCase {
+	return []attributeChangeCase{
+		{name: "tags", changedConfig: `tags = ["should-not-apply"]`, checkAttr: "tags.0", checkValue: "should-not-apply"},
 		{name: "context_tags", changedConfig: `
   context_tags = {
     env = "should-not-apply"
-  }`},
+  }`, checkAttr: "context_tags.env", checkValue: "should-not-apply"},
 		{name: "environment_variables", changedConfig: `
   environment_variables = [
     {
@@ -101,14 +109,14 @@ func TestAccWorkflowTemplateRevision_DisallowedFieldUpdatesWhilePublished(t *tes
         text_value = "should-not-apply"
       }
     }
-  ]`},
+  ]`, checkAttr: "environment_variables.0.config.var_name", checkValue: "SHOULD_NOT_APPLY"},
 		{name: "input_schemas", changedConfig: `
   input_schemas = [
     {
       name = "should-not-apply"
       type = "RAW_JSON"
     }
-  ]`},
+  ]`, checkAttr: "input_schemas.0.name", checkValue: "should-not-apply"},
 		{name: "mini_steps", changedConfig: `
   mini_steps = {
     wf_chaining = {
@@ -116,45 +124,50 @@ func TestAccWorkflowTemplateRevision_DisallowedFieldUpdatesWhilePublished(t *tes
         workflow_group_id = "kk"
       }]
     }
-  }`},
+  }`, checkAttr: "mini_steps.wf_chaining.errored.0.workflow_group_id", checkValue: "kk"},
 		{name: "runner_constraints", changedConfig: `
   runner_constraints = {
     type = "shared"
-  }`},
+  }`, checkAttr: "runner_constraints.type", checkValue: "shared"},
 		{name: "user_schedules", changedConfig: `
   user_schedules = [
     {
       cron  = "0 8 ? * MON *"
       state = "ENABLED"
     }
-  ]`},
-		{name: "approvers", changedConfig: `approvers = ["approver@example.com"]`},
-		{name: "number_of_approvals_required", changedConfig: `number_of_approvals_required = 1`},
-		{name: "user_job_cpu_and_memory", changedUserJobCPU: 1000, changedUserJobMemory: 2048},
-		{name: "runtime_source", changedConfig: fmt.Sprintf(`
+  ]`, checkAttr: "user_schedules.0.cron", checkValue: "0 8 ? * MON *"},
+		{name: "approvers", changedConfig: `approvers = ["approver@example.com"]`, checkAttr: "approvers.0", checkValue: "approver@example.com"},
+		{name: "number_of_approvals_required", changedConfig: `number_of_approvals_required = 1`, checkAttr: "number_of_approvals_required", checkValue: "1"},
+		{name: "user_job_cpu_and_memory", changedUserJobCPU: 1000, changedUserJobMemory: 2048, checkAttr: "user_job_cpu", checkValue: "1000"},
+		{
+			// Adding a repo after creation is rejected by ModifyPlan on every revision.
+			name: "runtime_source",
+			changedConfig: fmt.Sprintf(`
   runtime_source = {
     source_config_dest_kind = %q
     config = {
       is_private = false
       repo       = "https://github.com/StackGuardian/tf-null-resource.git"
     }
-  }`, constants.GitOther)},
+  }`, constants.GitOther),
+			immutable: true,
+		},
 		{name: "terraform_config", changedConfig: `
   terraform_config = {
     terraform_version = "1.5.0"
-  }`},
+  }`, checkAttr: "terraform_config.terraform_version", checkValue: "1.5.0"},
 		{name: "deployment_platform_config", changedConfig: `
   deployment_platform_config = [{
     kind = "AWS_RBAC"
     config = {
       integration_id = "/integrations/test-integration"
     }
-  }]`},
+  }]`, checkAttr: "deployment_platform_config.0.config.integration_id", checkValue: "/integrations/test-integration"},
 		{
 			// wf_steps_config needs a non-TERRAFORM/OPENTOFU source_config_kind throughout
 			// (both steps), or the provider's own wfStepsConfigNotAllowedForTerraformDiagnostics
 			// ValidateConfig check would reject it before the request ever reaches the API —
-			// a different failure than the one this test means to exercise.
+			// a different failure than the one these tests mean to exercise.
 			name:             "wf_steps_config",
 			sourceConfigKind: "CUSTOM",
 			changedConfig: `
@@ -164,11 +177,24 @@ func TestAccWorkflowTemplateRevision_DisallowedFieldUpdatesWhilePublished(t *tes
       wf_step_template_id = "/tf-provider-test-org/dummy-step-template:1"
     }
   ]`,
+			checkAttr:  "wf_steps_config.0.name",
+			checkValue: "step-1",
 		},
-		{name: "source_config_kind", changedSourceConfigKind: "OPENTOFU"},
+		// source_config_kind is rejected by ModifyPlan on every revision.
+		{name: "source_config_kind", changedSourceConfigKind: "OPENTOFU", immutable: true},
 	}
+}
 
-	for _, tc := range cases {
+// TestAccWorkflowTemplateRevision_DisallowedFieldUpdatesWhilePublished is a table-driven
+// sweep asserting the API rejects an actual *change* to every attribute other than
+// description/alias/notes/deprecation on a published revision. See the file-level doc
+// comment for why this exists.
+//
+// The exact error text the API returns isn't pinned down here — ExpectError only asserts
+// that apply fails, not what it says. Tighten each case's pattern with acctest.ErrorPattern
+// once the real message is known from a live run.
+func TestAccWorkflowTemplateRevision_DisallowedFieldUpdatesWhilePublished(t *testing.T) {
+	for _, tc := range attributeChangeCases() {
 		t.Run(tc.name, func(t *testing.T) {
 			sourceConfigKind := tc.sourceConfigKind
 			if sourceConfigKind == "" {
@@ -242,6 +268,86 @@ func TestAccWorkflowTemplateRevision_DisallowedFieldUpdatesWhilePublished(t *tes
 						Config: testAccWorkflowTemplateRevision(templateID, sourceConfigKind, baseCPU, baseMemory, baseline(true)),
 						Check: resource.ComposeAggregateTestCheckFunc(
 							resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "deprecation.message", "This revision is deprecated"),
+						),
+					},
+				},
+			})
+		})
+	}
+}
+
+// TestAccWorkflowTemplateRevision_AttributeUpdatesWhileUnpublished is the control for
+// TestAccWorkflowTemplateRevision_DisallowedFieldUpdatesWhilePublished: it applies the same
+// attribute changes to a revision that is *not* published (is_public = "0") and expects each
+// update to succeed and take effect. Together the two show the rejections there come from the
+// revision being published, not from the changes themselves. source_config_kind and adding a
+// runtime_source repo are skipped: ModifyPlan rejects them on every revision (see
+// SourceConfigKindRejectedOnChange and RepoRejectedOnChange). An unpublished revision can be
+// deleted directly, so no deprecation step is needed.
+func TestAccWorkflowTemplateRevision_AttributeUpdatesWhileUnpublished(t *testing.T) {
+	for _, tc := range attributeChangeCases() {
+		if tc.immutable {
+			continue
+		}
+		t.Run(tc.name, func(t *testing.T) {
+			sourceConfigKind := tc.sourceConfigKind
+			if sourceConfigKind == "" {
+				sourceConfigKind = "TERRAFORM"
+			}
+			changedCPU := baseCPU
+			if tc.changedUserJobCPU != 0 {
+				changedCPU = tc.changedUserJobCPU
+			}
+			changedMemory := baseMemory
+			if tc.changedUserJobMemory != 0 {
+				changedMemory = tc.changedUserJobMemory
+			}
+
+			if tc.name == "terraform_config" {
+				fmt.Println("")
+			}
+
+			templateID := acctest.ResourceName("tf-provider-wftr-unpublished-update-" + tc.name)
+			alias := "revision-unpublished-update-" + tc.name
+
+			registerWorkflowTemplateCleanup(t, templateID, 1)
+
+			err := createWorkflowTemplateFixture(templateID, sourceConfigKind)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			customHeader := http.Header{}
+			customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+			config := func(extra string) string {
+				return fmt.Sprintf(`
+			  alias       = %q
+			  is_public   = "0"
+			  description = "Unpublished revision"
+			  notes       = "Unpublished revision notes"
+			  %s
+			`, alias, extra)
+			}
+
+			resource.Test(t, resource.TestCase{
+				PreCheck: func() { acctest.TestAccPreCheck(t) },
+				TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+					tfversion.SkipBelow(tfversion.Version1_1_0),
+				},
+				ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+				Steps: []resource.TestStep{
+					// Create the revision unpublished.
+					{
+						Config: testAccWorkflowTemplateRevision(templateID, sourceConfigKind, baseCPU, baseMemory, config("")),
+						Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "is_public", "0"),
+					},
+					// Change the attribute; the update must succeed and apply the new value.
+					{
+						Config: testAccWorkflowTemplateRevision(templateID, sourceConfigKind, changedCPU, changedMemory, config(tc.changedConfig)),
+						Check: resource.ComposeAggregateTestCheckFunc(
+							resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "is_public", "0"),
+							resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", tc.checkAttr, tc.checkValue),
 						),
 					},
 				},

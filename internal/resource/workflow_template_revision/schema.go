@@ -8,6 +8,7 @@ import (
 	workflowtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
@@ -244,12 +245,22 @@ var terraformConfigSchema = schema.SingleNestedAttribute{
 			},
 		},
 		"run_pre_init_hooks_on_drift": schema.BoolAttribute{
-			MarkdownDescription: constants.TerraformRunPreInitHooksOnDrift,
+			MarkdownDescription: constants.WorkflowTemplateRevisionRunPreInitHooksOnDrift,
 			Optional:            true,
 			Computed:            true,
-			PlanModifiers: []planmodifier.Bool{
-				boolplanmodifier.UseStateForUnknown(),
-			},
+			Default:             booldefault.StaticBool(false),
+		},
+		"run_pre_plan_hooks_on_drift": schema.BoolAttribute{
+			MarkdownDescription: constants.WorkflowTemplateRevisionRunPrePlanHooksOnDrift,
+			Optional:            true,
+			Computed:            true,
+			Default:             booldefault.StaticBool(false),
+		},
+		"run_post_plan_hooks_on_drift": schema.BoolAttribute{
+			MarkdownDescription: constants.WorkflowTemplateRevisionRunPostPlanHooksOnDrift,
+			Optional:            true,
+			Computed:            true,
+			Default:             booldefault.StaticBool(false),
 		},
 	},
 }

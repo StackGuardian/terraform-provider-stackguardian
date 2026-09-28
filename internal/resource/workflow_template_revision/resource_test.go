@@ -802,6 +802,8 @@ func TestAccWorkflowTemplateRevision_WithTerraformConfig(t *testing.T) {
 		    terraform_init_options      = "-upgrade"
 		    timeout                     = 3600
 		    run_pre_init_hooks_on_drift = true
+		    run_pre_plan_hooks_on_drift = true
+		    run_post_plan_hooks_on_drift = true
 		    pre_init_hooks              = ["echo pre-init"]
 		    pre_plan_hooks              = ["echo pre-plan"]
 		    post_plan_hooks             = ["echo post-plan"]
@@ -840,6 +842,8 @@ func TestAccWorkflowTemplateRevision_WithTerraformConfig(t *testing.T) {
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.terraform_init_options", "-upgrade"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.timeout", "3600"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.run_pre_init_hooks_on_drift", "true"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.run_pre_plan_hooks_on_drift", "true"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.run_post_plan_hooks_on_drift", "true"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.pre_init_hooks.0", "echo pre-init"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.pre_plan_hooks.0", "echo pre-plan"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.post_plan_hooks.0", "echo post-plan"),

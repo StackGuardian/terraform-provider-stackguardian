@@ -348,7 +348,9 @@ Read-Only:
 - `pre_init_hooks` (List of String) Hooks to run before init.
 - `pre_plan_hooks` (List of String) Hooks to run before plan.
 - `pre_plan_wf_steps_config` (Attributes List) Workflow steps configuration to run before plan. (see [below for nested schema](#nestedatt--terraform_config--pre_plan_wf_steps_config))
-- `run_pre_init_hooks_on_drift` (Boolean) Run pre-init hooks on drift detection.
+- `run_post_plan_hooks_on_drift` (Boolean) Run post-plan hooks on drift detection. Defaults to `false`.
+- `run_pre_init_hooks_on_drift` (Boolean) Run pre-init hooks on drift detection. Defaults to `false`.
+- `run_pre_plan_hooks_on_drift` (Boolean) Run pre-plan hooks on drift detection. Defaults to `false`.
 - `terraform_bin_path` (Attributes List) Mount points for terraform binary. (see [below for nested schema](#nestedatt--terraform_config--terraform_bin_path))
 - `terraform_init_options` (String) Additional options for terraform init.
 - `terraform_plan_options` (String) Additional options for terraform plan.

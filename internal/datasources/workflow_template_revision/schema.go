@@ -260,7 +260,15 @@ var terraformConfigSchema = schema.SingleNestedAttribute{
 			Computed:            true,
 		},
 		"run_pre_init_hooks_on_drift": schema.BoolAttribute{
-			MarkdownDescription: constants.TerraformRunPreInitHooksOnDrift,
+			MarkdownDescription: constants.WorkflowTemplateRevisionRunPreInitHooksOnDrift,
+			Computed:            true,
+		},
+		"run_pre_plan_hooks_on_drift": schema.BoolAttribute{
+			MarkdownDescription: constants.WorkflowTemplateRevisionRunPrePlanHooksOnDrift,
+			Computed:            true,
+		},
+		"run_post_plan_hooks_on_drift": schema.BoolAttribute{
+			MarkdownDescription: constants.WorkflowTemplateRevisionRunPostPlanHooksOnDrift,
 			Computed:            true,
 		},
 		"pre_init_hooks": schema.ListAttribute{

@@ -639,3 +639,114 @@ func TestAccWorkflowTemplateRevision_RepoRejectedOnChange(t *testing.T) {
 		},
 	})
 }
+
+// TestAccWorkflowTemplateRevision_TerraformConfigDriftHookFlagsDefaultFalse verifies that the
+// three run_*_hooks_on_drift flags default to false when terraform_config is set without
+// them: the schema default plans false, the request sends false, and Read settles on the
+// false the API returns, so a follow-up plan shows no diff.
+func TestAccWorkflowTemplateRevision_TerraformConfigDriftHookFlagsDefaultFalse(t *testing.T) {
+	templateID := acctest.ResourceName("tf-provider-wftr-drift-hooks-default")
+
+	registerWorkflowTemplateCleanup(t, templateID, 1)
+
+	err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	config := testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, `
+	  alias = "revision-drift-hooks-default"
+
+	  terraform_config = {
+	    terraform_version = "1.5.0"
+	  }
+	`)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.run_pre_init_hooks_on_drift", "false"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.run_pre_plan_hooks_on_drift", "false"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.run_post_plan_hooks_on_drift", "false"),
+				),
+			},
+			{
+				Config:   config,
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccWorkflowTemplateRevision_TerraformConfigDriftHookFlagsExplicitNull verifies that
+// setting the run_*_hooks_on_drift flags to an explicit null behaves like omitting them:
+// Terraform can't tell the two apart, so the schema default applies and the flags plan as
+// false. Starting from true shows an explicit null resets them on update instead of keeping
+// the previous value.
+func TestAccWorkflowTemplateRevision_TerraformConfigDriftHookFlagsExplicitNull(t *testing.T) {
+	templateID := acctest.ResourceName("tf-provider-wftr-drift-hooks-null")
+
+	registerWorkflowTemplateCleanup(t, templateID, 1)
+
+	err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	config := func(value string) string {
+		return testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, fmt.Sprintf(`
+	  alias = "revision-drift-hooks-null"
+
+	  terraform_config = {
+	    terraform_version            = "1.5.0"
+	    run_pre_init_hooks_on_drift  = %[1]s
+	    run_pre_plan_hooks_on_drift  = %[1]s
+	    run_post_plan_hooks_on_drift = %[1]s
+	  }
+	`, value))
+	}
+
+	checkFlags := func(want string) resource.TestCheckFunc {
+		return resource.ComposeAggregateTestCheckFunc(
+			resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.run_pre_init_hooks_on_drift", want),
+			resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.run_pre_plan_hooks_on_drift", want),
+			resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.run_post_plan_hooks_on_drift", want),
+		)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: config("true"),
+				Check:  checkFlags("true"),
+			},
+			{
+				// Explicit null: the default applies and resets the flags to false.
+				Config: config("null"),
+				Check:  checkFlags("false"),
+			},
+			{
+				Config:   config("null"),
+				PlanOnly: true,
+			},
+		},
+	})
+}
