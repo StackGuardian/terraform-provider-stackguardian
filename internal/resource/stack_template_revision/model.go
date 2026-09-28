@@ -401,53 +401,13 @@ func (UserSchedulesModel) AttributeTypes() map[string]attr.Type {
 // VCS config (for WorkflowsConfigWorkflow)
 // ---------------------------------------------------------------------------
 
-type CustomSourceConfigModel struct {
-	IsPrivate               types.Bool   `tfsdk:"is_private"`
-	Auth                    types.String `tfsdk:"auth"`
-	WorkingDir              types.String `tfsdk:"working_dir"`
-	GitSparseCheckoutConfig types.String `tfsdk:"git_sparse_checkout_config"`
-	GitCoreAutoCrlf         types.Bool   `tfsdk:"git_core_auto_crlf"`
-	Ref                     types.String `tfsdk:"ref"`
-	Repo                    types.String `tfsdk:"repo"`
-	IncludeSubModule        types.Bool   `tfsdk:"include_sub_module"`
-}
-
-func (CustomSourceConfigModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"is_private":                 types.BoolType,
-		"auth":                       types.StringType,
-		"working_dir":                types.StringType,
-		"git_sparse_checkout_config": types.StringType,
-		"git_core_auto_crlf":         types.BoolType,
-		"ref":                        types.StringType,
-		"repo":                       types.StringType,
-		"include_sub_module":         types.BoolType,
-	}
-}
-
-type CustomSourceModel struct {
-	SourceConfigDestKind types.String `tfsdk:"source_config_dest_kind"`
-	Config               types.Object `tfsdk:"config"`
-}
-
-func (CustomSourceModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"source_config_dest_kind": types.StringType,
-		"config":                  types.ObjectType{AttrTypes: CustomSourceConfigModel{}.AttributeTypes()},
-	}
-}
-
 type IacVcsConfigModel struct {
-	UseMarketplaceTemplate types.Bool   `tfsdk:"use_marketplace_template"`
-	IacTemplateId          types.String `tfsdk:"iac_template_id"`
-	CustomSource           types.Object `tfsdk:"custom_source"`
+	IacTemplateId types.String `tfsdk:"iac_template_id"`
 }
 
 func (IacVcsConfigModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
-		"use_marketplace_template": types.BoolType,
-		"iac_template_id":          types.StringType,
-		"custom_source":            types.ObjectType{AttrTypes: CustomSourceModel{}.AttributeTypes()},
+		"iac_template_id": types.StringType,
 	}
 }
 
@@ -898,39 +858,11 @@ func convertVcsConfigToAPI(ctx context.Context, obj types.Object, orgName string
 			v := fmt.Sprintf("/%s/%s", orgName, *tid)
 			prefixedIacTemplateId = &v
 		}
+		// Stack template revision workflows always reference a workflow template, so this is
+		// always true and not user-configurable.
 		iacVcs := &sgsdkgo.IacvcsConfig{
-			UseMarketplaceTemplate: iacModel.UseMarketplaceTemplate.ValueBoolPointer(),
+			UseMarketplaceTemplate: sgsdkgo.Bool(true),
 			IacTemplateId:          prefixedIacTemplateId,
-		}
-		if !iacModel.CustomSource.IsNull() && !iacModel.CustomSource.IsUnknown() {
-			var csModel CustomSourceModel
-			if diags := iacModel.CustomSource.As(ctx, &csModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
-				return nil, diags
-			}
-			sourceConfigDestKind, err := sgsdkgo.NewCustomSourceSourceConfigDestKindEnumFromString(csModel.SourceConfigDestKind.ValueString())
-			if err != nil {
-				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid source_config_dest_kind", err.Error())}
-			}
-			cs := &sgsdkgo.CustomSource{
-				SourceConfigDestKind: &sourceConfigDestKind,
-			}
-			if !csModel.Config.IsNull() && !csModel.Config.IsUnknown() {
-				var csCfgModel CustomSourceConfigModel
-				if diags := csModel.Config.As(ctx, &csCfgModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
-					return nil, diags
-				}
-				cs.Config = &sgsdkgo.CustomSourceConfig{
-					IsPrivate:               csCfgModel.IsPrivate.ValueBoolPointer(),
-					Auth:                    csCfgModel.Auth.ValueStringPointer(),
-					WorkingDir:              csCfgModel.WorkingDir.ValueStringPointer(),
-					GitSparseCheckoutConfig: csCfgModel.GitSparseCheckoutConfig.ValueStringPointer(),
-					GitCoreAutoCrlf:         csCfgModel.GitCoreAutoCrlf.ValueBoolPointer(),
-					Ref:                     csCfgModel.Ref.ValueStringPointer(),
-					Repo:                    csCfgModel.Repo.ValueStringPointer(),
-					IncludeSubModule:        csCfgModel.IncludeSubModule.ValueBoolPointer(),
-				}
-			}
-			iacVcs.CustomSource = cs
 		}
 		vcsConfig.IacVcsConfig = iacVcs
 	}
@@ -1816,38 +1748,7 @@ func vcsConfigFromAPI(vc *sgsdkgo.VcsConfig) (types.Object, diag.Diagnostics) {
 			strippedIacTemplateId = &base
 		}
 		iacM := IacVcsConfigModel{
-			UseMarketplaceTemplate: flatteners.BoolPtr(vc.IacVcsConfig.UseMarketplaceTemplate),
-			IacTemplateId:          flatteners.StringPtr(strippedIacTemplateId),
-			CustomSource:           types.ObjectNull(CustomSourceModel{}.AttributeTypes()),
-		}
-		if vc.IacVcsConfig.CustomSource != nil {
-			cs := vc.IacVcsConfig.CustomSource
-			csM := CustomSourceModel{
-				SourceConfigDestKind: flatteners.String(string(*cs.SourceConfigDestKind)),
-				Config:               types.ObjectNull(CustomSourceConfigModel{}.AttributeTypes()),
-			}
-			if cs.Config != nil {
-				csCfgM := CustomSourceConfigModel{
-					IsPrivate:               flatteners.BoolPtr(cs.Config.IsPrivate),
-					Auth:                    flatteners.StringPtr(cs.Config.Auth),
-					WorkingDir:              flatteners.StringPtr(cs.Config.WorkingDir),
-					GitSparseCheckoutConfig: flatteners.StringPtr(cs.Config.GitSparseCheckoutConfig),
-					GitCoreAutoCrlf:         flatteners.BoolPtr(cs.Config.GitCoreAutoCrlf),
-					Ref:                     flatteners.StringPtr(cs.Config.Ref),
-					Repo:                    flatteners.StringPtr(cs.Config.Repo),
-					IncludeSubModule:        flatteners.BoolPtr(cs.Config.IncludeSubModule),
-				}
-				cfgObj, diags := types.ObjectValueFrom(context.Background(), CustomSourceConfigModel{}.AttributeTypes(), csCfgM)
-				if diags.HasError() {
-					return nullObj, diags
-				}
-				csM.Config = cfgObj
-			}
-			csObj, diags := types.ObjectValueFrom(context.Background(), CustomSourceModel{}.AttributeTypes(), csM)
-			if diags.HasError() {
-				return nullObj, diags
-			}
-			iacM.CustomSource = csObj
+			IacTemplateId: flatteners.StringPtr(strippedIacTemplateId),
 		}
 		var diags diag.Diagnostics
 		iacVcsNull, diags = types.ObjectValueFrom(context.Background(), IacVcsConfigModel{}.AttributeTypes(), iacM)
