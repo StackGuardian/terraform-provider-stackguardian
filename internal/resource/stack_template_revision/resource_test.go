@@ -117,6 +117,12 @@ resource "stackguardian_stack_template_revision" "test" {
         id            = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
         resource_name = "wf-1"
 
+        vcs_config = {
+          iac_vcs_config = {
+            iac_template_id = "%s"
+          }
+        }
+
         terraform_config = {
           managed_terraform_state = true
           terraform_version       = "1.5.7"
@@ -125,7 +131,7 @@ resource "stackguardian_stack_template_revision" "test" {
     ]
   }
 }
-`, stackTemplateID, alias, notes, description)
+`, stackTemplateID, alias, notes, description, wfTemplateID)
 }
 
 func testAccStackTemplateRevisionWithWorkflowsConfig(stackTemplateID, wfTemplateID, alias string) string {
@@ -145,8 +151,7 @@ resource "stackguardian_stack_template_revision" "test" {
 
         vcs_config = {
           iac_vcs_config = {
-            use_marketplace_template = true
-            iac_template_id          = "%s"
+            iac_template_id = "%s"
           }
           iac_input_data = {
             schema_type = "RAW_JSON"
@@ -387,6 +392,12 @@ resource "stackguardian_stack_template_revision" "test" {
       {
         id            = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
         resource_name = "wf-1"
+
+        vcs_config = {
+          iac_vcs_config = {
+            iac_template_id = stackguardian_workflow_template.wf_parent.id
+          }
+        }
 
         terraform_config = {
           managed_terraform_state = true

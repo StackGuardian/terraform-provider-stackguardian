@@ -548,33 +548,7 @@ Read-Only:
 
 Read-Only:
 
-- `custom_source` (Attributes) Custom source configuration. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source))
 - `iac_template_id` (String) Workflow template this stack workflow is created from, as the bare `template_name` of a template in your own organization (e.g. `my-workflow-template`). The provider qualifies it with your organization, so do not give the `/<org>/…` form.
-- `use_marketplace_template` (Boolean) Whether to use a marketplace template.
-
-<a id="nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source"></a>
-### Nested Schema for `workflows_config.workflows.vcs_config.iac_vcs_config.custom_source`
-
-Read-Only:
-
-- `config` (Attributes) Source configuration details. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source--config))
-- `source_config_dest_kind` (String) Which VCS provider hosts the repository. This decides how StackGuardian authenticates and, for `vcs_triggers`, which webhook integration is used. <ul><li>`GITHUB_COM` — github.com. See the [GitHub connector docs](https://docs.stackguardian.io/docs/connectors/vcs/githubcom/).</li><li>`GITHUB_APP_CUSTOM` — GitHub Enterprise, or a GitHub App you manage yourself. See the [GitHub Enterprise docs](https://docs.stackguardian.io/docs/connectors/vcs/github_enterprise/).</li><li>`GITLAB_COM` — gitlab.com. See the [GitLab connector docs](https://docs.stackguardian.io/docs/connectors/vcs/gitlabcom/).</li><li>`BITBUCKET_ORG` — Bitbucket Cloud. See the [Bitbucket connector docs](https://docs.stackguardian.io/docs/connectors/vcs/bitbucket/).</li><li>`AZURE_DEVOPS` — Azure DevOps. See the [Azure DevOps connector docs](https://docs.stackguardian.io/docs/connectors/vcs/azuredevops/).</li><li>`AZURE_DEVOPS_SP` — Azure DevOps authenticated with a service principal.</li><li>`GIT_OTHER` — any other Git host, including public repositories that need no authentication.</li></ul>
-
-<a id="nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source--config"></a>
-### Nested Schema for `workflows_config.workflows.vcs_config.iac_vcs_config.custom_source.config`
-
-Read-Only:
-
-- `auth` (String, Sensitive) Credential for cloning a private repository, as a path-form ID. Either a VCS connector — `/integrations/<connector-name>`, built as `"/integrations/${stackguardian_connector.github.id}"` — for `GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG` and `AZURE_DEVOPS*` sources, or a secret `/secrets/<secret-name>`. `GIT_OTHER` accepts only the secret form. Required when `is_private` is `true`.
-- `git_core_auto_crlf` (Boolean) Whether to automatically handle CRLF line endings.
-- `git_sparse_checkout_config` (String) Git sparse checkout command line git cli options.
-- `include_sub_module` (Boolean) Whether to include git submodules.
-- `is_private` (Boolean) Whether the repository is private. Auth is required if the repository is private
-- `ref` (String) Git reference (branch, tag, or commit hash).
-- `repo` (String) Git repository URL.
-- `working_dir` (String) Working directory within the repository.
-
-
 
 
 

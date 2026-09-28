@@ -17,8 +17,13 @@ resource "stackguardian_stack_template_revision" "basic" {
     workflows = [
       {
         id            = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
-        template_id   = "my-workflow-template"
         resource_name = "wf-1"
+
+        vcs_config = {
+          iac_vcs_config = {
+            iac_template_id = "my-workflow-template"
+          }
+        }
 
         terraform_config = {
           managed_terraform_state = true
@@ -29,25 +34,23 @@ resource "stackguardian_stack_template_revision" "basic" {
   }
 }
 
-# Example 2: Stack template revision with VCS config
+# Example 2: Stack template revision with IaC input data
 resource "stackguardian_stack_template_revision" "with_vcs" {
   parent_template_id = stackguardian_stack_template.example.id
   alias              = "v2"
-  notes              = "Revision with VCS configuration"
-  description        = "Stack template revision with VCS and input data"
+  notes              = "Revision with IaC input data"
+  description        = "Stack template revision with IaC input data"
   source_config_kind = "TERRAFORM"
 
   workflows_config = {
     workflows = [
       {
         id            = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
-        template_id   = "my-workflow-template"
         resource_name = "wf-1"
 
         vcs_config = {
           iac_vcs_config = {
-            use_marketplace_template = true
-            iac_template_id          = "my-workflow-template"
+            iac_template_id = "my-workflow-template"
           }
           iac_input_data = {
             schema_type = "RAW_JSON"

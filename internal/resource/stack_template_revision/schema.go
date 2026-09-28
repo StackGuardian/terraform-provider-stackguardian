@@ -321,68 +321,15 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 	},
 	"vcs_config": schema.SingleNestedAttribute{
 		MarkdownDescription: "VCS (version control) configuration for the workflow.",
-		Optional:            true,
+		Required:            true,
 		Attributes: map[string]schema.Attribute{
 			"iac_vcs_config": schema.SingleNestedAttribute{
 				MarkdownDescription: "IaC VCS configuration.",
-				Optional:            true,
+				Required:            true,
 				Attributes: map[string]schema.Attribute{
-					"use_marketplace_template": schema.BoolAttribute{
-						MarkdownDescription: "Whether to use a marketplace template.",
-						Optional:            true,
-					},
 					"iac_template_id": schema.StringAttribute{
 						MarkdownDescription: constants.StackTemplateRevisionIacTemplateId,
-						Optional:            true,
-					},
-					"custom_source": schema.SingleNestedAttribute{
-						MarkdownDescription: "Custom source configuration.",
-						Optional:            true,
-						Attributes: map[string]schema.Attribute{
-							"source_config_dest_kind": schema.StringAttribute{
-								MarkdownDescription: constants.RuntimeSourceDestKind,
-								Required:            true,
-							},
-							"config": schema.SingleNestedAttribute{
-								MarkdownDescription: "Source configuration details.",
-								Optional:            true,
-								Attributes: map[string]schema.Attribute{
-									"is_private": schema.BoolAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigIsPrivate,
-										Optional:            true,
-									},
-									"auth": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigAuth,
-										Optional:            true,
-										Sensitive:           true,
-									},
-									"working_dir": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigWorkingDir,
-										Optional:            true,
-									},
-									"git_sparse_checkout_config": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigGitSparse,
-										Optional:            true,
-									},
-									"git_core_auto_crlf": schema.BoolAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigGitCoreCRLF,
-										Optional:            true,
-									},
-									"ref": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigRef,
-										Optional:            true,
-									},
-									"repo": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigRepo,
-										Optional:            true,
-									},
-									"include_sub_module": schema.BoolAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigIncludeSubmodule,
-										Optional:            true,
-									},
-								},
-							},
-						},
+						Required:            true,
 					},
 				},
 			},

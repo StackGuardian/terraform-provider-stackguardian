@@ -285,62 +285,9 @@ var dsWorkflowInStackAttrs = map[string]schema.Attribute{
 				MarkdownDescription: "IaC VCS configuration.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"use_marketplace_template": schema.BoolAttribute{
-						MarkdownDescription: "Whether to use a marketplace template.",
-						Computed:            true,
-					},
 					"iac_template_id": schema.StringAttribute{
 						MarkdownDescription: constants.StackTemplateRevisionIacTemplateId,
 						Computed:            true,
-					},
-					"custom_source": schema.SingleNestedAttribute{
-						MarkdownDescription: "Custom source configuration.",
-						Computed:            true,
-						Attributes: map[string]schema.Attribute{
-							"source_config_dest_kind": schema.StringAttribute{
-								MarkdownDescription: constants.RuntimeSourceDestKind,
-								Computed:            true,
-							},
-							"config": schema.SingleNestedAttribute{
-								MarkdownDescription: "Source configuration details.",
-								Computed:            true,
-								Attributes: map[string]schema.Attribute{
-									"is_private": schema.BoolAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigIsPrivate,
-										Computed:            true,
-									},
-									"auth": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigAuth,
-										Computed:            true,
-										Sensitive:           true,
-									},
-									"working_dir": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigWorkingDir,
-										Computed:            true,
-									},
-									"git_sparse_checkout_config": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigGitSparse,
-										Computed:            true,
-									},
-									"git_core_auto_crlf": schema.BoolAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigGitCoreCRLF,
-										Computed:            true,
-									},
-									"ref": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigRef,
-										Computed:            true,
-									},
-									"repo": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigRepo,
-										Computed:            true,
-									},
-									"include_sub_module": schema.BoolAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigIncludeSubmodule,
-										Computed:            true,
-									},
-								},
-							},
-						},
 					},
 				},
 			},
