@@ -187,3 +187,12 @@ const (
 	TerraformRunPrePlanHooksOnDrift  = "Run pre-plan hooks on drift detection."
 	TerraformRunPostPlanHooksOnDrift = "Run post-plan hooks on drift detection."
 )
+
+// The run_*_hooks_on_drift flags on stackguardian_workflow_template_revision default to
+// false; workflow_git and workflow_from_template have no default and keep the plain
+// descriptions above.
+const (
+	WorkflowTemplateRevisionRunPreInitHooksOnDrift  = TerraformRunPreInitHooksOnDrift + " Defaults to `false`."
+	WorkflowTemplateRevisionRunPrePlanHooksOnDrift  = TerraformRunPrePlanHooksOnDrift + " Defaults to `false`."
+	WorkflowTemplateRevisionRunPostPlanHooksOnDrift = TerraformRunPostPlanHooksOnDrift + " Defaults to `false`."
+)
