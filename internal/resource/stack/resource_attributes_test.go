@@ -58,15 +58,15 @@ import (
 // send, and the provider does not synthesize one itself), so this set is
 // entirely the platform's own doing, not provider logic. The specific
 // values asserted below (names, descriptions, dependency chaining across
-// setupStackTemplateChainNoActions's two workflow slots) are therefore a
+// setupStackTemplateChainNoActions's two workflows) are therefore a
 // live contract with the API, not something client-side code produces —
 // see the project plan's note that this is the highest-risk test to re-run
 // after that removal, since these assertions now exercise real API
 // behavior for the first time rather than a deleted client-side replica.
 // What IS still provider logic and exercised here: translateActionsOrderKeys
-// (slot-uuid <-> real workflow-id substitution) and flattenActionsMap's full
+// (workflow UUID <-> real workflow id substitution) and flattenActionsMap's full
 // nested mapping (dependencies, conditions, terraform_action) on the
-// round-trip Read below. Order map keys are the bare template slot ids
+// round-trip Read below. Order map keys are the bare workflow UUIDs
 // (StackTemplateRevisionWorkflow.Id) — not the workflow's own post-creation
 // resource id, since at create time that doesn't exist yet.
 //
@@ -90,21 +90,21 @@ func TestAccStack_ActionsGeneratedFromTemplate(t *testing.T) {
 	revision := setupStackTemplateChainNoActions(t, stackTemplateName, workflowTemplateID)
 	t.Cleanup(func() { deleteStackFixture(wfGrpName, id) })
 
-	// setupStackTemplateChainNoActions wires two slots — testWfSlotId then
-	// secondWfSlotId — so workflows_config must declare both, in that order,
+	// setupStackTemplateChainNoActions declares two workflows — testWorkflowUUID then
+	// secondWorkflowUUID — so workflows_config must declare both, in that order,
 	// on every step (validateWorkflowsConfigMatchesRevision).
-	twoSlotWorkflowsConfig := fmt.Sprintf(`
+	twoWorkflowsConfig := fmt.Sprintf(`
   workflows_config = {
     workflows = [
       { id = %q },
       { id = %q }
     ]
   }
-`, testWfSlotId, secondWfSlotId)
+`, testWorkflowUUID, secondWorkflowUUID)
 
 	// actions declared explicitly — replaces the generated set entirely, not
 	// just its "apply" key.
-	withActionsOverride := twoSlotWorkflowsConfig + fmt.Sprintf(`
+	withActionsOverride := twoWorkflowsConfig + fmt.Sprintf(`
   actions = {
     apply = {
       name = "apply"
@@ -119,7 +119,7 @@ func TestAccStack_ActionsGeneratedFromTemplate(t *testing.T) {
       }
     }
   }
-`, testWfSlotId)
+`, testWorkflowUUID)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -131,7 +131,7 @@ func TestAccStack_ActionsGeneratedFromTemplate(t *testing.T) {
 			{
 				// actions left unset — generated apply/plan/destroy, matching
 				// default_actions.json's shape.
-				Config: testAccStackConfig(wfGrpName, revision, id, twoSlotWorkflowsConfig),
+				Config: testAccStackConfig(wfGrpName, revision, id, twoWorkflowsConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.apply.name", "Create"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.apply.description", "use this action to create resources in the stack"),
@@ -141,31 +141,31 @@ func TestAccStack_ActionsGeneratedFromTemplate(t *testing.T) {
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.destroy.description", "use this action to destroy resources in the stack"),
 
 					// apply/plan chain in the template's own declaration order:
-					// testWfSlotId first (no dependencies), secondWfSlotId depends on it.
+					// testWorkflowUUID first (no dependencies), secondWorkflowUUID depends on it.
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("actions.apply.order.%s.dependencies.#", testWfSlotId), "0"),
+						fmt.Sprintf("actions.apply.order.%s.dependencies.#", testWorkflowUUID), "0"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("actions.apply.order.%s.dependencies.0.id", secondWfSlotId), testWfSlotId),
+						fmt.Sprintf("actions.apply.order.%s.dependencies.0.id", secondWorkflowUUID), testWorkflowUUID),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("actions.apply.order.%s.dependencies.0.condition.latest_status", secondWfSlotId), "COMPLETED"),
+						fmt.Sprintf("actions.apply.order.%s.dependencies.0.condition.latest_status", secondWorkflowUUID), "COMPLETED"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("actions.apply.order.%s.parameters.terraform_action.action", testWfSlotId), "apply"),
+						fmt.Sprintf("actions.apply.order.%s.parameters.terraform_action.action", testWorkflowUUID), "apply"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("actions.plan.order.%s.parameters.terraform_action.action", testWfSlotId), "plan"),
+						fmt.Sprintf("actions.plan.order.%s.parameters.terraform_action.action", testWorkflowUUID), "plan"),
 
-					// destroy chains in REVERSE: secondWfSlotId first (no dependencies),
-					// testWfSlotId depends on it.
+					// destroy chains in REVERSE: secondWorkflowUUID first (no dependencies),
+					// testWorkflowUUID depends on it.
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("actions.destroy.order.%s.dependencies.#", secondWfSlotId), "0"),
+						fmt.Sprintf("actions.destroy.order.%s.dependencies.#", secondWorkflowUUID), "0"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("actions.destroy.order.%s.dependencies.0.id", testWfSlotId), secondWfSlotId),
+						fmt.Sprintf("actions.destroy.order.%s.dependencies.0.id", testWorkflowUUID), secondWorkflowUUID),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("actions.destroy.order.%s.parameters.terraform_action.action", secondWfSlotId), "destroy"),
+						fmt.Sprintf("actions.destroy.order.%s.parameters.terraform_action.action", secondWorkflowUUID), "destroy"),
 				),
 			},
 			{
 				// Round trips with no diff.
-				Config:   testAccStackConfig(wfGrpName, revision, id, twoSlotWorkflowsConfig),
+				Config:   testAccStackConfig(wfGrpName, revision, id, twoWorkflowsConfig),
 				PlanOnly: true,
 			},
 			{
@@ -176,7 +176,7 @@ func TestAccStack_ActionsGeneratedFromTemplate(t *testing.T) {
 				// a real declaration and re-sends it verbatim (see reResolveOnRevisionChange's
 				// doc comment in model.go for why "unchanged" is the correct
 				// prediction here).
-				Config: testAccStackConfig(wfGrpName, revision, id, twoSlotWorkflowsConfig+`description = "updated after create"`),
+				Config: testAccStackConfig(wfGrpName, revision, id, twoWorkflowsConfig+`description = "updated after create"`),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "description", "updated after create"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.apply.name", "Create"),
@@ -269,7 +269,7 @@ func TestAccStack_ActionsRoundTrip(t *testing.T) {
       }
     }
   }
-`, testWfSlotId)
+`, testWorkflowUUID)
 
 	withoutDestroy := fmt.Sprintf(`
   actions = {
@@ -286,7 +286,7 @@ func TestAccStack_ActionsRoundTrip(t *testing.T) {
       }
     }
   }
-`, testWfSlotId)
+`, testWorkflowUUID)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -301,14 +301,14 @@ func TestAccStack_ActionsRoundTrip(t *testing.T) {
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.apply.name", "apply"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.apply.description", "Custom apply action"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("actions.apply.order.%s.parameters.terraform_action.action", testWfSlotId), "apply"),
+						fmt.Sprintf("actions.apply.order.%s.parameters.terraform_action.action", testWorkflowUUID), "apply"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("actions.apply.order.%s.parameters.environment_variables.0.config.var_name", testWfSlotId), "ACTION_VAR"),
+						fmt.Sprintf("actions.apply.order.%s.parameters.environment_variables.0.config.var_name", testWorkflowUUID), "ACTION_VAR"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.destroy.name", "destroy"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("actions.destroy.order.%s.dependencies.0.id", testWfSlotId), testWfSlotId),
+						fmt.Sprintf("actions.destroy.order.%s.dependencies.0.id", testWorkflowUUID), testWorkflowUUID),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("actions.destroy.order.%s.dependencies.0.condition.latest_status", testWfSlotId), "COMPLETED"),
+						fmt.Sprintf("actions.destroy.order.%s.dependencies.0.condition.latest_status", testWorkflowUUID), "COMPLETED"),
 					// The template's own "plan" action is NOT inherited — actions is
 					// declared, so it wholesale replaces the template's value.
 					resource.TestCheckNoResourceAttr("stackguardian_stack.test", "actions.plan"),
