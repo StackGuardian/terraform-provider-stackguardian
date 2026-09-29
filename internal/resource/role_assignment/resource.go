@@ -98,8 +98,7 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 	reqResp, err := r.client.AccessManagement.CreateUser(ctx, r.org_name, payload)
 	if err != nil {
 		if apiErr, ok := err.(*core.APIError); ok {
-			// Check if resource already exists
-			if apiErr.StatusCode == 400 {
+			if apiErr.StatusCode == 400 || apiErr.StatusCode == 409 {
 				payload, paylodDiags := plan.ToGetAPIModel(ctx)
 				resp.Diagnostics.Append(paylodDiags...)
 				if resp.Diagnostics.HasError() {
