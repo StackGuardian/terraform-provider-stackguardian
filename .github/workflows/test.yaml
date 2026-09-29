@@ -11,9 +11,6 @@ name: "Terraform Provider on production API"  # layer 3: acceptance tests
 # bounding the behavioural range without the 12× cost of testing every minor.
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - "main"

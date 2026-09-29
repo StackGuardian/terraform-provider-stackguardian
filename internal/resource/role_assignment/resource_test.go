@@ -121,6 +121,7 @@ func TestAccRoleAssignment(t *testing.T) {
 	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupName) })
 	t.Cleanup(func() { deleteRoleFixture(roleName) })
 	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
+	deleteRoleAssignmentFixture(userId)
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
@@ -150,6 +151,7 @@ func TestAccRoleAssignmentRecreateOnExternalDelete(t *testing.T) {
 	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupName) })
 	t.Cleanup(func() { deleteRoleFixture(roleName) })
 	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
+	deleteRoleAssignmentFixture(userId)
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
@@ -194,6 +196,8 @@ func TestAccRoleAssignmentRecreateOnChangeInUserId(t *testing.T) {
 	t.Cleanup(func() { deleteRoleFixture(roleName) })
 	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
 	t.Cleanup(func() { deleteRoleAssignmentFixture(newUserId) })
+	deleteRoleAssignmentFixture(userId)
+	deleteRoleAssignmentFixture(newUserId)
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
@@ -226,6 +230,7 @@ func TestSendEmail(t *testing.T) {
 	t.Cleanup(func() { deleteWorkflowGroupFixture(workflowGroupName) })
 	t.Cleanup(func() { deleteRoleFixture(roleName) })
 	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
+	deleteRoleAssignmentFixture(userId)
 
 	testResource := `resource "stackguardian_workflow_group" "%s" {
   resource_name = "%s"
@@ -290,6 +295,7 @@ func TestRoleAssignmentGroupAlias(t *testing.T) {
 	newAlias := "Group Developers Updated"
 
 	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
+	deleteRoleAssignmentFixture(userId)
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
@@ -325,6 +331,7 @@ func TestRoleAssignmentMultipleRoles(t *testing.T) {
 	roleAssignmentName := acctest.ResourceName("example-role-assignment6")
 
 	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
+	deleteRoleAssignmentFixture(userId)
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
@@ -361,6 +368,7 @@ func TestRoleAssignmentRoleToRoles(t *testing.T) {
 	roleAssignmentName := acctest.ResourceName("example-role-assignment7")
 
 	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
+	deleteRoleAssignmentFixture(userId)
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
@@ -397,6 +405,7 @@ func TestRoleAssignmentRolesToRole(t *testing.T) {
 	roleAssignmentName := acctest.ResourceName("example-role-assignment8")
 
 	t.Cleanup(func() { deleteRoleAssignmentFixture(userId) })
+	deleteRoleAssignmentFixture(userId)
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctest.TestAccPreCheck(t) },
