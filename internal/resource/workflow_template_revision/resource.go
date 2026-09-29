@@ -59,9 +59,19 @@ func (r *workflowTemplateRevisionResource) Configure(_ context.Context, req reso
 	r.org_name = provider.OrgName
 }
 
-// ImportState imports a workflow template revision using its ID.
+// ImportState imports a workflow template revision using its ID, "<template_id>:<revision>".
+// template_id is set from the ID as well: Read carries it over from state rather than from
+// the API response, so without it an imported revision would have a null template_id and the
+// next plan would fail ModifyPlan's "template_id cannot be changed" check.
 func (r *workflowTemplateRevisionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	templateID, err := templateIDFromRevisionID(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid import ID", err.Error())
+		return
+	}
+
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("template_id"), templateID)...)
 }
 
 // ValidateConfig enforces:

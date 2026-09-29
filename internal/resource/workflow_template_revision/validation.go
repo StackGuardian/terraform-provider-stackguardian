@@ -2,6 +2,7 @@ package workflowtemplaterevision
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -48,4 +49,14 @@ func wfStepsConfigNotAllowedForTerraformDiagnostics(sourceConfigKind string, has
 	}
 
 	return diags
+}
+
+// templateIDFromRevisionID returns the template_id part of a revision ID of the form
+// "<template_id>:<revision>", splitting on the last ":". It errors when either part is empty.
+func templateIDFromRevisionID(revisionID string) (string, error) {
+	i := strings.LastIndex(revisionID, ":")
+	if i <= 0 || i == len(revisionID)-1 {
+		return "", fmt.Errorf("expected an import ID of the form <template_id>:<revision>, e.g. my-template:1, got %q", revisionID)
+	}
+	return revisionID[:i], nil
 }

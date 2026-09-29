@@ -1036,3 +1036,71 @@ func testAccWfTemplateRevisionLifecycleConfig(templateName, alias, isPublic stri
 		}
 		`, templateName, alias, isPublic, deprecationBlock)
 }
+
+// TestAccWorkflowTemplateRevision_Import creates a revision with a representative set of
+// attributes, then imports it by id ("<template_id>:<revision>") and verifies every
+// attribute in the imported state matches the state from the create step. Import only sets
+// id (ImportState); Read fills in everything else, including template_id.
+func TestAccWorkflowTemplateRevision_Import(t *testing.T) {
+	templateID := acctest.ResourceName("tf-provider-wftr-import")
+
+	registerWorkflowTemplateCleanup(t, templateID, 1)
+
+	err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	config := testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, `
+	  alias                        = "revision-import"
+	  is_public                    = "0"
+	  description                  = "Imported revision"
+	  notes                        = "Imported revision notes"
+	  tags                         = ["test", "import"]
+	  approvers                    = ["approver@example.com"]
+	  number_of_approvals_required = 1
+
+	  context_tags = {
+	    env = "import"
+	  }
+
+	  environment_variables = [
+	    {
+	      kind = "PLAIN_TEXT"
+	      config = {
+	        var_name   = "IMPORT_VAR"
+	        text_value = "import-value"
+	      }
+	    }
+	  ]
+
+	  terraform_config = {
+	    terraform_version           = "1.5.0"
+	    run_pre_init_hooks_on_drift = true
+	    pre_init_hooks              = ["echo pre-init"]
+	  }
+	`)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "id", templateID+":1"),
+			},
+			{
+				ResourceName:      "stackguardian_workflow_template_revision.test",
+				ImportState:       true,
+				ImportStateId:     templateID + ":1",
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
