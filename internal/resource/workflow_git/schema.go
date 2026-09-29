@@ -524,6 +524,7 @@ func environmentVariable() schema.NestedAttributeObject {
 					"text_value": schema.StringAttribute{
 						MarkdownDescription: constants.EnvVarConfigTextValue,
 						Optional:            true,
+						Sensitive:           true,
 						Validators:          nonEmptyString,
 					},
 				},
@@ -586,6 +587,7 @@ func miniStepsWebhook() schema.NestedAttributeObject {
 			"webhook_secret": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWebhookSecret,
 				Optional:            true,
+				Sensitive:           true,
 				Validators:          nonEmptyString,
 			},
 		},

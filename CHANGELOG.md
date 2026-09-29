@@ -66,6 +66,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix `make test` failing in CI with `401: Unauthorized` — acceptance test fixtures made API calls before the `TF_ACC` check; added `SkipUnlessAcceptance(t)` guard to 54 `TestAcc*` functions
 - Fix `make docs-validate-examples` failing in `test.yaml` CI with `terraform: command not found` — Terraform CLI is now installed before the docs check step
 
+### Security
+
+- **CRITICAL:** Stop logging the full API key in debug output (`provider.go`); the key is now redacted to `***redacted***`
+- **CRITICAL:** Mark all connector credential fields as `Sensitive: true` in both the `stackguardian_connector` resource and data source schemas — `github_app_webhook_secret`, `github_app_client_secret`, `github_app_pem_file_content`, `gitlab_creds`, `azure_creds`, `bitbucket_creds`, `aws_access_key_id`, `aws_secret_access_key`, `arm_client_secret`, `gcp_config_file_content` were previously written in plaintext to plan output and state
+- **HIGH:** Mark `runner_group_token` data source output as `Sensitive: true` — the registration token was previously exposed in plaintext in plan output and state
+- **HIGH:** Mark `webhook_secret` as `Sensitive: true` across all resources and data sources that use it (`workflow_git`, `workflow_from_template`, `stack_template_revision`, `workflow_template_revision` and their data sources)
+- **HIGH:** Mark `text_value` env var field as `Sensitive: true` across all resources and data sources — the field description itself warns that values are visible in configuration and state
+- **HIGH:** Mark `azure_blob_storage_access_key` as `Sensitive: true` in `stackguardian_runner_group` resource and data source
+- **MEDIUM:** Add 30-second HTTP client timeout to `runner_group_token` data source API call, replacing `http.DefaultClient` which had no timeout
+- **MEDIUM:** Replace `context.TODO()` with the request context (`ctx`) in `workflow_git` and `runner_group` resource `Create` operations so Ctrl+C can cancel in-flight API calls
+- **MEDIUM:** URL-encode `orgName` and `runnerGroupID` in the `runner_group_token` data source HTTP request to prevent URL path injection
+- **MEDIUM:** Stop dumping the raw HTTP response body in error messages from the `runner_group_token` data source; only the status code is now included, and response body reads are capped at 1 MB
+- **LOW:** Mark `docker_registry_username` as `Sensitive: true` across `workflow_step_template`, `runner_group`, and their data sources
+- **LOW:** Fix copy-paste error in `runner_group_token` data source configure error message (`"*hashicups.Client"` → `"*customTypes.ProviderInfo"`)
+- **LOW:** Fix incorrect error summary `"Missing Organization Name"` → `"Missing API Key"` and wrong env var name in the provider's missing API key error
+
 
 ## [0.1.0] - 2024-03-14
 

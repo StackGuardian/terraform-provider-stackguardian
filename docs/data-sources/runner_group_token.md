@@ -41,5 +41,5 @@ output "runner_registration_token" {
 
 ### Read-Only
 
-- `runner_group_token` (String) Runner Group token
+- `runner_group_token` (String, Sensitive) Runner Group token
 

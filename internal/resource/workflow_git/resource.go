@@ -80,7 +80,7 @@ func (r *workflowGitResource) Create(ctx context.Context, req resource.CreateReq
 	}
 	payload.VcsConfig.IacVcsConfig.UseMarketplaceTemplate = expanders.BoolPtr(false)
 
-	createResp, err := r.client.Workflows.CreateWorkflow(context.TODO(), r.org_name, plan.WorkflowGroupId.ValueString(), payload)
+	createResp, err := r.client.Workflows.CreateWorkflow(ctx, r.org_name, plan.WorkflowGroupId.ValueString(), payload)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating workflow_git", "Error in creating workflow_git API call: "+err.Error())
 		return
