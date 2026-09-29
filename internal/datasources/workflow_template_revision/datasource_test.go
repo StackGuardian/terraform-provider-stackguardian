@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand/v2"
 	"net/http"
 	"testing"
 	"time"
@@ -166,8 +165,9 @@ func setupStepTemplate(t *testing.T, name string) string {
 // any revision carrying a populated deployment_platform_config. The TERRAFORM-source path
 // (populated terraform_config) is covered by _Terraform below.
 func TestAccWorkflowTemplateRevisionDataSource_Custom(t *testing.T) {
-	stepTemplateID := setupStepTemplate(t, "tf-ds-wtr-step")
-	revisionID := setupPopulatedRevision(t, "tf-ds-wtr-tpl", stepTemplateID)
+	acctest.SkipUnlessAcceptance(t)
+	stepTemplateID := setupStepTemplate(t, acctest.ResourceName("tf-ds-wtr-step"))
+	revisionID := setupPopulatedRevision(t, acctest.ResourceName("tf-ds-wtr-tpl"), stepTemplateID)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -292,7 +292,8 @@ func setupTerraformRevision(t *testing.T, name string) string {
 // by the data source Read so it feeds workflow_from_template without a perpetual diff — this
 // assertion is the guard for that normalization.
 func TestAccWorkflowTemplateRevisionDataSource_Terraform(t *testing.T) {
-	revisionID := setupTerraformRevision(t, fmt.Sprintf("tf-ds-wtr-tftpl-%d", rand.IntN(101)+100))
+	acctest.SkipUnlessAcceptance(t)
+	revisionID := setupTerraformRevision(t, acctest.ResourceName("tf-ds-wtr-tftpl"))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },

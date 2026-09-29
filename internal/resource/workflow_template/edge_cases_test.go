@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"regexp"
 	"testing"
 
@@ -375,9 +374,7 @@ func TestAccWorkflowTemplate_EmptyStringListsRoundTrip(t *testing.T) {
 //   - create with SharedOrgsList = []: the SDK sends [] and GET returns it;
 //   - update with Tags = [] and SharedOrgsList = []: core stores and returns [] for both.
 func TestAccWorkflowTemplate_CoreEmptyStringListBehavior(t *testing.T) {
-	if os.Getenv("TF_ACC") == "" {
-		t.Skip("acceptance test: set TF_ACC=1 to run")
-	}
+	acctest.SkipUnlessAcceptance(t)
 	acctest.TestAccPreCheck(t)
 
 	ctx := context.Background()

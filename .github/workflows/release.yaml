@@ -11,6 +11,11 @@ permissions:
 
 jobs:
 
+  provider-release_compat-test:
+    name: "Check Terraform compatibility before the Release"
+    uses: ./.github/workflows/compat.yaml
+    secrets: inherit
+
   provider-release_pre-test:
     name: "Test Provider code before the Release"
     uses: ./.github/workflows/test.yaml
@@ -18,7 +23,9 @@ jobs:
 
   provider-release_build:
     name: "Build Release of the Provider"
-    needs: provider-release_pre-test
+    needs:
+      - provider-release_compat-test
+      - provider-release_pre-test
     uses: ./.github/workflows/community.yml
     secrets:
       gpg-private-key: '${{ secrets.GPG_PRIVATE_KEY }}'

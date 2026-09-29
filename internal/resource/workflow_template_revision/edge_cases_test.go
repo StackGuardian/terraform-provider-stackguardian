@@ -21,6 +21,7 @@ import (
 // false or erroring. ref also changes between the two steps, so this
 // exercises a genuine Update, not a no-op plan.
 func TestAccWorkflowTemplateRevision_GitCoreAutoCrlfPersistsAfterRemoval(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := acctest.ResourceName("tf-provider-wftr-crlf-persist")
 	alias := "revision-crlf-persist"
 
@@ -93,6 +94,7 @@ func TestAccWorkflowTemplateRevision_GitCoreAutoCrlfPersistsAfterRemoval(t *test
 // original server default or becoming unknown/erroring. ref also changes on
 // the final step so a real diff forces Update() to actually run.
 func TestAccWorkflowTemplateRevision_GitCoreAutoCrlfAddedThenRemoved(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := acctest.ResourceName("tf-provider-wftr-crlf-addrm")
 	alias := "revision-crlf-addrm"
 
@@ -174,6 +176,7 @@ func TestAccWorkflowTemplateRevision_GitCoreAutoCrlfAddedThenRemoved(t *testing.
 // the shared workflowtemplate.ConvertRuntimeSourceToUpdateAPI (model.go),
 // which sets Auth on the update path.
 func TestAccWorkflowTemplateRevision_RuntimeSourceAuthUpdates(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := acctest.ResourceName("tf-provider-wftr-auth-upd")
 	alias := "revision-auth-upd"
 
@@ -230,6 +233,7 @@ func TestAccWorkflowTemplateRevision_RuntimeSourceAuthUpdates(t *testing.T) {
 // ToAPIModel (via ConvertRuntimeSourceToUpdateAPI, model.go), so
 // IsPrivate/GitCoreAutoCRLF/Ref are all guarded against null/unknown.
 func TestAccWorkflowTemplateRevision_IsPrivatePersistsAfterRemoval(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := acctest.ResourceName("tf-provider-wftr-ispriv-persist")
 	alias := "revision-ispriv-persist"
 
@@ -299,6 +303,7 @@ func TestAccWorkflowTemplateRevision_IsPrivatePersistsAfterRemoval(t *testing.T)
 // (the only one TestAccWorkflowTemplateRevision_WithTerraformConfig ever
 // changes) actually apply on a genuine update, not just at create.
 func TestAccWorkflowTemplateRevision_TerraformConfigFieldsUpdate(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := acctest.ResourceName("tf-provider-wftr-tfconfig-upd")
 	alias := "revision-tfconfig-upd"
 
@@ -362,6 +367,7 @@ func TestAccWorkflowTemplateRevision_TerraformConfigFieldsUpdate(t *testing.T) {
 // top-level Optional+Computed with UseStateForUnknown(), but no test ever
 // changes its value after create.
 func TestAccWorkflowTemplateRevision_DeploymentPlatformConfigUpdate(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := acctest.ResourceName("tf-provider-wftr-dpc-upd")
 	alias := "revision-dpc-upd"
 
@@ -416,6 +422,7 @@ func TestAccWorkflowTemplateRevision_DeploymentPlatformConfigUpdate(t *testing.T
 // REJECTED (published-revision restriction) — this is the first test to
 // confirm they update successfully on a non-published revision.
 func TestAccWorkflowTemplateRevision_UserJobCpuMemoryUpdate(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := acctest.ResourceName("tf-provider-wftr-cpumem-upd")
 	alias := "revision-cpumem-upd"
 
@@ -466,6 +473,7 @@ func TestAccWorkflowTemplateRevision_UserJobCpuMemoryUpdate(t *testing.T) {
 // it disallows wf_steps_config — this config doesn't set any, so the two
 // kinds are otherwise unconstrained.
 func TestAccWorkflowTemplateRevision_SourceConfigKindRejectedOnChange(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := acctest.ResourceName("tf-provider-wftr-kind-rejected")
 	alias := "revision-kind-rejected"
 
@@ -506,6 +514,7 @@ func TestAccWorkflowTemplateRevision_SourceConfigKindRejectedOnChange(t *testing
 // revision under the new template. The second template only exists as the
 // target of the rejected change, so it never gets a revision.
 func TestAccWorkflowTemplateRevision_TemplateIdRejectedOnChange(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := acctest.ResourceName("tf-provider-wftr-tid-rejected-a")
 	otherTemplateID := acctest.ResourceName("tf-provider-wftr-tid-rejected-b")
 	alias := "revision-template-id-rejected"
@@ -548,6 +557,7 @@ func TestAccWorkflowTemplateRevision_TemplateIdRejectedOnChange(t *testing.T) {
 // applies on a genuine update — TestAccWorkflowTemplateRevision_WithConfig
 // only ever sets it once at create.
 func TestAccWorkflowTemplateRevision_NumberOfApprovalsRequiredUpdate(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := acctest.ResourceName("tf-provider-wftr-approvals-upd")
 	alias := "revision-approvals-upd"
 
@@ -594,6 +604,7 @@ func TestAccWorkflowTemplateRevision_NumberOfApprovalsRequiredUpdate(t *testing.
 // of the revision's publish status, unlike the published-revision
 // restriction covered in published_test.go.
 func TestAccWorkflowTemplateRevision_RepoRejectedOnChange(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := acctest.ResourceName("tf-provider-wftr-repo-rejected")
 	alias := "revision-repo-rejected"
 

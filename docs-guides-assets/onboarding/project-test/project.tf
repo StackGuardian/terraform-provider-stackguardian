@@ -1,6 +1,8 @@
 // project-test
 
 terraform {
+  required_version = ">= 1.5.7"
+
   required_providers {
     stackguardian = {
       source = "terraform/provider/stackguardian"
@@ -365,36 +367,36 @@ resource "stackguardian_workflow" "TPS-OBT-DevOps-T000000" {
   wfgrp = stackguardian_workflow_group.TPS-OBT-DevOps-T000000.id
 
   data = jsonencode({
-    "ResourceName": "TPS-OBT-DevOps-T000000",
-    "Description": "Example of StackGuardian Workflow: Deploy a website from AWS S3",
-    "Tags": ["tf-provider-test", "onboarding"],
-    "EnvironmentVariables": [],
-    "DeploymentPlatformConfig": [{
-      "kind": "AWS_RBAC",
-      "config": {
-        "integrationId": "/integrations/aws"
+    "ResourceName" : "TPS-OBT-DevOps-T000000",
+    "Description" : "Example of StackGuardian Workflow: Deploy a website from AWS S3",
+    "Tags" : ["tf-provider-test", "onboarding"],
+    "EnvironmentVariables" : [],
+    "DeploymentPlatformConfig" : [{
+      "kind" : "AWS_RBAC",
+      "config" : {
+        "integrationId" : "/integrations/aws"
       }
     }],
-    "VCSConfig": {
-      "iacVCSConfig": {
-        "useMarketplaceTemplate": true,
-        "iacTemplate": "/stackguardian/aws-s3-demo-website",
-        "iacTemplateId": "/stackguardian/aws-s3-demo-website:4"
+    "VCSConfig" : {
+      "iacVCSConfig" : {
+        "useMarketplaceTemplate" : true,
+        "iacTemplate" : "/stackguardian/aws-s3-demo-website",
+        "iacTemplateId" : "/stackguardian/aws-s3-demo-website:4"
       },
-      "iacInputData": {
-        "schemaType": "FORM_JSONSCHEMA",
-        "data": {
-          "shop_name": "StackGuardian",
-          "bucket_region": "eu-central-1"
+      "iacInputData" : {
+        "schemaType" : "FORM_JSONSCHEMA",
+        "data" : {
+          "shop_name" : "StackGuardian",
+          "bucket_region" : "eu-central-1"
         }
       }
     },
-    "Approvers": [],
-    "TerraformConfig": {
-      "managedTerraformState": true,
-      "terraformVersion": "1.4.6"
+    "Approvers" : [],
+    "TerraformConfig" : {
+      "managedTerraformState" : true,
+      "terraformVersion" : "1.4.6"
     },
-    "WfType": "TERRAFORM",
-    "UserSchedules": []
+    "WfType" : "TERRAFORM",
+    "UserSchedules" : []
   })
 }

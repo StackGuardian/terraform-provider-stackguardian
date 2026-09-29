@@ -1,4 +1,5 @@
 TEST?=$$(go list ./... | grep -v 'vendor')
+TEST_ACC=$$(grep -rl 'func TestAcc' --include='*_test.go' . | xargs dirname | sort -u)
 HOSTNAME=terraform
 NAMESPACE=provider
 NAME=stackguardian
@@ -32,8 +33,20 @@ test:
 	go test -i $(TEST) || exit 1
 	echo $(TEST) | xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
 
+# -p=8 runs up to 8 packages concurrently so the two heaviest packages
+# (workflow_template_revision ~327s and workflow_from_template ~247s)
+# overlap instead of landing in separate batches. Safe now that every test
+# uses acctest.ResourceName for unique identifiers.
+# -parallel=1 keeps t.Parallel() tests sequential within each package (none
+# of the TestAcc functions use t.Parallel() today, but the flag is a guard).
 test-acc:
-	TF_ACC=1 go test -parallel=1 $(TEST) -v $(TESTARGS) -timeout=15m
+	TF_ACC=1 go test -p=8 -parallel=1 $(TEST_ACC) -v $(TESTARGS) -timeout=15m
+
+# Terraform CLI compatibility gate. Needs no API credentials: it only makes the
+# CLI load the provider and decode its schema, then validates docs-examples/.
+# Override the CLI under test with TERRAFORM_BIN=/path/to/terraform.
+tf-compat-check:
+	bash scripts/tf-compat-check.sh
 
 # Reports resources an earlier acceptance run left behind. Read-only: it lists
 # what carries the test prefix and deletes nothing.

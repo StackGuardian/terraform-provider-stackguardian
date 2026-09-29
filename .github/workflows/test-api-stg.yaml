@@ -12,5 +12,5 @@ jobs:
     uses: ./.github/workflows/test-api.yaml
     secrets: inherit
     with:
-      gitref: devel
+      gitref: main
       testenv: STG

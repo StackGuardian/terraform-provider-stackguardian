@@ -70,6 +70,7 @@ func deprecationConfigBlock(deprecated bool) string {
 // that apply fails, not what it says. Tighten each case's pattern with acctest.ErrorPattern
 // once the real message is known from a live run.
 func TestAccWorkflowTemplateRevision_DisallowedFieldUpdatesWhilePublished(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	const (
 		baseCPU    = 500
 		baseMemory = 1024
@@ -260,6 +261,7 @@ func TestAccWorkflowTemplateRevision_DisallowedFieldUpdatesWhilePublished(t *tes
 // narrower, now-removed tests used to cover individually; they're just two rows of this
 // table now.
 func TestAccWorkflowTemplateRevision_UpdateAllowedFieldsWithOtherAttributesUnchangedWhilePublished(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	const (
 		baseCPU    = 500
 		baseMemory = 1024
@@ -426,6 +428,7 @@ func TestAccWorkflowTemplateRevision_UpdateAllowedFieldsWithOtherAttributesUncha
 // is_public = "1" can't be unpublished by updating is_public to "0": is_public isn't one of
 // the fields a published revision allows to change (see the file-level doc comment).
 func TestAccWorkflowTemplateRevision_UnpublishRejected(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := acctest.ResourceName("tf-provider-wftr-unpublish")
 	alias := "revision-unpublish"
 
