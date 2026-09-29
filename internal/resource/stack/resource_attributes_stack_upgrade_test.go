@@ -84,13 +84,15 @@ func TestAccStack_TemplateGroupIdReResolution(t *testing.T) {
 // --- actions ---
 
 // TestAccStack_ActionsRevisionRemovedWorkflow — REVISION SWITCH test.
-// Purpose: template_group_id moves to a revision that dropped a workflow slot the user's own
+// Purpose: template_group_id moves to a revision that dropped a workflow the user's own
 // actions still references. That switch must be rejected at plan time
 // (validateActionsAgainstRevision), rather than sending a dangling reference the API would
-// reject with a less actionable error.
+// reject with a less actionable error — whether the removed workflow appears as an order key
+// or only as another entry's dependency. Once actions is edited to no longer mention the
+// removed workflow, the same switch must succeed.
 //
-// Setup: revision1 (setupStackTemplateChainNoActions) wires testWfSlotId and secondWfSlotId;
-// revision2 (setupSecondStackTemplateRevision) only re-declares testWfSlotId, so secondWfSlotId
+// Setup: revision1 (setupStackTemplateChainNoActions) declares testWorkflowUUID and secondWorkflowUUID;
+// revision2 (setupSecondStackTemplateRevision) only re-declares testWorkflowUUID, so secondWorkflowUUID
 // is the removed workflow.
 func TestAccStack_ActionsRevisionRemovedWorkflow(t *testing.T) {
 	wfGrpName := "tf-provider-stack-actrmwf-wfgrp"
@@ -109,8 +111,8 @@ func TestAccStack_ActionsRevisionRemovedWorkflow(t *testing.T) {
 	revision2 := setupSecondStackTemplateRevision(t, stackTemplateName, workflowTemplateID, "revision two", nil)
 	t.Cleanup(func() { deleteStackFixture(wfGrpName, id) })
 
-	// revision1 wires two slots (testWfSlotId, secondWfSlotId); revision2 only
-	// re-declares testWfSlotId — workflows_config must match whichever
+	// revision1 declares two workflows (testWorkflowUUID, secondWorkflowUUID); revision2 only
+	// re-declares testWorkflowUUID — workflows_config must match whichever
 	// revision is active in that step (validateWorkflowsConfigMatchesRevision).
 	revision1WorkflowsConfig := fmt.Sprintf(`
   workflows_config = {
@@ -119,19 +121,80 @@ func TestAccStack_ActionsRevisionRemovedWorkflow(t *testing.T) {
       { id = %q }
     ]
   }
-`, testWfSlotId, secondWfSlotId)
+`, testWorkflowUUID, secondWorkflowUUID)
 	revision2WorkflowsConfig := fmt.Sprintf(`
   workflows_config = {
     workflows = [
       { id = %q }
     ]
   }
-`, testWfSlotId)
+`, testWorkflowUUID)
 
-	referencesSecondSlot := fmt.Sprintf(`
+	// Both workflows are part of the apply action: testWorkflowUUID runs first,
+	// secondWorkflowUUID depends on it.
+	actionsWithBothWorkflows := fmt.Sprintf(`
   actions = {
-    notify = {
-      name = "notify"
+    apply = {
+      name = "apply"
+      order = {
+        %[1]q = {
+          parameters = {
+            terraform_action = {
+              action = "apply"
+            }
+          }
+        }
+        %[2]q = {
+          parameters = {
+            terraform_action = {
+              action = "apply"
+            }
+          }
+          dependencies = [
+            {
+              id = %[1]q
+              condition = {
+                latest_status = "COMPLETED"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+`, testWorkflowUUID, secondWorkflowUUID)
+
+	// secondWorkflowUUID's own order entry is gone, but testWorkflowUUID still depends on it.
+	actionsWithDependencyOnRemovedWorkflow := fmt.Sprintf(`
+  actions = {
+    apply = {
+      name = "apply"
+      order = {
+        %[1]q = {
+          parameters = {
+            terraform_action = {
+              action = "apply"
+            }
+          }
+          dependencies = [
+            {
+              id = %[2]q
+              condition = {
+                latest_status = "COMPLETED"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+`, testWorkflowUUID, secondWorkflowUUID)
+
+	// Edited to no longer mention secondWorkflowUUID anywhere.
+	actionsWithoutRemovedWorkflow := fmt.Sprintf(`
+  actions = {
+    apply = {
+      name = "apply"
       order = {
         %[1]q = {
           parameters = {
@@ -143,7 +206,7 @@ func TestAccStack_ActionsRevisionRemovedWorkflow(t *testing.T) {
       }
     }
   }
-`, secondWfSlotId)
+`, testWorkflowUUID)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -153,14 +216,39 @@ func TestAccStack_ActionsRevisionRemovedWorkflow(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccStackConfig(wfGrpName, revision1, id, revision1WorkflowsConfig+referencesSecondSlot),
-				Check:  resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.notify.name", "notify"),
+				Config: testAccStackConfig(wfGrpName, revision1, id, revision1WorkflowsConfig+actionsWithBothWorkflows),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.apply.order.%", "2"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test",
+						fmt.Sprintf("actions.apply.order.%s.dependencies.0.id", secondWorkflowUUID), testWorkflowUUID),
+				),
 			},
 			{
-				// revision2 dropped secondWfSlotId — actions still references it, so
-				// the switch must be rejected.
-				Config:      testAccStackConfig(wfGrpName, revision2, id, revision2WorkflowsConfig+referencesSecondSlot),
-				ExpectError: regexp.MustCompile("actions references a removed workflow"),
+				// revision2 dropped secondWorkflowUUID, but actions still orders it — the
+				// switch must be rejected.
+				Config:      testAccStackConfig(wfGrpName, revision2, id, revision2WorkflowsConfig+actionsWithBothWorkflows),
+				ExpectError: regexp.MustCompile(`(?s)actions references a removed workflow.*\.order references\s+workflow`),
+			},
+			{
+				// secondWorkflowUUID is no longer ordered, but is still a dependency of
+				// testWorkflowUUID — still a dangling reference, still rejected.
+				Config:      testAccStackConfig(wfGrpName, revision2, id, revision2WorkflowsConfig+actionsWithDependencyOnRemovedWorkflow),
+				ExpectError: regexp.MustCompile(`(?s)actions references a removed workflow.*\.dependencies\s+references\s+workflow`),
+			},
+			{
+				// actions edited to drop every reference to secondWorkflowUUID — the
+				// switch to revision2 now goes through.
+				Config: testAccStackConfig(wfGrpName, revision2, id, revision2WorkflowsConfig+actionsWithoutRemovedWorkflow),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "template_group_id", revision2),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.#", "1"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", testWorkflowUUID),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.apply.order.%", "1"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test",
+						fmt.Sprintf("actions.apply.order.%s.parameters.terraform_action.action", testWorkflowUUID), "apply"),
+					resource.TestCheckNoResourceAttr("stackguardian_stack.test",
+						fmt.Sprintf("actions.apply.order.%s.parameters.terraform_action.action", secondWorkflowUUID)),
+				),
 			},
 		},
 	})
