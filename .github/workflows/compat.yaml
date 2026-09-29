@@ -9,9 +9,6 @@ name: "Terraform Compatibility"  # layers 1, 2 and 4 of the version-support guar
 # (.github/workflows/test.yaml).
 
 on:
-  push:
-    branches:
-      - "main"
   pull_request:
     branches:
       - "main"
