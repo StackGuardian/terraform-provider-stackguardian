@@ -25,14 +25,14 @@ import (
 
 var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
 
-// testWfSlotId is the shared workflow slot id used in the stack template
+// testWorkflowUUID is the shared workflow UUID used in the stack template
 // revision's workflows_config and Actions (see setupStackTemplateChain).
-const testWfSlotId = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
+const testWorkflowUUID = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
 
-// secondWfSlotId is a second workflow slot UUID, distinct from testWfSlotId,
-// shared package-wide by every test that needs a multi-slot stack template
-// revision (setupStackTemplateChainNoActions / setupSecondStackTemplateRevisionTwoSlots).
-const secondWfSlotId = "3f7c9e2a-5b1d-4e6f-8a2c-9d4b6e1f0a3c"
+// secondWorkflowUUID is a second workflow UUID, distinct from testWorkflowUUID,
+// shared package-wide by every test that needs a multi-workflow stack template
+// revision (setupStackTemplateChainNoActions / setupSecondStackTemplateRevisionTwoWorkflows).
+const secondWorkflowUUID = "3f7c9e2a-5b1d-4e6f-8a2c-9d4b6e1f0a3c"
 
 func getClient() *sgclient.Client {
 	return sgclient.NewClient(
@@ -293,7 +293,7 @@ func setupStackTemplateChainWithFields(t *testing.T, stackTemplateID, workflowTe
 			WorkflowsConfig: &stacktemplaterevisions.StackTemplateRevisionWorkflowsConfig{
 				Workflows: []*stacktemplaterevisions.StackTemplateRevisionWorkflow{
 					{
-						Id:           sgsdkgo.String(testWfSlotId),
+						Id:           sgsdkgo.String(testWorkflowUUID),
 						TemplateId:   &prefixedWorkflowTemplateID,
 						ResourceName: sgsdkgo.String("wf-1"),
 						VcsConfig: &sgsdkgo.VcsConfig{
@@ -313,7 +313,7 @@ func setupStackTemplateChainWithFields(t *testing.T, stackTemplateID, workflowTe
 				"apply": {
 					Name: "apply",
 					Order: map[string]*sgsdkgo.ActionOrder{
-						testWfSlotId: {
+						testWorkflowUUID: {
 							Parameters: &sgsdkgo.StackActionParameters{
 								TerraformAction: &sgsdkgo.TerraformAction{Action: &applyAction},
 							},
@@ -323,7 +323,7 @@ func setupStackTemplateChainWithFields(t *testing.T, stackTemplateID, workflowTe
 				"plan": {
 					Name: "plan",
 					Order: map[string]*sgsdkgo.ActionOrder{
-						testWfSlotId: {
+						testWorkflowUUID: {
 							Parameters: &sgsdkgo.StackActionParameters{
 								TerraformAction: &sgsdkgo.TerraformAction{Action: &planAction},
 							},
@@ -361,7 +361,7 @@ func setupStackTemplateChainWithFields(t *testing.T, stackTemplateID, workflowTe
 }
 
 // setupStackTemplateChain creates and publishes a stack template + revision
-// :1 via the SDK, with workflows_config wiring testWfSlotId to
+// :1 via the SDK, with workflows_config wiring testWorkflowUUID to
 // workflowTemplateID, and none of description/tags/contextTags set. Returns
 // the bare revision id ("<name>:1") for use as a stack's template_group_id,
 // which is stored bare in state and only gets the "/<org>/" wire prefix on
@@ -418,13 +418,13 @@ func setupStackDependencyChain(t *testing.T, wfGrpName, wfTemplateName, stackTem
 // the stack template revision instead. additionalConfig is inserted verbatim
 // into the resource body.
 //
-// workflows_config is Required and must declare exactly the workflow slots
+// workflows_config is Required and must declare exactly the workflows
 // the referenced revision defines, in order (validateWorkflowsConfigMatchesRevision).
 // Every fixture used by additionalConfig-only callers here
 // (setupStackDependencyChain/setupStackTemplateChain and
-// setupSecondStackTemplateRevision) wires exactly one slot, testWfSlotId, so
+// setupSecondStackTemplateRevision) declares exactly one workflow, testWorkflowUUID, so
 // that's injected automatically unless additionalConfig already declares its
-// own workflows_config — needed by callers against a multi-slot fixture
+// own workflows_config — needed by callers against a multi-workflow fixture
 // (setupStackTemplateChainNoActions) or a workflows_config value under test.
 func testAccStackConfig(wfGrpName, stackTemplateRevisionID, id, additionalConfig string) string {
 	if !strings.Contains(additionalConfig, "workflows_config") {
@@ -435,7 +435,7 @@ func testAccStackConfig(wfGrpName, stackTemplateRevisionID, id, additionalConfig
     ]
   }
 
-  %s`, testWfSlotId, additionalConfig)
+  %s`, testWorkflowUUID, additionalConfig)
 	}
 	return fmt.Sprintf(`
 resource "stackguardian_stack" "test" {
@@ -450,13 +450,13 @@ resource "stackguardian_stack" "test" {
 
 // setupStackTemplateChainNoActions creates and publishes a stack template +
 // revision :1 via the SDK, like setupStackTemplateChain, but wires TWO
-// workflow slots (testWfSlotId, secondWfSlotId — both pointing at the same
+// workflows (testWorkflowUUID, secondWorkflowUUID — both pointing at the same
 // workflow template) instead of one, and defines no Actions of its own at
 // all. Used by tests that need a template supplying neither apply/plan/destroy
 // NOR a dependency chain to inherit, so the only source for them is the API's
 // own create-time default (the provider no longer synthesizes one itself —
-// see expandActionsMap), and by tests that need a second workflow slot to
-// exercise workflows_config against a multi-slot revision.
+// see expandActionsMap), and by tests that need a second workflow to
+// exercise workflows_config against a multi-workflow revision.
 // Registers cleanup. Returns the bare revision id ("<name>:1").
 func setupStackTemplateChainNoActions(t *testing.T, stackTemplateID, workflowTemplateID string) string {
 	t.Helper()
@@ -489,9 +489,9 @@ func setupStackTemplateChainNoActions(t *testing.T, stackTemplateID, workflowTem
 	managedState := true
 	tfVersion := "1.5.7"
 
-	makeSlot := func(slotId, resourceName string) *stacktemplaterevisions.StackTemplateRevisionWorkflow {
+	makeWorkflow := func(workflowUUID, resourceName string) *stacktemplaterevisions.StackTemplateRevisionWorkflow {
 		return &stacktemplaterevisions.StackTemplateRevisionWorkflow{
-			Id:           sgsdkgo.String(slotId),
+			Id:           sgsdkgo.String(workflowUUID),
 			TemplateId:   &prefixedWorkflowTemplateID,
 			ResourceName: sgsdkgo.String(resourceName),
 			VcsConfig: &sgsdkgo.VcsConfig{
@@ -516,8 +516,8 @@ func setupStackTemplateChainNoActions(t *testing.T, stackTemplateID, workflowTem
 			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
 			WorkflowsConfig: &stacktemplaterevisions.StackTemplateRevisionWorkflowsConfig{
 				Workflows: []*stacktemplaterevisions.StackTemplateRevisionWorkflow{
-					makeSlot(testWfSlotId, "wf-1"),
-					makeSlot(secondWfSlotId, "wf-2"),
+					makeWorkflow(testWorkflowUUID, "wf-1"),
+					makeWorkflow(secondWorkflowUUID, "wf-2"),
 				},
 			},
 			// Deliberately no Actions — the template supplies none of its own, so
@@ -586,7 +586,7 @@ func setupSecondStackTemplateRevisionWithFields(t *testing.T, stackTemplateID, w
 			WorkflowsConfig: &stacktemplaterevisions.StackTemplateRevisionWorkflowsConfig{
 				Workflows: []*stacktemplaterevisions.StackTemplateRevisionWorkflow{
 					{
-						Id:                        sgsdkgo.String(testWfSlotId),
+						Id:                        sgsdkgo.String(testWorkflowUUID),
 						TemplateId:                &prefixedWorkflowTemplateID,
 						ResourceName:              sgsdkgo.String("wf-1"),
 						NumberOfApprovalsRequired: numberOfApprovalsRequired,
@@ -625,9 +625,9 @@ func setupSecondStackTemplateRevisionWithFields(t *testing.T, stackTemplateID, w
 
 // setupSecondStackTemplateRevision creates and publishes revision :2 of an
 // existing stack template (already created by setupStackTemplateChain), with
-// the given description and wired to the same workflow slot/template as
+// the given description and wired to the same workflow/template as
 // revision :1, and its own fixed apply/plan Actions verbatim.
-// numberOfApprovalsRequired, if non-nil, is set on that workflow slot — used
+// numberOfApprovalsRequired, if non-nil, is set on that workflow — used
 // to test workflows_config's revision-based re-resolution
 // (reResolveWorkflowsConfigOnRevisionChange), since revision :1 never sets it.
 // Registers cleanup. Returns the bare revision id ("<name>:2").
@@ -636,18 +636,18 @@ func setupSecondStackTemplateRevision(t *testing.T, stackTemplateID, workflowTem
 	return setupSecondStackTemplateRevisionWithFields(t, stackTemplateID, workflowTemplateID, description, numberOfApprovalsRequired, nil, nil, defaultSecondRevisionActions())
 }
 
-// setupSecondStackTemplateRevisionTwoSlots creates and publishes revision :2
+// setupSecondStackTemplateRevisionTwoWorkflows creates and publishes revision :2
 // of an existing stack template (already created by setupStackTemplateChain /
-// setupStackDependencyChain, whose revision :1 wires only testWfSlotId),
-// adding a second workflow slot (secondWfSlotId) alongside it — both pointing
+// setupStackDependencyChain, whose revision :1 wires only testWorkflowUUID),
+// adding a second workflow (secondWorkflowUUID) alongside it — both pointing
 // at the same workflow template. Used by
 // TestAccStack_WorkflowsConfigAddSecondWorkflowOverride to exercise
 // workflows_config growing across a genuine revision change: declaring an
-// extra slot workflows_config against a STATIC revision is no longer
+// extra workflow in workflows_config against a STATIC revision is no longer
 // possible (see validateWorkflowsConfigMatchesRevision), so growth can now
-// only come from the referenced revision itself defining more slots.
+// only come from the referenced revision itself defining more workflows.
 // Registers cleanup. Returns the bare revision id ("<name>:2").
-func setupSecondStackTemplateRevisionTwoSlots(t *testing.T, stackTemplateID, workflowTemplateID string) string {
+func setupSecondStackTemplateRevisionTwoWorkflows(t *testing.T, stackTemplateID, workflowTemplateID string) string {
 	t.Helper()
 	client := getClient()
 	revisionID := fmt.Sprintf("%s:2", stackTemplateID)
@@ -664,9 +664,9 @@ func setupSecondStackTemplateRevisionTwoSlots(t *testing.T, stackTemplateID, wor
 	managedState := true
 	tfVersion := "1.5.7"
 
-	makeSlot := func(slotId, resourceName string) *stacktemplaterevisions.StackTemplateRevisionWorkflow {
+	makeWorkflow := func(workflowUUID, resourceName string) *stacktemplaterevisions.StackTemplateRevisionWorkflow {
 		return &stacktemplaterevisions.StackTemplateRevisionWorkflow{
-			Id:           sgsdkgo.String(slotId),
+			Id:           sgsdkgo.String(workflowUUID),
 			TemplateId:   &prefixedWorkflowTemplateID,
 			ResourceName: sgsdkgo.String(resourceName),
 			VcsConfig: &sgsdkgo.VcsConfig{
@@ -691,15 +691,15 @@ func setupSecondStackTemplateRevisionTwoSlots(t *testing.T, stackTemplateID, wor
 			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
 			WorkflowsConfig: &stacktemplaterevisions.StackTemplateRevisionWorkflowsConfig{
 				Workflows: []*stacktemplaterevisions.StackTemplateRevisionWorkflow{
-					makeSlot(testWfSlotId, "wf-1"),
-					makeSlot(secondWfSlotId, "wf-2"),
+					makeWorkflow(testWorkflowUUID, "wf-1"),
+					makeWorkflow(secondWorkflowUUID, "wf-2"),
 				},
 			},
 			Actions: defaultSecondRevisionActions(),
 		},
 	)
 	if err != nil && !is409(err) {
-		t.Fatalf("setupSecondStackTemplateRevisionTwoSlots: create revision for %q: %s", stackTemplateID, err)
+		t.Fatalf("setupSecondStackTemplateRevisionTwoWorkflows: create revision for %q: %s", stackTemplateID, err)
 	}
 
 	_, err = client.StackTemplateRevisions.UpdateStackTemplateRevision(
@@ -709,7 +709,7 @@ func setupSecondStackTemplateRevisionTwoSlots(t *testing.T, stackTemplateID, wor
 		},
 	)
 	if err != nil {
-		t.Fatalf("setupSecondStackTemplateRevisionTwoSlots: publish revision %q: %s", revisionID, err)
+		t.Fatalf("setupSecondStackTemplateRevisionTwoWorkflows: publish revision %q: %s", revisionID, err)
 	}
 
 	return revisionID
@@ -717,8 +717,8 @@ func setupSecondStackTemplateRevisionTwoSlots(t *testing.T, stackTemplateID, wor
 
 // setupSecondStackTemplateRevisionRemoveAndAddWorkflow creates and publishes revision :2 of
 // an existing stack template (already created by setupStackTemplateChain /
-// setupStackDependencyChain, whose revision :1 declares only the testWfSlotId workflow
-// entry): it REMOVES that entry and ADDS a different one (secondWfSlotId) in its place,
+// setupStackDependencyChain, whose revision :1 declares only the testWorkflowUUID workflow
+// entry): it REMOVES that entry and ADDS a different one (secondWorkflowUUID) in its place,
 // instead of growing or shrinking the list — workflows_config.workflows[] stays the same
 // length (one), but its membership changes. Used by
 // TestAccStack_WorkflowsConfigRemoveAndAddWorkflow to verify a revision switch that drops a
@@ -755,7 +755,7 @@ func setupSecondStackTemplateRevisionRemoveAndAddWorkflow(t *testing.T, stackTem
 			WorkflowsConfig: &stacktemplaterevisions.StackTemplateRevisionWorkflowsConfig{
 				Workflows: []*stacktemplaterevisions.StackTemplateRevisionWorkflow{
 					{
-						Id:           sgsdkgo.String(secondWfSlotId),
+						Id:           sgsdkgo.String(secondWorkflowUUID),
 						TemplateId:   &prefixedWorkflowTemplateID,
 						ResourceName: sgsdkgo.String("wf-2"),
 						VcsConfig: &sgsdkgo.VcsConfig{
@@ -775,13 +775,13 @@ func setupSecondStackTemplateRevisionRemoveAndAddWorkflow(t *testing.T, stackTem
 				"apply": {
 					Name: "apply",
 					Order: map[string]*sgsdkgo.ActionOrder{
-						secondWfSlotId: {Parameters: &sgsdkgo.StackActionParameters{TerraformAction: &sgsdkgo.TerraformAction{Action: &applyAction}}},
+						secondWorkflowUUID: {Parameters: &sgsdkgo.StackActionParameters{TerraformAction: &sgsdkgo.TerraformAction{Action: &applyAction}}},
 					},
 				},
 				"plan": {
 					Name: "plan",
 					Order: map[string]*sgsdkgo.ActionOrder{
-						secondWfSlotId: {Parameters: &sgsdkgo.StackActionParameters{TerraformAction: &sgsdkgo.TerraformAction{Action: &planAction}}},
+						secondWorkflowUUID: {Parameters: &sgsdkgo.StackActionParameters{TerraformAction: &sgsdkgo.TerraformAction{Action: &planAction}}},
 					},
 				},
 			},
@@ -816,13 +816,13 @@ func defaultSecondRevisionActions() map[string]*sgsdkgo.Actions {
 		"apply": {
 			Name: "apply",
 			Order: map[string]*sgsdkgo.ActionOrder{
-				testWfSlotId: {Parameters: &sgsdkgo.StackActionParameters{TerraformAction: &sgsdkgo.TerraformAction{Action: &applyAction}}},
+				testWorkflowUUID: {Parameters: &sgsdkgo.StackActionParameters{TerraformAction: &sgsdkgo.TerraformAction{Action: &applyAction}}},
 			},
 		},
 		"plan": {
 			Name: "plan",
 			Order: map[string]*sgsdkgo.ActionOrder{
-				testWfSlotId: {Parameters: &sgsdkgo.StackActionParameters{TerraformAction: &sgsdkgo.TerraformAction{Action: &planAction}}},
+				testWorkflowUUID: {Parameters: &sgsdkgo.StackActionParameters{TerraformAction: &sgsdkgo.TerraformAction{Action: &planAction}}},
 			},
 		},
 	}
@@ -1054,9 +1054,9 @@ func TestAccStack_DeleteAlreadyGone(t *testing.T) {
 //     iac_input_data on workflows_config.workflows[] — TemplatesIacInputData
 //     — was removed: it doesn't apply to stacks.)
 // - Multiple workflows in workflows_config.workflows[]: needs a second
-//     workflow slot registered on the stack template revision fixture (a
-//     second workflow template + revision, or a second slot on the same
-//     one) — setupStackTemplateChain only wires one slot currently.
+//     workflow registered on the stack template revision fixture (a
+//     second workflow template + revision, or a second workflow on the same
+//     one) — setupStackTemplateChain only declares one workflow currently.
 // - updateWorkflowsFromConfig query param: not observable through
 //     resource.Test's black-box testing (would need an HTTP-level
 //     interceptor to inspect the actual request query string).

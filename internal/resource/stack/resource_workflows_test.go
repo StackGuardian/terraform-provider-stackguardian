@@ -39,7 +39,7 @@ func TestAccStack_WorkflowsConfigMinimalEntry(t *testing.T) {
       { id = %q }
     ]
   }
-`, testWfSlotId)
+`, testWorkflowUUID)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -51,7 +51,7 @@ func TestAccStack_WorkflowsConfigMinimalEntry(t *testing.T) {
 			{
 				Config: testAccStackConfig(wfGrpName, revision, id, config),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", testWfSlotId),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", testWorkflowUUID),
 					// None of these were declared — must resolve to real values, not
 					// be forced to "" / 0 by the unknown-value guard bug.
 					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.resource_name"),
@@ -91,7 +91,7 @@ func TestAccStack_WorkflowsConfigInvalidEnums(t *testing.T) {
       }
     ]
   }
-`, testWfSlotId, field, value)
+`, testWorkflowUUID, field, value)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -116,10 +116,10 @@ func TestAccStack_WorkflowsConfigInvalidEnums(t *testing.T) {
 // TestAccStack_WorkflowsConfigMismatchRejected verifies
 // validateWorkflowsConfigMatchesRevision (model.go) rejects
 // workflows_config.workflows whenever it doesn't exactly match the
-// referenced stack template revision's own slot list, in both directions of
-// mismatch that check guards against: a missing slot, and the same slots
+// referenced stack template revision's own workflow list, in both directions of
+// mismatch that check guards against: a missing workflow, and the same workflows
 // declared out of order. See that function's doc comment for why both are
-// enforced (completeness, so a template's slot never silently goes
+// enforced (completeness, so a template's workflow never silently goes
 // undeclared; order, so the stack's own listing can't drift out of sync with
 // the order the API's default action-chaining derives from). Each step's
 // apply fails before anything is created, so they can safely share one
@@ -137,19 +137,19 @@ func TestAccStack_WorkflowsConfigMismatchRejected(t *testing.T) {
 		t.Fatalf("TestAccStack_WorkflowsConfigMismatchRejected: create workflow group %q: %s", wfGrpName, err)
 	}
 	workflowTemplateID := setupStackWorkflowTemplate(t, wfTemplateName)
-	// setupStackTemplateChainNoActions wires two slots — testWfSlotId then
-	// secondWfSlotId, in that order — so both directions of mismatch can be
+	// setupStackTemplateChainNoActions declares two workflows — testWorkflowUUID then
+	// secondWorkflowUUID, in that order — so both directions of mismatch can be
 	// exercised against a single fixture.
 	revision := setupStackTemplateChainNoActions(t, stackTemplateName, workflowTemplateID)
 	t.Cleanup(func() { deleteStackFixture(wfGrpName, id) })
 
-	missingSlot := fmt.Sprintf(`
+	missingWorkflow := fmt.Sprintf(`
   workflows_config = {
     workflows = [
       { id = %q }
     ]
   }
-`, testWfSlotId)
+`, testWorkflowUUID)
 
 	wrongOrder := fmt.Sprintf(`
   workflows_config = {
@@ -158,7 +158,7 @@ func TestAccStack_WorkflowsConfigMismatchRejected(t *testing.T) {
       { id = %q }
     ]
   }
-`, secondWfSlotId, testWfSlotId)
+`, secondWorkflowUUID, testWorkflowUUID)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -168,13 +168,13 @@ func TestAccStack_WorkflowsConfigMismatchRejected(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
 		Steps: []resource.TestStep{
 			{
-				// The revision defines testWfSlotId AND secondWfSlotId — declaring
-				// only one is a missing slot, not a valid partial subset.
-				Config:      testAccStackConfig(wfGrpName, revision, id, missingSlot),
+				// The revision defines testWorkflowUUID AND secondWorkflowUUID — declaring
+				// only one is a missing workflow, not a valid partial subset.
+				Config:      testAccStackConfig(wfGrpName, revision, id, missingWorkflow),
 				ExpectError: regexp.MustCompile("does not match the stack template revision"),
 			},
 			{
-				// The same two slots, declared in the opposite order from the
+				// The same two workflows, declared in the opposite order from the
 				// revision's own declaration order.
 				Config:      testAccStackConfig(wfGrpName, revision, id, wrongOrder),
 				ExpectError: regexp.MustCompile("does not match the stack template revision"),
@@ -191,11 +191,11 @@ func TestAccStack_WorkflowsConfigMismatchRejected(t *testing.T) {
 // double-fetch-per-apply was eliminated), and neither is covered by a live test yet:
 //   - Update() with NO revision change: create a stack successfully with a valid
 //     workflows_config, then apply an update that changes workflows_config into a mismatch
-//     (a slot removed, or reordered) while template_group_id stays the same — must still be
+//     (a workflow removed, or reordered) while template_group_id stays the same — must still be
 //     rejected, not silently accepted just because the resource already exists.
 //   - ModifyPlan's revision-change branch: create successfully against revision1, then switch
-//     template_group_id to a revision2 whose own slot list, if carried over verbatim from
-//     revision1's declared workflows_config, would now be a missing-slot or wrong-order
+//     template_group_id to a revision2 whose own workflow list, if carried over verbatim from
+//     revision1's declared workflows_config, would now be a missing-workflow or wrong-order
 //     mismatch against revision2 — must be rejected at plan time, mirroring
 //     TestAccStack_ActionsRevisionRemovedWorkflow's pattern in resource_stack_upgrade_test.go.
 //
@@ -203,17 +203,17 @@ func TestAccStack_WorkflowsConfigMismatchRejected(t *testing.T) {
 // action generation (an unset "actions" attribute — see TestAccStack_ActionsGeneratedFromTemplate)
 // chains apply/plan/destroy dependencies ACROSS workflows in the stack template revision's own
 // declaration order — first workflow has no dependency, second depends on the first, and so
-// on (reversed for destroy). If workflows_config.workflows[] could list the same slots in a
+// on (reversed for destroy). If workflows_config.workflows[] could list the same workflows in a
 // different order than the revision declares them, the stack's own visible listing would
 // silently disagree with the order those generated dependencies are actually chained in, with
 // nothing in the diff ever explaining why. Pinning the declared order to the revision's own
 // order is what keeps the two from ever drifting apart.
 
 // TestAccStack_WorkflowsConfigPrecedenceMerge exercises the three-way
-// precedence merge for a workflow slot's terraform_config: workflow template
+// precedence merge for a workflow's terraform_config: workflow template
 // revision default (lowest, terraform_version 1.5.0 — see
 // setupStackWorkflowTemplate) < stack template revision's override for the
-// slot (middle, terraform_version 1.5.7 — see setupStackTemplateChain) < the
+// workflow (middle, terraform_version 1.5.7 — see setupStackTemplateChain) < the
 // stack's own workflows_config.workflows[] entry (highest). Step 1 leaves
 // terraform_config unset on the stack entry, so it must resolve to the
 // middle layer's 1.5.7 (not the bottom layer's 1.5.0). Step 2 declares
@@ -235,7 +235,7 @@ func TestAccStack_WorkflowsConfigPrecedenceMerge(t *testing.T) {
       { id = %q }
     ]
   }
-`, testWfSlotId)
+`, testWorkflowUUID)
 
 	overrideConfig := fmt.Sprintf(`
   workflows_config = {
@@ -248,7 +248,7 @@ func TestAccStack_WorkflowsConfigPrecedenceMerge(t *testing.T) {
       }
     ]
   }
-`, testWfSlotId)
+`, testWorkflowUUID)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -274,7 +274,7 @@ func TestAccStack_WorkflowsConfigPrecedenceMerge(t *testing.T) {
 // TestAccStack_WorkflowsConfigVcsConfigComputedOnly verifies
 // vcs_config.iac_vcs_config can't be set directly in config — it's
 // Computed-only and always inherited from the matched stack-template-revision
-// workflow slot (see resolveWorkflowTemplates/mergeWorkflowWithStackTemplateOverride).
+// workflow (see resolveWorkflowTemplates/mergeWorkflowWithStackTemplateOverride).
 func TestAccStack_WorkflowsConfigVcsConfigComputedOnly(t *testing.T) {
 	wfGrpName := "tf-provider-stack-wfvcs-wfgrp"
 	wfTemplateName := "tf-provider-stack-wfvcs-wftmpl"
@@ -296,7 +296,7 @@ func TestAccStack_WorkflowsConfigVcsConfigComputedOnly(t *testing.T) {
       }
     ]
   }
-`, testWfSlotId)
+`, testWorkflowUUID)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -361,7 +361,7 @@ func TestAccStack_WorkflowsConfigRoundTrip(t *testing.T) {
       }
     ]
   }
-`, testWfSlotId)
+`, testWorkflowUUID)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -439,7 +439,7 @@ func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
       }
     ]
   }
-`, testWfSlotId)
+`, testWorkflowUUID)
 
 	updatedConfig := fmt.Sprintf(`
   workflows_config = {
@@ -472,7 +472,7 @@ func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
       }
     ]
   }
-`, testWfSlotId)
+`, testWorkflowUUID)
 
 	// Explicit empty values, not omission: removing an attribute from config
 	// entirely is indistinguishable, at plan time, from never having set it —
@@ -493,7 +493,7 @@ func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
       }
     ]
   }
-`, testWfSlotId)
+`, testWorkflowUUID)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -590,7 +590,7 @@ func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
 //	// template id>:1" — see prefixedWorkflowRevisionID there), rather than duplicating the
 //	// formula's string-parsing logic here.
 //	resolvedIacTemplateId := fmt.Sprintf("/%s/%s:1", org, wfTemplateName)
-//	expectedWorkflowId := stackresource.ComputeWorkflowId(resolvedIacTemplateId, testWfSlotId)
+//	expectedWorkflowId := stackresource.ComputeWorkflowId(resolvedIacTemplateId, testWorkflowUUID)
 //
 //	config := fmt.Sprintf(`
 //  workflows_config = {
@@ -598,7 +598,7 @@ func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
 //      { id = %q }
 //    ]
 //  }
-//`, testWfSlotId)
+//`, testWorkflowUUID)
 //
 //	resource.Test(t, resource.TestCase{
 //		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -632,7 +632,7 @@ func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
 //				Config: testAccStackConfig(wfGrpName, revision, id, config),
 //				Check: resource.ComposeAggregateTestCheckFunc(
 //					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.#", "1"),
-//					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", testWfSlotId),
+//					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", testWorkflowUUID),
 //					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.workflow_id", expectedWorkflowId),
 //					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.resource_name"),
 //				),

@@ -35,7 +35,7 @@ func TestAccStack_WorkflowsConfigRevisionReResolution(t *testing.T) {
       { id = %q }
     ]
   }
-`, testWfSlotId)
+`, testWorkflowUUID)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -77,14 +77,14 @@ func TestAccStack_WorkflowsConfigRevisionReResolution(t *testing.T) {
 // workflows_config's shape can change at all is a revision switch that itself adds or drops
 // a workflow entry:
 //
-//   - revision1 (setupStackDependencyChain) declares only the testWfSlotId workflow entry.
-//   - revision2 (setupSecondStackTemplateRevisionTwoSlots) declares both testWfSlotId AND
-//     secondWfSlotId.
+//   - revision1 (setupStackDependencyChain) declares only the testWorkflowUUID workflow entry.
+//   - revision2 (setupSecondStackTemplateRevisionTwoWorkflows) declares both testWorkflowUUID AND
+//     secondWorkflowUUID.
 //
 // Step 1 creates against revision1 (one workflow entry declared). Step 2 switches
-// template_group_id to revision2, which now requires secondWfSlotId to be declared too — the
+// template_group_id to revision2, which now requires secondWorkflowUUID to be declared too — the
 // existing entry's tags must be undisturbed, and the new entry must appear with its own
-// values. Step 3 switches back to revision1, which now requires secondWfSlotId to be ABSENT
+// values. Step 3 switches back to revision1, which now requires secondWorkflowUUID to be ABSENT
 // — workflows_config must shrink back to one entry cleanly, not error or leave the removed
 // entry lingering in state.
 func TestAccStack_WorkflowsConfigAddSecondWorkflowOverride(t *testing.T) {
@@ -94,7 +94,7 @@ func TestAccStack_WorkflowsConfigAddSecondWorkflowOverride(t *testing.T) {
 	id := "tf-provider-stack-wfadd"
 
 	revision1 := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
-	revision2 := setupSecondStackTemplateRevisionTwoSlots(t, stackTemplateName, wfTemplateName)
+	revision2 := setupSecondStackTemplateRevisionTwoWorkflows(t, stackTemplateName, wfTemplateName)
 
 	oneWorkflowConfig := fmt.Sprintf(`
   workflows_config = {
@@ -102,7 +102,7 @@ func TestAccStack_WorkflowsConfigAddSecondWorkflowOverride(t *testing.T) {
       { id = %q, tags = ["first"] }
     ]
   }
-`, testWfSlotId)
+`, testWorkflowUUID)
 
 	twoWorkflowsConfig := fmt.Sprintf(`
   workflows_config = {
@@ -111,7 +111,7 @@ func TestAccStack_WorkflowsConfigAddSecondWorkflowOverride(t *testing.T) {
       { id = %q, tags = ["second"] }
     ]
   }
-`, testWfSlotId, secondWfSlotId)
+`, testWorkflowUUID, secondWorkflowUUID)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -124,7 +124,7 @@ func TestAccStack_WorkflowsConfigAddSecondWorkflowOverride(t *testing.T) {
 				Config: testAccStackConfig(wfGrpName, revision1, id, oneWorkflowConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.#", "1"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", testWfSlotId),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", testWorkflowUUID),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.tags.0", "first"),
 				),
 			},
@@ -136,7 +136,7 @@ func TestAccStack_WorkflowsConfigAddSecondWorkflowOverride(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.#", "2"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.tags.0", "first"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.1.id", secondWfSlotId),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.1.id", secondWorkflowUUID),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.1.tags.0", "second"),
 				),
 			},
@@ -145,7 +145,7 @@ func TestAccStack_WorkflowsConfigAddSecondWorkflowOverride(t *testing.T) {
 				Config: testAccStackConfig(wfGrpName, revision1, id, oneWorkflowConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.#", "1"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", testWfSlotId),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", testWorkflowUUID),
 				),
 			},
 		},
@@ -160,10 +160,10 @@ func TestAccStack_WorkflowsConfigAddSecondWorkflowOverride(t *testing.T) {
 // revision change that REMOVES a previously-declared workflow entry AND ADDS a different,
 // new one in the same step, so workflows_config.workflows[] keeps the same length (one) but
 // its membership changes entirely: revision1 (setupStackDependencyChain) declares only the
-// testWfSlotId workflow entry, setupSecondStackTemplateRevisionRemoveAndAddWorkflow's
-// revision2 declares only the secondWfSlotId entry instead. Switching from revision1 to
-// revision2 must confirm testWfSlotId's live workflow is actually removed/cleaned up (not
-// orphaned) while secondWfSlotId's is correctly created and populated — exercising both the
+// testWorkflowUUID workflow entry, setupSecondStackTemplateRevisionRemoveAndAddWorkflow's
+// revision2 declares only the secondWorkflowUUID entry instead. Switching from revision1 to
+// revision2 must confirm testWorkflowUUID's live workflow is actually removed/cleaned up (not
+// orphaned) while secondWorkflowUUID's is correctly created and populated — exercising both the
 // "remove" and "add" halves of reResolveWorkflowsConfigOnRevisionChange and
 // validateWorkflowsConfigMatchesRevision's exact-match check together, rather than each in
 // isolation the way the existing grow/shrink test does.
@@ -182,7 +182,7 @@ func TestAccStack_WorkflowsConfigRemoveAndAddWorkflow(t *testing.T) {
       { id = %q }
     ]
   }
-`, testWfSlotId)
+`, testWorkflowUUID)
 
 	secondWorkflowConfig := fmt.Sprintf(`
   workflows_config = {
@@ -190,20 +190,20 @@ func TestAccStack_WorkflowsConfigRemoveAndAddWorkflow(t *testing.T) {
       { id = %q }
     ]
   }
-`, secondWfSlotId)
+`, secondWorkflowUUID)
 
-	// The id testWfSlotId's workflow resolves to under revision1 — computed the same way
+	// The id testWorkflowUUID's workflow resolves to under revision1 — computed the same way
 	// the provider itself does (model.go's computeWorkflowId, exposed via export_test.go),
 	// fed the same resolved iac_template_id setupStackDependencyChain's chain wires onto
 	// that workflow entry. Used after the revision change to confirm the platform actually
 	// removed it.
 	resolvedIacTemplateId := fmt.Sprintf("/%s/%s:1", org, wfTemplateName)
-	oldWorkflowId := stackresource.ComputeWorkflowId(resolvedIacTemplateId, testWfSlotId)
+	oldWorkflowId := stackresource.ComputeWorkflowId(resolvedIacTemplateId, testWorkflowUUID)
 
 	checkOldWorkflowRemoved := func(s *terraform.State) error {
 		_, err := getClient().StackWorkflows.ReadStackWorkflow(context.TODO(), org, id, oldWorkflowId, wfGrpName)
 		if err == nil {
-			return fmt.Errorf("expected workflow %q (entry %s) to be removed after the revision change, but it still exists", oldWorkflowId, testWfSlotId)
+			return fmt.Errorf("expected workflow %q (entry %s) to be removed after the revision change, but it still exists", oldWorkflowId, testWorkflowUUID)
 		}
 		// A missing workflow can come back as a 400 with {"msg":"Workflow does not exist"}
 		// rather than a 404 (the API's api_helper decorator defaults any response without an
@@ -226,40 +226,40 @@ func TestAccStack_WorkflowsConfigRemoveAndAddWorkflow(t *testing.T) {
 				Config: testAccStackConfig(wfGrpName, revision1, id, firstWorkflowConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.#", "1"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", testWfSlotId),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", testWorkflowUUID),
 					// actions is unset in config, so it comes from revision1: apply/plan
-					// each ordering only the testWfSlotId workflow.
+					// each ordering only the testWorkflowUUID workflow.
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.apply.order.%", "1"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("actions.apply.order.%s.parameters.terraform_action.action", testWfSlotId), "apply"),
+						fmt.Sprintf("actions.apply.order.%s.parameters.terraform_action.action", testWorkflowUUID), "apply"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.plan.order.%", "1"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("actions.plan.order.%s.parameters.terraform_action.action", testWfSlotId), "plan"),
+						fmt.Sprintf("actions.plan.order.%s.parameters.terraform_action.action", testWorkflowUUID), "plan"),
 				),
 			},
 			{
-				// Switch to revision2 — testWfSlotId's workflow must be removed (not
-				// orphaned) and secondWfSlotId's added in its place; the list length
+				// Switch to revision2 — testWorkflowUUID's workflow must be removed (not
+				// orphaned) and secondWorkflowUUID's added in its place; the list length
 				// stays at one throughout, only its membership changes. actions (still
 				// unset in config) must be re-resolved from revision2: the removed
 				// workflow must no longer be ordered, and the added one must be.
 				Config: testAccStackConfig(wfGrpName, revision2, id, secondWorkflowConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.#", "1"),
-					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", secondWfSlotId),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", secondWorkflowUUID),
 					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.workflow_id"),
 					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.resource_name"),
 					checkOldWorkflowRemoved,
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.apply.order.%", "1"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("actions.apply.order.%s.parameters.terraform_action.action", secondWfSlotId), "apply"),
+						fmt.Sprintf("actions.apply.order.%s.parameters.terraform_action.action", secondWorkflowUUID), "apply"),
 					resource.TestCheckNoResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("actions.apply.order.%s.parameters.terraform_action.action", testWfSlotId)),
+						fmt.Sprintf("actions.apply.order.%s.parameters.terraform_action.action", testWorkflowUUID)),
 					resource.TestCheckResourceAttr("stackguardian_stack.test", "actions.plan.order.%", "1"),
 					resource.TestCheckResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("actions.plan.order.%s.parameters.terraform_action.action", secondWfSlotId), "plan"),
+						fmt.Sprintf("actions.plan.order.%s.parameters.terraform_action.action", secondWorkflowUUID), "plan"),
 					resource.TestCheckNoResourceAttr("stackguardian_stack.test",
-						fmt.Sprintf("actions.plan.order.%s.parameters.terraform_action.action", testWfSlotId)),
+						fmt.Sprintf("actions.plan.order.%s.parameters.terraform_action.action", testWorkflowUUID)),
 				),
 			},
 		},
