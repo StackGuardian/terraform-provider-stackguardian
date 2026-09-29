@@ -283,3 +283,54 @@ func TestAccWorkflowTemplate_IdRejectedOnChange(t *testing.T) {
 		},
 	})
 }
+
+// TestAccWorkflowTemplate_Import creates a template with a representative set of attributes,
+// then imports it by id and verifies every attribute in the imported state matches the state
+// from the create step. Import only sets id (ImportState); Read fills in everything else.
+func TestAccWorkflowTemplate_Import(t *testing.T) {
+	templateName := acctest.ResourceName("tf-provider-workflow-template-import")
+
+	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	config := testAccWorkflowTemplate(templateName, sourceConfigKind, fmt.Sprintf(`
+	  is_public   = "0"
+	  description = "Imported template"
+	  tags        = ["test", "import"]
+
+	  context_tags = {
+	    env = "import"
+	  }
+
+	  runtime_source = {
+	    source_config_dest_kind = %q
+	    config = {
+	      is_private = false
+	      repo       = "https://github.com/StackGuardian/tf-null-resource.git"
+	      ref        = "main"
+	    }
+	  }
+	`, constants.GitOther))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "id", templateName),
+			},
+			{
+				ResourceName:      "stackguardian_workflow_template.test",
+				ImportState:       true,
+				ImportStateId:     templateName,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
