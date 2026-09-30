@@ -174,7 +174,7 @@ func (r *workflowGitResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 	payload.VcsConfig.Value.IacVcsConfig.UseMarketplaceTemplate = expanders.BoolPtr(false)
 
-	_, err := r.client.Workflows.UpdateWorkflow(ctx, r.org_name, id, workflowGroupId, sgworkflows.UpgradeModeEnumPreserveSettings.Ptr(), payload)
+	_, err := r.client.Workflows.UpdateWorkflow(ctx, r.org_name, id, workflowGroupId, nil, payload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error updating workflow_git", "Error in updating workflow_git API call: "+err.Error())
