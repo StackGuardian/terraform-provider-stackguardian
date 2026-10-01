@@ -32,6 +32,7 @@ func RuntimeSourceConfigSchemaAttributes() map[string]schema.Attribute {
 		"docker_registry_username": schema.StringAttribute{
 			MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigDockerRegistryUsernameCommon,
 			Optional:            true,
+			Sensitive:           true,
 		},
 		"local_workspace_dir": schema.StringAttribute{
 			MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigLocalWorkspaceDirCommon,

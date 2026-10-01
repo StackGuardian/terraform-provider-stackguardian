@@ -50,6 +50,7 @@ func (r *runnerGroupDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 					"azure_blob_storage_access_key": schema.StringAttribute{
 						MarkdownDescription: constants.AzureBlobStorageAccessKey,
 						Computed:            true,
+						Sensitive:           true,
 					},
 					"azure_blob_storage_account_name": schema.StringAttribute{
 						MarkdownDescription: constants.AzureBlobStorageAccountName,
@@ -124,6 +125,7 @@ func (r *runnerGroupDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 							"docker_registry_username": schema.StringAttribute{
 								MarkdownDescription: constants.DockerRegistryUsername,
 								Computed:            true,
+								Sensitive:           true,
 							},
 							"local_workspace_dir": schema.StringAttribute{
 								MarkdownDescription: constants.WorkflowStepTemplateRuntimeSourceConfigLocalWorkspaceDirCommon,

@@ -94,7 +94,7 @@ func (r *runnerGroupResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	runnerGroup, err := r.client.RunnerGroups.CreateNewRunnerGroup(context.TODO(), r.org_name, payload)
+	runnerGroup, err := r.client.RunnerGroups.CreateNewRunnerGroup(ctx, r.org_name, payload)
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error create runner group", "Error in creating runner group API call: "+err.Error())

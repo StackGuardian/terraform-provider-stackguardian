@@ -123,7 +123,7 @@ Read-Only:
 Read-Only:
 
 - `secret_id` (String) Not used. To reference a secret, set `config.text_value` instead — see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
-- `text_value` (String) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+- `text_value` (String, Sensitive) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `var_name` (String) Name of the variable.
 
 
@@ -164,7 +164,7 @@ Read-Only:
 Read-Only:
 
 - `secret_id` (String) Not used. To reference a secret, set `config.text_value` instead — see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
-- `text_value` (String) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+- `text_value` (String, Sensitive) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `var_name` (String) Name of the variable.
 
 
@@ -252,7 +252,7 @@ Read-Only:
 Read-Only:
 
 - `secret_id` (String) Not used. To reference a secret, set `config.text_value` instead — see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
-- `text_value` (String) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+- `text_value` (String, Sensitive) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `var_name` (String) Name of the variable.
 
 
@@ -319,7 +319,7 @@ Read-Only:
 Read-Only:
 
 - `secret_id` (String) Not used. To reference a secret, set `config.text_value` instead — see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
-- `text_value` (String) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+- `text_value` (String, Sensitive) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `var_name` (String) Name of the variable.
 
 
@@ -372,7 +372,7 @@ Read-Only:
 Read-Only:
 
 - `secret_id` (String) Not used. To reference a secret, set `config.text_value` instead — see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
-- `text_value` (String) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+- `text_value` (String, Sensitive) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `var_name` (String) Name of the variable.
 
 
@@ -425,7 +425,7 @@ Read-Only:
 Read-Only:
 
 - `secret_id` (String) Not used. To reference a secret, set `config.text_value` instead — see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
-- `text_value` (String) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+- `text_value` (String, Sensitive) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `var_name` (String) Name of the variable.
 
 
@@ -478,7 +478,7 @@ Read-Only:
 Read-Only:
 
 - `secret_id` (String) Not used. To reference a secret, set `config.text_value` instead — see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
-- `text_value` (String) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+- `text_value` (String, Sensitive) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `var_name` (String) Name of the variable.
 
 
@@ -606,7 +606,7 @@ Read-Only:
 Read-Only:
 
 - `secret_id` (String) Not used. To reference a secret, set `config.text_value` instead — see the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
-- `text_value` (String) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+- `text_value` (String, Sensitive) Value written inline, and visible in configuration and state. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `var_name` (String) Name of the variable.
 
 

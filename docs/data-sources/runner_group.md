@@ -82,7 +82,7 @@ Read-Only:
 
 - `auth` (String) Credential used to reach the repository, as a path-form ID: a connector `/integrations/<connector-name>` or a secret `/secrets/<secret-name>`. Build the connector form from the resource rather than typing it: `"/integrations/${stackguardian_connector.github.id}"`.
 - `docker_image` (String) Docker image to used to execute workflows
-- `docker_registry_username` (String) Username for docker register
+- `docker_registry_username` (String, Sensitive) Username for docker register
 - `git_core_auto_crlf` (Boolean) Indicates if core.autocrlf should be enabled.
 - `git_sparse_checkout_config` (String) Configuration for git sparse checkout
 - `include_sub_module` (Boolean) Indicates whether to include sub-modules.
@@ -100,7 +100,7 @@ Read-Only:
 
 - `auth` (Attributes) Authentication required by the runner to access the backend storage. Required only for type "aws_s3" (see [below for nested schema](#nestedatt--storage_backend_config--auth))
 - `aws_region` (String) AWS region where the bucket is placed
-- `azure_blob_storage_access_key` (String) Access key for your Azure Blob Storage account.
+- `azure_blob_storage_access_key` (String, Sensitive) Access key for your Azure Blob Storage account.
 - `azure_blob_storage_account_name` (String) Name of your Azure Blob Storage account.
 - `s3_bucket_name` (String) Name of the S3 bucket used to store runner logs.
 - `type` (String) Platform of the storage:

@@ -107,7 +107,7 @@ Required:
 Optional:
 
 - `auth` (String, Sensitive) Credential for the private registry or repository, as a path-form ID: a connector `/integrations/<connector-name>` (build it as `"/integrations/${stackguardian_connector.x.id}"`) or a secret `/secrets/<secret-name>`. (Sensitive)
-- `docker_registry_username` (String) Username for authentication with the Docker registry (if using private registries).
+- `docker_registry_username` (String, Sensitive) Username for authentication with the Docker registry (if using private registries).
 - `is_private` (Boolean) Indicates whether the container registry or repository is private.
 - `local_workspace_dir` (String) Working directory path inside the workspace, relative to the repository root.
 

@@ -68,6 +68,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								},
 								"github_app_webhook_secret": schema.StringAttribute{
 									Optional:            true,
+									Sensitive:           true,
 									MarkdownDescription: constants.SettingsConfigGithubAppWebhookSecret,
 								},
 								"github_api_url": schema.StringAttribute{
@@ -84,10 +85,12 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								},
 								"github_app_client_secret": schema.StringAttribute{
 									Optional:            true,
+									Sensitive:           true,
 									MarkdownDescription: constants.SettingsConfigGithubAppClientSecret,
 								},
 								"github_app_pem_file_content": schema.StringAttribute{
 									Optional:            true,
+									Sensitive:           true,
 									MarkdownDescription: constants.SettingsConfigGithubAppPemFileContent,
 								},
 								"github_app_webhook_url": schema.StringAttribute{
@@ -96,6 +99,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								},
 								"gitlab_creds": schema.StringAttribute{
 									Optional:            true,
+									Sensitive:           true,
 									MarkdownDescription: constants.SettingsConfigGitlabCreds,
 								},
 								"gitlab_http_url": schema.StringAttribute{
@@ -108,6 +112,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								},
 								"azure_creds": schema.StringAttribute{
 									Optional:            true,
+									Sensitive:           true,
 									MarkdownDescription: constants.SettingsConfigAzureCreds,
 								},
 								"azure_devops_http_url": schema.StringAttribute{
@@ -120,14 +125,17 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								},
 								"bitbucket_creds": schema.StringAttribute{
 									Optional:            true,
+									Sensitive:           true,
 									MarkdownDescription: constants.SettingsConfigBitbucketCreds,
 								},
 								"aws_access_key_id": schema.StringAttribute{
 									Optional:            true,
+									Sensitive:           true,
 									MarkdownDescription: constants.SettingsConfigAwsAccessKeyId,
 								},
 								"aws_secret_access_key": schema.StringAttribute{
 									Optional:            true,
+									Sensitive:           true,
 									MarkdownDescription: constants.SettingsConfigAwsSecretAccessKey,
 								},
 								"aws_default_region": schema.StringAttribute{
@@ -148,10 +156,12 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								},
 								"arm_client_secret": schema.StringAttribute{
 									Optional:            true,
+									Sensitive:           true,
 									MarkdownDescription: constants.SettingsConfigArmClientSecret,
 								},
 								"gcp_config_file_content": schema.StringAttribute{
 									Optional:            true,
+									Sensitive:           true,
 									MarkdownDescription: constants.SettingsConfigGcpConfigFileContent,
 								},
 							},

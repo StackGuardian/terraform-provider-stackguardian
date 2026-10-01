@@ -46,6 +46,7 @@ var ministepsWebhooks = schema.ListNestedAttribute{
 			"webhook_secret": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWebhookSecret,
 				Optional:            true,
+				Sensitive:           true,
 			},
 		},
 	},
@@ -95,6 +96,7 @@ var envVarsAttrs = map[string]schema.Attribute{
 			"text_value": schema.StringAttribute{
 				MarkdownDescription: constants.EnvVarConfigTextValue,
 				Optional:            true,
+				Sensitive:           true,
 			},
 		},
 	},

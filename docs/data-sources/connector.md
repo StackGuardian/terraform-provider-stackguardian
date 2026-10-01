@@ -185,29 +185,29 @@ Read-Only:
 Read-Only:
 
 - `arm_client_id` (String) Client ID for Azure Resource Manager.
-- `arm_client_secret` (String) Client ID for Azure Resource Manager.
+- `arm_client_secret` (String, Sensitive) Client ID for Azure Resource Manager.
 - `arm_subscription_id` (String) Azure Resource Manager subscription ID.
 - `arm_tenant_id` (String) Azure Resource Manager tenant ID.
-- `aws_access_key_id` (String) AWS access key ID for authentication.
+- `aws_access_key_id` (String, Sensitive) AWS access key ID for authentication.
 - `aws_default_region` (String) Default AWS region for resource operations.
-- `aws_secret_access_key` (String) AWS secret access key for authentication.
-- `azure_creds` (String) Credentials for Azure integration.
+- `aws_secret_access_key` (String, Sensitive) AWS secret access key for authentication.
+- `azure_creds` (String, Sensitive) Credentials for Azure integration.
 - `azure_devops_api_url` (String) Base URL for Azure DevOps API.
 - `azure_devops_http_url` (String) HTTP URL for accessing Azure DevOps services.
-- `bitbucket_creds` (String) Credentials for Bitbucket integration.
+- `bitbucket_creds` (String, Sensitive) Credentials for Bitbucket integration.
 - `duration_seconds` (String) The duration, in seconds, of the role session. Default is 3600 seconds (1 hour).
 - `external_id` (String) A unique identifier that is used to assume the role in the customers' AWS accounts. Should start with org name followed by ":" and a random string. SG_ORG_NAME:ElfygiFglfldTwnDFpAScQkvgvHTGV
-- `gcp_config_file_content` (String) Content of the GCP configuration file.
+- `gcp_config_file_content` (String, Sensitive) Content of the GCP configuration file.
 - `github_api_url` (String) Base URL for the GitHub API.
 - `github_app_client_id` (String) Client ID for the GitHub app.
-- `github_app_client_secret` (String) Client secret for the GitHub app.
+- `github_app_client_secret` (String, Sensitive) Client secret for the GitHub app.
 - `github_app_id` (String) The application ID for the GitHub app.
-- `github_app_pem_file_content` (String) Content of the PEM file for the GitHub app.
-- `github_app_webhook_secret` (String) Webhook secret for the GitHub app.
+- `github_app_pem_file_content` (String, Sensitive) Content of the PEM file for the GitHub app.
+- `github_app_webhook_secret` (String, Sensitive) Webhook secret for the GitHub app.
 - `github_app_webhook_url` (String) Webhook URL for the GitHub app.
 - `github_http_url` (String) HTTP URL for accessing the GitHub repository.
 - `gitlab_api_url` (String) Base URL for the GitLab API.
-- `gitlab_creds` (String) Credentials for GitLab integration.
+- `gitlab_creds` (String, Sensitive) Credentials for GitLab integration.
 - `gitlab_http_url` (String) HTTP URL for accessing the GitLab repository.
 - `installation_id` (String) The installation ID for GitHub applications.
 - `role_arn` (String) The Amazon Resource Name (ARN) of the role that the caller is assuming.

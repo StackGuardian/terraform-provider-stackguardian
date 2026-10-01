@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"time"
 )
 
 type apiResponseModel struct {
@@ -13,8 +15,12 @@ type apiResponseModel struct {
 	Data string `json:"data"`
 }
 
+var httpClient = &http.Client{
+	Timeout: 30 * time.Second,
+}
+
 func getAPIToken(runnerGroupID string, apiBaseUrl string, apiKey string, orgName string) (apiResponse *apiResponseModel, err error) {
-	url := apiBaseUrl + "/api/v1/orgs/" + orgName + "/api_token/"
+	tokenURL := apiBaseUrl + "/api/v1/orgs/" + url.PathEscape(orgName) + "/api_token/"
 
 	type reqBody struct {
 		Regenerate    bool   `json:"regenerate"`
@@ -22,7 +28,7 @@ func getAPIToken(runnerGroupID string, apiBaseUrl string, apiKey string, orgName
 	}
 	reqBodyValue := reqBody{
 		Regenerate:    false,
-		RunnerGroupId: fmt.Sprintf("/runnergroups/%s", runnerGroupID),
+		RunnerGroupId: fmt.Sprintf("/runnergroups/%s", url.PathEscape(runnerGroupID)),
 	}
 
 	payload, err := json.Marshal(reqBodyValue)
@@ -30,25 +36,25 @@ func getAPIToken(runnerGroupID string, apiBaseUrl string, apiKey string, orgName
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewReader(payload))
+	req, err := http.NewRequest("POST", tokenURL, bytes.NewReader(payload))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Add("Authorization", apiKey)
 
-	reqResp, err := http.DefaultClient.Do(req)
+	reqResp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = reqResp.Body.Close() }()
 
-	reqRespBody, err := io.ReadAll(reqResp.Body)
+	reqRespBody, err := io.ReadAll(io.LimitReader(reqResp.Body, 1<<20))
 	if err != nil {
 		return nil, err
 	}
 
 	if reqResp.StatusCode != 200 {
-		return nil, fmt.Errorf("datasources.runner_group_token.getAPIToken: Failed to fetch api token: %s", reqRespBody)
+		return nil, fmt.Errorf("datasources.runner_group_token.getAPIToken: API returned status %d", reqResp.StatusCode)
 	}
 
 	var respModel apiResponseModel

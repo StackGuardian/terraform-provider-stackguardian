@@ -68,6 +68,7 @@ var dsEnvVarsAttrs = map[string]schema.Attribute{
 			"text_value": schema.StringAttribute{
 				MarkdownDescription: constants.EnvVarConfigTextValue,
 				Computed:            true,
+				Sensitive:           true,
 			},
 		},
 	},
