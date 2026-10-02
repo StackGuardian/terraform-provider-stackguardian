@@ -116,3 +116,14 @@ Read-Only:
 
 
 
+
+
+## Building this with AI
+
+<!-- AI-SKILLS:START -->
+Generating `stackguardian_runner_group` configuration with an AI assistant? Load the **`stackguardian-workflows`** skill, which covers this resource's arguments and the mistakes it invites.
+
+**Worth knowing either way:** Pin a workflow to a runner group with `runner_constraints = {type = "private", names = ["<group-name>"]}` — `names` takes the group's **name**, not an ID or a path.
+
+The skills live in [the provider repository](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/.claude/skills) and work with Claude Code, Cursor, Copilot, Windsurf and any agent that reads [`AGENTS.md`](https://github.com/StackGuardian/terraform-provider-stackguardian/blob/main/AGENTS.md).
+<!-- AI-SKILLS:END -->

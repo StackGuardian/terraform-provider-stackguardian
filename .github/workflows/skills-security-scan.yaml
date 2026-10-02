@@ -1,0 +1,120 @@
+name: "SkillSpector security scan"  # security scan over AI agent skills
+
+# Scans every SKILL.md under .claude/skills/ with NVIDIA SkillSpector — static
+# analysis only (--no-llm), so no API key is needed and the job is safe on fork
+# pull requests. Fails when any skill scores above 50 (recommendation
+# DO NOT INSTALL). SARIF reports are uploaded to the GitHub Security tab for
+# inline annotation.
+#
+# Install SkillSpector locally with:
+#   uv tool install git+https://github.com/NVIDIA/skillspector.git
+
+on:
+  pull_request:
+    branches:
+      - "main"
+    types: [ opened, reopened, synchronize ]
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+
+  skillspector-scan:
+    name: "Scan AI skills with SkillSpector"
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: "Checkout code"
+        uses: actions/checkout@v4
+
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v3
+
+      - name: "Install SkillSpector"
+        run: uv tool install git+https://github.com/NVIDIA/skillspector.git
+
+      # Each subdirectory under .claude/skills/ is a separate skill with its
+      # own SKILL.md, so scan them individually. SkillSpector exits:
+      #   0 = risk ≤ 50 (SAFE or CAUTION)
+      #   1 = risk > 50 (DO NOT INSTALL) or finding from a strict gate
+      #   2 = error (bad input, unreadable source, internal failure)
+      # We collect failures and fail the job after all skills are scanned so
+      # every result is visible, not just the first.
+      - name: "Scan skills"
+        id: scan
+        run: |
+          mkdir -p sarif-reports
+          fail=0
+          for skill_dir in .claude/skills/*/; do
+            skill_name="$(basename "$skill_dir")"
+            echo "::group::Scanning $skill_name"
+            set +e
+            skillspector scan "$skill_dir" --no-llm \
+              --format sarif --output "sarif-reports/${skill_name}.sarif"
+            rc=$?
+            set -e
+            case $rc in
+              0) echo "$skill_name: PASS (risk ≤ 50)" ;;
+              1) echo "$skill_name: FAIL (risk > 50 or findings detected)"; fail=1 ;;
+              *) echo "$skill_name: ERROR (exit code $rc)"; fail=1 ;;
+            esac
+            echo "::endgroup::"
+          done
+          echo "fail=$fail" >> "$GITHUB_OUTPUT"
+          exit $fail
+
+      # Merge all per-skill SARIF files into a single SARIF run. The CodeQL
+      # upload action rejects multiple runs sharing the same category, so
+      # we union all results and deduplicate rules into one run object.
+      - name: "Merge SARIF reports"
+        if: always()
+        run: |
+          python3 -c "
+          import json, glob, os
+
+          rules = {}
+          all_results = []
+          tool_driver = None
+          for f in sorted(glob.glob('sarif-reports/*.sarif')):
+              if os.path.basename(f) == 'combined.sarif':
+                  continue
+              with open(f) as fh:
+                  data = json.load(fh)
+              for run in data.get('runs', []):
+                  if tool_driver is None:
+                      tool_driver = run.get('tool', {}).get('driver', {})
+                  for rule in run.get('tool', {}).get('driver', {}).get('rules', []):
+                      rid = rule.get('id')
+                      if rid and rid not in rules:
+                          rules[rid] = rule
+                  all_results.extend(run.get('results', []))
+
+          merged = {
+              'version': '2.1.0',
+              '\$schema': 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/Schemata/sarif-schema-2.1.0.json',
+              'runs': [{
+                  'tool': {'driver': {**tool_driver, 'rules': list(rules.values())} if tool_driver else {}},
+                  'results': all_results,
+              }],
+          }
+          with open('sarif-reports/combined.sarif', 'w') as fh:
+              json.dump(merged, fh)
+          print(f'Merged {len(all_results)} results from {len(rules)} rules into single SARIF run')
+          "
+
+      # Upload SARIF even when the scan step failed so findings are visible in
+      # the GitHub Security tab. On public repos this is free; private repos
+      # need GitHub Advanced Security.
+      - name: "Upload SARIF to GitHub Security tab"
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: sarif-reports/combined.sarif
+
+      - name: "Upload scan reports artifact"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skillspector-sarif-reports
+          path: sarif-reports/
+          retention-days: 30
