@@ -23,6 +23,12 @@ variables, execution settings — lives in a
 created from a specific revision through
 [`stackguardian_workflow_from_template`](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/resources/workflow_from_template).
 
+## Tag-triggered revisions
+
+The `vcs_triggers` block on a template is not the same as the one on a workflow: on a tag push it
+creates a **new template revision** from the tagged commit. It does not start a workflow run. The
+repository comes from `runtime_source`.
+
 ## Example Usage
 
 ```terraform
@@ -68,6 +74,7 @@ resource "stackguardian_workflow_template" "with_runtime" {
 - `runtime_source` (Attributes) Runtime source configuration for the template. (see [below for nested schema](#nestedatt--runtime_source))
 - `shared_orgs_list` (List of String) List of organizations the template is shared with.
 - `tags` (List of String) A list of tags associated with the workflow template. A maximum of 10 tags are allowed.
+- `vcs_triggers` (Attributes) VCS trigger configuration for the template. On a tag push, StackGuardian creates a new `stackguardian_workflow_template_revision` from the tagged commit — it does not start a workflow run. The repository is taken from `runtime_source`. (see [below for nested schema](#nestedatt--vcs_triggers))
 
 ### Read-Only
 
@@ -100,6 +107,31 @@ Optional:
 
 
 
+<a id="nestedatt--vcs_triggers"></a>
+### Nested Schema for `vcs_triggers`
+
+Required:
+
+- `create_tag` (Attributes) Trigger configuration on tag creation in VCS (see [below for nested schema](#nestedatt--vcs_triggers--create_tag))
+- `type` (String) The VCS platform type. Determines which webhook integration is used. Supported values: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>,
+
+<a id="nestedatt--vcs_triggers--create_tag"></a>
+### Nested Schema for `vcs_triggers.create_tag`
+
+Required:
+
+- `create_revision` (Attributes) Create new revision on tag creation (see [below for nested schema](#nestedatt--vcs_triggers--create_tag--create_revision))
+
+<a id="nestedatt--vcs_triggers--create_tag--create_revision"></a>
+### Nested Schema for `vcs_triggers.create_tag.create_revision`
+
+Optional:
+
+- `enabled` (Boolean) Whether to create revision when tag is created.
+
+
+
+
 
 
 ## Import
@@ -118,3 +150,13 @@ import {
 ```bash
 terraform import stackguardian_workflow_template.example template-name
 ```
+
+## Building this with AI
+
+<!-- AI-SKILLS:START -->
+Generating `stackguardian_workflow_template` configuration with an AI assistant? Load the **`stackguardian-templates`** skill, which covers this resource's arguments and the mistakes it invites.
+
+**Worth knowing either way:** The container holds no content; the revision does. Create this first, then a `stackguardian_workflow_template_revision` against it.
+
+The skills live in [the provider repository](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/.claude/skills) and work with Claude Code, Cursor, Copilot, Windsurf and any agent that reads [`AGENTS.md`](https://github.com/StackGuardian/terraform-provider-stackguardian/blob/main/AGENTS.md).
+<!-- AI-SKILLS:END -->

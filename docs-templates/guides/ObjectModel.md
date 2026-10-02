@@ -76,8 +76,7 @@ Both live inside a workflow group and both take a user-chosen `id`.
 
 - **A connector**, through `deployment_platform_config.integration_id` — the credentials it
   deploys with. Also through `custom_source.config.auth` when cloning a private repository.
-  A connector is referenced as `/integrations/<id>`, built from the resource:
-  `"/integrations/${stackguardian_connector.aws.id}"` — the `id` attribute itself is the bare slug. See
+  Connector IDs take the form `/integrations/<resource_name>`; see
   [Resource IDs](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ResourceIDs)
   for every ID format the provider uses.
 - **A runner group**, through `runner_constraints` — set `type = "private"` and list the group's
@@ -115,3 +114,13 @@ Three data sources return values produced by runs, as JSON strings you `jsondeco
 | `stackguardian_workflow_outputs`         | outputs of a workflow's latest run        |
 | `stackguardian_stack_outputs`            | outputs of a stack's latest run           |
 | `stackguardian_stack_workflow_outputs`   | outputs of one workflow inside a stack    |
+
+## Building this with AI
+
+<!-- AI-SKILLS:START -->
+Generating configuration from this guide? Load the **`stackguardian-provider`** skill, which turns the guidance here into rules an agent can follow.
+
+**Worth knowing either way:** A workflow group is both a folder and the unit access is scoped to, so the group layout decides the permission model.
+
+The skills live in [the provider repository](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/.claude/skills) and work with Claude Code, Cursor, Copilot, Windsurf and any agent that reads [`AGENTS.md`](https://github.com/StackGuardian/terraform-provider-stackguardian/blob/main/AGENTS.md).
+<!-- AI-SKILLS:END -->

@@ -58,18 +58,12 @@ resource "stackguardian_connector" "aws" {
   }
 }
 
-# 3. The workflow. deployment_platform_config references the connector created
-#    above as "/integrations/<id>" -- the connector's `id` is the bare slug, the
-#    prefix is what the platform resolves at run time.
+# 3. The workflow. deployment_platform_config wires in the connector created
+#    above, so the two resources are genuinely connected rather than hardcoded.
 resource "stackguardian_workflow_git" "quickstart" {
-  workflow_group_id = stackguardian_workflow_group.quickstart.id
+  workflow_group_id = stackguardian_workflow_group.quickstart.resource_name
   id                = "quickstart-workflow"
   wf_type           = "TERRAFORM"
-
-  # Required for TERRAFORM / OPENTOFU workflows.
-  terraform_config = {
-    terraform_version = "1.5.7"
-  }
 
   description = "Deploys the Terraform in the referenced repository"
   tags        = ["quickstart"]
@@ -91,7 +85,7 @@ resource "stackguardian_workflow_git" "quickstart" {
   deployment_platform_config = [{
     kind = "AWS_RBAC"
     config = {
-      integration_id = "/integrations/${stackguardian_connector.aws.id}"
+      integration_id = stackguardian_connector.aws.id
     }
   }]
 }

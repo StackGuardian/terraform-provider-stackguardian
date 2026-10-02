@@ -15,10 +15,6 @@ description: |-
 
 Reads the outputs produced by a stack's most recent run, so other Terraform resources can consume values that StackGuardian produced.
 
-These are read at plan time. To hand a value straight to another workflow instead, without
-Terraform seeing it, use a runtime reference — see the
-[Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
-
 ## Example Usage
 
 ```terraform
@@ -53,3 +49,14 @@ output "vpc_id" {
 - `data` (Map of String) Map of k/v pairs with value as JSON string
 - `data_json` (String) Raw JSON body
 
+
+
+## Building this with AI
+
+<!-- AI-SKILLS:START -->
+Generating `stackguardian_stack_outputs` configuration with an AI assistant? Load the **`stackguardian-templates`** skill, which covers this resource's arguments and the mistakes it invites.
+
+**Worth knowing either way:** Stack outputs aggregate across every workflow in the stack.
+
+The skills live in [the provider repository](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/.claude/skills) and work with Claude Code, Cursor, Copilot, Windsurf and any agent that reads [`AGENTS.md`](https://github.com/StackGuardian/terraform-provider-stackguardian/blob/main/AGENTS.md).
+<!-- AI-SKILLS:END -->

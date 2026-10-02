@@ -55,3 +55,14 @@ output "entity_type" {
 - `roles` (List of String) StackGuardian roles. Use to assign one or multiple roles.
 - `send_email` (Boolean) Enable or disable email notification to the user on creation.
 
+
+
+## Building this with AI
+
+<!-- AI-SKILLS:START -->
+Generating `stackguardian_role_assignment` configuration with an AI assistant? Load the **`stackguardian-access`** skill, which covers this resource's arguments and the mistakes it invites.
+
+**Worth knowing either way:** `user_id` is an email address for a user, or an SSO group identifier to grant the role to everyone in that group.
+
+The skills live in [the provider repository](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/.claude/skills) and work with Claude Code, Cursor, Copilot, Windsurf and any agent that reads [`AGENTS.md`](https://github.com/StackGuardian/terraform-provider-stackguardian/blob/main/AGENTS.md).
+<!-- AI-SKILLS:END -->
