@@ -1,0 +1,54 @@
+---
+description: StackGuardian Terraform provider — resource IDs, workflows, templates, policies, access, imports, and the repository's generated-docs conventions.
+globs:
+  - "**/*.tf"
+  - "**/*.tftpl"
+  - "internal/**/*.go"
+  - "docs-templates/**"
+  - "docs-examples/**"
+alwaysApply: false
+---
+
+# StackGuardian Terraform Provider
+
+Full guidance: [`AGENTS.md`](../../AGENTS.md). Per-area skills: [`.claude/skills/`](../../.claude/skills/).
+Provider internals: [`CLAUDE.md`](../../CLAUDE.md).
+
+## Writing StackGuardian configuration
+
+Load the skill matching the task — `stackguardian-resource-ids`, `-workflows`, `-templates`,
+`-policies`, `-access`, `-import` — and start from `stackguardian-provider` when unsure.
+
+Rules where being wrong is silent:
+
+- **Never invent a resource type, attribute, or enum value.** `internal/provider/provider.go` is
+  authoritative: 15 resources, 17 data sources.
+- **IDs are path-form and position-sensitive.** `/integrations/<name>`, `/secrets/<name>`,
+  `<name>:<rev>` (own org), `/<org>/<name>:<rev>` (elsewhere). The
+  `stackguardian_workflow_template_revision` **data source** takes only the bare form — the
+  qualified path returns `Unauthorized`.
+- **`stackguardian_role` is deprecated; use `stackguardian_rolev4`.** V3 takes the cartesian product
+  of path values, V4 maps one to one — convert by combining values into one alternation string
+  (`"a|b|c"`), not by swapping the resource type.
+- **Inline policies set both `policy_input_data` and `policy_vcs_config`**, with
+  `schema_type = "TIRITH_JSON"`.
+- **Secret references use a double colon**: `${secret::<name>}`, written `$${secret::<name>}` in
+  Terraform. Credentials never go in `text_value`.
+- **Nested workflow groups do not create their parents** — `platform/networking` needs `platform`.
+- Prefer resource references (`stackguardian_connector.aws.id`) over literal IDs, so Terraform
+  orders the graph.
+
+Attributes whose nesting is easy to get backwards: `deployment_platform_config`,
+`environment_variables` and `user_schedules` are **lists**; `mini_steps.notifications.email.<event>`
+is a **list** of `{recipients}`; `vcs_triggers.push` is a **map** keyed `createWfRun`.
+
+## Working in this repository
+
+- **`docs/` is generated — never edit it.** Edit `docs-templates/`, `docs-examples/`, or the
+  `MarkdownDescription` values in `internal/constants/` and each `schema.go`, then
+  `make docs-generate`.
+- Every example is type-checked in CI (`make docs-validate-examples`), including snippets embedded
+  in prose.
+- Acceptance tests create real infrastructure. Identifiers are randomised with a `tfacc-` prefix via
+  `acctest.ResourceName` — do not hardcode names in new tests.
+- Go 1.21.4; `go build ./...` is the source of truth for compilation errors.

@@ -45,7 +45,7 @@ resource "stackguardian_workflow_git" "example" {
   deployment_platform_config = [{
     kind = "AWS_RBAC"
     config = {
-      integration_id = "/integrations/${data.stackguardian_connector.shared_aws.id}"
+      integration_id = data.stackguardian_connector.shared_aws.id
     }
   }]
 }
@@ -133,48 +133,48 @@ Read-Only:
 	Values with supported config fields:
 
 	**VCS Connectors**
-	- <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM <a href="https://docs.stackguardian.io/docs/connectors/vcs/githubcom/"><span class="fa fa-external-link"></span></span></a>
+	- <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM <a href="https://docs.stackguardian.io/docs/connectors/vcs/githubcom/"><span class="fa fa-external-link"></span></a></span>
 		- github_com_url
 		- github_http_url
-	- <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM <a href="https://docs.stackguardian.io/docs/connectors/vcs/github_enterprise/"><span class="fa fa-external-link"></span></span></a>
+	- <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM <a href="https://docs.stackguardian.io/docs/connectors/vcs/github_enterprise/"><span class="fa fa-external-link"></span></a></span>
 		- github_app_client_id
 		- github_app_client_secret
 		- github_app_id
 		- github_app_pem_file_content
 		- github_app_webhook_secret
 		- github_app_webhook_url
-	- <span style="background-color: #eff0f0; color: #e53835;">BITBUCKET_ORG <a href="https://docs.stackguardian.io/docs/connectors/vcs/bitbucket/"><span class="fa fa-external-link"></span></span></a>
+	- <span style="background-color: #eff0f0; color: #e53835;">BITBUCKET_ORG <a href="https://docs.stackguardian.io/docs/connectors/vcs/bitbucket/"><span class="fa fa-external-link"></span></a></span>
 		- bitbucket_creds
-	- <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM <a href="https://docs.stackguardian.io/docs/connectors/vcs/gitlabcom/"><span class="fa fa-external-link"></span></span></a>
+	- <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM <a href="https://docs.stackguardian.io/docs/connectors/vcs/gitlabcom/"><span class="fa fa-external-link"></span></a></span>
 		- gitlab_api_url
 		- gitlab_creds
 		- gitlab_http_url
-	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS <a href="https://docs.stackguardian.io/docs/connectors/vcs/azuredevops/"><span class="fa fa-external-link"></span></span></a>
+	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_DEVOPS <a href="https://docs.stackguardian.io/docs/connectors/vcs/azuredevops/"><span class="fa fa-external-link"></span></a></span>
 		- azure_devops_api_url
 		- azure_devops_http_url
-		- azure_creds</br>
+		- azure_creds<br>
 
 	**Cloud Connectors**
-	- <span style="background-color: #eff0f0; color: #e53835;">AWS_STATIC <a href="https://docs.stackguardian.io/docs/connectors/csp/aws/#access-keys"><span class="fa fa-external-link"></span></span></a>
+	- <span style="background-color: #eff0f0; color: #e53835;">AWS_STATIC <a href="https://docs.stackguardian.io/docs/connectors/csp/aws/#access-keys"><span class="fa fa-external-link"></span></a></span>
 		- aws_access_key_id
 		- aws_secret_access_key
 		- aws_default_region
-	- <span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC <a href="https://docs.stackguardian.io/docs/connectors/csp/aws/#roles-or-rbac-recommended"><span class="fa fa-external-link"></span></span></a>
+	- <span style="background-color: #eff0f0; color: #e53835;">AWS_RBAC <a href="https://docs.stackguardian.io/docs/connectors/csp/aws/#roles-or-rbac-recommended"><span class="fa fa-external-link"></span></a></span>
 		- role_arn
 		- external_id
 		- duration_seconds
-	- <span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC <a href="https://docs.stackguardian.io/docs/connectors/csp/aws/#using-oidc-identity-provider"><span class="fa fa-external-link"></span></span></a>
+	- <span style="background-color: #eff0f0; color: #e53835;">AWS_OIDC <a href="https://docs.stackguardian.io/docs/connectors/csp/aws/#using-oidc-identity-provider"><span class="fa fa-external-link"></span></a></span>
 		- role_arn
-	- <span style="background-color: #eff0f0; color: #e53835;">GCP_STATIC <a href="https://docs.stackguardian.io/docs/connectors/csp/gcp/#using-service-account"><span class="fa fa-external-link"></span></span></a>
+	- <span style="background-color: #eff0f0; color: #e53835;">GCP_STATIC <a href="https://docs.stackguardian.io/docs/connectors/csp/gcp/#using-service-account"><span class="fa fa-external-link"></span></a></span>
 		- gcp_config_file_content
-	- <span style="background-color: #eff0f0; color: #e53835;">GCP_OIDC <a href="https://docs.stackguardian.io/docs/connectors/csp/gcp/"><span class="fa fa-external-link"></span></span></a>
+	- <span style="background-color: #eff0f0; color: #e53835;">GCP_OIDC <a href="https://docs.stackguardian.io/docs/connectors/csp/gcp/"><span class="fa fa-external-link"></span></a></span>
 		- gcp_config_file_content
-	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_STATIC <a href="https://docs.stackguardian.io/docs/connectors/csp/azure/#service-principal-with-client-secret"><span class="fa fa-external-link"></span></span></a>
+	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_STATIC <a href="https://docs.stackguardian.io/docs/connectors/csp/azure/#service-principal-with-client-secret"><span class="fa fa-external-link"></span></a></span>
 		- arm_client_id
 		- arm_client_secret
 		- arm_subscription_id
 		- arm_tenant_id
-	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_OIDC & AZURE_MANAGED_ID_OIDC <a href="https://docs.stackguardian.io/docs/connectors/csp/azure/#service-principal-with-workload-identity"><span class="fa fa-external-link"></span></span></a>
+	- <span style="background-color: #eff0f0; color: #e53835;">AZURE_OIDC & AZURE_MANAGED_ID_OIDC <a href="https://docs.stackguardian.io/docs/connectors/csp/azure/#service-principal-with-workload-identity"><span class="fa fa-external-link"></span></a></span>
 		- arm_tenant_id
 		- arm_subscription_id
 		- arm_client_id
@@ -214,3 +214,14 @@ Read-Only:
 
 
 
+
+
+## Building this with AI
+
+<!-- AI-SKILLS:START -->
+Generating `stackguardian_connector` configuration with an AI assistant? Load the **`stackguardian-provider`** skill, which covers this resource's arguments and the mistakes it invites.
+
+**Worth knowing either way:** Reference a connector rather than typing its ID: `stackguardian_connector.aws.id` gives Terraform the dependency edge. A workflow's `deployment_platform_config[].kind` must match the connector's own kind.
+
+The skills live in [the provider repository](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/.claude/skills) and work with Claude Code, Cursor, Copilot, Windsurf and any agent that reads [`AGENTS.md`](https://github.com/StackGuardian/terraform-provider-stackguardian/blob/main/AGENTS.md).
+<!-- AI-SKILLS:END -->

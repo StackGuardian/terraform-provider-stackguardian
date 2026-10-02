@@ -20,7 +20,7 @@ build:
 	go build -o ${BINARY}
 
 release:
-	goreleaser release --rm-dist --snapshot --skip-publish  --skip-sign
+	goreleaser release --clean --snapshot --skip-publish --skip-sign
 
 install: build
 	mkdir -p ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
@@ -30,7 +30,6 @@ clean-test-cache:
 	go clean -testcache
 
 test:
-	go test -i $(TEST) || exit 1
 	echo $(TEST) | xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
 
 # -p=8 runs up to 8 packages concurrently so the two heaviest packages
@@ -109,7 +108,6 @@ gh-workflow-test-provider-mock-stg-as-prd:
 		push \
 		;
 
-#		--local-repository StackGuardian/terraform-provider-stackguardian@devel=${PWD} \#
 gh-workflow-test-api-stg:
 	act \
 		--workflows ${PWD}/.github/workflows/test-api-stg.yaml \
@@ -119,7 +117,6 @@ gh-workflow-test-api-stg:
 		workflow_dispatch \
 		;
 
-#		--local-repository StackGuardian/terraform-provider-stackguardian@devel=${PWD} \#
 gh-workflow-test-api-prd:
 	act \
 		--workflows ${PWD}/.github/workflows/test-api-prd.yaml \
