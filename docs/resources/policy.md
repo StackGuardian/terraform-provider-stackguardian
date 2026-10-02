@@ -19,7 +19,7 @@ Manages a policy: a guardrail evaluated during workflow runs, which can block or
 
 `enforced_on` decides where the policy applies: `["*"]` for the whole organization, or any
 combination of workflow groups, workflows and connectors — a workflow group is `/wfgrps/<group>`,
-with no trailing slash, best written as `"/wfgrps/${stackguardian_workflow_group.x.id}"`.
+with no trailing slash.
 
 Note this is **not** the same form a `stackguardian_role` uses in `allowed_permissions`, which
 takes bare resource names. See
@@ -69,7 +69,7 @@ resource "stackguardian_policy" "require_environment_tag" {
 
   # A workflow group is a path, with no trailing slash. Use ["*"] to enforce
   # organization-wide instead.
-  enforced_on = ["/wfgrps/${stackguardian_workflow_group.production.id}"]
+  enforced_on = ["/wfgrps/${stackguardian_workflow_group.production.resource_name}"]
 
   policies_config = [{
     name    = "require-environment-tag"
@@ -125,7 +125,7 @@ resource "stackguardian_policy" "approval_on_apply" {
   description   = "Approval needed before an apply"
   policy_type   = "GENERAL"
 
-  enforced_on = ["/wfgrps/${stackguardian_workflow_group.production.id}"]
+  enforced_on = ["/wfgrps/${stackguardian_workflow_group.production.resource_name}"]
 
   # A local user is listed by email. SSO users and SSO groups take a user pool
   # prefix -- the one here is the EU region's. The Approvers guide lists the US one
@@ -212,7 +212,7 @@ resource "stackguardian_policy" "opa_from_git" {
   description   = "Rego policies maintained alongside our platform code"
   policy_type   = "GENERAL"
 
-  enforced_on = ["/wfgrps/${stackguardian_workflow_group.production.id}"]
+  enforced_on = ["/wfgrps/${stackguardian_workflow_group.production.resource_name}"]
 
   policies_config = [{
     name    = "opa-from-git"
@@ -340,3 +340,13 @@ import {
 ```bash
 terraform import stackguardian_policy.require_environment_tag require-environment-tag
 ```
+
+## Building this with AI
+
+<!-- AI-SKILLS:START -->
+Generating `stackguardian_policy` configuration with an AI assistant? Load the **`stackguardian-policies`** skill, which covers this resource's arguments and the mistakes it invites.
+
+**Worth knowing either way:** An inline policy sets **both** `policy_input_data` and `policy_vcs_config` — they are not alternatives — and `schema_type` is `TIRITH_JSON`. `RAW_JSON` is accepted but the platform stores `TIRITH_JSON`, leaving a permanent diff. `enforced_on = ["*"]` is organization-wide.
+
+The skills live in [the provider repository](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/.claude/skills) and work with Claude Code, Cursor, Copilot, Windsurf and any agent that reads [`AGENTS.md`](https://github.com/StackGuardian/terraform-provider-stackguardian/blob/main/AGENTS.md).
+<!-- AI-SKILLS:END -->

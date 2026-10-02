@@ -18,7 +18,6 @@ description: |-
 | [Getting Started](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/GettingStarted) | A working deployment, built one resource at a time |
 | [Object Model](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ObjectModel) | How workflow groups, templates, connectors and roles relate |
 | [Resource IDs](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ResourceIDs) | Why some values look like `/integrations/my-connector` |
-| [Runtime References](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences) | Values the platform resolves when a workflow runs |
 | [Templates and Revisions](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Templates) | The template lifecycle and how inheritance works |
 | [Access Management](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/AccessManagement) | Roles and role assignments |
 | [Policies](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Policies) | Guardrails that gate a run, and approval gating |
@@ -29,7 +28,7 @@ description: |-
 
 ## Example Usage
 
-Terraform 1.5.7 and later:
+Terraform 0.13 and later:
 
 ```terraform
 terraform {
@@ -60,3 +59,13 @@ resource "stackguardian_workflow_group" "Simple-Workflow-Group" {
 ## Release Notes
 
 Check the release notes on github [here](https://github.com/StackGuardian/terraform-provider-stackguardian/releases).
+
+## Building this with AI
+
+<!-- AI-SKILLS:START -->
+Generating configuration from this guide? Load the **`stackguardian-provider`** skill, which turns the guidance here into rules an agent can follow.
+
+**Worth knowing either way:** Start with `stackguardian-provider`; it routes to the skill for the area in play.
+
+The skills live in [the provider repository](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/.claude/skills) and work with Claude Code, Cursor, Copilot, Windsurf and any agent that reads [`AGENTS.md`](https://github.com/StackGuardian/terraform-provider-stackguardian/blob/main/AGENTS.md).
+<!-- AI-SKILLS:END -->

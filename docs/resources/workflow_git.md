@@ -58,7 +58,7 @@ resource "stackguardian_workflow_group" "sandbox" {
 }
 
 resource "stackguardian_workflow_git" "basic" {
-  workflow_group_id = stackguardian_workflow_group.sandbox.id
+  workflow_group_id = stackguardian_workflow_group.sandbox.resource_name
   id                = "hello-terraform"
   wf_type           = "TERRAFORM"
 
@@ -81,9 +81,8 @@ resource "stackguardian_workflow_git" "basic" {
 #
 # Groups nest with `/`, and the nested group is an ordinary resource of its own --
 # creating "platform/networking" does not create "platform" for you, so both are
-# declared. A secret goes into a PLAIN_TEXT variable as a `${secret::<name>}`
-# reference, never as a literal value -- the literal would be visible in
-# configuration and state, the reference is resolved at run time.
+# declared. Anything secret belongs in a VAULT_SECRET variable or a `${secret::...}`
+# reference, never in PLAIN_TEXT, which is visible in configuration and state.
 resource "stackguardian_workflow_group" "platform" {
   resource_name = "platform"
   description   = "Platform team workflows"
@@ -95,7 +94,7 @@ resource "stackguardian_workflow_group" "networking" {
 }
 
 resource "stackguardian_workflow_git" "vpc_staging" {
-  workflow_group_id = stackguardian_workflow_group.networking.id
+  workflow_group_id = stackguardian_workflow_group.networking.resource_name
   id                = "vpc-staging"
   wf_type           = "TERRAFORM"
 
@@ -139,10 +138,10 @@ resource "stackguardian_workflow_git" "vpc_staging" {
       }
     },
     {
-      kind = "PLAIN_TEXT"
+      kind = "VAULT_SECRET"
       config = {
-        var_name   = "DATADOG_API_KEY"
-        text_value = "$${secret::datadog-api-key}"
+        var_name  = "DATADOG_API_KEY"
+        secret_id = "/secrets/datadog-api-key"
       }
     },
   ]
@@ -159,7 +158,7 @@ resource "stackguardian_workflow_group" "production" {
 }
 
 resource "stackguardian_workflow_git" "vpc_production" {
-  workflow_group_id = stackguardian_workflow_group.production.id
+  workflow_group_id = stackguardian_workflow_group.production.resource_name
   id                = "vpc-production"
   wf_type           = "TERRAFORM"
 
@@ -212,9 +211,8 @@ resource "stackguardian_workflow_git" "vpc_production" {
   }
 
   terraform_config = {
-    # Bare version. OpenTofu accepts any version; Terraform is limited to the
-    # open-source releases unless the step runs your own runtime image. The engine
-    # comes from wf_type, not from this value.
+    # Bare version, with no TERRAFORM-/OPENTOFU- prefix; a patch wildcard such as
+    # "1.9.x" is accepted too. The engine comes from wf_type, not from this value.
     terraform_version = "1.5.7"
 
     # StackGuardian stores the state file. Set false only if state lives in your
@@ -256,10 +254,10 @@ resource "stackguardian_workflow_git" "vpc_production" {
 
   environment_variables = [
     {
-      kind = "PLAIN_TEXT"
+      kind = "VAULT_SECRET"
       config = {
-        var_name   = "TF_VAR_datadog_api_key"
-        text_value = "$${secret::datadog-api-key}"
+        var_name  = "TF_VAR_datadog_api_key"
+        secret_id = "/secrets/datadog-api-key"
       }
     }
   ]
@@ -1082,3 +1080,13 @@ import {
 ```bash
 terraform import stackguardian_workflow_git.example workflow-group-id/workflow-id
 ```
+
+## Building this with AI
+
+<!-- AI-SKILLS:START -->
+Generating `stackguardian_workflow_git` configuration with an AI assistant? Load the **`stackguardian-workflows`** skill, which covers this resource's arguments and the mistakes it invites.
+
+**Worth knowing either way:** Three nesting modes are easy to get backwards: `deployment_platform_config`, `environment_variables` and `user_schedules` are **lists**; `mini_steps.notifications.email.<event>` is a **list** of `{recipients}`; and `vcs_triggers.push` is a **map** keyed `createWfRun`. `terraform_version` takes the bare form — no `TERRAFORM-` prefix.
+
+The skills live in [the provider repository](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/.claude/skills) and work with Claude Code, Cursor, Copilot, Windsurf and any agent that reads [`AGENTS.md`](https://github.com/StackGuardian/terraform-provider-stackguardian/blob/main/AGENTS.md).
+<!-- AI-SKILLS:END -->
