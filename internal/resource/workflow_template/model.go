@@ -257,7 +257,7 @@ func convertVcsTriggersToAPI(ctx context.Context, obj types.Object) (*workflowte
 
 func convertVcsTriggersFromAPI(ctx context.Context, vt *workflowtemplates.VCSTriggers) (types.Object, diag.Diagnostics) {
 	nullObj := types.ObjectNull(TemplateVcsTriggersModel{}.AttributeTypes())
-	if vt == nil {
+	if vt == nil || flatteners.IsEmptyObject(vt) {
 		return nullObj, nil
 	}
 
