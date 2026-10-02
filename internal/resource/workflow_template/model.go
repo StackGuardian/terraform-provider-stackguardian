@@ -430,7 +430,9 @@ func (m *WorkflowTemplateResourceModel) ToUpdateAPIModel(ctx context.Context) (*
 		apiModel.SharedOrgsList = sgsdkgo.Null[[]string]()
 	}
 
-	// Convert VcsTriggers
+	// Convert VcsTriggers — only send when the user configured it. The API rejects
+	// an explicit null with "VCSTriggers.type: This field is required", so leave the
+	// field nil (omitted from the payload) when vcs_triggers is not set.
 	if !m.VcsTriggers.IsNull() && !m.VcsTriggers.IsUnknown() {
 		vcsTriggers, diags := convertVcsTriggersToAPI(ctx, m.VcsTriggers)
 		if diags.HasError() {
@@ -438,11 +440,7 @@ func (m *WorkflowTemplateResourceModel) ToUpdateAPIModel(ctx context.Context) (*
 		}
 		if vcsTriggers != nil {
 			apiModel.VCSTriggers = sgsdkgo.Optional(*vcsTriggers)
-		} else {
-			apiModel.VCSTriggers = sgsdkgo.Null[workflowtemplates.VCSTriggers]()
 		}
-	} else {
-		apiModel.VCSTriggers = sgsdkgo.Null[workflowtemplates.VCSTriggers]()
 	}
 
 	return apiModel, diag
