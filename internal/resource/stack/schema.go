@@ -379,7 +379,7 @@ var actionsAttrs = map[string]schema.Attribute{
 		Optional:            true,
 	},
 	"order": schema.MapNestedAttribute{
-		MarkdownDescription: "Execution order for workflows in this action. Key is the workflow ID.",
+		MarkdownDescription: "Execution order for workflows in this action, keyed by each workflow's `id` (its UUID) as defined in the stack template revision's `workflows_config.workflows` — the same `id` declared in this stack's `workflows_config.workflows`.",
 		Optional:            true,
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
@@ -397,16 +397,19 @@ var actionsAttrs = map[string]schema.Attribute{
 							},
 						},
 						"deployment_platform_config": schema.ListNestedAttribute{
-							Optional:     true,
-							NestedObject: schema.NestedAttributeObject{Attributes: deploymentPlatformConfigAttrs},
+							MarkdownDescription: constants.WfDeploymentPlatformConfig,
+							Optional:            true,
+							NestedObject:        schema.NestedAttributeObject{Attributes: deploymentPlatformConfigAttrs},
 						},
 						"wf_steps_config": schema.ListNestedAttribute{
-							Optional:     true,
-							NestedObject: wfStepsConfigNestedObj,
+							MarkdownDescription: constants.WfStepsConfig,
+							Optional:            true,
+							NestedObject:        wfStepsConfigNestedObj,
 						},
 						"environment_variables": schema.ListNestedAttribute{
-							Optional:     true,
-							NestedObject: schema.NestedAttributeObject{Attributes: envVarsAttrs},
+							MarkdownDescription: constants.WfEnvironmentVariables,
+							Optional:            true,
+							NestedObject:        schema.NestedAttributeObject{Attributes: envVarsAttrs},
 						},
 					},
 				},
@@ -416,7 +419,7 @@ var actionsAttrs = map[string]schema.Attribute{
 					NestedObject: schema.NestedAttributeObject{
 						Attributes: map[string]schema.Attribute{
 							"id": schema.StringAttribute{
-								MarkdownDescription: "ID of the workflow this depends on.",
+								MarkdownDescription: "Workflow this depends on, as its `id` (its UUID) as defined in the stack template revision's `workflows_config.workflows` — the same `id` declared in this stack's `workflows_config.workflows`.",
 								Required:            true,
 							},
 							"condition": schema.SingleNestedAttribute{
@@ -442,7 +445,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 		MarkdownDescription: "Manages a stack resource.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Id for the resource. Use it to reference the resource in other resources. Allowed characters are ^[a-zA-Z0-9_]+$",
+				MarkdownDescription: constants.Id,
 				Required:            true,
 				// The SDK has no way to change a stack's id via update (PatchedStack has
 				// no Id field), so a change must recreate the resource.
@@ -460,7 +463,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 			},
 			"resource_name": schema.StringAttribute{
-				MarkdownDescription: "Name of the stack.",
+				MarkdownDescription: fmt.Sprintf(constants.ResourceName, "stack"),
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -468,7 +471,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "Description of the stack. Must be less than 256 characters.",
+				MarkdownDescription: fmt.Sprintf(constants.Description, "stack"),
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -485,7 +488,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 			},
 			"actions": schema.MapNestedAttribute{
-				MarkdownDescription: "Actions define the sequence in which the workflows in the Stack are executed. Optional+Computed: when left unset, inherits the actions resolved from the stack template revision (its own actions verbatim, or a generated apply/plan/destroy set — see the template revision docs); when set, this value is used as-is instead of the template's. Must have at least one entry if set — an empty map is rejected, matching the API's own requirement that a stack always have at least one action.",
+				MarkdownDescription: "Actions define the sequence in which the workflows in the Stack are executed. When left unset, inherits the actions resolved from the stack template revision (its own actions verbatim, or a generated apply/plan/destroy set — see the template revision docs); when set, this value is used as-is instead of the template's. Must have at least one entry if set — an empty map is rejected, matching the API's own requirement that a stack always have at least one action.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Map{
@@ -499,15 +502,15 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 			},
 			"template_group_id": schema.StringAttribute{
-				MarkdownDescription: "The ID of the template group that this Stack is mapped to. The format is `/<org>/<template_group_revision_id>`. Required — a stack cannot be created without a template.",
+				MarkdownDescription: "Stack template revision this stack is created from, as `<template-name>:<revision>` (e.g. `my-stack-template:1`) — the stack template revision's `id`, not a path. The provider qualifies it with your organization, so do not give the `/<org>/…` form. Change the revision to upgrade the stack.",
 				Required:            true,
 			},
 			"workflows_config": schema.SingleNestedAttribute{
-				MarkdownDescription: "Workflows configuration for the stack. Required — every workflow slot defined on the stack template revision (`template_group_id`) must be declared in `workflows.*.id`; the provider rejects a plan that omits one.",
+				MarkdownDescription: "Workflows configuration for the stack. Every workflow defined on the stack template revision (`template_group_id`) must be declared in `workflows.*.id`; the provider rejects a plan that omits one.",
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"workflows": schema.ListNestedAttribute{
-						MarkdownDescription: "List of workflows in the stack. Must include every workflow slot id defined on the referenced stack template revision.",
+						MarkdownDescription: "List of workflows in the stack. Must include the id of every workflow defined on the referenced stack template revision, in the same order.",
 						Required:            true,
 						Validators: []validator.List{
 							listvalidator.SizeAtLeast(1),
@@ -515,11 +518,11 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"id": schema.StringAttribute{
-									MarkdownDescription: "UUID of the workflow slot as defined in the stack template.",
+									MarkdownDescription: "UUID of the workflow, as defined on the stack template revision.",
 									Required:            true,
 								},
 								"workflow_id": schema.StringAttribute{
-									MarkdownDescription: "Resource id the platform assigns to this workflow, derived from the resolved template name and the slot id.",
+									MarkdownDescription: "Resource id the platform assigns to this workflow, derived from the resolved workflow template name and this workflow's `id`.",
 									Computed:            true,
 									PlanModifiers: []planmodifier.String{
 										stringplanmodifier.UseStateForUnknown(),
@@ -534,7 +537,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									},
 								},
 								"description": schema.StringAttribute{
-									MarkdownDescription: "Description of the workflow.",
+									MarkdownDescription: fmt.Sprintf(constants.Description, "workflow"),
 									Optional:            true,
 									Computed:            true,
 									PlanModifiers: []planmodifier.String{
@@ -542,7 +545,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									},
 								},
 								"tags": schema.ListAttribute{
-									MarkdownDescription: "Tags for the workflow.",
+									MarkdownDescription: fmt.Sprintf(constants.Tags, "workflow"),
 									ElementType:         types.StringType,
 									Optional:            true,
 									Computed:            true,
@@ -551,7 +554,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									},
 								},
 								"wf_type": schema.StringAttribute{
-									MarkdownDescription: "Type of workflow.",
+									MarkdownDescription: constants.WorkflowType,
 									Optional:            true,
 									Computed:            true,
 									PlanModifiers: []planmodifier.String{
@@ -567,7 +570,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									},
 								},
 								"wf_steps_config": schema.ListNestedAttribute{
-									MarkdownDescription: "Workflow steps configuration.",
+									MarkdownDescription: constants.WfStepsConfig,
 									Optional:            true,
 									Computed:            true,
 									PlanModifiers: []planmodifier.List{
@@ -585,7 +588,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									Attributes: terraformConfigAttrs,
 								},
 								"environment_variables": schema.ListNestedAttribute{
-									MarkdownDescription: "Environment variables.",
+									MarkdownDescription: constants.WfEnvironmentVariables,
 									Optional:            true,
 									Computed:            true,
 									PlanModifiers: []planmodifier.List{
@@ -596,7 +599,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									},
 								},
 								"deployment_platform_config": schema.ListNestedAttribute{
-									MarkdownDescription: "Deployment platform configuration.",
+									MarkdownDescription: constants.WfDeploymentPlatformConfig,
 									Optional:            true,
 									Computed:            true,
 									PlanModifiers: []planmodifier.List{
@@ -607,7 +610,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									},
 								},
 								"vcs_config": schema.SingleNestedAttribute{
-									MarkdownDescription: "VCS (version control) configuration for the workflow.",
+									MarkdownDescription: constants.WorkflowVcsConfig,
 									Optional:            true,
 									Computed:            true,
 									PlanModifiers: []planmodifier.Object{
@@ -615,34 +618,36 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									},
 									Attributes: map[string]schema.Attribute{
 										"iac_vcs_config": schema.SingleNestedAttribute{
-											MarkdownDescription: "IaC VCS configuration. Not user-editable — always inherited from the matched workflow slot on the stack template revision.",
+											MarkdownDescription: "IaC VCS configuration. Not user-editable — always inherited from the matching workflow on the stack template revision.",
 											Computed:            true,
 											PlanModifiers: []planmodifier.Object{
 												objectplanmodifier.UseStateForUnknown(),
 											},
 											Attributes: map[string]schema.Attribute{
 												"use_marketplace_template": schema.BoolAttribute{
-													MarkdownDescription: "Whether to use a marketplace template.",
+													MarkdownDescription: constants.WorkflowUseMarketplaceTemplate,
 													Computed:            true,
 												},
 												"iac_template_id": schema.StringAttribute{
-													MarkdownDescription: "ID of the IaC template from the marketplace.",
+													MarkdownDescription: "Workflow template revision this workflow is created from, as `/<org>/<workflow-template-name>:<revision>`. Inherited from the stack template revision.",
 													Computed:            true,
 												},
 											},
 										},
 										"iac_input_data": schema.SingleNestedAttribute{
-											MarkdownDescription: "IaC input data for the workflow.",
+											MarkdownDescription: constants.WorkflowIacInputData,
 											Optional:            true,
 											Attributes: map[string]schema.Attribute{
 												"schema_id": schema.StringAttribute{
-													Optional: true,
+													MarkdownDescription: constants.WorkflowIacInputDataSchemaId,
+													Optional:            true,
 												},
 												"schema_type": schema.StringAttribute{
-													Required: true,
+													MarkdownDescription: constants.WorkflowIacInputDataSchemaType,
+													Required:            true,
 												},
 												"data": schema.StringAttribute{
-													MarkdownDescription: "Input data as a JSON string.",
+													MarkdownDescription: constants.WorkflowIacInputDataData,
 													Optional:            true,
 												},
 											},
@@ -650,7 +655,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									},
 								},
 								"approvers": schema.ListAttribute{
-									MarkdownDescription: "List of approvers.",
+									MarkdownDescription: constants.WfApprovers,
 									ElementType:         types.StringType,
 									Optional:            true,
 									Computed:            true,
@@ -659,7 +664,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									},
 								},
 								"number_of_approvals_required": schema.Int64Attribute{
-									MarkdownDescription: "Number of approvals required.",
+									MarkdownDescription: constants.WfNumberOfApprovals,
 									Optional:            true,
 									Computed:            true,
 									PlanModifiers: []planmodifier.Int64{
@@ -667,7 +672,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									},
 								},
 								"user_job_cpu": schema.Int64Attribute{
-									MarkdownDescription: "CPU limit for the user job.",
+									MarkdownDescription: constants.WfUserJobCPU,
 									Optional:            true,
 									Computed:            true,
 									PlanModifiers: []planmodifier.Int64{
@@ -675,7 +680,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									},
 								},
 								"user_job_memory": schema.Int64Attribute{
-									MarkdownDescription: "Memory limit for the user job.",
+									MarkdownDescription: constants.WfUserJobMemory,
 									Optional:            true,
 									Computed:            true,
 									PlanModifiers: []planmodifier.Int64{
@@ -683,7 +688,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									},
 								},
 								"user_schedules": schema.ListNestedAttribute{
-									MarkdownDescription: "User-defined schedules.",
+									MarkdownDescription: constants.WfUserSchedules,
 									Optional:            true,
 									Computed:            true,
 									PlanModifiers: []planmodifier.List{
@@ -692,19 +697,29 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									NestedObject: schema.NestedAttributeObject{
 										Attributes: map[string]schema.Attribute{
 											"name": schema.StringAttribute{
-												Computed: true,
+												MarkdownDescription: constants.UserScheduleName,
+												Computed:            true,
 												PlanModifiers: []planmodifier.String{
 													stringplanmodifier.UseStateForUnknown(),
 												},
 											},
-											"desc":  schema.StringAttribute{Optional: true},
-											"cron":  schema.StringAttribute{Required: true},
-											"state": schema.StringAttribute{Required: true},
+											"desc": schema.StringAttribute{
+												MarkdownDescription: constants.UserScheduleDesc,
+												Optional:            true,
+											},
+											"cron": schema.StringAttribute{
+												MarkdownDescription: constants.UserScheduleCron,
+												Required:            true,
+											},
+											"state": schema.StringAttribute{
+												MarkdownDescription: constants.UserScheduleState,
+												Required:            true,
+											},
 										},
 									},
 								},
 								"mini_steps": schema.SingleNestedAttribute{
-									MarkdownDescription: "Mini steps configuration.",
+									MarkdownDescription: constants.WfMiniSteps,
 									Optional:            true,
 									Computed:            true,
 									PlanModifiers: []planmodifier.Object{
@@ -712,10 +727,12 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									},
 									Attributes: map[string]schema.Attribute{
 										"notifications": schema.SingleNestedAttribute{
-											Optional: true,
+											MarkdownDescription: constants.MiniStepsNotifications,
+											Optional:            true,
 											Attributes: map[string]schema.Attribute{
 												"email": schema.SingleNestedAttribute{
-													Optional: true,
+													MarkdownDescription: constants.MiniStepsNotificationsEmail,
+													Optional:            true,
 													Attributes: map[string]schema.Attribute{
 														"approval_required": ministepsNotificationRecipients,
 														"cancelled":         ministepsNotificationRecipients,
@@ -727,7 +744,8 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 											},
 										},
 										"webhooks": schema.SingleNestedAttribute{
-											Optional: true,
+											MarkdownDescription: constants.MiniStepsWebhooks,
+											Optional:            true,
 											Attributes: map[string]schema.Attribute{
 												"approval_required": ministepsWebhooks,
 												"cancelled":         ministepsWebhooks,
@@ -737,7 +755,8 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 											},
 										},
 										"wf_chaining": schema.SingleNestedAttribute{
-											Optional: true,
+											MarkdownDescription: constants.MiniStepsWorkflowChaining,
+											Optional:            true,
 											Attributes: map[string]schema.Attribute{
 												"completed": ministepsWorkflowChaining,
 												"errored":   ministepsWorkflowChaining,
@@ -746,7 +765,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									},
 								},
 								"context_tags": schema.MapAttribute{
-									MarkdownDescription: "Contextual tags.",
+									MarkdownDescription: fmt.Sprintf(constants.ContextTags, "workflow"),
 									ElementType:         types.StringType,
 									Optional:            true,
 									Computed:            true,
@@ -755,17 +774,21 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									},
 								},
 								"runner_constraints": schema.SingleNestedAttribute{
-									MarkdownDescription: "Runner constraints.",
+									MarkdownDescription: constants.WorkflowRunnerConstraints,
 									Optional:            true,
 									Computed:            true,
 									PlanModifiers: []planmodifier.Object{
 										objectplanmodifier.UseStateForUnknown(),
 									},
 									Attributes: map[string]schema.Attribute{
-										"type": schema.StringAttribute{Required: true},
+										"type": schema.StringAttribute{
+											MarkdownDescription: constants.RunnerConstraintsType,
+											Required:            true,
+										},
 										"names": schema.ListAttribute{
-											ElementType: types.StringType,
-											Optional:    true,
+											MarkdownDescription: constants.RunnerConstraintsNames,
+											ElementType:         types.StringType,
+											Optional:            true,
 										},
 									},
 								},
