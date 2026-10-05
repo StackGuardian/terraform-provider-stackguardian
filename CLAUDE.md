@@ -272,14 +272,17 @@ Note the directory `role_v4/` produces the Terraform type `stackguardian_rolev4`
 
 ## Data Sources
 
-Authoritative list: `DataSources()` in `internal/provider/provider.go`. Seventeen, under
+Authoritative list: `DataSources()` in `internal/provider/provider.go`. Eighteen, under
 `internal/datasources/<name>/`: `connector`, `policy`, `role`, `role_assignment`, `runner_group`,
-`runner_group_token`, `stack_outputs`, `stack_template`, `stack_template_revision`,
+`runner_group_token`, `stack`, `stack_outputs`, `stack_template`, `stack_template_revision`,
 `stack_workflow_outputs`, `workflow_git`, `workflow_group`, `workflow_outputs`,
 `workflow_step_template`, `workflow_step_template_revision`, `workflow_template`,
 `workflow_template_revision`.
 
 `stack_template` and `stack_template_revision` define their schema inline in `datasource.go`
 rather than a separate `schema.go`.
+
+`stack` derives its schema from the `stackguardian_stack` resource's schema (every attribute
+Computed except `id` and `workflow_group_id`) instead of restating it.
 
 ---
