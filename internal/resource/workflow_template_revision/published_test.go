@@ -134,6 +134,11 @@ func attributeChangeCases() []attributeChangeCase {
     {
       cron  = "0 8 ? * MON *"
       state = "ENABLED"
+      inputs = {
+        terraform_action = {
+          action = "apply"
+        }
+      }
     }
   ]`, checkAttr: "user_schedules.0.cron", checkValue: "0 8 ? * MON *"},
 		{name: "approvers", changedConfig: `approvers = ["approver@example.com"]`, checkAttr: "approvers.0", checkValue: "approver@example.com"},
@@ -421,6 +426,11 @@ func TestAccWorkflowTemplateRevision_UpdateAllowedFieldsWithOtherAttributesUncha
     {
       cron  = "0 8 ? * MON *"
       state = "ENABLED"
+      inputs = {
+        terraform_action = {
+          action = "apply"
+        }
+      }
     }
   ]`},
 		{name: "approvers", constantConfig: `approvers = ["approver@example.com"]`},

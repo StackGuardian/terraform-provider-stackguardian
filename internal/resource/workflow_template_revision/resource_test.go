@@ -528,7 +528,7 @@ func TestAccWorkflowTemplateRevision_WithUserSchedules(t *testing.T) {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
-	templateRevisionCallback := func(cron string) string {
+	templateRevisionCallback := func(cron, action string) string {
 		return fmt.Sprintf(`
 		  alias = %q
 		
@@ -538,9 +538,21 @@ func TestAccWorkflowTemplateRevision_WithUserSchedules(t *testing.T) {
 		      state = "ENABLED"
 		      desc  = "Runs on schedule"
 		      name  = "weekly"
+		
+		      inputs = {
+		        terraform_action = {
+		          action = %q
+		        }
+		        vcs_config = {
+		          iac_input_data = {
+		            schema_type = "RAW_JSON"
+		            data        = jsonencode({ test = "value" })
+		          }
+		        }
+		      }
 		    }
 		  ]
-		`, alias, cron)
+		`, alias, cron, action)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -551,19 +563,28 @@ func TestAccWorkflowTemplateRevision_WithUserSchedules(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, templateRevisionCallback("0 8 ? * MON *")),
+				Config: testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, templateRevisionCallback("0 8 ? * MON *", "apply")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "user_schedules.0.cron", "0 8 ? * MON *"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "user_schedules.0.state", "ENABLED"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "user_schedules.0.desc", "Runs on schedule"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "user_schedules.0.name", "weekly"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "user_schedules.0.inputs.terraform_action.action", "apply"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "user_schedules.0.inputs.vcs_config.iac_input_data.schema_type", "RAW_JSON"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "user_schedules.0.inputs.vcs_config.iac_input_data.data", `{"test":"value"}`),
 				),
 			},
 			{
-				Config: testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, templateRevisionCallback("0 9 ? * MON *")),
+				Config: testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, templateRevisionCallback("0 9 ? * MON *", "plan")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "user_schedules.0.cron", "0 9 ? * MON *"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "user_schedules.0.inputs.terraform_action.action", "plan"),
 				),
+			},
+			{
+				// Read settles on what was planned, including the JSON data string.
+				Config:   testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, templateRevisionCallback("0 9 ? * MON *", "plan")),
+				PlanOnly: true,
 			},
 		},
 	})
@@ -1054,10 +1075,11 @@ func TestAccWorkflowTemplateRevision_Import(t *testing.T) {
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
-	config := testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, `
+	config := func(description string) string {
+		return testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, fmt.Sprintf(`
 	  alias                        = "revision-import"
 	  is_public                    = "0"
-	  description                  = "Imported revision"
+	  description                  = %q
 	  notes                        = "Imported revision notes"
 	  tags                         = ["test", "import"]
 	  approvers                    = ["approver@example.com"]
@@ -1082,7 +1104,18 @@ func TestAccWorkflowTemplateRevision_Import(t *testing.T) {
 	    run_pre_init_hooks_on_drift = true
 	    pre_init_hooks              = ["echo pre-init"]
 	  }
-	`)
+
+	  user_schedules = [
+	    {
+	      cron  = "0 8 ? * MON *"
+	      state = "ENABLED"
+	      inputs = {
+	        terraform_action = { action = "apply" }
+	      }
+	    }
+	  ]
+	`, description))
+	}
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
@@ -1092,14 +1125,26 @@ func TestAccWorkflowTemplateRevision_Import(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
 		Steps: []resource.TestStep{
 			{
-				Config: config,
+				Config: config("Imported revision"),
 				Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "id", templateID+":1"),
 			},
 			{
-				ResourceName:      "stackguardian_workflow_template_revision.test",
-				ImportState:       true,
-				ImportStateId:     templateID + ":1",
-				ImportStateVerify: true,
+				ResourceName:       "stackguardian_workflow_template_revision.test",
+				ImportState:        true,
+				ImportStateId:      templateID + ":1",
+				ImportStateVerify:  true,
+				ImportStatePersist: true,
+			},
+			{
+				// Update the imported revision. Computed values such as
+				// user_schedules[*].inputs.enable_chaining come from the imported state, and a
+				// value the API doesn't return must not be invented and sent back.
+				Config: config("Imported revision, updated"),
+				Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "description", "Imported revision, updated"),
+			},
+			{
+				Config:   config("Imported revision, updated"),
+				PlanOnly: true,
 			},
 		},
 	})

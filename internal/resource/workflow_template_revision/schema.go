@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	workflowtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -16,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -536,13 +539,73 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 							MarkdownDescription: constants.UserScheduleState,
 							Optional:            true,
 						},
+						// desc and name are Optional+Computed: schedules created in the UI store
+						// "" for both, so an omitted value keeps the stored "" (and sends it back
+						// unchanged on update) instead of planning a change to null.
 						"desc": schema.StringAttribute{
 							MarkdownDescription: constants.UserScheduleDesc,
 							Optional:            true,
+							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 						"name": schema.StringAttribute{
 							MarkdownDescription: constants.UserScheduleName,
 							Optional:            true,
+							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
+						},
+						"inputs": schema.SingleNestedAttribute{
+							MarkdownDescription: constants.UserScheduleInputs,
+							Required:            true,
+							Attributes: map[string]schema.Attribute{
+								"terraform_action": schema.SingleNestedAttribute{
+									MarkdownDescription: constants.UserScheduleInputsTerraformAction,
+									Required:            true,
+									Attributes: map[string]schema.Attribute{
+										"action": schema.StringAttribute{
+											MarkdownDescription: constants.UserScheduleInputsTerraformActionAction,
+											Required:            true,
+										},
+									},
+								},
+								"enable_chaining": schema.BoolAttribute{
+									MarkdownDescription: constants.UserScheduleInputsEnableChaining,
+									Computed:            true,
+									PlanModifiers: []planmodifier.Bool{
+										boolplanmodifier.UseStateForUnknown(),
+									},
+								},
+								"vcs_config": schema.SingleNestedAttribute{
+									MarkdownDescription: constants.UserScheduleInputsVcsConfig,
+									Optional:            true,
+									Attributes: map[string]schema.Attribute{
+										"iac_input_data": schema.SingleNestedAttribute{
+											MarkdownDescription: constants.UserScheduleInputsIacInputData,
+											Optional:            true,
+											Attributes: map[string]schema.Attribute{
+												"schema_type": schema.StringAttribute{
+													MarkdownDescription: constants.UserScheduleInputsIacInputDataSchemaType,
+													Required:            true,
+													Validators: []validator.String{
+														stringvalidator.OneOf(
+															string(sgsdkgo.IacInputDataSchemaTypeEnumRawJson),
+															string(sgsdkgo.IacInputDataSchemaTypeEnumFormJsonschema),
+														),
+													},
+												},
+												"data": schema.StringAttribute{
+													MarkdownDescription: constants.WorkflowIacInputDataData,
+													Optional:            true,
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 				},

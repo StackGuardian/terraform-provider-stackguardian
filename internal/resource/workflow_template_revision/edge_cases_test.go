@@ -1,12 +1,17 @@
 package workflowtemplaterevision_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"regexp"
 	"testing"
 
+	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
+	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
+	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
@@ -745,6 +750,96 @@ func TestAccWorkflowTemplateRevision_TerraformConfigDriftHookFlagsExplicitNull(t
 			},
 			{
 				Config:   config("null"),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccWorkflowTemplateRevision_ImportUserScheduleWithEmptyNameAndDesc reproduces a schedule
+// created in the UI: the API stores "" for its name and desc. The revision is created directly
+// through the SDK with that shape, imported into a config that leaves name/desc out, and must
+// then plan no changes and accept an update. name/desc are Optional+Computed, so the imported
+// "" is carried forward and sent back unchanged instead of planning a change to null.
+func TestAccWorkflowTemplateRevision_ImportUserScheduleWithEmptyNameAndDesc(t *testing.T) {
+	templateID := acctest.ResourceName("tf-provider-wftr-import-schedule")
+	revisionID := templateID + ":1"
+
+	registerWorkflowTemplateCleanup(t, templateID, 1)
+
+	if err := createWorkflowTemplateFixture(templateID, "TERRAFORM"); err != nil {
+		t.Fatal(err)
+	}
+
+	empty := ""
+	kind := workflowtemplates.WorkflowTemplateSourceConfigKindEnum("TERRAFORM")
+	cpu, memory := 500, 1024
+	_, err := GetClient().WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, templateID, &workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
+		OwnerOrg:         fmt.Sprintf("/orgs/%s", config.Get().OrgName),
+		Alias:            "revision-import-schedule",
+		SourceConfigKind: &kind,
+		UserJobCPU:       &cpu,
+		UserJobMemory:    &memory,
+		UserSchedules: []workflowtemplaterevisions.UserSchedules{{
+			Cron:  "0 12 ? * 2 *",
+			State: workflowtemplaterevisions.UserSchedulesStateEnum("ENABLED"),
+			Name:  &empty,
+			Desc:  &empty,
+			Inputs: &workflowtemplaterevisions.UserSchedulesInputs{
+				TerraformAction: &sgsdkgo.TerraformAction{Action: sgsdkgo.ActionEnum("apply").Ptr()},
+			},
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	revisionConfig := func(description string) string {
+		return testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, fmt.Sprintf(`
+	  alias       = "revision-import-schedule"
+	  description = %q
+
+	  user_schedules = [
+	    {
+	      cron  = "0 12 ? * 2 *"
+	      state = "ENABLED"
+	      inputs = {
+	        terraform_action = { action = "apply" }
+	      }
+	    }
+	  ]
+	`, description))
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config:             revisionConfig("Imported"),
+				ResourceName:       "stackguardian_workflow_template_revision.test",
+				ImportState:        true,
+				ImportStateId:      revisionID,
+				ImportStatePersist: true,
+			},
+			{
+				// Update the imported revision; the schedule's stored "" name/desc and its
+				// enable_chaining are carried forward from the imported state.
+				Config: revisionConfig("Imported, then updated"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "description", "Imported, then updated"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "user_schedules.0.name", ""),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "user_schedules.0.desc", ""),
+				),
+			},
+			{
+				Config:   revisionConfig("Imported, then updated"),
 				PlanOnly: true,
 			},
 		},

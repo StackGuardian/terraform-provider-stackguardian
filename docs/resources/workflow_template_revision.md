@@ -676,12 +676,57 @@ Optional:
 Required:
 
 - `cron` (String) Cron expression defining the schedule. Use [AWS cron](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-scheduled-rule-pattern.html) expression format.
+- `inputs` (Attributes) Run inputs used when this schedule triggers a workflow run. (see [below for nested schema](#nestedatt--user_schedules--inputs))
 
 Optional:
 
 - `desc` (String) Description of the schedule.
 - `name` (String) Name of the schedule.
 - `state` (String) State of the schedule. Options: <span style="background-color: #eff0f0; color: #e53835;">ENABLED</span>, <span style="background-color: #eff0f0; color: #e53835;">DISABLED</span>
+
+<a id="nestedatt--user_schedules--inputs"></a>
+### Nested Schema for `user_schedules.inputs`
+
+Required:
+
+- `terraform_action` (Attributes) Terraform action the scheduled run performs. (see [below for nested schema](#nestedatt--user_schedules--inputs--terraform_action))
+
+Optional:
+
+- `vcs_config` (Attributes) VCS configuration for the scheduled run. (see [below for nested schema](#nestedatt--user_schedules--inputs--vcs_config))
+
+Read-Only:
+
+- `enable_chaining` (Boolean) Whether the scheduled run triggers the workflows and stacks chained to it. Set by StackGuardian; read-only.
+
+<a id="nestedatt--user_schedules--inputs--terraform_action"></a>
+### Nested Schema for `user_schedules.inputs.terraform_action`
+
+Required:
+
+- `action` (String) Action to run. One of `apply`, `destroy`, `plan`, `plan-destroy`, `plan-without-policy` or `refresh`.
+
+
+<a id="nestedatt--user_schedules--inputs--vcs_config"></a>
+### Nested Schema for `user_schedules.inputs.vcs_config`
+
+Optional:
+
+- `iac_input_data` (Attributes) IaC input data for the scheduled run. (see [below for nested schema](#nestedatt--user_schedules--inputs--vcs_config--iac_input_data))
+
+<a id="nestedatt--user_schedules--inputs--vcs_config--iac_input_data"></a>
+### Nested Schema for `user_schedules.inputs.vcs_config.iac_input_data`
+
+Required:
+
+- `schema_type` (String) How the value in `data` is formatted. One of `RAW_JSON` or `FORM_JSONSCHEMA`.
+
+Optional:
+
+- `data` (String) Input data as a JSON string. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+
+
+
 
 
 <a id="nestedatt--wf_steps_config"></a>

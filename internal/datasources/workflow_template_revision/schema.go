@@ -483,6 +483,46 @@ func (d *workflowTemplateRevisionDataSource) Schema(_ context.Context, _ datasou
 							MarkdownDescription: constants.UserScheduleName,
 							Computed:            true,
 						},
+						"inputs": schema.SingleNestedAttribute{
+							MarkdownDescription: constants.UserScheduleInputs,
+							Computed:            true,
+							Attributes: map[string]schema.Attribute{
+								"terraform_action": schema.SingleNestedAttribute{
+									MarkdownDescription: constants.UserScheduleInputsTerraformAction,
+									Computed:            true,
+									Attributes: map[string]schema.Attribute{
+										"action": schema.StringAttribute{
+											MarkdownDescription: constants.UserScheduleInputsTerraformActionAction,
+											Computed:            true,
+										},
+									},
+								},
+								"enable_chaining": schema.BoolAttribute{
+									MarkdownDescription: constants.UserScheduleInputsEnableChaining,
+									Computed:            true,
+								},
+								"vcs_config": schema.SingleNestedAttribute{
+									MarkdownDescription: constants.UserScheduleInputsVcsConfig,
+									Computed:            true,
+									Attributes: map[string]schema.Attribute{
+										"iac_input_data": schema.SingleNestedAttribute{
+											MarkdownDescription: constants.UserScheduleInputsIacInputData,
+											Computed:            true,
+											Attributes: map[string]schema.Attribute{
+												"schema_type": schema.StringAttribute{
+													MarkdownDescription: constants.UserScheduleInputsIacInputDataSchemaType,
+													Computed:            true,
+												},
+												"data": schema.StringAttribute{
+													MarkdownDescription: constants.WorkflowIacInputDataData,
+													Computed:            true,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},

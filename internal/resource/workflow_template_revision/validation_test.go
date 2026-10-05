@@ -82,3 +82,46 @@ func TestAccWorkflowTemplateRevision_ValidateRuntimeSourceAuthRequired(t *testin
 		},
 	})
 }
+
+// TestAccWorkflowTemplateRevision_ValidateUserScheduleInputsSchemaType confirms
+// user_schedules[*].inputs.vcs_config.iac_input_data.schema_type only accepts RAW_JSON or
+// FORM_JSONSCHEMA. The OneOf validator runs during validation, before Create, so no API call
+// happens and no fixture/cleanup is needed.
+func TestAccWorkflowTemplateRevision_ValidateUserScheduleInputsSchemaType(t *testing.T) {
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	config := testAccWorkflowTemplateRevision("does-not-need-to-exist", "TERRAFORM", 500, 1024, `
+	  alias = "revision-validate-schedule-inputs"
+
+	  user_schedules = [
+	    {
+	      cron  = "0 8 ? * MON *"
+	      state = "ENABLED"
+	      inputs = {
+	        terraform_action = { action = "apply" }
+	        vcs_config = {
+	          iac_input_data = {
+	            schema_type = "RAW_HCL"
+	            data        = jsonencode({ test = "value" })
+	          }
+	        }
+	      }
+	    }
+	  ]
+	`)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config:      config,
+				ExpectError: acctest.TFStandardErrorPattern(`value must be one of: ["RAW_JSON" "FORM_JSONSCHEMA"], got: "RAW_HCL"`),
+			},
+		},
+	})
+}

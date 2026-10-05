@@ -2,6 +2,8 @@ package workflowtemplaterevision
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
@@ -11,6 +13,7 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
@@ -389,19 +392,264 @@ func (DeploymentPlatformConfigModel) AttributeTypes() map[string]attr.Type {
 }
 
 type UserSchedulesModel struct {
-	Cron  types.String `tfsdk:"cron"`
-	State types.String `tfsdk:"state"`
-	Desc  types.String `tfsdk:"desc"`
-	Name  types.String `tfsdk:"name"`
+	Cron   types.String `tfsdk:"cron"`
+	State  types.String `tfsdk:"state"`
+	Desc   types.String `tfsdk:"desc"`
+	Name   types.String `tfsdk:"name"`
+	Inputs types.Object `tfsdk:"inputs"`
 }
 
 func (UserSchedulesModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
-		"cron":  types.StringType,
-		"state": types.StringType,
-		"desc":  types.StringType,
-		"name":  types.StringType,
+		"cron":   types.StringType,
+		"state":  types.StringType,
+		"desc":   types.StringType,
+		"name":   types.StringType,
+		"inputs": types.ObjectType{AttrTypes: UserScheduleInputsModel{}.AttributeTypes()},
 	}
+}
+
+// UserScheduleInputsModel is user_schedules[*].inputs: the run inputs a schedule uses when it
+// triggers a run.
+type UserScheduleInputsModel struct {
+	TerraformAction types.Object `tfsdk:"terraform_action"`
+	EnableChaining  types.Bool   `tfsdk:"enable_chaining"`
+	VcsConfig       types.Object `tfsdk:"vcs_config"`
+}
+
+func (UserScheduleInputsModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"terraform_action": types.ObjectType{AttrTypes: UserScheduleTerraformActionModel{}.AttributeTypes()},
+		"enable_chaining":  types.BoolType,
+		"vcs_config":       types.ObjectType{AttrTypes: UserScheduleVcsConfigModel{}.AttributeTypes()},
+	}
+}
+
+type UserScheduleTerraformActionModel struct {
+	Action types.String `tfsdk:"action"`
+}
+
+func (UserScheduleTerraformActionModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"action": types.StringType,
+	}
+}
+
+type UserScheduleVcsConfigModel struct {
+	IacInputData types.Object `tfsdk:"iac_input_data"`
+}
+
+func (UserScheduleVcsConfigModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"iac_input_data": types.ObjectType{AttrTypes: UserScheduleIacInputDataModel{}.AttributeTypes()},
+	}
+}
+
+type UserScheduleIacInputDataModel struct {
+	SchemaType types.String `tfsdk:"schema_type"`
+	Data       types.String `tfsdk:"data"` // JSON string
+}
+
+func (UserScheduleIacInputDataModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"schema_type": types.StringType,
+		"data":        types.StringType,
+	}
+}
+
+func (m UserScheduleTerraformActionModel) ToAPIModel() *sgsdkgo.TerraformAction {
+	action := &sgsdkgo.TerraformAction{}
+	if !m.Action.IsNull() && !m.Action.IsUnknown() {
+		action.Action = sgsdkgo.ActionEnum(m.Action.ValueString()).Ptr()
+	}
+	return action
+}
+
+func (m UserScheduleIacInputDataModel) ToAPIModel() (*sgsdkgo.IacInputData, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	inputData := &sgsdkgo.IacInputData{}
+	if !m.SchemaType.IsNull() && !m.SchemaType.IsUnknown() {
+		inputData.SchemaType = sgsdkgo.IacInputDataSchemaTypeEnum(m.SchemaType.ValueString()).Ptr()
+	}
+	if !m.Data.IsNull() && !m.Data.IsUnknown() {
+		var data map[string]interface{}
+		if err := json.Unmarshal([]byte(m.Data.ValueString()), &data); err != nil {
+			diags.AddAttributeError(
+				path.Root("user_schedules"),
+				"Invalid user_schedules inputs data",
+				fmt.Sprintf("inputs.vcs_config.iac_input_data.data must be a JSON object: %s", err),
+			)
+			return nil, diags
+		}
+		inputData.Data = &data
+	}
+	return inputData, diags
+}
+
+func (m UserScheduleVcsConfigModel) ToAPIModel(ctx context.Context) (*sgsdkgo.VcsConfig, diag.Diagnostics) {
+	vcsConfig := &sgsdkgo.VcsConfig{}
+	if !m.IacInputData.IsNull() && !m.IacInputData.IsUnknown() {
+		var inputDataModel UserScheduleIacInputDataModel
+		diags := m.IacInputData.As(ctx, &inputDataModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, diags
+		}
+		inputData, diags := inputDataModel.ToAPIModel()
+		if diags.HasError() {
+			return nil, diags
+		}
+		vcsConfig.IacInputData = inputData
+	}
+	return vcsConfig, nil
+}
+
+func (m UserScheduleInputsModel) ToAPIModel(ctx context.Context) (*workflowtemplaterevisions.UserSchedulesInputs, diag.Diagnostics) {
+	inputs := &workflowtemplaterevisions.UserSchedulesInputs{}
+
+	if !m.TerraformAction.IsNull() && !m.TerraformAction.IsUnknown() {
+		var actionModel UserScheduleTerraformActionModel
+		diags := m.TerraformAction.As(ctx, &actionModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, diags
+		}
+		inputs.TerraformAction = actionModel.ToAPIModel()
+	}
+
+	// enable_chaining is Computed-only and only sent when the API returned a value: on update
+	// UseStateForUnknown carries that value into the plan so it is sent back unchanged. When it
+	// is unknown (create) or null (the API had none, e.g. after an import), nothing is sent and
+	// the server keeps its own value.
+	if !m.EnableChaining.IsNull() && !m.EnableChaining.IsUnknown() {
+		inputs.EnableChaining = m.EnableChaining.ValueBoolPointer()
+	}
+
+	if !m.VcsConfig.IsNull() && !m.VcsConfig.IsUnknown() {
+		var vcsConfigModel UserScheduleVcsConfigModel
+		diags := m.VcsConfig.As(ctx, &vcsConfigModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, diags
+		}
+		vcsConfig, diags := vcsConfigModel.ToAPIModel(ctx)
+		if diags.HasError() {
+			return nil, diags
+		}
+		inputs.VCSConfig = vcsConfig
+	}
+
+	return inputs, nil
+}
+
+// convertUserScheduleInputsToAPI converts user_schedules[*].inputs, returning nil (left out of
+// the request) when it is null or unknown.
+func convertUserScheduleInputsToAPI(ctx context.Context, obj types.Object) (*workflowtemplaterevisions.UserSchedulesInputs, diag.Diagnostics) {
+	if obj.IsNull() || obj.IsUnknown() {
+		return nil, nil
+	}
+	var m UserScheduleInputsModel
+	diags := obj.As(ctx, &m, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, diags
+	}
+	return m.ToAPIModel(ctx)
+}
+
+func convertUserScheduleTerraformActionFromAPI(ctx context.Context, action *sgsdkgo.TerraformAction) (types.Object, diag.Diagnostics) {
+	nullObj := types.ObjectNull(UserScheduleTerraformActionModel{}.AttributeTypes())
+	if action == nil || flatteners.IsEmptyObject(action) {
+		return nullObj, nil
+	}
+
+	obj, diags := types.ObjectValueFrom(ctx, UserScheduleTerraformActionModel{}.AttributeTypes(), UserScheduleTerraformActionModel{
+		Action: flatteners.StringPtr((*string)(action.Action)),
+	})
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	return obj, diags
+}
+
+func convertUserScheduleIacInputDataFromAPI(ctx context.Context, inputData *sgsdkgo.IacInputData) (types.Object, diag.Diagnostics) {
+	nullObj := types.ObjectNull(UserScheduleIacInputDataModel{}.AttributeTypes())
+	if inputData == nil || flatteners.IsEmptyObject(inputData) {
+		return nullObj, nil
+	}
+
+	var diags diag.Diagnostics
+	data := types.StringNull()
+	if inputData.Data != nil {
+		b, err := json.Marshal(*inputData.Data)
+		if err != nil {
+			diags.AddError("Error reading user_schedules inputs data", fmt.Sprintf("could not encode inputs.vcs_config.iac_input_data.data as JSON: %s", err))
+			return nullObj, diags
+		}
+		data = types.StringValue(string(b))
+	}
+
+	obj, d := types.ObjectValueFrom(ctx, UserScheduleIacInputDataModel{}.AttributeTypes(), UserScheduleIacInputDataModel{
+		SchemaType: flatteners.StringPtr((*string)(inputData.SchemaType)),
+		Data:       data,
+	})
+	diags.Append(d...)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	return obj, diags
+}
+
+func convertUserScheduleVcsConfigFromAPI(ctx context.Context, vcsConfig *sgsdkgo.VcsConfig) (types.Object, diag.Diagnostics) {
+	nullObj := types.ObjectNull(UserScheduleVcsConfigModel{}.AttributeTypes())
+	if vcsConfig == nil || vcsConfig.IacInputData == nil {
+		return nullObj, nil
+	}
+
+	inputData, diags := convertUserScheduleIacInputDataFromAPI(ctx, vcsConfig.IacInputData)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	if inputData.IsNull() {
+		return nullObj, nil
+	}
+
+	obj, diags := types.ObjectValueFrom(ctx, UserScheduleVcsConfigModel{}.AttributeTypes(), UserScheduleVcsConfigModel{
+		IacInputData: inputData,
+	})
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	return obj, diags
+}
+
+// convertUserScheduleInputsFromAPI converts a schedule's inputs, returning a null object when
+// the API has none (for example a schedule created outside Terraform).
+func convertUserScheduleInputsFromAPI(ctx context.Context, inputs *workflowtemplaterevisions.UserSchedulesInputs) (types.Object, diag.Diagnostics) {
+	nullObj := types.ObjectNull(UserScheduleInputsModel{}.AttributeTypes())
+	if inputs == nil || flatteners.IsEmptyObject(inputs) {
+		return nullObj, nil
+	}
+
+	terraformAction, diags := convertUserScheduleTerraformActionFromAPI(ctx, inputs.TerraformAction)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+
+	vcsConfig, diags := convertUserScheduleVcsConfigFromAPI(ctx, inputs.VCSConfig)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+
+	obj, diags := types.ObjectValueFrom(ctx, UserScheduleInputsModel{}.AttributeTypes(), UserScheduleInputsModel{
+		TerraformAction: terraformAction,
+		// A value the API leaves out stays null rather than being given a default: the API
+		// treats a missing EnableChaining as true, so inventing false (or any value) and
+		// sending it back on update would change the schedule.
+		EnableChaining: flatteners.BoolPtr(inputs.EnableChaining),
+		VcsConfig:      vcsConfig,
+	})
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	return obj, diags
 }
 
 func ConvertDeprecationToAPIModel(ctx context.Context, deprecationObj types.Object) (*workflowtemplaterevisions.Deprecation, diag.Diagnostics) {
@@ -456,11 +704,23 @@ func ConvertUserSchedulesToAPIModel(ctx context.Context, userSchedulesList types
 
 	result := make([]workflowtemplaterevisions.UserSchedules, len(models))
 	for i, m := range models {
+		inputs, diags := convertUserScheduleInputsToAPI(ctx, m.Inputs)
+		if diags.HasError() {
+			return nil, diags
+		}
+
 		schedule := workflowtemplaterevisions.UserSchedules{
-			Cron:  m.Cron.ValueString(),
-			State: workflowtemplaterevisions.UserSchedulesStateEnum(m.State.ValueString()),
-			Desc:  m.Desc.ValueStringPointer(),
-			Name:  m.Name.ValueStringPointer(),
+			Cron:   m.Cron.ValueString(),
+			State:  workflowtemplaterevisions.UserSchedulesStateEnum(m.State.ValueString()),
+			Inputs: inputs,
+		}
+		// desc and name are Optional+Computed: unknown on create (left out of the request),
+		// otherwise the configured or carried-over value, including an empty string.
+		if !m.Desc.IsNull() && !m.Desc.IsUnknown() {
+			schedule.Desc = m.Desc.ValueStringPointer()
+		}
+		if !m.Name.IsNull() && !m.Name.IsUnknown() {
+			schedule.Name = m.Name.ValueStringPointer()
 		}
 
 		result[i] = schedule
@@ -1308,11 +1568,17 @@ func ConvertUserSchedulesFromAPI(ctx context.Context, userSchedules []workflowte
 
 	models := make([]UserSchedulesModel, len(userSchedules))
 	for i, us := range userSchedules {
+		inputs, diags := convertUserScheduleInputsFromAPI(ctx, us.Inputs)
+		if diags.HasError() {
+			return nullList, diags
+		}
+
 		models[i] = UserSchedulesModel{
-			Cron:  flatteners.String(us.Cron),
-			State: flatteners.String(string(us.State)),
-			Desc:  flatteners.StringPtr(us.Desc),
-			Name:  flatteners.StringPtr(us.Name),
+			Cron:   flatteners.String(us.Cron),
+			State:  flatteners.String(string(us.State)),
+			Desc:   flatteners.StringPtr(us.Desc),
+			Name:   flatteners.StringPtr(us.Name),
+			Inputs: inputs,
 		}
 	}
 

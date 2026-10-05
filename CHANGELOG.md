@@ -11,6 +11,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > initial release series and are kept for historical reference.**
 
 
+## [1.12.4]
+
+### Breaking
+
+- `stackguardian_workflow_template_revision`: every `user_schedules` entry now requires an
+  `inputs` block with `inputs.terraform_action.action` set. Existing configurations whose
+  schedules have no `inputs` fail validation after upgrading; add, for example:
+
+  ```hcl
+  user_schedules = [
+    {
+      cron  = "0 8 ? * MON *"
+      state = "ENABLED"
+      inputs = {
+        terraform_action = { action = "apply" }
+      }
+    }
+  ]
+  ```
+
+### Added
+
+- `user_schedules[*].inputs` on `stackguardian_workflow_template_revision` and its data source:
+  the run inputs a schedule uses when it triggers a run — `terraform_action.action` and
+  `vcs_config.iac_input_data` (`schema_type` and `data`, a JSON string
+  such as `jsonencode({ test = "value" })`). `enable_chaining` is read-only: set by
+  StackGuardian and sent back unchanged on update
+- Plan-time validation that `user_schedules[*].inputs.vcs_config.iac_input_data.schema_type`
+  is `RAW_JSON` or `FORM_JSONSCHEMA`
+- `terraform_config.run_pre_plan_hooks_on_drift` and `terraform_config.run_post_plan_hooks_on_drift`
+  on `stackguardian_workflow_template_revision` and its data source
+
+### Changed
+
+- `terraform_config.run_pre_init_hooks_on_drift`, `run_pre_plan_hooks_on_drift` and
+  `run_post_plan_hooks_on_drift` on `stackguardian_workflow_template_revision` default to
+  `false`. Omitting one (or setting it to `null`) now sends `false`; previously an omitted
+  `run_pre_init_hooks_on_drift` kept its last value.
+
+### Fixed
+
+- Importing a `stackguardian_workflow_template_revision` (`<template_id>:<revision>`) now sets
+  `template_id`. It was left null, so the first plan after an import failed with
+  "template_id cannot be changed". A malformed import ID now returns a clear error.
+- `user_schedules[*].name` and `desc` on `stackguardian_workflow_template_revision` are now
+  Optional + Computed. Schedules created in the UI store `""` for both; leaving them out of the
+  config after an import planned a change to null on every run, and the update was then
+  rejected for published revisions ("Cannot update … UserSchedules … for a published template").
+
 ## [Unreleased]
 
 ### Added
