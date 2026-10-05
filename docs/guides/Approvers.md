@@ -28,17 +28,44 @@ For a group the middle part is the literal word `group`, not the SSO provider na
 
 ## User pool IDs
 
-SSO users and groups take a prefix that depends on your StackGuardian region.
+SSO users and SSO groups take a user pool ID as their prefix. Which one depends on the region
+your organization is hosted in — the same region your provider's `api_uri` points at.
 
-| Region | `api_uri` | SSO users and groups | Local users (optional) |
-|--------|-----------|----------------------|------------------------|
-| EU | `https://api.app.stackguardian.io` | `eu-central-1_xut85XJiL` | `eu-central-1_srEmUITJM` |
-| US | `https://api.us.stackguardian.io` | `us-east-2_LKSJfYtpl` | `us-east-2_B8artiaXu` |
+| Region | Dashboard | `api_uri` | SSO users and groups | Local users (optional) |
+|--------|-----------|-----------|----------------------|------------------------|
+| EU | `app.stackguardian.io` | `https://api.app.stackguardian.io` | `eu-central-1_xut85XJiL` | `eu-central-1_srEmUITJM` |
+| US | `us.stackguardian.io` | `https://api.us.stackguardian.io` | `us-east-2_LKSJfYtpl` | `us-east-2_B8artiaXu` |
+
+Put together, these are the entries for each region:
+
+| Region | Approver | Entry |
+|--------|----------|-------|
+| EU | SSO user | `eu-central-1_xut85XJiL/<sso-provider-name>/<email>` |
+| EU | SSO group | `eu-central-1_xut85XJiL/group/<group-id>` |
+| EU | Local account only | `eu-central-1_srEmUITJM/local/<email>` |
+| US | SSO user | `us-east-2_LKSJfYtpl/<sso-provider-name>/<email>` |
+| US | SSO group | `us-east-2_LKSJfYtpl/group/<group-id>` |
+| US | Local account only | `us-east-2_B8artiaXu/local/<email>` |
+
+The local pool ID is only needed for the
+[local-account-only form](#allowing-the-local-account-only); a local user is normally just the
+email address.
+
+A few things to get right:
+
+- **Each region has two pools — do not swap them.** An SSO user or group under the local pool ID,
+  or a local user under the SSO pool ID, never matches anyone.
+- **A pool ID only works in its own region.** An organization hosted in the US cannot use the EU
+  IDs, and the other way round.
+- **Copy the ID exactly.** It is case-sensitive, including the part after the underscore.
+
+~> **EU region: always use the `eu-central-1` IDs.** The EU region also has user pools in a
+secondary AWS region, `eu-west-1`, and you may come across one of those IDs in your SSO setup.
+They are not valid in an approver entry. StackGuardian records every EU identity under the
+`eu-central-1` ID, so an entry with an `eu-west-1_…` prefix never matches anyone.
 
 On any other StackGuardian installation the IDs are different —
 [read them from an existing resource](#checking-a-value) instead.
-
-The local pool ID is only needed for the [local-account-only form](#allowing-the-local-account-only).
 
 ## SSO provider name and group ID
 
