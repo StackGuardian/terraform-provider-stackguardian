@@ -25,7 +25,7 @@ New to the provider? Start with the **Getting Started** guide, then **Object Mod
 | [Templates and Revisions](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Templates) | The template lifecycle and how inheritance works |
 | [Access Management](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/AccessManagement) | Roles and role assignments |
 | [Policies](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Policies) | Guardrails that gate a run, and approval gating |
-| [Approvers](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers) | How to list local users, SSO users and SSO groups as approvers |
+| [Approvers](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers) | How to list local users, SSO users and SSO groups as approvers, and how approvals are counted |
 | [Importing Existing Resources](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ImportingResources) | Import ID formats for every resource |
 | [Troubleshooting](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Troubleshooting) | Common errors and surprising behaviour |
 | [Team Onboarding](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/TeamOnboarding) | Structuring an organization, with worked examples |

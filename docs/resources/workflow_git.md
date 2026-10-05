@@ -323,7 +323,7 @@ resource "stackguardian_workflow_git" "vpc_production" {
 - `description` (String) A brief description of the workflow. Must be less than 256 characters.
 - `environment_variables` (Attributes List) Environment variables made available to the workflow during its runs. (see [below for nested schema](#nestedatt--environment_variables))
 - `mini_steps` (Attributes) Actions that are required to be performed once workflow execution is complete (see [below for nested schema](#nestedatt--mini_steps))
-- `number_of_approvals_required` (Number) Number of approvals required.
+- `number_of_approvals_required` (Number) How many approvals release a workflow run that is waiting for approval. `0` means every entry in `approvers` must approve. `1` or more means that many different people must approve — use this when the list contains an SSO group. A single rejection cancels the run whatever the value. Not validated against the list, so a value higher than the number of people who can approve leaves the run waiting. See [how approvals are counted](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers#how-many-approvals-are-needed).
 - `resource_name` (String) Name of the workflow. Must be less than 100 characters. Free-form: when it is not already slug-shaped (letters, digits, `_`, `-`) the platform derives a slug for `id` — see `id`.
 - `runner_constraints` (Attributes) Runner constraints to control which runner executes the workflow. (see [below for nested schema](#nestedatt--runner_constraints))
 - `tags` (List of String) A list of tags associated with the workflow. A maximum of 10 tags are allowed.

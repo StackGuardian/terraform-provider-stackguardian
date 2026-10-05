@@ -395,7 +395,7 @@ var dsWorkflowInStackAttrs = map[string]schema.Attribute{
 		Computed:            true,
 	},
 	"number_of_approvals_required": schema.Int64Attribute{
-		MarkdownDescription: "Number of approvals required.",
+		MarkdownDescription: constants.WfNumberOfApprovals,
 		Computed:            true,
 	},
 	"runner_constraints": schema.SingleNestedAttribute{

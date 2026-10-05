@@ -217,7 +217,7 @@ Read-Only:
 - `deployment_platform_config` (Attributes List) Deployment platform configuration. (see [below for nested schema](#nestedatt--workflows_config--workflows--deployment_platform_config))
 - `description` (String) Description of this workflow.
 - `environment_variables` (Attributes List) Environment variables for the workflow. (see [below for nested schema](#nestedatt--workflows_config--workflows--environment_variables))
-- `number_of_approvals_required` (Number) Number of approvals required.
+- `number_of_approvals_required` (Number) How many approvals release a workflow run that is waiting for approval. `0` means every entry in `approvers` must approve. `1` or more means that many different people must approve — use this when the list contains an SSO group. A single rejection cancels the run whatever the value. Not validated against the list, so a value higher than the number of people who can approve leaves the run waiting. See [how approvals are counted](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers#how-many-approvals-are-needed).
 - `resource_name` (String) Name of the workflow resource within the stack.
 - `runner_constraints` (Attributes) Runner constraints for the workflow. (see [below for nested schema](#nestedatt--workflows_config--workflows--runner_constraints))
 - `tags` (List of String) Tags for the workflow.

@@ -2,7 +2,7 @@
 page_title: "Approvers"
 subcategory: "Concepts"
 description: |-
-  How to write an `approvers` entry for a local user, an SSO user or an SSO group, and which user-pool prefix SSO entries take.
+  How to write an `approvers` entry for a local user, an SSO user or an SSO group, which user-pool prefix SSO entries take, and how `number_of_approvals_required` decides when a run continues.
 ---
 
 # Approvers
@@ -106,6 +106,52 @@ resource "stackguardian_policy" "approval_on_apply" {
 
 Workflows and template revisions take exactly the same entries.
 
+## How many approvals are needed
+
+`number_of_approvals_required` sits next to `approvers` and decides how many of them must approve
+before the run continues.
+
+| Value | The run continues when |
+|-------|------------------------|
+| `0` — the default for a policy and for `stackguardian_workflow_git` | **every** entry in `approvers` has approved |
+| `1` or more | that many **different people** have approved |
+
+For example, with three approvers — Alice, Bob and Carol:
+
+| `number_of_approvals_required` | The run continues when |
+|--------------------------------|------------------------|
+| `0` | Alice, Bob and Carol have all approved |
+| `1` | any one of them has approved |
+| `2` | any two of them have approved |
+| `3` | all three have approved — the same as `0` today, but `0` keeps meaning "everyone" as the list grows |
+| `4` | never — see the warning below |
+
+~> **Do not ask for more approvals than there are people who can give them.** The value is not
+checked at apply time. Set it too high and the gate can never be met: the run waits until someone
+cancels it.
+
+### How people are counted
+
+- **A group adds its members.** Each group member who approves counts as one person. With a single
+  group in the list and `number_of_approvals_required = 2`, any two members of the group release
+  the run.
+- **With a group in the list, use `1` or more, never `0`.** `0` means "every entry", and a group
+  is one entry however many people are in it.
+- **One person counts once.** Someone listed by name who is also in a listed group still gives a
+  single approval.
+- **A local login and an SSO login count separately.** Someone who has both is two identities to
+  StackGuardian, and can approve once with each.
+
+### What else decides the outcome
+
+- **One rejection cancels the run**, whatever the number is. An approver can reject, and so can an
+  organization admin who is not in the list — an admin can reject but not approve.
+- **Each gate is counted on its own.** A run can be held by more than one thing at once: the
+  workflow's own gate, and one or more policies. Each uses its own `approvers` and its own
+  `number_of_approvals_required`, and the run continues only when all of them are met.
+- **An approval can be withdrawn** by the person who gave it, for as long as the run is still
+  waiting.
+
 ## Rules worth knowing
 
 - **Write emails in lowercase.** Workflows store the email part in lowercase, so mixed case in
@@ -113,14 +159,10 @@ Workflows and template revisions take exactly the same entries.
   provider name are case-sensitive and must match exactly.
 - **An SSO entry only matches an SSO sign-in.** `<sso-pool-id>/sg-test-sso/jane@example.com`
   cannot approve from a local account with the same address.
-- **With a group in the list, set `number_of_approvals_required` to `1` or more.** `0` means
-  "every listed approver must approve", which cannot be counted for a group.
-- **One person counts once.** Someone listed as an SSO user who is also in a listed SSO group
-  still gives a single approval.
 - **Entries are not checked at apply time.** A wrong prefix or a typo applies cleanly, and that
   entry then never matches anyone.
 - **An empty list on a workflow means anyone can approve.** A workflow gate with no approvers
-  can be released by any user who can reach the run.
+  can be released by any user who can reach the run, and one approval is enough.
 
 ## Allowing the local account only
 
