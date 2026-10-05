@@ -97,7 +97,7 @@ resource "stackguardian_workflow_from_template" "example" {
 
 ### Optional
 
-- `approvers` (List of String) Who can approve a workflow run that is waiting for approval. Each entry identifies one approver: <ul><li>Local user — `<local-pool-id>/local/<email>`</li><li>SSO user — `<sso-pool-id>/<sso-provider-name>/<email>`</li><li>SSO group — `<sso-pool-id>/group/<group-id>`, which lets anyone in that group approve</li></ul>Write emails in lowercase. A bare email address is also accepted and matches that address for both local and SSO sign-in. See the [Approvers guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers) for the user pool ID of each region and worked examples.
+- `approvers` (List of String) Who can approve a workflow run that is waiting for approval. Each entry identifies one approver: <ul><li>Local user — the email address, e.g. `jane@example.com`</li><li>SSO user — `<sso-pool-id>/<sso-provider-name>/<email>`</li><li>SSO group — `<sso-pool-id>/group/<group-id>`, which lets anyone in that group approve</li></ul>Write emails in lowercase. A bare email address also matches an SSO sign-in with the same address; use `<local-pool-id>/local/<email>` to allow the local account only. See the [Approvers guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers) for the user pool ID of each region and worked examples.
 - `context_tags` (Map of String) Context tags for workflow
 - `deployment_platform_config` (Attributes List) Deployment platform configuration. (see [below for nested schema](#nestedatt--deployment_platform_config))
 - `description` (String) A brief description of the workflow. Must be less than 256 characters.

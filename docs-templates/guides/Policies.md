@@ -132,7 +132,7 @@ resource "stackguardian_policy" "approval_on_apply" {
   enforced_on = ["/wfgrps/frontend"]
 
   approvers = [
-    "eu-central-1_srEmUITJM/local/platform-lead@example.com",
+    "platform-lead@example.com",
   ]
   number_of_approvals_required = 1
 
@@ -169,8 +169,8 @@ resource "stackguardian_policy" "approval_on_apply" {
 }
 ```
 
-~> The entry above is a **local user** in the EU region. SSO users and SSO groups are written
-differently, and the user pool prefix depends on your region — see
+~> A local user is listed by email address, as above. SSO users and SSO groups take a user pool
+prefix that depends on your region — see
 [Approvers](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers)
 for every form.
 

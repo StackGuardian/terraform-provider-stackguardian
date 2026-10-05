@@ -29,11 +29,5 @@ resource "stackguardian_workflow_template_revision" "detailed" {
   user_job_memory              = 4096
   number_of_approvals_required = 1
   tags                         = ["terraform", "production", "approved"]
-
-  # Local users, with the EU region's user pool ID. See the Approvers guide for
-  # SSO users, SSO groups and the US pool IDs.
-  approvers = [
-    "eu-central-1_srEmUITJM/local/user1@example.com",
-    "eu-central-1_srEmUITJM/local/user2@example.com",
-  ]
+  approvers                    = ["user1@example.com", "user2@example.com"]
 }

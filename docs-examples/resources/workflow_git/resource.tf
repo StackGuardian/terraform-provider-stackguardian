@@ -194,10 +194,10 @@ resource "stackguardian_workflow_git" "vpc_production" {
     timeout = 3600
   }
 
-  # A local user and an SSO group, with the EU region's user pool IDs. See the
-  # Approvers guide for the entry format and the US pool IDs.
+  # A local user by email, and an SSO group with the EU region's SSO user pool ID.
+  # See the Approvers guide for the entry format and the US pool ID.
   approvers = [
-    "eu-central-1_srEmUITJM/local/platform-lead@example.com",
+    "platform-lead@example.com",
     "eu-central-1_xut85XJiL/group/sre-oncall",
   ]
   number_of_approvals_required = 1

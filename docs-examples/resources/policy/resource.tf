@@ -77,12 +77,11 @@ resource "stackguardian_policy" "approval_on_apply" {
 
   enforced_on = ["/wfgrps/${stackguardian_workflow_group.production.id}"]
 
-  # Each approver is "<user-pool-id>/<sign-in-method>/<email-or-group-id>". The pool
-  # IDs here are the EU region's: one for local users, one for SSO users and groups.
-  # The Approvers guide lists the US ones and shows how to find your SSO provider
-  # name and group IDs.
+  # A local user is listed by email. SSO users and SSO groups take a user pool
+  # prefix -- the one here is the EU region's. The Approvers guide lists the US one
+  # and shows how to find your SSO provider name and group IDs.
   approvers = [
-    "eu-central-1_srEmUITJM/local/platform-lead@example.com",    # local user
+    "platform-lead@example.com",                                 # local user
     "eu-central-1_xut85XJiL/sg-test-sso/sre-oncall@example.com", # SSO user
     "eu-central-1_xut85XJiL/group/platform-admins",              # SSO group
   ]
