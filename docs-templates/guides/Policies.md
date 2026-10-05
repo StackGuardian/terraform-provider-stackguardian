@@ -132,7 +132,7 @@ resource "stackguardian_policy" "approval_on_apply" {
   enforced_on = ["/wfgrps/frontend"]
 
   approvers = [
-    "platform-lead@example.com",
+    "eu-central-1_srEmUITJM/local/platform-lead@example.com",
   ]
   number_of_approvals_required = 1
 
@@ -169,9 +169,10 @@ resource "stackguardian_policy" "approval_on_apply" {
 }
 ```
 
-~> Each `approvers` entry is a user's email address, or an SSO group name to allow anyone in
-that group. The fully qualified form `<user-pool-id>/local/<email>` is also accepted. Read an
-existing policy with the `stackguardian_policy` data source to see what your organization uses.
+~> The entry above is a **local user** in the EU region. SSO users and SSO groups are written
+differently, and the user pool prefix depends on your region — see
+[Approvers](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers)
+for every form.
 
 ## Where to go next
 

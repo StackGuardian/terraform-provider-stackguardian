@@ -240,7 +240,12 @@ resource "stackguardian_workflow_git" "vpc_production" {
     timeout = 3600
   }
 
-  approvers                    = ["platform-lead@example.com", "sre-oncall@example.com"]
+  # A local user and an SSO group, with the EU region's user pool IDs. See the
+  # Approvers guide for the entry format and the US pool IDs.
+  approvers = [
+    "eu-central-1_srEmUITJM/local/platform-lead@example.com",
+    "eu-central-1_xut85XJiL/group/sre-oncall",
+  ]
   number_of_approvals_required = 1
 
   # "shared" runs on StackGuardian-managed infrastructure. Use "private" with
@@ -312,7 +317,7 @@ resource "stackguardian_workflow_git" "vpc_production" {
 
 ### Optional
 
-- `approvers` (List of String) List of approvers for approvals during workflow execution.
+- `approvers` (List of String) Who can approve a workflow run that is waiting for approval. Each entry identifies one approver: <ul><li>Local user — `<local-pool-id>/local/<email>`</li><li>SSO user — `<sso-pool-id>/<sso-provider-name>/<email>`</li><li>SSO group — `<sso-pool-id>/group/<group-id>`, which lets anyone in that group approve</li></ul>Write emails in lowercase. A bare email address is also accepted and matches that address for both local and SSO sign-in. See the [Approvers guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers) for the user pool ID of each region and worked examples.
 - `context_tags` (Map of String) Context tags for workflow
 - `deployment_platform_config` (Attributes List) Deployment platform configuration. (see [below for nested schema](#nestedatt--deployment_platform_config))
 - `description` (String) A brief description of the workflow. Must be less than 256 characters.

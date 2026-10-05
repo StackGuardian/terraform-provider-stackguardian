@@ -194,7 +194,12 @@ resource "stackguardian_workflow_git" "vpc_production" {
     timeout = 3600
   }
 
-  approvers                    = ["platform-lead@example.com", "sre-oncall@example.com"]
+  # A local user and an SSO group, with the EU region's user pool IDs. See the
+  # Approvers guide for the entry format and the US pool IDs.
+  approvers = [
+    "eu-central-1_srEmUITJM/local/platform-lead@example.com",
+    "eu-central-1_xut85XJiL/group/sre-oncall",
+  ]
   number_of_approvals_required = 1
 
   # "shared" runs on StackGuardian-managed infrastructure. Use "private" with

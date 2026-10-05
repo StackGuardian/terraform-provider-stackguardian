@@ -133,9 +133,12 @@ const (
 	Roles = "StackGuardian roles. Use to assign one or multiple roles."
 )
 
+// Shared by every `approvers` attribute so the accepted forms cannot drift.
+const ApproverFormats = "Each entry identifies one approver: <ul><li>Local user — `<local-pool-id>/local/<email>`</li><li>SSO user — `<sso-pool-id>/<sso-provider-name>/<email>`</li><li>SSO group — `<sso-pool-id>/group/<group-id>`, which lets anyone in that group approve</li></ul>Write emails in lowercase. A bare email address is also accepted and matches that address for both local and SSO sign-in. See the [Approvers guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers) for the user pool ID of each region and worked examples."
+
 // Policy
 const (
-	Approvers                 = "StackGuardian users who can approve a held run. Each entry is a user's email address, or an SSO group name to allow anyone in that group; the fully qualified form `<user-pool-id>/local/<email>` is also accepted. Read an existing policy with the `stackguardian_policy` data source to see what your organization uses. Applies only to `policy_type = \"GENERAL\"`."
+	Approvers                 = "Who can approve a run that this policy holds for approval. " + ApproverFormats + " Applies only to `policy_type = \"GENERAL\"`."
 	NumberOfApprovalsRequired = "Number of approvals required for a policy check to pass"
 	EnforcedOn                = "What this policy is enforced on — either organization-wide, or any combination of workflow groups, workflows and connectors. <ul><li>`[\"*\"]` — the whole organization. Used on its own, not combined with other entries.</li><li>`[\"/wfgrps/<group>\"]` — a workflow group and everything inside it. No trailing slash.</li><li>Workflows and connectors follow the same resource-path convention and can be listed alongside workflow groups.</li></ul>Confirm an unfamiliar form against an existing policy before relying on it."
 	PolicyType                = "What kind of policy this is. <ul><li>`GENERAL` — the standard policy, evaluated during workflow and stack runs. `enforced_on`, `approvers` and `number_of_approvals_required` apply only to this type.</li><li>`FILTER.INSIGHT` — a filter over Insight findings. It excludes findings that match its definition from the Insight dashboard rather than gating a run, so it takes no scope and no approval settings.</li></ul>"
@@ -212,7 +215,7 @@ const (
 
 // Common Workflow and Workflow Template Revision attributes
 const (
-	WfApprovers                = "List of approvers for approvals during workflow execution."
+	WfApprovers                = "Who can approve a workflow run that is waiting for approval. " + ApproverFormats
 	WfNumberOfApprovals        = "Number of approvals required."
 	WfUserJobCPU               = "Limits to set user job CPU."
 	WfUserJobMemory            = "Limits to set user job memory."

@@ -66,7 +66,13 @@ resource "stackguardian_workflow_template_revision" "detailed" {
   user_job_memory              = 4096
   number_of_approvals_required = 1
   tags                         = ["terraform", "production", "approved"]
-  approvers                    = ["user1@example.com", "user2@example.com"]
+
+  # Local users, with the EU region's user pool ID. See the Approvers guide for
+  # SSO users, SSO groups and the US pool IDs.
+  approvers = [
+    "eu-central-1_srEmUITJM/local/user1@example.com",
+    "eu-central-1_srEmUITJM/local/user2@example.com",
+  ]
 }
 ```
 
@@ -83,7 +89,7 @@ resource "stackguardian_workflow_template_revision" "detailed" {
 ### Optional
 
 - `alias` (String) Alias for the template revision
-- `approvers` (List of String) List of approvers for approvals during workflow execution.
+- `approvers` (List of String) Who can approve a workflow run that is waiting for approval. Each entry identifies one approver: <ul><li>Local user — `<local-pool-id>/local/<email>`</li><li>SSO user — `<sso-pool-id>/<sso-provider-name>/<email>`</li><li>SSO group — `<sso-pool-id>/group/<group-id>`, which lets anyone in that group approve</li></ul>Write emails in lowercase. A bare email address is also accepted and matches that address for both local and SSO sign-in. See the [Approvers guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers) for the user pool ID of each region and worked examples.
 - `context_tags` (Map of String) Context tags for workflow template revision
 - `deployment_platform_config` (Attributes List) Deployment platform configuration. (see [below for nested schema](#nestedatt--deployment_platform_config))
 - `deprecation` (Attributes) Marking a template revision for deprecation (see [below for nested schema](#nestedatt--deprecation))

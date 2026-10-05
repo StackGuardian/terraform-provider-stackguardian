@@ -443,7 +443,7 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 		},
 	},
 	"approvers": schema.ListAttribute{
-		MarkdownDescription: "List of approvers.",
+		MarkdownDescription: constants.WfApprovers,
 		ElementType:         types.StringType,
 		Optional:            true,
 	},
