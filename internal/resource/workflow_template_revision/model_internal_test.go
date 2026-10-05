@@ -6,12 +6,15 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
+
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
@@ -105,5 +108,179 @@ func TestEmptyListAttributesReachThePayload(t *testing.T) {
 				t.Errorf("update: %s = [] was dropped from the request body: %s", p, emptyUpdate)
 			}
 		})
+	}
+}
+
+// userScheduleWithInputs builds a user_schedules list with one schedule whose inputs match
+// the API example: TerraformAction and VCSConfig.iacInputData. enableChaining is the planned
+// value of the Computed-only enable_chaining: unknown on create, the state value on update.
+func userScheduleWithInputs(t *testing.T, data string, enableChaining types.Bool) types.List {
+	t.Helper()
+
+	iacInputData := types.ObjectValueMust(UserScheduleIacInputDataModel{}.AttributeTypes(), map[string]attr.Value{
+		"schema_type": types.StringValue("RAW_JSON"),
+		"data":        types.StringValue(data),
+	})
+	vcsConfig := types.ObjectValueMust(UserScheduleVcsConfigModel{}.AttributeTypes(), map[string]attr.Value{
+		"iac_input_data": iacInputData,
+	})
+	terraformAction := types.ObjectValueMust(UserScheduleTerraformActionModel{}.AttributeTypes(), map[string]attr.Value{
+		"action": types.StringValue("apply"),
+	})
+	inputs := types.ObjectValueMust(UserScheduleInputsModel{}.AttributeTypes(), map[string]attr.Value{
+		"terraform_action": terraformAction,
+		"enable_chaining":  enableChaining,
+		"vcs_config":       vcsConfig,
+	})
+	schedule := types.ObjectValueMust(UserSchedulesModel{}.AttributeTypes(), map[string]attr.Value{
+		"cron":   types.StringValue("0 8 ? * MON *"),
+		"state":  types.StringValue("ENABLED"),
+		"desc":   types.StringNull(),
+		"name":   types.StringNull(),
+		"inputs": inputs,
+	})
+	return types.ListValueMust(types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()}, []attr.Value{schedule})
+}
+
+// TestUserScheduleInputsRoundTrip checks the update path: user_schedules[*].inputs is sent as
+// the API expects, including the enable_chaining value carried over from state, with no
+// empty MiniSteps (left out by `omitzero`), and reading it back yields the same object.
+func TestUserScheduleInputsRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	configured := userScheduleWithInputs(t, `{"test":"value"}`, types.BoolValue(true))
+
+	schedules, diags := ConvertUserSchedulesToAPIModel(ctx, configured)
+	if diags.HasError() {
+		t.Fatalf("ConvertUserSchedulesToAPIModel: %v", diags)
+	}
+
+	body, err := json.Marshal(schedules)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sent []map[string]any
+	if err := json.Unmarshal(body, &sent); err != nil {
+		t.Fatal(err)
+	}
+
+	wantInputs := `{"EnableChaining":true,"TerraformAction":{"action":"apply"},"VCSConfig":{"iacInputData":{"data":{"test":"value"},"schemaType":"RAW_JSON"}}}`
+	gotInputs, err := json.Marshal(sent[0]["inputs"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(gotInputs) != wantInputs {
+		t.Errorf("inputs sent:\n got  %s\n want %s", gotInputs, wantInputs)
+	}
+
+	readBack, diags := ConvertUserSchedulesFromAPI(ctx, schedules)
+	if diags.HasError() {
+		t.Fatalf("ConvertUserSchedulesFromAPI: %v", diags)
+	}
+	if !readBack.Equal(configured) {
+		t.Errorf("read back value differs from configured:\n got  %s\n want %s", readBack, configured)
+	}
+}
+
+// TestUserScheduleInputsInvalidData checks that non-JSON inputs data is reported as an error
+// instead of being sent to the API.
+func TestUserScheduleInputsInvalidData(t *testing.T) {
+	_, diags := ConvertUserSchedulesToAPIModel(context.Background(), userScheduleWithInputs(t, "not json", types.BoolUnknown()))
+	if !diags.HasError() {
+		t.Fatal("expected an error diagnostic for invalid inputs data")
+	}
+}
+
+// TestUserScheduleInputsEnableChainingNotReturned checks a schedule whose EnableChaining the
+// API doesn't return (for example an imported revision): it reads back as null, not an
+// invented value, and a null or unknown value is never sent on the next update.
+func TestUserScheduleInputsEnableChainingNotReturned(t *testing.T) {
+	ctx := context.Background()
+
+	schedules, diags := ConvertUserSchedulesToAPIModel(ctx, userScheduleWithInputs(t, `{"test":"value"}`, types.BoolUnknown()))
+	if diags.HasError() {
+		t.Fatalf("ConvertUserSchedulesToAPIModel: %v", diags)
+	}
+	if schedules[0].Inputs.EnableChaining != nil {
+		t.Fatalf("EnableChaining sent on create: got %v, want omitted", *schedules[0].Inputs.EnableChaining)
+	}
+
+	readBack, diags := ConvertUserSchedulesFromAPI(ctx, schedules)
+	if diags.HasError() {
+		t.Fatalf("ConvertUserSchedulesFromAPI: %v", diags)
+	}
+	var models []UserSchedulesModel
+	if diags := readBack.ElementsAs(ctx, &models, false); diags.HasError() {
+		t.Fatal(diags)
+	}
+	var inputs UserScheduleInputsModel
+	if diags := models[0].Inputs.As(ctx, &inputs, basetypes.ObjectAsOptions{}); diags.HasError() {
+		t.Fatal(diags)
+	}
+	if !inputs.EnableChaining.IsNull() {
+		t.Errorf("enable_chaining read back as %s, want null", inputs.EnableChaining)
+	}
+
+	// Next update with the null read back from the API: still not sent.
+	schedules, diags = ConvertUserSchedulesToAPIModel(ctx, userScheduleWithInputs(t, `{"test":"value"}`, types.BoolNull()))
+	if diags.HasError() {
+		t.Fatalf("ConvertUserSchedulesToAPIModel: %v", diags)
+	}
+	if schedules[0].Inputs.EnableChaining != nil {
+		t.Errorf("EnableChaining sent for a null value: got %v, want omitted", *schedules[0].Inputs.EnableChaining)
+	}
+}
+
+// TestUserSchedulesFromAPIResponse decodes a UserSchedules entry exactly as the revision GET
+// endpoint returns it and checks the read path keeps every value, including the
+// Computed-only enable_chaining.
+func TestUserSchedulesFromAPIResponse(t *testing.T) {
+	ctx := context.Background()
+	response := `[
+	  {
+	    "name": "",
+	    "state": "ENABLED",
+	    "cron": "0 12 ? * 2 *",
+	    "desc": "",
+	    "inputs": {
+	      "VCSConfig": {
+	        "iacInputData": {
+	          "data": {"test": "value"},
+	          "schemaType": "RAW_JSON"
+	        }
+	      },
+	      "TerraformAction": {"action": "apply"},
+	      "EnableChaining": true
+	    }
+	  }
+	]`
+
+	var schedules []workflowtemplaterevisions.UserSchedules
+	if err := json.Unmarshal([]byte(response), &schedules); err != nil {
+		t.Fatal(err)
+	}
+
+	list, diags := ConvertUserSchedulesFromAPI(ctx, schedules)
+	if diags.HasError() {
+		t.Fatalf("ConvertUserSchedulesFromAPI: %v", diags)
+	}
+	var models []UserSchedulesModel
+	if diags := list.ElementsAs(ctx, &models, false); diags.HasError() {
+		t.Fatal(diags)
+	}
+	var inputs UserScheduleInputsModel
+	if diags := models[0].Inputs.As(ctx, &inputs, basetypes.ObjectAsOptions{}); diags.HasError() {
+		t.Fatal(diags)
+	}
+
+	if !inputs.EnableChaining.Equal(types.BoolValue(true)) {
+		t.Errorf("enable_chaining = %s, want true", inputs.EnableChaining)
+	}
+	// The UI stores "" for an empty name/desc; the read path keeps it as "" (not null) so the
+	// Optional+Computed attributes carry it forward and send it back unchanged.
+	if !models[0].Name.Equal(types.StringValue("")) {
+		t.Errorf("name = %s, want \"\"", models[0].Name)
+	}
+	if !models[0].Desc.Equal(types.StringValue("")) {
+		t.Errorf("desc = %s, want \"\"", models[0].Desc)
 	}
 }
