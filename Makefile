@@ -125,3 +125,25 @@ gh-workflow-test-api-prd:
 		--secret SG_PRD_ORG_NAME=${SG_PRD_ORG_NAME} \
 		workflow_dispatch \
 		;
+
+# Security scan over AI agent skills using NVIDIA SkillSpector (static analysis
+# only, --no-llm — no API key needed). Requires `skillspector` on PATH:
+#   uv tool install git+https://github.com/NVIDIA/skillspector.git
+# Fails when any skill scores above 50 (recommendation DO NOT INSTALL).
+skills-security-scan:
+	@mkdir -p .skillspector-reports; \
+	fail=0; \
+	for skill_dir in .claude/skills/*/; do \
+		skill_name=$$(basename "$$skill_dir"); \
+		echo "Scanning $$skill_name..."; \
+		skillspector scan "$$skill_dir" --no-llm \
+			--format sarif --output ".skillspector-reports/$$skill_name.sarif"; \
+		rc=$$?; \
+		if [ $$rc -eq 0 ]; then \
+			echo "  $$skill_name: PASS"; \
+		else \
+			echo "  $$skill_name: FAIL (exit $$rc)"; \
+			fail=1; \
+		fi; \
+	done; \
+	exit $$fail
