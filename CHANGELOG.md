@@ -5,84 +5,81 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-> **Releases from 0.1.0 onward are documented on the
-> [GitHub releases page](https://github.com/StackGuardian/terraform-provider-stackguardian/releases),
-> which is generated from the merged pull requests for each tag. The entries below cover the
-> initial release series and are kept for historical reference.**
-
+Entries describe changes that affect provider users: resources, data sources, attributes,
+behavior, documentation and security. Internal refactors, tests and CI changes are left out.
+Changes that can require edits to existing configurations are marked **Breaking**.
 
 ## [Unreleased]
 
 ### Added
 
-- Approvers guide and corrected `approvers` attribute descriptions: the entry formats for local users, SSO users and SSO groups, and the user pool ID each region takes
-- Centralized configuration via `github.com/spf13/viper` in `internal/config/config.go`, replacing all `os.Getenv` calls throughout the codebase
-- `ValidateConfig` on `workflow_template` and `workflow_template_revision` resources to enforce `runtime_source` auth/is_private rules at plan time
-- `wf_steps_config` validation on `workflow_template_revision` to reject usage when `source_config_kind` is `TERRAFORM` or `OPENTOFU`
-- `internal/constants/vcs.go` with shared enum constants for VCS provider kinds (`GITHUB_COM`, `GIT_OTHER`, etc.)
-- `acctest.TFStandardErrorPattern` helper that builds regex patterns tolerating Terraform CLI line-wrapping in expected error messages
-- Comprehensive acceptance tests covering every schema attribute on `workflow_template` and `workflow_template_revision`
-- `internal/constants/terraform_version.go` with `MinTerraformVersion` (1.5.7), `MaxTerraformVersion` (1.16.4), and `SupportedTerraformVersions` CI matrix
-- `internal/provider/version_check.go` runtime check that refuses to configure below `MinTerraformVersion` with an actionable error message
-- `internal/acctest/skip.go` with `SkipUnlessAcceptance(t)` helper for early `TF_ACC` guard before fixture-creation API calls
-- `internal/acctest/tfversion.go` with `VersionChecks()` returning `tfversion.RequireAbove(MinTerraformVersion)`
-- `scripts/tf-compat-check.sh` hermetic Terraform CLI compatibility gate (schema decode + example validation, no credentials)
-- `compat.yaml` workflow — hermetic compatibility gate targeting `main`: build, vet, unit tests, docs validation, and TF compatibility matrix
-- Terraform version matrix (1.5.7–1.16.4) in `test.yaml` acceptance workflow
-- `concurrency: acceptance-tests` group in `test.yaml` to prevent overlapping acceptance runs
-- `Makefile` targets `tf-compat-check` and `test-acc-min-terraform`
+- Approvers guide, and corrected `approvers` attribute descriptions covering the entry formats for local users, SSO users and SSO groups, and the user pool ID each region takes ([#151])
 
 ### Changed
 
-- Update Go version from 1.21.4 to 1.26.7
-- Update `terraform-plugin-framework` from v1.11.0 to v1.19.0
-- Update `terraform-plugin-framework-validators` from v0.12.0 to v0.19.0
-- Update `terraform-plugin-go` from v0.23.0 to v0.31.0
-- Update `terraform-plugin-log` from v0.9.0 to v0.11.0
-- Update `terraform-plugin-testing` from v1.10.0 to v1.16.0
-- Update `terraform-plugin-docs` (tools) from v0.18.0 to v0.25.0
-- Rename `ProviderInfo.Org_name` to `ProviderInfo.OrgName` for Go naming consistency
-- Rename `stackguardianProviderModel` fields (`Api_key` → `APIKey`, `Api_uri` → `APIUri`, `Org_name` → `OrgName`) and local variables in `Configure()` from snake_case to camelCase for Go naming consistency
-- Fix "Stackguardian" → "StackGuardian" casing in provider log messages, error messages, and comments
-- Replace hardcoded `os.Getenv` calls with `config.Get()` singleton in provider, acctest, and all resource/datasource test files
-- Make `mount_point.read_only` `Computed` with `UseStateForUnknown()` on `workflow_template_revision` to match API behavior
-- Make `input_schemas.type` `Required` (was `Optional`) on `workflow_template_revision` to match actual API behavior
-- Shorten import alias `workflowtemplate` → `wft` across `provider.go`, `datasource.go`, `resource.go`, `model.go`, and `schema.go`
-- All CI workflows now target `main` only (removed `develop` branch triggers from `compat.yaml`, `test-api-stg.yaml`, `test-api.yaml`)
-- `test-api-stg.yaml` and `test-api.yaml` default `gitref` changed from `develop` to `main`
-- `release.yaml` now calls `compat.yaml` as a pre-release gate
-- `test.yaml` installs Terraform CLI before the docs check step
+- **Breaking:** The provider now refuses to run on Terraform CLI versions older than 1.5.7 and returns an error explaining how to upgrade. The provider is tested against Terraform 1.5.7 through 1.16.4 ([#134])
+- **Breaking:** Several credential and secret attributes are now marked sensitive (see Security below). Terraform redacts them in plan output, and any `output` that references one must now set `sensitive = true` ([#147])
 
 ### Fixed
 
-- Fix non-constant format string vet errors in `workflow_template_revision` tests for Go 1.26 compatibility
-- Fix unchecked error returns (errcheck) from SDK `Delete*`/`Update*` calls in test cleanup functions
-- Fix unchecked `defer Body.Close()` in 4 datasource files
-- Fix staticcheck SA4006 unused `diags` in `workflow_template_revision/model.go` and `workflow_template/model.go`
-- Remove unused `charSetAlphaNum` constant in `internal/acctest/random_acc_test_name.go`
-- Fix gofmt alignment in `constants/template.go`, `constants/workflow.go`, `datasources/workflow_template_revision/schema.go`, and `resource/workflow_from_template/model.go`
-- Guard Optional+Computed fields (`LongDescription`, `Notes`, `IsPublic`, `NumberOfApprovalsRequired`) in `WorkflowTemplateRevisionResourceModel.ToAPIModel` against Unknown values, preventing unintended zero-value sends on Create
-- Guard `mount_point.read_only` in `ConvertMountPointsListToAPI` against Unknown values to prevent sending an explicit `false`
-- Replace `os.Getenv("STACKGUARDIAN_ORG_NAME")` with `config.Get().OrgName` in `sweep_test.go`
-- Fix `make test` failing in CI with `401: Unauthorized` — acceptance test fixtures made API calls before the `TF_ACC` check; added `SkipUnlessAcceptance(t)` guard to 54 `TestAcc*` functions
-- Fix `make docs-validate-examples` failing in `test.yaml` CI with `terraform: command not found` — Terraform CLI is now installed before the docs check step
+- `stackguardian_role_assignment`: creating an assignment for a user who already exists now adopts the existing user when the API responds with `409 Conflict`, the same way it already handled `400` ([#145])
+- The missing API key error now says "Missing API Key" and names the correct environment variable, instead of "Missing Organization Name" ([#147])
+- `stackguardian_runner_group_token` data source: corrected a configuration error message that referred to the wrong client type ([#147])
 
 ### Security
 
-- **CRITICAL:** Stop logging the full API key in debug output (`provider.go`); the key is now redacted to `***redacted***`
-- **CRITICAL:** Mark all connector credential fields as `Sensitive: true` in both the `stackguardian_connector` resource and data source schemas — `github_app_webhook_secret`, `github_app_client_secret`, `github_app_pem_file_content`, `gitlab_creds`, `azure_creds`, `bitbucket_creds`, `aws_access_key_id`, `aws_secret_access_key`, `arm_client_secret`, `gcp_config_file_content` were previously written in plaintext to plan output and state
-- **HIGH:** Mark `runner_group_token` data source output as `Sensitive: true` — the registration token was previously exposed in plaintext in plan output and state
-- **HIGH:** Mark `webhook_secret` as `Sensitive: true` across all resources and data sources that use it (`workflow_git`, `workflow_from_template`, `stack_template_revision`, `workflow_template_revision` and their data sources)
-- **HIGH:** Mark `text_value` env var field as `Sensitive: true` across all resources and data sources — the field description itself warns that values are visible in configuration and state
-- **HIGH:** Mark `azure_blob_storage_access_key` as `Sensitive: true` in `stackguardian_runner_group` resource and data source
-- **MEDIUM:** Add 30-second HTTP client timeout to `runner_group_token` data source API call, replacing `http.DefaultClient` which had no timeout
-- **MEDIUM:** Replace `context.TODO()` with the request context (`ctx`) in `workflow_git` and `runner_group` resource `Create` operations so Ctrl+C can cancel in-flight API calls
-- **MEDIUM:** URL-encode `orgName` and `runnerGroupID` in the `runner_group_token` data source HTTP request to prevent URL path injection
-- **MEDIUM:** Stop dumping the raw HTTP response body in error messages from the `runner_group_token` data source; only the status code is now included, and response body reads are capped at 1 MB
-- **LOW:** Mark `docker_registry_username` as `Sensitive: true` across `workflow_step_template`, `runner_group`, and their data sources
-- **LOW:** Fix copy-paste error in `runner_group_token` data source configure error message (`"*hashicups.Client"` → `"*customTypes.ProviderInfo"`)
-- **LOW:** Fix incorrect error summary `"Missing Organization Name"` → `"Missing API Key"` and wrong env var name in the provider's missing API key error
+- Stop logging the full API key in provider debug output; it is now redacted ([#147])
+- Mark connector credential attributes as sensitive in the `stackguardian_connector` resource and data source: `github_app_webhook_secret`, `github_app_client_secret`, `github_app_pem_file_content`, `gitlab_creds`, `azure_creds`, `bitbucket_creds`, `aws_access_key_id`, `aws_secret_access_key`, `arm_client_secret` and `gcp_config_file_content`. These were previously shown in plaintext in plan output ([#147])
+- Mark the `stackguardian_runner_group_token` data source token as sensitive ([#147])
+- Mark `webhook_secret` as sensitive on `stackguardian_workflow_git`, `stackguardian_workflow_from_template`, `stackguardian_stack_template_revision`, `stackguardian_workflow_template_revision` and their data sources ([#147])
+- Mark the `text_value` environment variable field as sensitive on all resources and data sources that have it ([#147])
+- Mark `azure_blob_storage_access_key` as sensitive on the `stackguardian_runner_group` resource and data source ([#147])
+- Mark `docker_registry_username` as sensitive on `stackguardian_workflow_step_template`, `stackguardian_runner_group` and their data sources ([#147])
+- `stackguardian_runner_group_token` data source: add a 30-second timeout to the API request, URL-encode the organization and runner group IDs in the request path, and stop including the raw response body in error messages ([#147])
+- Cancelling a run (Ctrl+C) now cancels in-flight create requests for `stackguardian_workflow_git` and `stackguardian_runner_group` ([#147])
+- Update `golang.org/x/crypto`, `golang.org/x/net`, `google.golang.org/grpc` and related dependencies to patched versions ([#145], [#146])
 
+## [1.12.3] - 2026-09-24
+
+### Changed
+
+- **Breaking:** `stackguardian_workflow_template`: removed the `vcs_triggers` attribute from the resource and the data source ([#143])
+- **Breaking:** Changing an identity attribute on an existing resource is now rejected at plan time with an error, instead of destroying and recreating the resource. This applies to `id`, `source_config_kind` and `runtime_source.config.repo` on `stackguardian_workflow_template`, and to `template_id`, `source_config_kind` and `runtime_source.config.repo` on `stackguardian_workflow_template_revision` ([#143])
+- Attribute docs now state which `workflow_template` and `workflow_template_revision` attributes cannot change after creation, and that a published revision only accepts changes to `description`, `alias`, `notes` and `deprecation` ([#143])
+
+### Fixed
+
+- `stackguardian_workflow_template` and `stackguardian_workflow_template_revision`: optional attributes left out of the configuration are no longer sent to the API as `false` or `""`. Affects `runtime_source.config.is_private`, `runtime_source.config.git_core_auto_crlf`, `runtime_source.config.ref` and `runtime_source.config_dest_kind`, and every `terraform_config` attribute on the revision ([#143])
+- `stackguardian_workflow_template_revision`: changes to `runtime_source.config.auth` are now sent on update; previously they had no effect ([#143])
+- `stackguardian_workflow_template`: a configured `id` is now used on create, instead of being replaced by a server-generated ID and causing "Provider produced inconsistent result after apply" ([#143])
+- An explicitly empty list attribute (`[]`) no longer turns into `null` after apply, which caused "Provider produced inconsistent result after apply" ([#143])
+- `stackguardian_workflow_git` `tags` and `approvers`, and `stackguardian_workflow_template` `tags`, no longer show a perpetual diff after apply ([#143])
+
+## [1.12.2] - 2026-09-17
+
+### Added
+
+- `stackguardian_workflow_template` and `stackguardian_workflow_template_revision`: plan-time validation of the `runtime_source` `auth` and `is_private` rules ([#132])
+- `stackguardian_workflow_template_revision`: `wf_steps_config` is rejected at plan time when `source_config_kind` is `TERRAFORM` or `OPENTOFU`, which use built-in run steps ([#132])
+- Every resource and data source attribute is now documented ([#117])
+- New guides: Getting Started, Object Model, Templates, Policies, Access Management, Resource IDs, Runtime References, Importing Resources and Troubleshooting ([#117])
+
+### Changed
+
+- **Breaking:** `stackguardian_workflow_template_revision`: `input_schemas.type` is now required, to match the API ([#132])
+- `stackguardian_workflow_template_revision`: `mount_points.read_only` is now computed when not set, to match the API ([#132])
+- Provider log and error messages now spell the product name "StackGuardian"
+- Built with Go 1.26.7 and `terraform-plugin-framework` v1.19.0
+
+### Fixed
+
+- `stackguardian_workflow_template_revision`: `description`, `notes`, `is_public`, `number_of_approvals_required` and `mount_points.read_only` are no longer sent to the API as zero values on create when left out of the configuration ([#132])
+
+## Releases 0.2.0 to 1.12.1
+
+These releases are not recorded in this file. See the
+[GitHub releases page](https://github.com/StackGuardian/terraform-provider-stackguardian/releases)
+for their notes.
 
 ## [0.1.0] - 2024-03-14
 
@@ -102,7 +99,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documentation
 - GH workflows for test & release
 
-
 ## [0.1.0-rc4] - 2024-03-08
 
 ### Added
@@ -114,13 +110,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Provider docs
 - Cleanup repo
 
-
 ## [0.1.0-rc3] - 2024-03-07
 
 ### Fixed
 
 - _Nihil ad rem_ release for Terraform Registry
-
 
 ## [0.1.0-rc2] - 2024-03-07
 
@@ -129,20 +123,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Release Test with quickstart example
 - CLI Test with quickstart example
 
-
 ## [0.1.0-rc1] - 2024-01-15
 
 ### Added
 
 - Cleanup & Tests for each resource
 
-
 ## [0.1.0-beta1] - 2023-12-22
 
 ### Added
 
 - TF Data-Source for StackGuardian Workflow Outputs
-
 
 ## [0.1.0-alpha1] - 2023-10-16
 
@@ -153,3 +144,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TF Resource and Data-Source for StackGuardian Stack
 - TF Resource and Data-Source for StackGuardian Policy
 - TF Resource and Data-Source for StackGuardian Integration
+
+[Unreleased]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.3...HEAD
+[1.12.3]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.2...v1.12.3
+[1.12.2]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.1...v1.12.2
+[0.1.0]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v0.1.0-rc4...v0.1.0
+[0.1.0-rc4]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v0.1.0-rc3...v0.1.0-rc4
+[0.1.0-rc3]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v0.1.0-rc2...v0.1.0-rc3
+[0.1.0-rc2]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v0.1.0-rc1...v0.1.0-rc2
+[0.1.0-rc1]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v0.1.0-beta1...v0.1.0-rc1
+[0.1.0-beta1]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v0.1.0-alpha1...v0.1.0-beta1
+[0.1.0-alpha1]: https://github.com/StackGuardian/terraform-provider-stackguardian/releases/tag/v0.1.0-alpha1
+
+[#117]: https://github.com/StackGuardian/terraform-provider-stackguardian/pull/117
+[#132]: https://github.com/StackGuardian/terraform-provider-stackguardian/pull/132
+[#134]: https://github.com/StackGuardian/terraform-provider-stackguardian/pull/134
+[#143]: https://github.com/StackGuardian/terraform-provider-stackguardian/pull/143
+[#145]: https://github.com/StackGuardian/terraform-provider-stackguardian/pull/145
+[#146]: https://github.com/StackGuardian/terraform-provider-stackguardian/pull/146
+[#147]: https://github.com/StackGuardian/terraform-provider-stackguardian/pull/147
+[#151]: https://github.com/StackGuardian/terraform-provider-stackguardian/pull/151
