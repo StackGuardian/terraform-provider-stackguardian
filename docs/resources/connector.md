@@ -84,7 +84,7 @@ resource "stackguardian_connector" "github" {
 #
 #   deployment_platform_config = [{
 #     kind   = "AWS_RBAC"
-#     config = { integration_id = stackguardian_connector.aws_rbac.id }
+#     config = { integration_id = "/integrations/${stackguardian_connector.aws_rbac.id}" }
 #   }]
 ```
 

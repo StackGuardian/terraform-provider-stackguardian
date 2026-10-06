@@ -73,7 +73,7 @@ not move on its own — a revision change can alter attributes you never declare
 Prefer a reference to a literal, so Terraform builds the dependency edge and the value cannot drift:
 
 ```terraform
-integration_id = stackguardian_connector.production_aws.id
+integration_id = "/integrations/${stackguardian_connector.production_aws.id}"
 workflow_group_id = stackguardian_workflow_group.platform.resource_name
 ```
 
