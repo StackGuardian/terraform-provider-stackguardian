@@ -113,7 +113,7 @@ before the run continues.
 
 | Value | The run continues when |
 |-------|------------------------|
-| `0` — the default for a policy and for `stackguardian_workflow_git` | **every** entry in `approvers` has approved |
+| `0` — the default for a policy and for `stackguardian_workflow_git` | as many **different people** have approved as there are entries in `approvers` (everyone, if the list has only individual users) |
 | `1` or more | that many **different people** have approved |
 
 For example, with three approvers — Alice, Bob and Carol:
@@ -123,7 +123,7 @@ For example, with three approvers — Alice, Bob and Carol:
 | `0` | Alice, Bob and Carol have all approved |
 | `1` | any one of them has approved |
 | `2` | any two of them have approved |
-| `3` | all three have approved — the same as `0` today, but `0` keeps meaning "everyone" as the list grows |
+| `3` | all three have approved — the same as `0` for this list, but `0` follows the list as it grows |
 | `4` | never — see the warning below |
 
 ~> **Do not ask for more approvals than there are people who can give them.** The value is not
@@ -135,8 +135,9 @@ cancels it.
 - **A group adds its members.** Each group member who approves counts as one person. With a single
   group in the list and `number_of_approvals_required = 2`, any two members of the group release
   the run.
-- **With a group in the list, use `1` or more, never `0`.** `0` means "every entry", and a group
-  is one entry however many people are in it.
+- **With a group in the list, use `1` or more, never `0`.** `0` counts approvals, not entries:
+  with a single group, one member's approval releases the run, and with `[group, bob]`, two group
+  members can release it without Bob.
 - **One person counts once.** Someone listed by name who is also in a listed group still gives a
   single approval.
 - **A local login and an SSO login count separately.** Someone who has both is two identities to
@@ -196,7 +197,7 @@ dashboard, then read it back:
 
 ```terraform
 data "stackguardian_policy" "existing" {
-  resource_name = "approval-on-apply"
+  id = "approval-on-apply"
 }
 
 output "approvers" {
