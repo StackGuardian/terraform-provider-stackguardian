@@ -54,7 +54,7 @@ output "revision_template_id" {
 ### Read-Only
 
 - `alias` (String) Alias for the template revision
-- `approvers` (List of String) List of approvers for approvals during workflow execution.
+- `approvers` (List of String) Who can approve a workflow run that is waiting for approval. Each entry identifies one approver: <ul><li>Local user — the email address, e.g. `jane@example.com`</li><li>SSO user — `<sso-pool-id>/<sso-provider-name>/<email>`</li><li>SSO group — `<sso-pool-id>/group/<group-id>`, which lets anyone in that group approve</li></ul>Write emails in lowercase. A bare email address also matches an SSO sign-in with the same address; use `<local-pool-id>/local/<email>` to allow the local account only. See the [Approvers guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers) for the user pool ID of each region and worked examples.
 - `context_tags` (Map of String) Context tags for the revision.
 - `deployment_platform_config` (Attributes List) Deployment platform configuration. (see [below for nested schema](#nestedatt--deployment_platform_config))
 - `deprecation` (Attributes) Marking a template revision for deprecation (see [below for nested schema](#nestedatt--deprecation))
@@ -64,7 +64,7 @@ output "revision_template_id" {
 - `is_public` (String) Whether this **revision** is published and available to be referenced. Distinct from `is_public` on the parent template, which controls cross-organization sharing. Once set to `"1"`, only `description`, `alias`, `notes`, and `deprecation` may still be changed — every other attribute is rejected by the API. Options: <span style="background-color: #eff0f0; color: #e53835;">"1"</span>, <span style="background-color: #eff0f0; color: #e53835;">"0"</span>
 - `mini_steps` (Attributes) (see [below for nested schema](#nestedatt--mini_steps))
 - `notes` (String) Notes for the revision
-- `number_of_approvals_required` (Number) Number of approvals required.
+- `number_of_approvals_required` (Number) How many approvals release a workflow run that is waiting for approval. `0` waits for as many distinct approvals as there are entries in `approvers`, which means everyone when the list has only individual users. `1` or more means that many different people must approve — use this when the list contains an SSO group. A single rejection cancels the run whatever the value. Not validated against the list, so a value higher than the number of people who can approve leaves the run waiting. See [how approvals are counted](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers#how-many-approvals-are-needed).
 - `runner_constraints` (Attributes) Runner constraints to control which runner executes the workflow. (see [below for nested schema](#nestedatt--runner_constraints))
 - `runtime_source` (Attributes) (see [below for nested schema](#nestedatt--runtime_source))
 - `source_config_kind` (String) What this template deploys, which decides how StackGuardian runs it. **Cannot be changed** after creation. <ul><li>`TERRAFORM` / `OPENTOFU` — Terraform or OpenTofu configuration.</li><li>`ANSIBLE_PLAYBOOK` — an Ansible playbook.</li><li>`HELM` — a Helm chart.</li><li>`KUBECTL` — Kubernetes manifests applied with kubectl.</li><li>`CLOUDFORMATION` — an AWS CloudFormation stack.</li><li>`CUSTOM` — anything else, typically a public repository run with your own steps.</li></ul>

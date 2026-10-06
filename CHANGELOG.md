@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Approvers guide and corrected `approvers` attribute descriptions: the entry formats for local users, SSO users and SSO groups, and the user pool ID each region takes
 - Centralized configuration via `github.com/spf13/viper` in `internal/config/config.go`, replacing all `os.Getenv` calls throughout the codebase
 - `ValidateConfig` on `workflow_template` and `workflow_template_revision` resources to enforce `runtime_source` auth/is_private rules at plan time
 - `wf_steps_config` validation on `workflow_template_revision` to reject usage when `source_config_kind` is `TERRAFORM` or `OPENTOFU`

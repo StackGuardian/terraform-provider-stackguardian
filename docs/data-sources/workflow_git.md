@@ -48,13 +48,13 @@ output "workflow_git_repo" {
 
 ### Read-Only
 
-- `approvers` (List of String) List of approvers for approvals during workflow execution.
+- `approvers` (List of String) Who can approve a workflow run that is waiting for approval. Each entry identifies one approver: <ul><li>Local user — the email address, e.g. `jane@example.com`</li><li>SSO user — `<sso-pool-id>/<sso-provider-name>/<email>`</li><li>SSO group — `<sso-pool-id>/group/<group-id>`, which lets anyone in that group approve</li></ul>Write emails in lowercase. A bare email address also matches an SSO sign-in with the same address; use `<local-pool-id>/local/<email>` to allow the local account only. See the [Approvers guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers) for the user pool ID of each region and worked examples.
 - `context_tags` (Map of String) Context tags for workflow
 - `deployment_platform_config` (Attributes List) Deployment platform configuration. (see [below for nested schema](#nestedatt--deployment_platform_config))
 - `description` (String) A brief description of the workflow. Must be less than 256 characters.
 - `environment_variables` (Attributes List) Environment variables made available to the workflow during its runs. (see [below for nested schema](#nestedatt--environment_variables))
 - `mini_steps` (Attributes) Actions that are required to be performed once workflow execution is complete (see [below for nested schema](#nestedatt--mini_steps))
-- `number_of_approvals_required` (Number) Number of approvals required.
+- `number_of_approvals_required` (Number) How many approvals release a workflow run that is waiting for approval. `0` waits for as many distinct approvals as there are entries in `approvers`, which means everyone when the list has only individual users. `1` or more means that many different people must approve — use this when the list contains an SSO group. A single rejection cancels the run whatever the value. Not validated against the list, so a value higher than the number of people who can approve leaves the run waiting. See [how approvals are counted](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers#how-many-approvals-are-needed).
 - `resource_name` (String) Name of the workflow. Must be less than 100 characters. Free-form: when it is not already slug-shaped (letters, digits, `_`, `-`) the platform derives a slug for `id` — see `id`.
 - `runner_constraints` (Attributes) Runner constraints to control which runner executes the workflow. (see [below for nested schema](#nestedatt--runner_constraints))
 - `tags` (List of String) A list of tags associated with the workflow. A maximum of 10 tags are allowed.

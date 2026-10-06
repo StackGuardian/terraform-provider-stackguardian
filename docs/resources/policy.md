@@ -127,13 +127,13 @@ resource "stackguardian_policy" "approval_on_apply" {
 
   enforced_on = ["/wfgrps/${stackguardian_workflow_group.production.id}"]
 
-  # Each approver is a user's email address, or an SSO group name to allow anyone in
-  # that group. The fully qualified form "<user-pool-id>/local/<email>" is also
-  # accepted. Read an existing policy with the stackguardian_policy data source to
-  # see what your organization uses.
+  # A local user is listed by email. SSO users and SSO groups take a user pool
+  # prefix -- the one here is the EU region's. The Approvers guide lists the US one
+  # and shows how to find your SSO provider name and group IDs.
   approvers = [
-    "platform-lead@example.com",
-    "sre-oncall@example.com",
+    "platform-lead@example.com",                                 # local user
+    "eu-central-1_xut85XJiL/sg-test-sso/sre-oncall@example.com", # SSO user
+    "eu-central-1_xut85XJiL/group/platform-admins",              # SSO group
   ]
   number_of_approvals_required = 1
 
@@ -246,11 +246,11 @@ resource "stackguardian_policy" "opa_from_git" {
 
 ### Optional
 
-- `approvers` (List of String) StackGuardian users who can approve a held run. Each entry is a user's email address, or an SSO group name to allow anyone in that group; the fully qualified form `<user-pool-id>/local/<email>` is also accepted. Read an existing policy with the `stackguardian_policy` data source to see what your organization uses. Applies only to `policy_type = "GENERAL"`.
+- `approvers` (List of String) Who can approve a run that this policy holds for approval. Each entry identifies one approver: <ul><li>Local user — the email address, e.g. `jane@example.com`</li><li>SSO user — `<sso-pool-id>/<sso-provider-name>/<email>`</li><li>SSO group — `<sso-pool-id>/group/<group-id>`, which lets anyone in that group approve</li></ul>Write emails in lowercase. A bare email address also matches an SSO sign-in with the same address; use `<local-pool-id>/local/<email>` to allow the local account only. See the [Approvers guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers) for the user pool ID of each region and worked examples. Applies only to `policy_type = "GENERAL"`.
 - `description` (String) A brief description of the policy. Must be less than 256 characters.
 - `enforced_on` (List of String) What this policy is enforced on — either organization-wide, or any combination of workflow groups, workflows and connectors. <ul><li>`["*"]` — the whole organization. Used on its own, not combined with other entries.</li><li>`["/wfgrps/<group>"]` — a workflow group and everything inside it. No trailing slash.</li><li>Workflows and connectors follow the same resource-path convention and can be listed alongside workflow groups.</li></ul>Confirm an unfamiliar form against an existing policy before relying on it.
 - `id` (String) Identifier of the resource: a bare slug such as `production-aws`, never a path. When omitted it is derived from `resource_name` — unchanged if that is already slug-shaped (letters, digits, `_`, `-`), otherwise lowercased, spaces replaced by `-`, with a random suffix appended. Set it explicitly to control it. Use it to reference the resource elsewhere, adding the prefix the attribute expects: `"/integrations/${stackguardian_connector.x.id}"`, `"/wfgrps/${stackguardian_workflow_group.x.id}"`. The `resource_name` attribute is still available for references but its use is discouraged: it is not always equal to `id`.
-- `number_of_approvals_required` (Number) Number of approvals required for a policy check to pass
+- `number_of_approvals_required` (Number) How many approvals release a run that this policy holds for approval. Defaults to `0`. `0` waits for as many distinct approvals as there are entries in `approvers`, which means everyone when the list has only individual users. `1` or more means that many different people must approve — use this when the list contains an SSO group. A single rejection cancels the run whatever the value. Not validated against the list, so a value higher than the number of people who can approve leaves the run waiting. See [how approvals are counted](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers#how-many-approvals-are-needed).
 - `policies_config` (Attributes List) Policy configuration (see [below for nested schema](#nestedatt--policies_config))
 - `tags` (List of String) A list of tags associated with the policy. A maximum of 10 tags are allowed.
 

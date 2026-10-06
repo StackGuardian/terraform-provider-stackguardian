@@ -169,9 +169,10 @@ resource "stackguardian_policy" "approval_on_apply" {
 }
 ```
 
-~> Each `approvers` entry is a user's email address, or an SSO group name to allow anyone in
-that group. The fully qualified form `<user-pool-id>/local/<email>` is also accepted. Read an
-existing policy with the `stackguardian_policy` data source to see what your organization uses.
+~> A local user is listed by email address, as above. SSO users and SSO groups take a user pool
+prefix that depends on your region — see
+[Approvers](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers)
+for every form.
 
 ## Where to go next
 

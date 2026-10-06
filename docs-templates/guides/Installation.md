@@ -74,6 +74,9 @@ for how roles are scoped.
 Point `api_uri` at the region your organization is hosted in. Using the wrong one produces
 authentication errors even with a valid key.
 
+The region also decides the user pool ID that prefixes SSO users and SSO groups in an `approvers`
+list — see [Approvers](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers#user-pool-ids).
+
 ## Next steps
 
 - [Getting Started](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/GettingStarted) — a working configuration, end to end.
