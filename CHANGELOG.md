@@ -2,14 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+Versions use the `MAJOR.MINOR.PATCH` format. While the provider is under active development,
+breaking changes can ship in any release and are marked **Breaking**.
 
 Entries describe changes that affect provider users: resources, data sources, attributes,
 behavior, documentation and security. Internal refactors, tests and CI changes are left out.
-Changes that can require edits to existing configurations are marked **Breaking**.
+A **Breaking** change can require edits to existing configurations.
 
 ## [Unreleased]
+
+## [1.12.4] - 2026-10-06
 
 ### Added
 
@@ -145,7 +148,8 @@ for their notes.
 - TF Resource and Data-Source for StackGuardian Policy
 - TF Resource and Data-Source for StackGuardian Integration
 
-[Unreleased]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.3...HEAD
+[Unreleased]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.4...HEAD
+[1.12.4]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.3...v1.12.4
 [1.12.3]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.2...v1.12.3
 [1.12.2]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.1...v1.12.2
 [0.1.0]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v0.1.0-rc4...v0.1.0
