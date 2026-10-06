@@ -20,7 +20,7 @@ Reads an existing policy, including its evaluation configuration and the resourc
 ```terraform
 # Read an existing policy to check how it is configured and where it is enforced.
 data "stackguardian_policy" "example" {
-  resource_name = "require-tags"
+  id = "require-tags"
 }
 
 output "policy_enforced_on" {

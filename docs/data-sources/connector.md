@@ -21,7 +21,7 @@ Reads an existing connector, so a workflow or runner group can reference its ID 
 # Look up a connector that is managed elsewhere -- by another team, or created in the
 # StackGuardian UI -- so a workflow can deploy with it without this configuration owning it.
 data "stackguardian_connector" "shared_aws" {
-  resource_name = "shared-aws-production"
+  id = "shared-aws-production"
 }
 
 resource "stackguardian_workflow_git" "example" {

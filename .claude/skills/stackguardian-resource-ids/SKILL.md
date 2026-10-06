@@ -74,7 +74,7 @@ Prefer a reference to a literal, so Terraform builds the dependency edge and the
 
 ```terraform
 integration_id = "/integrations/${stackguardian_connector.production_aws.id}"
-workflow_group_id = stackguardian_workflow_group.platform.resource_name
+workflow_group_id = stackguardian_workflow_group.platform.id
 ```
 
 Use a literal only for something this configuration does not manage — and say so, because
