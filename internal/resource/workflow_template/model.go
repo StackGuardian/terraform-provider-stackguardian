@@ -24,39 +24,6 @@ type WorkflowTemplateResourceModel struct {
 	SharedOrgsList   types.List   `tfsdk:"shared_orgs_list"`
 	Tags             types.List   `tfsdk:"tags"`
 	ContextTags      types.Map    `tfsdk:"context_tags"`
-	VcsTriggers      types.Object `tfsdk:"vcs_triggers"`
-}
-
-type TemplateVcsTriggersCreateRevisionModel struct {
-	Enabled types.Bool `tfsdk:"enabled"`
-}
-
-func (TemplateVcsTriggersCreateRevisionModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"enabled": types.BoolType,
-	}
-}
-
-type TemplateVcsTriggersCreateTagModel struct {
-	CreateRevision types.Object `tfsdk:"create_revision"`
-}
-
-func (TemplateVcsTriggersCreateTagModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"create_revision": types.ObjectType{AttrTypes: TemplateVcsTriggersCreateRevisionModel{}.AttributeTypes()},
-	}
-}
-
-type TemplateVcsTriggersModel struct {
-	Type      types.String `tfsdk:"type"`
-	CreateTag types.Object `tfsdk:"create_tag"`
-}
-
-func (TemplateVcsTriggersModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"type":       types.StringType,
-		"create_tag": types.ObjectType{AttrTypes: TemplateVcsTriggersCreateTagModel{}.AttributeTypes()},
-	}
 }
 
 type RuntimeSourceModel struct {
@@ -207,97 +174,6 @@ func ConvertRuntimeSourceToUpdateAPI(ctx context.Context, runtimeSourceObj types
 	}, diags
 }
 
-func convertVcsTriggersToAPI(ctx context.Context, obj types.Object) (*workflowtemplates.VCSTriggers, diag.Diagnostics) {
-	if obj.IsNull() || obj.IsUnknown() {
-		return nil, nil
-	}
-	var m TemplateVcsTriggersModel
-	diags := obj.As(ctx, &m, basetypes.ObjectAsOptions{
-		UnhandledNullAsEmpty:    true,
-		UnhandledUnknownAsEmpty: true,
-	})
-	if diags.HasError() {
-		return nil, diags
-	}
-
-	result := &workflowtemplates.VCSTriggers{}
-	if !m.Type.IsNull() && !m.Type.IsUnknown() {
-		t := workflowtemplates.VCSTriggersTypeEnum(m.Type.ValueString())
-		result.Type = &t
-	}
-
-	if !m.CreateTag.IsNull() && !m.CreateTag.IsUnknown() {
-		var createTagModel TemplateVcsTriggersCreateTagModel
-		diags := m.CreateTag.As(ctx, &createTagModel, basetypes.ObjectAsOptions{
-			UnhandledNullAsEmpty:    true,
-			UnhandledUnknownAsEmpty: true,
-		})
-		if diags.HasError() {
-			return nil, diags
-		}
-		ct := &workflowtemplates.VCSTriggersCreateTag{}
-		if !createTagModel.CreateRevision.IsNull() && !createTagModel.CreateRevision.IsUnknown() {
-			var revModel TemplateVcsTriggersCreateRevisionModel
-			diags := createTagModel.CreateRevision.As(ctx, &revModel, basetypes.ObjectAsOptions{
-				UnhandledNullAsEmpty:    true,
-				UnhandledUnknownAsEmpty: true,
-			})
-			if diags.HasError() {
-				return nil, diags
-			}
-			ct.CreateRevision = &workflowtemplates.VCSTriggersCreateTagCreateRevision{
-				Enabled: revModel.Enabled.ValueBoolPointer(),
-			}
-		}
-		result.CreateTag = ct
-	}
-
-	return result, nil
-}
-
-func convertVcsTriggersFromAPI(ctx context.Context, vt *workflowtemplates.VCSTriggers) (types.Object, diag.Diagnostics) {
-	nullObj := types.ObjectNull(TemplateVcsTriggersModel{}.AttributeTypes())
-	if vt == nil || flatteners.IsEmptyObject(vt) {
-		return nullObj, nil
-	}
-
-	m := TemplateVcsTriggersModel{}
-	if vt.Type != nil {
-		m.Type = flatteners.String(string(*vt.Type))
-	} else {
-		m.Type = types.StringNull()
-	}
-
-	if vt.CreateTag != nil {
-		ctModel := TemplateVcsTriggersCreateTagModel{}
-		if vt.CreateTag.CreateRevision != nil {
-			revModel := TemplateVcsTriggersCreateRevisionModel{
-				Enabled: flatteners.BoolPtr(vt.CreateTag.CreateRevision.Enabled),
-			}
-			revObj, diags := types.ObjectValueFrom(ctx, TemplateVcsTriggersCreateRevisionModel{}.AttributeTypes(), revModel)
-			if diags.HasError() {
-				return nullObj, diags
-			}
-			ctModel.CreateRevision = revObj
-		} else {
-			ctModel.CreateRevision = types.ObjectNull(TemplateVcsTriggersCreateRevisionModel{}.AttributeTypes())
-		}
-		ctObj, diags := types.ObjectValueFrom(ctx, TemplateVcsTriggersCreateTagModel{}.AttributeTypes(), ctModel)
-		if diags.HasError() {
-			return nullObj, diags
-		}
-		m.CreateTag = ctObj
-	} else {
-		m.CreateTag = types.ObjectNull(TemplateVcsTriggersCreateTagModel{}.AttributeTypes())
-	}
-
-	obj, diags := types.ObjectValueFrom(ctx, TemplateVcsTriggersModel{}.AttributeTypes(), m)
-	if diags.HasError() {
-		return nullObj, diags
-	}
-	return obj, nil
-}
-
 func (m *WorkflowTemplateResourceModel) ToAPIModel(ctx context.Context) (*workflowtemplates.CreateWorkflowTemplateRequest, diag.Diagnostics) {
 	diag := diag.Diagnostics{}
 
@@ -357,13 +233,6 @@ func (m *WorkflowTemplateResourceModel) ToAPIModel(ctx context.Context) (*workfl
 		return nil, diags
 	}
 	apiModel.RuntimeSource = runtimeSource
-
-	// Convert VcsTriggers
-	vcsTriggers, diags := convertVcsTriggersToAPI(ctx, m.VcsTriggers)
-	if diags.HasError() {
-		return nil, diags
-	}
-	apiModel.VCSTriggers = vcsTriggers
 
 	return apiModel, diag
 }
@@ -428,19 +297,6 @@ func (m *WorkflowTemplateResourceModel) ToUpdateAPIModel(ctx context.Context) (*
 		apiModel.SharedOrgsList = sgsdkgo.Optional(sharedOrgsList)
 	} else {
 		apiModel.SharedOrgsList = sgsdkgo.Null[[]string]()
-	}
-
-	// Convert VcsTriggers — only send when the user configured it. The API rejects
-	// an explicit null with "VCSTriggers.type: This field is required", so leave the
-	// field nil (omitted from the payload) when vcs_triggers is not set.
-	if !m.VcsTriggers.IsNull() && !m.VcsTriggers.IsUnknown() {
-		vcsTriggers, diags := convertVcsTriggersToAPI(ctx, m.VcsTriggers)
-		if diags.HasError() {
-			return nil, diags
-		}
-		if vcsTriggers != nil {
-			apiModel.VCSTriggers = sgsdkgo.Optional(*vcsTriggers)
-		}
 	}
 
 	return apiModel, diag
@@ -537,13 +393,6 @@ func BuildAPIModelToWorkflowTemplateModel(apiResponse *workflowtemplates.ReadWor
 		return nil, diags
 	}
 	model.RuntimeSource = runtimeSourceTerraType
-
-	// Convert VcsTriggers
-	vcsTriggersObj, diags := convertVcsTriggersFromAPI(context.Background(), apiResponse.VCSTriggers)
-	if diags.HasError() {
-		return nil, diags
-	}
-	model.VcsTriggers = vcsTriggersObj
 
 	return model, diag
 }

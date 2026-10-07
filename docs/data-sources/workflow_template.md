@@ -52,7 +52,6 @@ output "workflow_template_output" {
 - `tags` (List of String) A list of tags associated with the workflow template. A maximum of 10 tags are allowed.
 - `template_name` (String) Name of the workflow template.
 - `template_type` (String) Type of the template.
-- `vcs_triggers` (Attributes) VCS trigger configuration for the template. On a tag push, StackGuardian creates a new `stackguardian_workflow_template_revision` from the tagged commit — it does not start a workflow run. The repository is taken from `runtime_source`. (see [below for nested schema](#nestedatt--vcs_triggers))
 
 <a id="nestedatt--runtime_source"></a>
 ### Nested Schema for `runtime_source`
@@ -60,7 +59,7 @@ output "workflow_template_output" {
 Read-Only:
 
 - `config` (Attributes) Configuration for the runtime environment. (see [below for nested schema](#nestedatt--runtime_source--config))
-- `source_config_dest_kind` (String) Which VCS provider hosts the repository. This decides how StackGuardian authenticates and, for `vcs_triggers`, which webhook integration is used. <ul><li>`GITHUB_COM` — github.com. See the [GitHub connector docs](https://docs.stackguardian.io/docs/connectors/vcs/githubcom/).</li><li>`GITHUB_APP_CUSTOM` — GitHub Enterprise, or a GitHub App you manage yourself. See the [GitHub Enterprise docs](https://docs.stackguardian.io/docs/connectors/vcs/github_enterprise/).</li><li>`GITLAB_COM` — gitlab.com. See the [GitLab connector docs](https://docs.stackguardian.io/docs/connectors/vcs/gitlabcom/).</li><li>`BITBUCKET_ORG` — Bitbucket Cloud. See the [Bitbucket connector docs](https://docs.stackguardian.io/docs/connectors/vcs/bitbucket/).</li><li>`AZURE_DEVOPS` — Azure DevOps. See the [Azure DevOps connector docs](https://docs.stackguardian.io/docs/connectors/vcs/azuredevops/).</li><li>`AZURE_DEVOPS_SP` — Azure DevOps authenticated with a service principal.</li><li>`GIT_OTHER` — any other Git host, including public repositories that need no authentication.</li></ul> `GIT_OTHER` is the only kind that may omit `auth` for a public repository; every other kind requires it regardless of `is_private`.
+- `source_config_dest_kind` (String) Which VCS provider hosts the repository. This decides how StackGuardian authenticates. <ul><li>`GITHUB_COM` — github.com. See the [GitHub connector docs](https://docs.stackguardian.io/docs/connectors/vcs/githubcom/).</li><li>`GITHUB_APP_CUSTOM` — GitHub Enterprise, or a GitHub App you manage yourself. See the [GitHub Enterprise docs](https://docs.stackguardian.io/docs/connectors/vcs/github_enterprise/).</li><li>`GITLAB_COM` — gitlab.com. See the [GitLab connector docs](https://docs.stackguardian.io/docs/connectors/vcs/gitlabcom/).</li><li>`BITBUCKET_ORG` — Bitbucket Cloud. See the [Bitbucket connector docs](https://docs.stackguardian.io/docs/connectors/vcs/bitbucket/).</li><li>`AZURE_DEVOPS` — Azure DevOps. See the [Azure DevOps connector docs](https://docs.stackguardian.io/docs/connectors/vcs/azuredevops/).</li><li>`AZURE_DEVOPS_SP` — Azure DevOps authenticated with a service principal.</li><li>`GIT_OTHER` — any other Git host, including public repositories that need no authentication.</li></ul> `GIT_OTHER` is the only kind that may omit `auth` for a public repository; every other kind requires it regardless of `is_private`.
 
 <a id="nestedatt--runtime_source--config"></a>
 ### Nested Schema for `runtime_source.config`
@@ -75,31 +74,6 @@ Read-Only:
 - `ref` (String) Git reference (branch, tag, or commit hash).
 - `repo` (String) Git repository URL. **Cannot be changed** after creation.
 - `working_dir` (String) Working directory within the repository.
-
-
-
-<a id="nestedatt--vcs_triggers"></a>
-### Nested Schema for `vcs_triggers`
-
-Read-Only:
-
-- `create_tag` (Attributes) Trigger configuration on tag creation in VCS (see [below for nested schema](#nestedatt--vcs_triggers--create_tag))
-- `type` (String) The VCS platform type. Determines which webhook integration is used. Supported values: <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>,
-
-<a id="nestedatt--vcs_triggers--create_tag"></a>
-### Nested Schema for `vcs_triggers.create_tag`
-
-Read-Only:
-
-- `create_revision` (Attributes) Create new revision on tag creation (see [below for nested schema](#nestedatt--vcs_triggers--create_tag--create_revision))
-
-<a id="nestedatt--vcs_triggers--create_tag--create_revision"></a>
-### Nested Schema for `vcs_triggers.create_tag.create_revision`
-
-Read-Only:
-
-- `enabled` (Boolean) Whether to create revision when tag is created.
-
 
 
 
