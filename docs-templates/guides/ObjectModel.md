@@ -76,7 +76,8 @@ Both live inside a workflow group and both take a user-chosen `id`.
 
 - **A connector**, through `deployment_platform_config.integration_id` — the credentials it
   deploys with. Also through `custom_source.config.auth` when cloning a private repository.
-  Connector IDs take the form `/integrations/<resource_name>`; see
+  A connector is referenced as `/integrations/<id>`, built from the resource:
+  `"/integrations/${stackguardian_connector.aws.id}"` — the `id` attribute itself is the bare slug. See
   [Resource IDs](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ResourceIDs)
   for every ID format the provider uses.
 - **A runner group**, through `runner_constraints` — set `type = "private"` and list the group's

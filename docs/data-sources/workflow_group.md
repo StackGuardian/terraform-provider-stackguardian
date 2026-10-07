@@ -23,11 +23,11 @@ Reads an existing workflow group. For a nested group, give the full path — for
 #
 # For a nested group, give the full path -- for example "platform/networking".
 data "stackguardian_workflow_group" "platform" {
-  id = "platform"
+  resource_name = "platform"
 }
 
 resource "stackguardian_workflow_git" "example" {
-  workflow_group_id = data.stackguardian_workflow_group.platform.id
+  workflow_group_id = data.stackguardian_workflow_group.platform.resource_name
   id                = "deploy-vpc"
   wf_type           = "TERRAFORM"
 

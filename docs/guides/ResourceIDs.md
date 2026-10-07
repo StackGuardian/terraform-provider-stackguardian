@@ -121,12 +121,28 @@ Every path-form ID is derivable from a resource attribute, so let Terraform buil
 ```terraform
 deployment_platform_config = [{
   kind   = "AWS_RBAC"
-  config = { integration_id = stackguardian_connector.aws.id }
+  config = { integration_id = "/integrations/${stackguardian_connector.aws.id}" }
 }]
 ```
 
 This keeps the ID correct through renames, and orders resource creation for you. Hard-coding
 `"/integrations/aws"` works until someone renames the connector.
+
+## Where it goes wrong
+
+### A bare connector id applies, then every run fails
+
+`integration_id = stackguardian_connector.aws.id` passes `terraform apply` — the API stores the
+string exactly as given — and every run then fails in its preparation step (`pre_0_step`) with
+`Connector aws does not exist`, because the platform looks connectors up by `/integrations/<id>`.
+Runner groups are stricter: the same mistake in `storage_backend_config.auth.integration_id` is
+rejected on apply with `Invalid integration id used in auth for storage backend config`.
+
+### `auth` is checked on apply
+
+`custom_source.config.auth` must start with `/secrets/` or `/integrations/`; anything else is a
+validation error. With `source_config_dest_kind = "GIT_OTHER"` only the `/secrets/` form is
+allowed — `only secrets supported for GIT_OTHER`.
 
 ## Import IDs are a separate question
 

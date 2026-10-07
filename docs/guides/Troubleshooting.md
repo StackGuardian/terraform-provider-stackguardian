@@ -77,6 +77,32 @@ If VCS trigger registration fails while creating a `stackguardian_workflow_git`,
 deletes the workflow it just created rather than leaving one behind with no working triggers.
 Fix the underlying problem — usually connector permissions or repository access — and apply again.
 
+### `auth` is rejected with "only secrets supported for GIT_OTHER"
+
+A private repository on a `GIT_OTHER` source can only authenticate with a secret,
+`auth = "/secrets/<secret-name>"`. Connectors (`/integrations/…`) work for `GITHUB_COM`,
+`GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG` and `AZURE_DEVOPS*` sources. Any other value —
+including a bare connector `id` — is rejected on apply because `auth` must start with `/secrets/`
+or `/integrations/`.
+
+## Workflow runs
+
+### Every run fails at once with `Connector <name> does not exist`
+
+The run never reached a step: its preparation phase (`pre_0_step`) could not resolve the
+connector in `deployment_platform_config.integration_id`. Almost always the value is the bare
+connector `id` where the platform expects the path form:
+
+```terraform
+integration_id = stackguardian_connector.aws.id                    # applies, then every run fails
+integration_id = "/integrations/${stackguardian_connector.aws.id}" # correct
+```
+
+The API stores the value as given and only resolves it when a run starts, so nothing warns you
+at `apply`. Runner groups are stricter and reject the same mistake in
+`storage_backend_config.auth.integration_id` on apply. See
+[Resource IDs](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ResourceIDs).
+
 ## VCS triggers
 
 ### Triggers are rejected when I enable them

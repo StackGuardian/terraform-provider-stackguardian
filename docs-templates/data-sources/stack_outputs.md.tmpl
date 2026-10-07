@@ -11,6 +11,10 @@ description: |-
 
 {{ .Description | trimspace }}
 
+These are read at plan time. To hand a value straight to another workflow instead, without
+Terraform seeing it, use a runtime reference — see the
+[Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+
 ## Example Usage
 
 {{tffile "docs-examples/datasources/stack_outputs/datasource.tf"}}

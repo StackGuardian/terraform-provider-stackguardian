@@ -1,7 +1,7 @@
 # Look up a runner group so a workflow can be pinned to it without this configuration
 # managing the group itself.
 data "stackguardian_runner_group" "private_runners" {
-  id = "private-runners"
+  resource_name = "private-runners"
 }
 
 resource "stackguardian_workflow_git" "example" {
@@ -13,7 +13,7 @@ resource "stackguardian_workflow_git" "example" {
   # StackGuardian's shared runners and `names` would not apply.
   runner_constraints = {
     type  = "private"
-    names = [data.stackguardian_runner_group.private_runners.id]
+    names = [data.stackguardian_runner_group.private_runners.resource_name]
   }
 
   vcs_config = {

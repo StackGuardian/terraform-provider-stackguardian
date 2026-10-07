@@ -1,7 +1,7 @@
 # Look up a connector that is managed elsewhere -- by another team, or created in the
 # StackGuardian UI -- so a workflow can deploy with it without this configuration owning it.
 data "stackguardian_connector" "shared_aws" {
-  id = "shared-aws-production"
+  resource_name = "shared-aws-production"
 }
 
 resource "stackguardian_workflow_git" "example" {

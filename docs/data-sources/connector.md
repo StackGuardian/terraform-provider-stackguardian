@@ -21,7 +21,7 @@ Reads an existing connector, so a workflow or runner group can reference its ID 
 # Look up a connector that is managed elsewhere -- by another team, or created in the
 # StackGuardian UI -- so a workflow can deploy with it without this configuration owning it.
 data "stackguardian_connector" "shared_aws" {
-  id = "shared-aws-production"
+  resource_name = "shared-aws-production"
 }
 
 resource "stackguardian_workflow_git" "example" {
@@ -221,7 +221,7 @@ Read-Only:
 <!-- AI-SKILLS:START -->
 Generating `stackguardian_connector` configuration with an AI assistant? Load the **`stackguardian-provider`** skill, which covers this resource's arguments and the mistakes it invites.
 
-**Worth knowing either way:** Reference a connector rather than typing its ID: `stackguardian_connector.aws.id` gives Terraform the dependency edge. A workflow's `deployment_platform_config[].kind` must match the connector's own kind.
+**Worth knowing either way:** Reference a connector rather than typing its ID: `"/integrations/${stackguardian_connector.aws.id}"` gives Terraform the dependency edge. A workflow's `deployment_platform_config[].kind` must match the connector's own kind.
 
 The skills live in [the provider repository](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/.claude/skills) and work with Claude Code, Cursor, Copilot, Windsurf and any agent that reads [`AGENTS.md`](https://github.com/StackGuardian/terraform-provider-stackguardian/blob/main/AGENTS.md).
 <!-- AI-SKILLS:END -->
