@@ -16,6 +16,7 @@ import (
 	sgoption "github.com/StackGuardian/sg-sdk-go/option"
 	"github.com/StackGuardian/sg-sdk-go/stacktemplaterevisions"
 	"github.com/StackGuardian/sg-sdk-go/stacktemplates"
+	"github.com/StackGuardian/sg-sdk-go/workflowsteptemplate"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
@@ -153,14 +154,20 @@ func deleteStackFixture(wfGrpName, id string) error {
 	return err
 }
 
-// setupStackWorkflowTemplate creates and publishes a workflow template +
-// revision :1 via the SDK (mirrors workflow_from_template's own
+// setupStackWorkflowTemplate creates and publishes a TERRAFORM workflow
+// template + revision :1 via the SDK (mirrors workflow_from_template's own
 // setupWorkflowTemplate). Registers cleanup. Returns the bare template id.
 func setupStackWorkflowTemplate(t *testing.T, templateID string) string {
 	t.Helper()
+	return setupStackWorkflowTemplateOfKind(t, templateID, workflowtemplates.WorkflowTemplateSourceConfigKindTerraform)
+}
+
+// setupStackWorkflowTemplateOfKind is setupStackWorkflowTemplate for any source
+// kind. Only a TERRAFORM revision gets a terraform_config (terraform_version 1.5.0).
+func setupStackWorkflowTemplateOfKind(t *testing.T, templateID string, sourceConfigKind workflowtemplates.WorkflowTemplateSourceConfigKindEnum) string {
+	t.Helper()
 	client := getClient()
 	revisionID := fmt.Sprintf("%s:1", templateID)
-	sourceConfigKind := workflowtemplates.WorkflowTemplateSourceConfigKindTerraform
 
 	// Registered before any create/publish call below, so a t.Fatalf or panic
 	// partway through still leaves cleanup registered for whatever did make
@@ -187,20 +194,16 @@ func setupStackWorkflowTemplate(t *testing.T, templateID string) string {
 		t.Fatalf("setupStackWorkflowTemplate: create template %q: %s", templateID, err)
 	}
 
-	alias := "v1"
-	tfVersion := "1.5.0"
-	_, err = client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(
-		context.TODO(), org, templateID,
-		&workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
-			Alias:            alias,
-			SourceConfigKind: &sourceConfigKind,
-			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
-			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
-			TerraformConfig: &sgsdkgo.TerraformConfig{
-				TerraformVersion: &tfVersion,
-			},
-		},
-	)
+	revisionRequest := &workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
+		Alias:            "v1",
+		SourceConfigKind: &sourceConfigKind,
+		IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
+		OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+	}
+	if sourceConfigKind == workflowtemplates.WorkflowTemplateSourceConfigKindTerraform {
+		revisionRequest.TerraformConfig = &sgsdkgo.TerraformConfig{TerraformVersion: sgsdkgo.String("1.5.0")}
+	}
+	_, err = client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(context.TODO(), org, templateID, revisionRequest)
 	if err != nil && !is409(err) {
 		t.Fatalf("setupStackWorkflowTemplate: create revision for %q: %s", templateID, err)
 	}
@@ -226,6 +229,48 @@ func setupStackWorkflowTemplate(t *testing.T, templateID string) string {
 	}
 
 	return templateID
+}
+
+// setupStackWorkflowStepTemplate creates a public workflow step template (with
+// revision :1) running a plain container image, for wf_steps_config entries to
+// reference. Mirrors workflow_from_template's setupWorkflowStepTemplate.
+// Registers cleanup. Returns the step template revision in the path form
+// wf_step_template_id takes ("/<org>/<name>:1").
+func setupStackWorkflowStepTemplate(t *testing.T, name string) string {
+	t.Helper()
+	client := getClient()
+	isPublic := workflowsteptemplate.IsPublicEnumOne
+
+	// The template can't be deleted while it still has a revision, so :1 goes first.
+	revisionID := name + ":1"
+	t.Cleanup(func() {
+		logCleanupErr(t, fmt.Sprintf("delete workflow step template revision %q", revisionID),
+			client.WorkflowStepTemplateRevision.DeleteWorkflowStepTemplateRevision(context.TODO(), org, revisionID, true))
+		logCleanupErr(t, fmt.Sprintf("delete workflow step template %q", name),
+			client.WorkflowStepTemplate.DeleteWorkflowStepTemplate(context.TODO(), org, name))
+	})
+
+	// createFirstRevision=true so :1 exists and is referenceable immediately.
+	_, err := client.WorkflowStepTemplate.CreateWorkflowStepTemplate(context.TODO(), org, true,
+		&workflowsteptemplate.CreateWorkflowStepTemplate{
+			TemplateName:     name,
+			TemplateType:     workflowsteptemplate.TemplateTypeWorkflowStepEnum,
+			SourceConfigKind: workflowsteptemplate.WorkflowStepTemplateSourceConfigKindDockerImageEnum,
+			IsPublic:         &isPublic,
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			RuntimeSource: &workflowsteptemplate.WorkflowStepRuntimeSource{
+				SourceConfigDestKind: workflowsteptemplate.SourceConfigDestKindContainerRegistryEnum,
+				Config: &workflowsteptemplate.WorkflowStepRuntimeSourceConfig{
+					DockerImage: "ubuntu:latest",
+					IsPrivate:   sgsdkgo.Bool(false),
+				},
+			},
+		})
+	if err != nil && !is409(err) {
+		t.Fatalf("setupStackWorkflowStepTemplate: create %q: %s", name, err)
+	}
+
+	return fmt.Sprintf("/%s/%s:1", org, name)
 }
 
 // setupStackTemplateChainWithFields is setupStackTemplateChain's general

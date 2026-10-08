@@ -2,6 +2,7 @@ package flatteners
 
 import (
 	"encoding/json"
+	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -22,8 +23,22 @@ func IsEmptyObject(v any) bool {
 	return len(b) == 2 && b[0] == '{' && b[1] == '}'
 }
 
-func JSONInterfaceToString(v interface{}) types.String {
+// isNil reports whether v is nil, including a typed nil — a nil map, pointer, slice,
+// interface, func or chan wrapped in an interface{} is not == nil, and json.Marshal would
+// encode it as the string "null" rather than leaving the value unset.
+func isNil(v interface{}) bool {
 	if v == nil {
+		return true
+	}
+	switch rv := reflect.ValueOf(v); rv.Kind() {
+	case reflect.Map, reflect.Ptr, reflect.Slice, reflect.Interface, reflect.Func, reflect.Chan:
+		return rv.IsNil()
+	}
+	return false
+}
+
+func JSONInterfaceToString(v interface{}) types.String {
+	if isNil(v) {
 		return types.StringNull()
 	}
 	b, err := json.Marshal(v)
@@ -34,7 +49,7 @@ func JSONInterfaceToString(v interface{}) types.String {
 }
 
 func JSONInterfaceToStringDefault(v interface{}) types.String {
-	if v == nil {
+	if isNil(v) {
 		return types.StringValue("")
 	}
 	b, err := json.Marshal(v)

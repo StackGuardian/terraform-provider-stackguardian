@@ -353,7 +353,7 @@ func (r *stackResource) Create(ctx context.Context, req resource.CreateRequest, 
 	stackID := createResp.Data.Stack.Id
 
 	// Call read to get the full state since create response may not return all values
-	readResp, err := r.client.Stacks.ReadStack(ctx, r.org_name, stackID, wfGrpId)
+	readResp, err := r.client.Stacks.ReadStack(ctx, r.org_name, stackID, wfGrpId, &sgsdkgo.ReadStackQueryParams{RefreshWorkflowsConfig: sgsdkgo.Bool(true)})
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading created stack", "Could not read the created stack: "+err.Error())
 		return
@@ -383,7 +383,7 @@ func (r *stackResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	wfGrpId := state.WorkflowGroupId.ValueString()
 
 	// Get refreshed state from client
-	readResp, err := r.client.Stacks.ReadStack(ctx, r.org_name, stackId, wfGrpId)
+	readResp, err := r.client.Stacks.ReadStack(ctx, r.org_name, stackId, wfGrpId, &sgsdkgo.ReadStackQueryParams{RefreshWorkflowsConfig: sgsdkgo.Bool(true)})
 	if err != nil {
 		// If a managed resource is no longer found then remove it from the state
 		if isStackNotFound(err) {
@@ -453,7 +453,7 @@ func (r *stackResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	// Call read to get the updated stack resource to set the state
-	updatedStack, err := r.client.Stacks.ReadStack(ctx, r.org_name, stackId, wfGrpId)
+	updatedStack, err := r.client.Stacks.ReadStack(ctx, r.org_name, stackId, wfGrpId, &sgsdkgo.ReadStackQueryParams{RefreshWorkflowsConfig: sgsdkgo.Bool(true)})
 	if err != nil {
 		tflog.Error(ctx, err.Error())
 		resp.Diagnostics.AddError("Error reading the updated state of stack",
