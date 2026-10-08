@@ -155,6 +155,32 @@ func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRe
 					objectplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"vcs_triggers": schema.SingleNestedAttribute{
+				MarkdownDescription: constants.TemplateVCSTriggers,
+				Optional:            true,
+				Attributes: map[string]schema.Attribute{
+					"type": schema.StringAttribute{
+						MarkdownDescription: constants.TemplateVCSTriggersType,
+						Required:            true,
+					},
+					"create_tag": schema.SingleNestedAttribute{
+						MarkdownDescription: constants.TemplateVCSTriggersCreateTag,
+						Required:            true,
+						Attributes: map[string]schema.Attribute{
+							"create_revision": schema.SingleNestedAttribute{
+								MarkdownDescription: constants.TemplateVCSTriggersCreateTagRevision,
+								Required:            true,
+								Attributes: map[string]schema.Attribute{
+									"enabled": schema.BoolAttribute{
+										MarkdownDescription: constants.TemplateVCSTriggersCreateTagRevisionEnabled,
+										Optional:            true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }

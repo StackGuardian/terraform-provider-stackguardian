@@ -296,3 +296,44 @@ func TestValidateRuntimeSourceRepoUnchanged(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateVcsTriggersRuntimeSource(t *testing.T) {
+	ctx := context.Background()
+	repo := "https://github.com/StackGuardian/tf-null-resource.git"
+	nullTriggers := types.ObjectNull(VCSTriggersModel{}.AttributeTypes())
+	nullRuntimeSource := types.ObjectNull(RuntimeSourceModel{}.AttributeTypes())
+
+	cases := []struct {
+		name          string
+		vcsTriggers   types.Object
+		runtimeSource types.Object
+		wantError     string // substring of the error summary; "" means no error
+	}{
+		{name: "no vcs_triggers is fine", vcsTriggers: nullTriggers, runtimeSource: nullRuntimeSource},
+		{name: "matching GitHub source is fine", vcsTriggers: testVCSTriggers("GITHUB_COM", true), runtimeSource: testRuntimeSource("GITHUB_COM", repo)},
+		{name: "matching Azure DevOps source is fine", vcsTriggers: testVCSTriggers("AZURE_DEVOPS", true), runtimeSource: testRuntimeSource("AZURE_DEVOPS", repo)},
+		{name: "unknown runtime_source is skipped", vcsTriggers: testVCSTriggers("GITHUB_COM", true), runtimeSource: types.ObjectUnknown(RuntimeSourceModel{}.AttributeTypes())},
+		{name: "missing runtime_source is rejected", vcsTriggers: testVCSTriggers("GITHUB_COM", true), runtimeSource: nullRuntimeSource, wantError: "vcs_triggers requires runtime_source"},
+		{name: "unsupported dest kind is rejected", vcsTriggers: testVCSTriggers("GITHUB_COM", true), runtimeSource: testRuntimeSource("GIT_OTHER", repo), wantError: "Unsupported source_config_dest_kind"},
+		{name: "type mismatch is rejected", vcsTriggers: testVCSTriggers("GITLAB_COM", true), runtimeSource: testRuntimeSource("GITHUB_COM", repo), wantError: "vcs_triggers.type must match runtime_source"},
+		{name: "missing repo is rejected", vcsTriggers: testVCSTriggers("GITHUB_COM", true), runtimeSource: testRuntimeSource("GITHUB_COM", ""), wantError: "requires runtime_source.config.repo"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			diags := validateVcsTriggersRuntimeSource(ctx, tc.vcsTriggers, tc.runtimeSource)
+			if tc.wantError == "" {
+				if diags.HasError() {
+					t.Fatalf("expected no error, got: %v", diags)
+				}
+				return
+			}
+			if !diags.HasError() {
+				t.Fatalf("expected error %q, got none", tc.wantError)
+			}
+			if summary := diags.Errors()[0].Summary(); !strings.Contains(summary, tc.wantError) {
+				t.Fatalf("expected error %q, got %q", tc.wantError, summary)
+			}
+		})
+	}
+}

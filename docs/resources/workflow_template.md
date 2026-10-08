@@ -23,6 +23,23 @@ variables, execution settings — lives in a
 created from a specific revision through
 [`stackguardian_workflow_from_template`](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/resources/workflow_from_template).
 
+## Tag-triggered revisions
+
+The `vcs_triggers` block on a template is not the same as the one on a workflow: on a tag push it
+creates a **new template revision** from the tagged commit. It does not start a workflow run.
+
+The webhook is registered for the repository in `runtime_source`, so `runtime_source` must be set,
+and `vcs_triggers.type` must equal `runtime_source.source_config_dest_kind`. Supported providers
+are `GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG`, `AZURE_DEVOPS` and
+`AZURE_DEVOPS_SP`.
+
+The provider registers the triggers after creating the template, and again on every update while
+`vcs_triggers` is set. An existing webhook for the repository is reused, so repeated applies don't
+create duplicates. If registration fails while creating the template, the template is deleted.
+
+Removing `vcs_triggers` clears the triggers stored on the template, but doesn't unregister a
+webhook already created in GitLab, Bitbucket or Azure DevOps. Remove it in your VCS provider.
+
 ## Example Usage
 
 ```terraform
@@ -68,6 +85,7 @@ resource "stackguardian_workflow_template" "with_runtime" {
 - `runtime_source` (Attributes) Runtime source configuration for the template. (see [below for nested schema](#nestedatt--runtime_source))
 - `shared_orgs_list` (List of String) List of organizations the template is shared with.
 - `tags` (List of String) A list of tags associated with the workflow template. A maximum of 10 tags are allowed.
+- `vcs_triggers` (Attributes) VCS trigger configuration for the template. On a tag push, StackGuardian creates a new `stackguardian_workflow_template_revision` from the tagged commit; it does not start a workflow run. The webhook is registered for the repository in `runtime_source`, so `runtime_source` must be set and `type` must match `runtime_source.source_config_dest_kind`. Removing this block clears the stored triggers but does not unregister a webhook already created in GitLab, Bitbucket or Azure DevOps. (see [below for nested schema](#nestedatt--vcs_triggers))
 
 ### Read-Only
 
@@ -97,6 +115,31 @@ Optional:
 - `is_private` (Boolean) Whether the repository is private. Setting this to `true` always requires `auth`. Only `GIT_OTHER` supports a fully public, authless repository (`is_private = false` with `auth` unset) — every other `source_config_dest_kind` requires `auth` regardless of this value.
 - `ref` (String) Git reference (branch, tag, or commit hash).
 - `working_dir` (String) Working directory within the repository.
+
+
+
+<a id="nestedatt--vcs_triggers"></a>
+### Nested Schema for `vcs_triggers`
+
+Required:
+
+- `create_tag` (Attributes) Trigger configuration for tag creation in the repository. (see [below for nested schema](#nestedatt--vcs_triggers--create_tag))
+- `type` (String) VCS provider the webhook is registered with. Must equal `runtime_source.source_config_dest_kind`. One of `GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG`, `AZURE_DEVOPS` or `AZURE_DEVOPS_SP`.
+
+<a id="nestedatt--vcs_triggers--create_tag"></a>
+### Nested Schema for `vcs_triggers.create_tag`
+
+Required:
+
+- `create_revision` (Attributes) Create a new template revision when a tag is created. (see [below for nested schema](#nestedatt--vcs_triggers--create_tag--create_revision))
+
+<a id="nestedatt--vcs_triggers--create_tag--create_revision"></a>
+### Nested Schema for `vcs_triggers.create_tag.create_revision`
+
+Optional:
+
+- `enabled` (Boolean) Whether a new template revision is created when a tag is created.
+
 
 
 

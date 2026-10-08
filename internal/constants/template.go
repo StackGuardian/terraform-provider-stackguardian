@@ -64,6 +64,22 @@ const (
 	WorkflowTemplateRuntimeSourceConfigRepo      = "Git repository URL. **Cannot be changed** after creation."
 )
 
+// Template VCS triggers: the `vcs_triggers` block on `stackguardian_workflow_template`. It is
+// separate from the workflow VCSTriggers constants: a template has no `vcs_config` (it uses
+// `runtime_source`), and its only trigger creates a new template revision on tag push.
+const (
+	TemplateVCSTriggers = "VCS trigger configuration for the template. On a tag push, StackGuardian creates a new " +
+		"`stackguardian_workflow_template_revision` from the tagged commit; it does not start a workflow run. " +
+		"The webhook is registered for the repository in `runtime_source`, so `runtime_source` must be set and " +
+		"`type` must match `runtime_source.source_config_dest_kind`. Removing this block clears the stored " +
+		"triggers but does not unregister a webhook already created in GitLab, Bitbucket or Azure DevOps."
+	TemplateVCSTriggersType = "VCS provider the webhook is registered with. Must equal `runtime_source.source_config_dest_kind`. " +
+		"One of `GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG`, `AZURE_DEVOPS` or `AZURE_DEVOPS_SP`."
+	TemplateVCSTriggersCreateTag                = "Trigger configuration for tag creation in the repository."
+	TemplateVCSTriggersCreateTagRevision        = "Create a new template revision when a tag is created."
+	TemplateVCSTriggersCreateTagRevisionEnabled = "Whether a new template revision is created when a tag is created."
+)
+
 // VCS Triggers attributes
 const (
 	VCSTriggers                    = "Webhook triggers for this workflow. Supported when the repository is on `GITHUB_COM`, `GITHUB_APP_CUSTOM` or `GITLAB_COM`.<br><br>**Requires** `vcs_config.iac_vcs_config.custom_source.config.is_private` to be `true` and `...config.auth` to name a `stackguardian_connector` with access — StackGuardian has to authenticate to register the webhook. See the [VCS connector docs](https://docs.stackguardian.io/docs/connectors/vcs/)." + "`source_config_dest_kind`" + ` is <span style="background-color: #eff0f0; color: #e53835;">GITHUB_COM</span>, <span style="background-color: #eff0f0; color: #e53835;">GITHUB_APP_CUSTOM</span>, or <span style="background-color: #eff0f0; color: #e53835;">GITLAB_COM</span>. **Requires** ` + "`vcs_config.iac_vcs_config.custom_source.config.is_private`" + ` to be ` + "`true`" + ` and ` + "`vcs_config.iac_vcs_config.custom_source.config.auth`" + ` to be set with a valid connector ID.`

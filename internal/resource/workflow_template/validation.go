@@ -229,3 +229,78 @@ func ValidateRuntimeSourceRepoUnchanged(ctx context.Context, plan tfsdk.Plan, st
 
 	return diags
 }
+
+// vcsTriggersDestKinds are the runtime_source.source_config_dest_kind values the template
+// webhooks/vcs_triggers endpoint can register a webhook for.
+var vcsTriggersDestKinds = []string{
+	constants.GithubCom,
+	constants.GithubAppCustom,
+	constants.GitlabCom,
+	constants.BitbucketOrg,
+	constants.AzureDevops,
+	constants.AzureDevopsSp,
+}
+
+// validateVcsTriggersRuntimeSource checks that vcs_triggers can be registered: the webhook
+// endpoint takes the VCS provider and repository from runtime_source, so runtime_source must
+// set a supported source_config_dest_kind and config.repo, and vcs_triggers.type must match the
+// dest kind. Unknown values are skipped; they're checked again once known.
+func validateVcsTriggersRuntimeSource(ctx context.Context, vcsTriggersObj, runtimeSourceObj types.Object) diag.Diagnostics {
+	var diags diag.Diagnostics
+	vcsTriggersPath := path.Root("vcs_triggers")
+
+	if vcsTriggersObj.IsNull() || vcsTriggersObj.IsUnknown() || runtimeSourceObj.IsUnknown() {
+		return diags
+	}
+	if runtimeSourceObj.IsNull() {
+		diags.AddAttributeError(vcsTriggersPath, "vcs_triggers requires runtime_source",
+			"vcs_triggers registers a webhook for the repository in runtime_source; set runtime_source with source_config_dest_kind and config.repo.")
+		return diags
+	}
+
+	var triggers VCSTriggersModel
+	diags.Append(vcsTriggersObj.As(ctx, &triggers, basetypes.ObjectAsOptions{})...)
+	var runtimeSource RuntimeSourceModel
+	diags.Append(runtimeSourceObj.As(ctx, &runtimeSource, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
+		return diags
+	}
+
+	destKindPath := path.Root("runtime_source").AtName("source_config_dest_kind")
+	if !runtimeSource.SourceConfigDestKind.IsUnknown() {
+		destKind := runtimeSource.SourceConfigDestKind.ValueString()
+		supported := false
+		for _, k := range vcsTriggersDestKinds {
+			if destKind == k {
+				supported = true
+				break
+			}
+		}
+		if !supported {
+			diags.AddAttributeError(destKindPath, "Unsupported source_config_dest_kind for vcs_triggers",
+				fmt.Sprintf("vcs_triggers can only be registered when runtime_source.source_config_dest_kind is one of %s, got %q.",
+					strings.Join(vcsTriggersDestKinds, ", "), destKind))
+		} else if !triggers.Type.IsUnknown() && triggers.Type.ValueString() != destKind {
+			diags.AddAttributeError(vcsTriggersPath.AtName("type"), "vcs_triggers.type must match runtime_source",
+				fmt.Sprintf("vcs_triggers.type (%q) must equal runtime_source.source_config_dest_kind (%q).", triggers.Type.ValueString(), destKind))
+		}
+	}
+
+	if !runtimeSource.Config.IsUnknown() {
+		repo := types.StringNull()
+		if !runtimeSource.Config.IsNull() {
+			var cfg RuntimeSourceConfigModel
+			diags.Append(runtimeSource.Config.As(ctx, &cfg, basetypes.ObjectAsOptions{})...)
+			if diags.HasError() {
+				return diags
+			}
+			repo = cfg.Repo
+		}
+		if !repo.IsUnknown() && repo.ValueString() == "" {
+			diags.AddAttributeError(runtimeSourceRepoPath, "vcs_triggers requires runtime_source.config.repo",
+				"vcs_triggers registers a webhook for the repository in runtime_source.config.repo; set it.")
+		}
+	}
+
+	return diags
+}
