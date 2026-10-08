@@ -73,6 +73,7 @@ func (r *workflowTemplateResource) ValidateConfig(ctx context.Context, req resou
 	}
 
 	resp.Diagnostics.Append(ValidateRuntimeSourceAuth(ctx, templateModel.RuntimeSource, path.Root("runtime_source"))...)
+	resp.Diagnostics.Append(validateVcsTriggersRuntimeSource(ctx, templateModel.VCSTriggers, templateModel.RuntimeSource)...)
 }
 
 // ModifyPlan rejects a change to id, source_config_kind or runtime_source.config.repo
@@ -124,6 +125,18 @@ func (r *workflowTemplateResource) Create(ctx context.Context, req resource.Crea
 
 	// Set the ID from the create response
 	templateID := *createResp.Data.Parent.Id
+
+	// VCS triggers aren't registered by the template create call; they go through the
+	// template's webhooks/vcs_triggers endpoint. If that fails, delete the new template so no
+	// half-configured template is left behind.
+	if err := r.registerVcsTriggers(ctx, &plan, templateID); err != nil {
+		_ = r.client.WorkflowTemplates.DeleteWorkflowTemplate(ctx, r.org_name, templateID)
+		resp.Diagnostics.AddError(
+			"Error creating vcs_triggers for workflow_template",
+			"VCS trigger registration failed: "+err.Error()+". The template was deleted to avoid leaving orphaned resources.",
+		)
+		return
+	}
 
 	// Call read to get the full state since create response doesn't return all values
 	readResp, err := r.client.WorkflowTemplates.ReadWorkflowTemplate(ctx, r.org_name, templateID)
@@ -207,6 +220,14 @@ func (r *workflowTemplateResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
+	// Register (or re-register) VCS triggers on every update while they're set. The endpoint is
+	// idempotent: an existing webhook for the repository is reused and the stored triggers are
+	// overwritten. Removing vcs_triggers is handled by the PATCH above (VCSTriggers: null).
+	if err := r.registerVcsTriggers(ctx, &plan, templateID); err != nil {
+		resp.Diagnostics.AddError("Error updating vcs_triggers for workflow_template", "VCS trigger update failed: "+err.Error())
+		return
+	}
+
 	// Call read to get the updated state since update response doesn't return all values
 	readResp, err := r.client.WorkflowTemplates.ReadWorkflowTemplate(ctx, r.org_name, templateID)
 	if err != nil {
@@ -238,4 +259,19 @@ func (r *workflowTemplateResource) Delete(ctx context.Context, req resource.Dele
 		resp.Diagnostics.AddError("Error deleting workflow template", "Error in deleting workflow template API call: "+err.Error())
 		return
 	}
+}
+
+// registerVcsTriggers calls the template's webhooks/vcs_triggers endpoint with the planned
+// runtime_source and vcs_triggers. It does nothing when vcs_triggers is not set.
+func (r *workflowTemplateResource) registerVcsTriggers(ctx context.Context, plan *WorkflowTemplateResourceModel, templateID string) error {
+	request, diags := plan.BuildCreateVcsTriggersRequest(ctx)
+	if diags.HasError() {
+		return fmt.Errorf("building the vcs_triggers request: %v", diags)
+	}
+	if request == nil {
+		return nil
+	}
+
+	_, err := r.client.WorkflowTemplates.CreateVcsTriggers(ctx, r.org_name, templateID, request)
+	return err
 }

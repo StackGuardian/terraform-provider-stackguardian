@@ -24,6 +24,177 @@ type WorkflowTemplateResourceModel struct {
 	SharedOrgsList   types.List   `tfsdk:"shared_orgs_list"`
 	Tags             types.List   `tfsdk:"tags"`
 	ContextTags      types.Map    `tfsdk:"context_tags"`
+	VCSTriggers      types.Object `tfsdk:"vcs_triggers"`
+}
+
+// VCSTriggersModel is vcs_triggers: on a tag push StackGuardian creates a new template revision
+// from the tagged commit. The webhook is registered through the template's
+// webhooks/vcs_triggers endpoint, not the template create/update payload.
+type VCSTriggersModel struct {
+	Type      types.String `tfsdk:"type"`
+	CreateTag types.Object `tfsdk:"create_tag"`
+}
+
+func (VCSTriggersModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"type":       types.StringType,
+		"create_tag": types.ObjectType{AttrTypes: VCSTriggersCreateTagModel{}.AttributeTypes()},
+	}
+}
+
+type VCSTriggersCreateTagModel struct {
+	CreateRevision types.Object `tfsdk:"create_revision"`
+}
+
+func (VCSTriggersCreateTagModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"create_revision": types.ObjectType{AttrTypes: VCSTriggersCreateRevisionModel{}.AttributeTypes()},
+	}
+}
+
+type VCSTriggersCreateRevisionModel struct {
+	Enabled types.Bool `tfsdk:"enabled"`
+}
+
+func (VCSTriggersCreateRevisionModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"enabled": types.BoolType,
+	}
+}
+
+func (m VCSTriggersCreateRevisionModel) ToAPIModel() *workflowtemplates.VCSTriggersCreateTagCreateRevision {
+	createRevision := &workflowtemplates.VCSTriggersCreateTagCreateRevision{}
+	if !m.Enabled.IsNull() && !m.Enabled.IsUnknown() {
+		createRevision.Enabled = m.Enabled.ValueBoolPointer()
+	}
+	return createRevision
+}
+
+func (m VCSTriggersCreateTagModel) ToAPIModel(ctx context.Context) (*workflowtemplates.VCSTriggersCreateTag, diag.Diagnostics) {
+	createTag := &workflowtemplates.VCSTriggersCreateTag{}
+	if !m.CreateRevision.IsNull() && !m.CreateRevision.IsUnknown() {
+		var createRevisionModel VCSTriggersCreateRevisionModel
+		diags := m.CreateRevision.As(ctx, &createRevisionModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, diags
+		}
+		createTag.CreateRevision = createRevisionModel.ToAPIModel()
+	}
+	return createTag, nil
+}
+
+func (m VCSTriggersModel) ToAPIModel(ctx context.Context) (*workflowtemplates.VCSTriggers, diag.Diagnostics) {
+	vcsTriggers := &workflowtemplates.VCSTriggers{}
+	if !m.Type.IsNull() && !m.Type.IsUnknown() {
+		vcsTriggers.Type = workflowtemplates.VCSTriggersTypeEnum(m.Type.ValueString()).Ptr()
+	}
+	if !m.CreateTag.IsNull() && !m.CreateTag.IsUnknown() {
+		var createTagModel VCSTriggersCreateTagModel
+		diags := m.CreateTag.As(ctx, &createTagModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, diags
+		}
+		createTag, diags := createTagModel.ToAPIModel(ctx)
+		if diags.HasError() {
+			return nil, diags
+		}
+		vcsTriggers.CreateTag = createTag
+	}
+	return vcsTriggers, nil
+}
+
+// ConvertVCSTriggersToAPI converts vcs_triggers, returning nil when it is null or unknown.
+func ConvertVCSTriggersToAPI(ctx context.Context, obj types.Object) (*workflowtemplates.VCSTriggers, diag.Diagnostics) {
+	if obj.IsNull() || obj.IsUnknown() {
+		return nil, nil
+	}
+	var m VCSTriggersModel
+	diags := obj.As(ctx, &m, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, diags
+	}
+	return m.ToAPIModel(ctx)
+}
+
+// BuildCreateVcsTriggersRequest builds the body of the template's webhooks/vcs_triggers call:
+// the repository (runtime_source) the webhook is registered for, and the triggers to store.
+// It returns nil when vcs_triggers is null or unknown.
+func (m *WorkflowTemplateResourceModel) BuildCreateVcsTriggersRequest(ctx context.Context) (*workflowtemplates.CreateVcsTriggersRequest, diag.Diagnostics) {
+	vcsTriggers, diags := ConvertVCSTriggersToAPI(ctx, m.VCSTriggers)
+	if diags.HasError() || vcsTriggers == nil {
+		return nil, diags
+	}
+
+	runtimeSource, diags := ConvertRuntimeSourceToAPI(ctx, m.RuntimeSource)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return &workflowtemplates.CreateVcsTriggersRequest{
+		VcsConfig: &workflowtemplates.TemplateVcsConfig{
+			IacVcsConfig: &workflowtemplates.TemplateIacVcsConfig{
+				// Required by the API. false means the repository comes from customSource
+				// (runtime_source) rather than a marketplace template, which would also need
+				// an iacTemplateId. Not exposed as an attribute.
+				UseMarketplaceTemplate: expanders.BoolPtr(false),
+				CustomSource:           runtimeSource,
+			},
+		},
+		VcsTriggers: vcsTriggers,
+	}, nil
+}
+
+func convertVCSTriggersCreateRevisionFromAPI(ctx context.Context, createRevision *workflowtemplates.VCSTriggersCreateTagCreateRevision) (types.Object, diag.Diagnostics) {
+	nullObj := types.ObjectNull(VCSTriggersCreateRevisionModel{}.AttributeTypes())
+	if createRevision == nil {
+		return nullObj, nil
+	}
+	obj, diags := types.ObjectValueFrom(ctx, VCSTriggersCreateRevisionModel{}.AttributeTypes(), VCSTriggersCreateRevisionModel{
+		Enabled: flatteners.BoolPtr(createRevision.Enabled),
+	})
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	return obj, diags
+}
+
+func convertVCSTriggersCreateTagFromAPI(ctx context.Context, createTag *workflowtemplates.VCSTriggersCreateTag) (types.Object, diag.Diagnostics) {
+	nullObj := types.ObjectNull(VCSTriggersCreateTagModel{}.AttributeTypes())
+	if createTag == nil {
+		return nullObj, nil
+	}
+	createRevision, diags := convertVCSTriggersCreateRevisionFromAPI(ctx, createTag.CreateRevision)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	obj, diags := types.ObjectValueFrom(ctx, VCSTriggersCreateTagModel{}.AttributeTypes(), VCSTriggersCreateTagModel{
+		CreateRevision: createRevision,
+	})
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	return obj, diags
+}
+
+// convertVCSTriggersFromAPI converts the template's stored VCSTriggers. Extra keys the API adds
+// (post_comments, gh_check, gl_hook_id, …) are not part of the SDK type and are ignored.
+func convertVCSTriggersFromAPI(ctx context.Context, vcsTriggers *workflowtemplates.VCSTriggers) (types.Object, diag.Diagnostics) {
+	nullObj := types.ObjectNull(VCSTriggersModel{}.AttributeTypes())
+	if vcsTriggers == nil || flatteners.IsEmptyObject(vcsTriggers) {
+		return nullObj, nil
+	}
+	createTag, diags := convertVCSTriggersCreateTagFromAPI(ctx, vcsTriggers.CreateTag)
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	obj, diags := types.ObjectValueFrom(ctx, VCSTriggersModel{}.AttributeTypes(), VCSTriggersModel{
+		Type:      flatteners.StringPtr((*string)(vcsTriggers.Type)),
+		CreateTag: createTag,
+	})
+	if diags.HasError() {
+		return nullObj, diags
+	}
+	return obj, diags
 }
 
 type RuntimeSourceModel struct {
@@ -299,6 +470,13 @@ func (m *WorkflowTemplateResourceModel) ToUpdateAPIModel(ctx context.Context) (*
 		apiModel.SharedOrgsList = sgsdkgo.Null[[]string]()
 	}
 
+	// VCSTriggers: when removed from config, send null to clear the stored triggers. When set,
+	// leave it out here; Update registers and stores them through the webhooks/vcs_triggers
+	// endpoint, so a failed registration never leaves triggers stored without a webhook.
+	if m.VCSTriggers.IsNull() {
+		apiModel.VCSTriggers = sgsdkgo.Null[workflowtemplates.VCSTriggers]()
+	}
+
 	return apiModel, diag
 }
 
@@ -393,6 +571,13 @@ func BuildAPIModelToWorkflowTemplateModel(apiResponse *workflowtemplates.ReadWor
 		return nil, diags
 	}
 	model.RuntimeSource = runtimeSourceTerraType
+
+	// Convert VCSTriggers
+	vcsTriggersTerraType, diags := convertVCSTriggersFromAPI(context.Background(), apiResponse.VCSTriggers)
+	if diags.HasError() {
+		return nil, diags
+	}
+	model.VCSTriggers = vcsTriggersTerraType
 
 	return model, diag
 }

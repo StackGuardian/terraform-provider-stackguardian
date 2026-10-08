@@ -492,3 +492,68 @@ func TestAccWorkflowTemplate_OmittedTags(t *testing.T) {
 		},
 	})
 }
+
+// TestAccWorkflowTemplate_VcsTriggersClearedOnRemoval verifies that removing vcs_triggers from
+// config clears the stored triggers: vcs_triggers is plain Optional, so an omitted value plans as
+// null, and ToUpdateAPIModel sends VCSTriggers: null in the template PATCH. (A webhook already
+// registered with an external VCS provider is not unregistered; the GitHub source used here has
+// none.) description also changes on the second step, so this is a genuine update.
+func TestAccWorkflowTemplate_VcsTriggersClearedOnRemoval(t *testing.T) {
+	templateName := acctest.ResourceName("tf-provider-workflow-template-vcst-clear")
+
+	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	runtimeSource := `
+	  runtime_source = {
+		source_config_dest_kind = "GITHUB_COM"
+		config = {
+		  is_private = true
+		  auth       = "/integrations/tf-provider-test-connector"
+		  repo       = "https://github.com/StackGuardian/tf-null-resource.git"
+		}
+	  }
+	`
+	withVcsTriggers := runtimeSource + `
+	  vcs_triggers = {
+		type = "GITHUB_COM"
+		create_tag = {
+		  create_revision = {
+			enabled = true
+		  }
+		}
+	  }
+
+	  description = "with vcs_triggers"
+	`
+	withoutVcsTriggers := runtimeSource + `
+	  description = "vcs_triggers omitted"
+	`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowTemplate(templateName, sourceConfigKind, withVcsTriggers),
+				Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "vcs_triggers.type", "GITHUB_COM"),
+			},
+			{
+				Config: testAccWorkflowTemplate(templateName, sourceConfigKind, withoutVcsTriggers),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "description", "vcs_triggers omitted"),
+					resource.TestCheckNoResourceAttr("stackguardian_workflow_template.test", "vcs_triggers.type"),
+				),
+			},
+			{
+				Config:   testAccWorkflowTemplate(templateName, sourceConfigKind, withoutVcsTriggers),
+				PlanOnly: true,
+			},
+		},
+	})
+}

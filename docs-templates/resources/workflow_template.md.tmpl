@@ -19,6 +19,23 @@ variables, execution settings — lives in a
 created from a specific revision through
 [`stackguardian_workflow_from_template`](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/resources/workflow_from_template).
 
+## Tag-triggered revisions
+
+The `vcs_triggers` block on a template is not the same as the one on a workflow: on a tag push it
+creates a **new template revision** from the tagged commit. It does not start a workflow run.
+
+The webhook is registered for the repository in `runtime_source`, so `runtime_source` must be set,
+and `vcs_triggers.type` must equal `runtime_source.source_config_dest_kind`. Supported providers
+are `GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG`, `AZURE_DEVOPS` and
+`AZURE_DEVOPS_SP`.
+
+The provider registers the triggers after creating the template, and again on every update while
+`vcs_triggers` is set. An existing webhook for the repository is reused, so repeated applies don't
+create duplicates. If registration fails while creating the template, the template is deleted.
+
+Removing `vcs_triggers` clears the triggers stored on the template, but doesn't unregister a
+webhook already created in GitLab, Bitbucket or Azure DevOps. Remove it in your VCS provider.
+
 ## Example Usage
 
 {{tffile "docs-examples/resources/workflow_template/resource.tf"}}

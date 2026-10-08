@@ -334,3 +334,67 @@ func TestAccWorkflowTemplate_Import(t *testing.T) {
 		},
 	})
 }
+
+// TestAccWorkflowTemplate_WithVCSTriggers creates a template with vcs_triggers, which registers
+// the webhook through the template's webhooks/vcs_triggers endpoint, then changes
+// create_revision.enabled, which re-runs that idempotent call on update. Each step checks the
+// triggers the API stored, and a final plan-only step confirms there's no diff.
+func TestAccWorkflowTemplate_WithVCSTriggers(t *testing.T) {
+	templateName := acctest.ResourceName("tf-provider-workflow-template-vcs-triggers")
+
+	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	templateCallback := func(enabled bool) string {
+		return fmt.Sprintf(`
+		  runtime_source = {
+			source_config_dest_kind = "GITHUB_COM"
+			config = {
+			  is_private = true
+			  auth       = "/integrations/tf-provider-test-connector"
+			  repo       = "https://github.com/StackGuardian/tf-null-resource.git"
+			}
+		  }
+
+		  vcs_triggers = {
+			type = "GITHUB_COM"
+
+			create_tag = {
+			  create_revision = {
+				enabled = %t
+			  }
+			}
+		  }
+		`, enabled)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowTemplate(templateName, sourceConfigKind, templateCallback(true)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "template_name", templateName),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "vcs_triggers.type", constants.GithubCom),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "vcs_triggers.create_tag.create_revision.enabled", "true"),
+				),
+			},
+			{
+				Config: testAccWorkflowTemplate(templateName, sourceConfigKind, templateCallback(false)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_template.test", "vcs_triggers.create_tag.create_revision.enabled", "false"),
+				),
+			},
+			{
+				Config:   testAccWorkflowTemplate(templateName, sourceConfigKind, templateCallback(false)),
+				PlanOnly: true,
+			},
+		},
+	})
+}

@@ -121,3 +121,69 @@ func TestAccWorkflowTemplate_RuntimeSourceGitOtherAuthWithPublicRepo(t *testing.
 		},
 	})
 }
+
+// TestAccWorkflowTemplate_ValidateVcsTriggersRuntimeSource confirms vcs_triggers is checked
+// against runtime_source at plan time: the webhook endpoint takes the VCS provider and repo from
+// runtime_source, so it must be set and its source_config_dest_kind must equal
+// vcs_triggers.type. ValidateConfig runs before Create, so no API call happens.
+func TestAccWorkflowTemplate_ValidateVcsTriggersRuntimeSource(t *testing.T) {
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	vcsTriggers := func(triggerType string) string {
+		return fmt.Sprintf(`
+		  vcs_triggers = {
+			type = %q
+			create_tag = {
+			  create_revision = {
+				enabled = true
+			  }
+			}
+		  }
+		`, triggerType)
+	}
+
+	cases := []struct {
+		name      string
+		config    string
+		wantError string
+	}{
+		{
+			name:      "missing_runtime_source",
+			config:    vcsTriggers("GITHUB_COM"),
+			wantError: "vcs_triggers requires runtime_source",
+		},
+		{
+			name: "type_mismatch",
+			config: `
+			  runtime_source = {
+				source_config_dest_kind = "GITHUB_COM"
+				config = {
+				  is_private = true
+				  auth       = "/integrations/tf-provider-test-connector"
+				  repo       = "https://github.com/StackGuardian/tf-null-resource.git"
+				}
+			  }
+			` + vcsTriggers("GITLAB_COM"),
+			wantError: "vcs_triggers.type must match runtime_source",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			resource.Test(t, resource.TestCase{
+				PreCheck: func() { acctest.TestAccPreCheck(t) },
+				TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+					tfversion.SkipBelow(tfversion.Version1_1_0),
+				},
+				ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+				Steps: []resource.TestStep{
+					{
+						Config:      testAccWorkflowTemplate("does-not-need-to-exist", sourceConfigKind, tc.config),
+						ExpectError: acctest.TFStandardErrorPattern(tc.wantError),
+					},
+				},
+			})
+		})
+	}
+}
