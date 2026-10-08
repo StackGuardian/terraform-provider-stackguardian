@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
@@ -545,103 +546,248 @@ func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
 	})
 }
 
-// TODO: out-of-band deletion of a stack workflow is not handled yet — the test below is
-// commented out until it is. Deleting the live workflow behind a workflows_config.workflows[] entry
-// (e.g. from the platform UI) makes the next refresh drop that entry from state; re-applying the
-// unchanged config then fails with "Provider produced inconsistent result after apply"
-// (workflows[0].workflow_id / approvers: was null, but now ...). Real users hit this too: a plain
-// `terraform apply` refreshes before planning. Cause: UseStateForUnknown (framework v1.19.0) only
-// skips when the whole resource has no state, so for an entry missing from state it copies that
-// entry's null into the plan for every computed field, while the apply returns real values.
-//
-// Proposed fix: in ModifyPlan, when template_group_id is unchanged but the plan has a
-// workflows[].id not present in the refreshed state, fetch the revision and
-// resolveWorkflowTemplates, expand/flatten the same way reResolveWorkflowsConfigOnRevisionChange
-// (model.go) does, and write the predicted values only into those new entries' fields that are
-// null in config — existing entries and anything set in .tf stay untouched, and a normal update
-// never triggers the extra fetch. Rejected: swapping to UseNonNullStateForUnknown — it would
-// plan nullable fields (description, user_job_cpu, ...) as "known after apply" on every update,
-// cascading to anything referencing them.
+// TestAccStack_WorkflowsConfigRoundTripRemainingFields covers the per-workflow attributes the
+// other workflows_config tests don't set: description, wf_type, parallel_execution,
+// environment_variables, number_of_approvals_required, deployment_platform_config,
+// iac_input_data, the rest of terraform_config (drift, approval, plan/init options, timeout,
+// hooks, and a pre-plan workflow step), and mini_steps email notifications and wf_chaining.
+// Each value must come back from the API exactly as sent — a mismatch fails the apply itself
+// ("Provider produced inconsistent result after apply") — and the second step checks it then
+// re-plans with no diff.
+func TestAccStack_WorkflowsConfigRoundTripRemainingFields(t *testing.T) {
+	wfGrpName := acctest.ResourceName("stack-wfrest-wfgrp")
+	wfTemplateName := acctest.ResourceName("stack-wfrest-wftmpl")
+	stackTemplateName := acctest.ResourceName("stack-wfrest-stmpl")
+	id := acctest.ResourceName("stack-wfrest")
 
-// TestAccStack_WorkflowsConfigDriftRestoredAfterOutOfBandDelete verifies that deleting the
-// live workflow behind a workflows_config.workflows[] entry directly (not the stack itself)
-// is detected as drift on the next refresh, and that re-applying the SAME, unchanged config
-// restores it — the platform recreates the missing workflow to match the declared
-// workflows_config, rather than the provider erroring or silently leaving it gone.
-//
-// workflow_id (the newly-added computed field, model.go's computeWorkflowId) is what makes
-// this test possible without any extra lookup: it's derived purely from the resolved
-// iac_template_id and the workflow's own declared uuid (workflows_config.workflows[].id).
-// This test calls computeWorkflowId itself (exposed via export_test.go) rather than
-// duplicating its formula, and uses the result to delete the live workflow directly via
-// client.StackWorkflows.DeleteStackWorkflow — the stack resource itself is untouched by that
-// call.
-//func TestAccStack_WorkflowsConfigDriftRestoredAfterOutOfBandDelete(t *testing.T) {
-//	wfGrpName := "tf-provider-stack-wfdrift-wfgrp"
-//	wfTemplateName := "tf-provider-stack-wfdrift-wftmpl"
-//	stackTemplateName := "tf-provider-stack-wfdrift-stmpl"
-//	id := "tf-provider-stack-wfdrift"
-//
-//	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
-//
-//	// Computed via the same computeWorkflowId the provider itself calls when building the
-//	// create/update payload (model.go), fed the exact resolved iac_template_id
-//	// setupStackTemplateChainWithFields wires onto the workflow entry ("/<org>/<workflow
-//	// template id>:1" — see prefixedWorkflowRevisionID there), rather than duplicating the
-//	// formula's string-parsing logic here.
-//	resolvedIacTemplateId := fmt.Sprintf("/%s/%s:1", org, wfTemplateName)
-//	expectedWorkflowId := stackresource.ComputeWorkflowId(resolvedIacTemplateId, testWorkflowUUID)
-//
-//	config := fmt.Sprintf(`
-//  workflows_config = {
-//    workflows = [
-//      { id = %q }
-//    ]
-//  }
-//`, testWorkflowUUID)
-//
-//	resource.Test(t, resource.TestCase{
-//		PreCheck: func() { acctest.TestAccPreCheck(t) },
-//		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-//			tfversion.SkipBelow(tfversion.Version1_1_0),
-//		},
-//		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
-//		Steps: []resource.TestStep{
-//			{
-//				Config: testAccStackConfig(wfGrpName, revision, id, config),
-//				Check: resource.ComposeAggregateTestCheckFunc(
-//					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.workflow_id", expectedWorkflowId),
-//					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.resource_name"),
-//				),
-//			},
-//			{
-//				// Delete the live workflow directly — the stack resource itself is never
-//				// touched by this call, so Terraform's own state has no idea this happened
-//				// until the refresh below re-reads the stack.
-//				PreConfig: func() {
-//					if err := getClient().StackWorkflows.DeleteStackWorkflow(context.TODO(), org, id, expectedWorkflowId, wfGrpName); err != nil {
-//						t.Fatalf("failed to delete workflow %q out-of-band: %s", expectedWorkflowId, err)
-//					}
-//				},
-//				RefreshState:       true,
-//				ExpectNonEmptyPlan: true,
-//			},
-//			{
-//				// Same config, a real apply — the provider must restore the missing
-//				// workflow to match workflows_config, not error or leave it gone.
-//				Config: testAccStackConfig(wfGrpName, revision, id, config),
-//				Check: resource.ComposeAggregateTestCheckFunc(
-//					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.#", "1"),
-//					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.id", testWorkflowUUID),
-//					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.workflow_id", expectedWorkflowId),
-//					resource.TestCheckResourceAttrSet("stackguardian_stack.test", "workflows_config.workflows.0.resource_name"),
-//				),
-//			},
-//			{
-//				// And the restored state round trips with no diff.
-//				Config:   testAccStackConfig(wfGrpName, revision, id, config),
-//				PlanOnly: true,
-//			},
-//		},
-//	})
-//}
+	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+	stepTemplateID := setupStackWorkflowStepTemplate(t, acctest.ResourceName("stack-wfrest-step"))
+
+	config := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id                 = %[1]q
+        description        = "workflow description"
+        wf_type            = "TERRAFORM"
+        parallel_execution = "enabled"
+
+        approvers                    = ["alice@example.com"]
+        number_of_approvals_required = 1
+
+        environment_variables = [
+          {
+            kind = "PLAIN_TEXT"
+            config = {
+              var_name   = "WF_VAR"
+              text_value = "wf-value"
+            }
+          }
+        ]
+
+        deployment_platform_config = [
+          {
+            kind = "AWS_RBAC"
+            config = {
+              integration_id = "/integrations/test-integration"
+              profile_name   = "test-profile"
+            }
+          }
+        ]
+
+        vcs_config = {
+          iac_input_data = {
+            schema_type = "RAW_JSON"
+            data        = jsonencode({ bucket_region = "eu-central-1" })
+          }
+        }
+
+        terraform_config = {
+          terraform_version       = "1.5.5"
+          managed_terraform_state = true
+          drift_check             = true
+          drift_cron              = "0 */6 * * ? *"
+          approval_pre_apply      = true
+          terraform_plan_options  = "-input=false"
+          terraform_init_options  = "-input=false"
+          timeout                 = 3600
+          pre_plan_hooks          = ["echo pre-plan"]
+          post_apply_hooks        = ["echo post-apply"]
+
+          pre_plan_wf_steps_config = [
+            {
+              name                = "pre-plan-step"
+              wf_step_template_id = %[2]q
+            }
+          ]
+        }
+
+        mini_steps = {
+          notifications = {
+            email = {
+              completed = [
+                {
+                  recipients = ["alice@example.com"]
+                }
+              ]
+            }
+          }
+          wf_chaining = {
+            errored = [
+              {
+                workflow_group_id = "kk"
+                workflow_id       = "retest-of-bug-cewgh6dt-i7vp-0vo474rl"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+`, testWorkflowUUID, stepTemplateID)
+
+	const res = "stackguardian_stack.test"
+	wf := "workflows_config.workflows.0."
+	tc := wf + "terraform_config."
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(res, wf+"description", "workflow description"),
+					resource.TestCheckResourceAttr(res, wf+"wf_type", "TERRAFORM"),
+					resource.TestCheckResourceAttr(res, wf+"parallel_execution", "enabled"),
+					resource.TestCheckResourceAttr(res, wf+"approvers.0", "alice@example.com"),
+					resource.TestCheckResourceAttr(res, wf+"number_of_approvals_required", "1"),
+
+					resource.TestCheckResourceAttr(res, wf+"environment_variables.#", "1"),
+					resource.TestCheckResourceAttr(res, wf+"environment_variables.0.kind", "PLAIN_TEXT"),
+					resource.TestCheckResourceAttr(res, wf+"environment_variables.0.config.var_name", "WF_VAR"),
+					resource.TestCheckResourceAttr(res, wf+"environment_variables.0.config.text_value", "wf-value"),
+
+					resource.TestCheckResourceAttr(res, wf+"deployment_platform_config.#", "1"),
+					resource.TestCheckResourceAttr(res, wf+"deployment_platform_config.0.kind", "AWS_RBAC"),
+					resource.TestCheckResourceAttr(res, wf+"deployment_platform_config.0.config.integration_id", "/integrations/test-integration"),
+					resource.TestCheckResourceAttr(res, wf+"deployment_platform_config.0.config.profile_name", "test-profile"),
+
+					resource.TestCheckResourceAttr(res, wf+"vcs_config.iac_input_data.schema_type", "RAW_JSON"),
+					resource.TestCheckResourceAttr(res, wf+"vcs_config.iac_input_data.data", `{"bucket_region":"eu-central-1"}`),
+
+					resource.TestCheckResourceAttr(res, tc+"terraform_version", "1.5.5"),
+					resource.TestCheckResourceAttr(res, tc+"managed_terraform_state", "true"),
+					resource.TestCheckResourceAttr(res, tc+"drift_check", "true"),
+					resource.TestCheckResourceAttr(res, tc+"drift_cron", "0 */6 * * ? *"),
+					resource.TestCheckResourceAttr(res, tc+"approval_pre_apply", "true"),
+					resource.TestCheckResourceAttr(res, tc+"terraform_plan_options", "-input=false"),
+					resource.TestCheckResourceAttr(res, tc+"terraform_init_options", "-input=false"),
+					resource.TestCheckResourceAttr(res, tc+"timeout", "3600"),
+					resource.TestCheckResourceAttr(res, tc+"pre_plan_hooks.0", "echo pre-plan"),
+					resource.TestCheckResourceAttr(res, tc+"post_apply_hooks.0", "echo post-apply"),
+					resource.TestCheckResourceAttr(res, tc+"pre_plan_wf_steps_config.#", "1"),
+					resource.TestCheckResourceAttr(res, tc+"pre_plan_wf_steps_config.0.name", "pre-plan-step"),
+					resource.TestCheckResourceAttr(res, tc+"pre_plan_wf_steps_config.0.wf_step_template_id", stepTemplateID),
+
+					resource.TestCheckResourceAttr(res, wf+"mini_steps.notifications.email.completed.0.recipients.0", "alice@example.com"),
+					resource.TestCheckResourceAttr(res, wf+"mini_steps.wf_chaining.errored.0.workflow_group_id", "kk"),
+					resource.TestCheckResourceAttr(res, wf+"mini_steps.wf_chaining.errored.0.workflow_id", "retest-of-bug-cewgh6dt-i7vp-0vo474rl"),
+				),
+			},
+			{
+				// Round trips with no diff.
+				Config:   testAccStackConfig(wfGrpName, revision, id, config),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccStack_WorkflowsConfigCustomWfStepsConfig covers a workflow's top-level
+// wf_steps_config, which only applies to CUSTOM workflows — so this stack's template revision
+// is built on a CUSTOM workflow template rather than the TERRAFORM one the other tests use. The
+// declared steps must come back from the API exactly as sent, then re-plan with no diff.
+func TestAccStack_WorkflowsConfigCustomWfStepsConfig(t *testing.T) {
+	wfGrpName := acctest.ResourceName("stack-wfcustom-wfgrp")
+	wfTemplateName := acctest.ResourceName("stack-wfcustom-wftmpl")
+	stackTemplateName := acctest.ResourceName("stack-wfcustom-stmpl")
+	id := acctest.ResourceName("stack-wfcustom")
+
+	t.Cleanup(func() {
+		logCleanupErr(t, fmt.Sprintf("delete workflow group %q", wfGrpName), deleteWorkflowGroupFixture(wfGrpName))
+	})
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil && !is409(err) {
+		t.Fatalf("TestAccStack_WorkflowsConfigCustomWfStepsConfig: create workflow group %q: %s", wfGrpName, err)
+	}
+	workflowTemplateID := setupStackWorkflowTemplateOfKind(t, wfTemplateName, workflowtemplates.WorkflowTemplateSourceConfigKindCustom)
+	revision := setupStackTemplateChain(t, stackTemplateName, workflowTemplateID)
+	stepTemplateID := setupStackWorkflowStepTemplate(t, acctest.ResourceName("stack-wfcustom-step"))
+	t.Cleanup(func() { deleteStackFixture(wfGrpName, id) })
+
+	config := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id      = %[1]q
+        wf_type = "CUSTOM"
+
+        wf_steps_config = [
+          {
+            name                = "step-one"
+            wf_step_template_id = %[2]q
+            approval            = true
+            timeout             = 600
+            cmd_override        = "echo hello"
+
+            environment_variables = [
+              {
+                kind = "PLAIN_TEXT"
+                config = {
+                  var_name   = "STEP_VAR"
+                  text_value = "step-value"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+`, testWorkflowUUID, stepTemplateID)
+
+	const res = "stackguardian_stack.test"
+	step := "workflows_config.workflows.0.wf_steps_config.0."
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(res, "workflows_config.workflows.0.wf_type", "CUSTOM"),
+					resource.TestCheckResourceAttr(res, "workflows_config.workflows.0.wf_steps_config.#", "1"),
+					resource.TestCheckResourceAttr(res, step+"name", "step-one"),
+					resource.TestCheckResourceAttr(res, step+"wf_step_template_id", stepTemplateID),
+					resource.TestCheckResourceAttr(res, step+"approval", "true"),
+					resource.TestCheckResourceAttr(res, step+"timeout", "600"),
+					resource.TestCheckResourceAttr(res, step+"cmd_override", "echo hello"),
+					resource.TestCheckResourceAttr(res, step+"environment_variables.0.config.var_name", "STEP_VAR"),
+					resource.TestCheckResourceAttr(res, step+"environment_variables.0.config.text_value", "step-value"),
+				),
+			},
+			{
+				// Round trips with no diff.
+				Config:   testAccStackConfig(wfGrpName, revision, id, config),
+				PlanOnly: true,
+			},
+		},
+	})
+}
