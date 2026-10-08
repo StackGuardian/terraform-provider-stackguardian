@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	stackresource "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/stack"
@@ -56,7 +57,7 @@ func (d *stackDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	id := config.Id.ValueString()
 	workflowGroupId := config.WorkflowGroupId.ValueString()
 
-	readResp, err := d.client.Stacks.ReadStack(ctx, d.orgName, id, workflowGroupId)
+	readResp, err := d.client.Stacks.ReadStack(ctx, d.orgName, id, workflowGroupId, &sgsdkgo.ReadStackQueryParams{RefreshWorkflowsConfig: sgsdkgo.Bool(true)})
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read stack.", err.Error())
 		return
