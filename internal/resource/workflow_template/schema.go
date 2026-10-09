@@ -146,15 +146,15 @@ func (r *workflowTemplateResource) Schema(_ context.Context, _ resource.SchemaRe
 					listplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"runtime_source": schema.SingleNestedAttribute{
-				MarkdownDescription: fmt.Sprintf(constants.RuntimeSource, "template"),
-				Optional:            true,
-				Computed:            true,
-				Attributes:          WorkflowTemplateRuntimeSourceConfig(),
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
-				},
+		"runtime_source": schema.SingleNestedAttribute{
+			MarkdownDescription: fmt.Sprintf(constants.RuntimeSource, "template"),
+			Optional:            true,
+			Computed:            true,
+			Attributes:          WorkflowTemplateRuntimeSourceConfig(),
+			PlanModifiers: []planmodifier.Object{
+				objectplanmodifier.UseStateForUnknown(),
 			},
+		},
 		},
 	}
 }

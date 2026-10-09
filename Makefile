@@ -20,7 +20,7 @@ build:
 	go build -o ${BINARY}
 
 release:
-	goreleaser release --rm-dist --snapshot --skip-publish  --skip-sign
+	goreleaser release --clean --snapshot --skip-publish --skip-sign
 
 install: build
 	mkdir -p ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
@@ -30,7 +30,6 @@ clean-test-cache:
 	go clean -testcache
 
 test:
-	go test -i $(TEST) || exit 1
 	echo $(TEST) | xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
 
 # -p=8 runs up to 8 packages concurrently so the two heaviest packages
@@ -109,7 +108,6 @@ gh-workflow-test-provider-mock-stg-as-prd:
 		push \
 		;
 
-#		--local-repository StackGuardian/terraform-provider-stackguardian@devel=${PWD} \#
 gh-workflow-test-api-stg:
 	act \
 		--workflows ${PWD}/.github/workflows/test-api-stg.yaml \
@@ -119,7 +117,6 @@ gh-workflow-test-api-stg:
 		workflow_dispatch \
 		;
 
-#		--local-repository StackGuardian/terraform-provider-stackguardian@devel=${PWD} \#
 gh-workflow-test-api-prd:
 	act \
 		--workflows ${PWD}/.github/workflows/test-api-prd.yaml \
@@ -128,3 +125,25 @@ gh-workflow-test-api-prd:
 		--secret SG_PRD_ORG_NAME=${SG_PRD_ORG_NAME} \
 		workflow_dispatch \
 		;
+
+# Security scan over AI agent skills using NVIDIA SkillSpector (static analysis
+# only, --no-llm — no API key needed). Requires `skillspector` on PATH:
+#   uv tool install git+https://github.com/NVIDIA/skillspector.git
+# Fails when any skill scores above 50 (recommendation DO NOT INSTALL).
+skills-security-scan:
+	@mkdir -p .skillspector-reports; \
+	fail=0; \
+	for skill_dir in .claude/skills/*/; do \
+		skill_name=$$(basename "$$skill_dir"); \
+		echo "Scanning $$skill_name..."; \
+		skillspector scan "$$skill_dir" --no-llm \
+			--format sarif --output ".skillspector-reports/$$skill_name.sarif"; \
+		rc=$$?; \
+		if [ $$rc -eq 0 ]; then \
+			echo "  $$skill_name: PASS"; \
+		else \
+			echo "  $$skill_name: FAIL (exit $$rc)"; \
+			fail=1; \
+		fi; \
+	done; \
+	exit $$fail

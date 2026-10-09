@@ -59,3 +59,13 @@ import {
 ```bash
 terraform import stackguardian_workflow_git.example workflow-group-id/workflow-id
 ```
+
+## Building this with AI
+
+<!-- AI-SKILLS:START -->
+Generating `stackguardian_workflow_git` configuration with an AI assistant? Load the **`stackguardian-workflows`** skill, which covers this resource's arguments and the mistakes it invites.
+
+**Worth knowing either way:** Three nesting modes are easy to get backwards: `deployment_platform_config`, `environment_variables` and `user_schedules` are **lists**; `mini_steps.notifications.email.<event>` is a **list** of `{recipients}`; and `vcs_triggers.push` is a **map** keyed `createWfRun`. `terraform_version` takes the bare form — no `TERRAFORM-` prefix.
+
+The skills live in [the provider repository](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/.claude/skills) and work with Claude Code, Cursor, Copilot, Windsurf and any agent that reads [`AGENTS.md`](https://github.com/StackGuardian/terraform-provider-stackguardian/blob/main/AGENTS.md).
+<!-- AI-SKILLS:END -->

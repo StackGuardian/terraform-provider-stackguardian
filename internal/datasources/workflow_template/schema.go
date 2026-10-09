@@ -57,55 +57,55 @@ func (d *workflowTemplateDataSource) Schema(_ context.Context, _ datasource.Sche
 				ElementType:         types.StringType,
 				Computed:            true,
 			},
-			"runtime_source": schema.SingleNestedAttribute{
-				MarkdownDescription: "Runtime source configuration for the template.",
-				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"source_config_dest_kind": schema.StringAttribute{
-						MarkdownDescription: constants.WorkflowTemplateRuntimeSourceDestKind,
-						Computed:            true,
-					},
-					"config": schema.SingleNestedAttribute{
-						MarkdownDescription: constants.RuntimeSourceConfig,
-						Computed:            true,
-						Attributes: map[string]schema.Attribute{
-							"auth": schema.StringAttribute{
-								MarkdownDescription: constants.WorkflowTemplateRuntimeSourceConfigAuth,
-								Computed:            true,
-								Sensitive:           true,
-							},
-							"git_core_auto_crlf": schema.BoolAttribute{
-								MarkdownDescription: constants.RuntimeSourceConfigGitCoreCRLF,
-								Computed:            true,
-							},
-							"git_sparse_checkout_config": schema.StringAttribute{
-								MarkdownDescription: constants.RuntimeSourceConfigGitSparse,
-								Computed:            true,
-							},
-							"include_sub_module": schema.BoolAttribute{
-								MarkdownDescription: constants.RuntimeSourceConfigIncludeSubmodule,
-								Computed:            true,
-							},
-							"is_private": schema.BoolAttribute{
-								MarkdownDescription: constants.WorkflowTemplateRuntimeSourceConfigIsPrivate,
-								Computed:            true,
-							},
-							"ref": schema.StringAttribute{
-								MarkdownDescription: constants.RuntimeSourceConfigRef,
-								Computed:            true,
-							},
-							"repo": schema.StringAttribute{
-								MarkdownDescription: constants.WorkflowTemplateRuntimeSourceConfigRepo,
-								Computed:            true,
-							},
-							"working_dir": schema.StringAttribute{
-								MarkdownDescription: constants.RuntimeSourceConfigWorkingDir,
-								Computed:            true,
-							},
+		"runtime_source": schema.SingleNestedAttribute{
+			MarkdownDescription: "Runtime source configuration for the template.",
+			Computed:            true,
+			Attributes: map[string]schema.Attribute{
+				"source_config_dest_kind": schema.StringAttribute{
+					MarkdownDescription: constants.WorkflowTemplateRuntimeSourceDestKind,
+					Computed:            true,
+				},
+				"config": schema.SingleNestedAttribute{
+					MarkdownDescription: constants.RuntimeSourceConfig,
+					Computed:            true,
+					Attributes: map[string]schema.Attribute{
+						"auth": schema.StringAttribute{
+							MarkdownDescription: constants.WorkflowTemplateRuntimeSourceConfigAuth,
+							Computed:            true,
+							Sensitive:           true,
+						},
+						"git_core_auto_crlf": schema.BoolAttribute{
+							MarkdownDescription: constants.RuntimeSourceConfigGitCoreCRLF,
+							Computed:            true,
+						},
+						"git_sparse_checkout_config": schema.StringAttribute{
+							MarkdownDescription: constants.RuntimeSourceConfigGitSparse,
+							Computed:            true,
+						},
+						"include_sub_module": schema.BoolAttribute{
+							MarkdownDescription: constants.RuntimeSourceConfigIncludeSubmodule,
+							Computed:            true,
+						},
+						"is_private": schema.BoolAttribute{
+							MarkdownDescription: constants.WorkflowTemplateRuntimeSourceConfigIsPrivate,
+							Computed:            true,
+						},
+						"ref": schema.StringAttribute{
+							MarkdownDescription: constants.RuntimeSourceConfigRef,
+							Computed:            true,
+						},
+						"repo": schema.StringAttribute{
+							MarkdownDescription: constants.WorkflowTemplateRuntimeSourceConfigRepo,
+							Computed:            true,
+						},
+						"working_dir": schema.StringAttribute{
+							MarkdownDescription: constants.RuntimeSourceConfigWorkingDir,
+							Computed:            true,
 						},
 					},
 				},
 			},
+		},
 		},
 	}
 }
