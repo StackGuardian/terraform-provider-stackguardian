@@ -174,7 +174,7 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 	if apiKey == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("api_key"),
-			"Missing Organization Name",
+			"Missing API Key",
 			"The provider cannot create the StackGuardian API client as there is an unknown configuration value for the StackGuardian API Key. "+
 				"Either set the value statically in the configuration, or use the STACKGUARDIAN_API_URI environment variable.",
 		)
@@ -182,7 +182,7 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 	if apiURI == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("api_uri"),
-			"Missing Organization Name",
+			"Missing API URI",
 			"The provider cannot create the StackGuardian API client as there is an unknown configuration value for the StackGuardian API URI. "+
 				"Either set the value statically in the configuration, or use the STACKGUARDIAN_API_URI environment variable.",
 		)
