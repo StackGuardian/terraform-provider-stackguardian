@@ -2,6 +2,8 @@ module github.com/StackGuardian/terraform-provider-stackguardian
 
 go 1.26.7
 
+replace github.com/StackGuardian/sg-sdk-go => /Users/taherkathanawala/workspace/sg-sdk-go.git/fix_workflow_template/
+
 require (
 	github.com/StackGuardian/sg-sdk-go v1.6.0
 	github.com/hashicorp/go-version v1.9.0
