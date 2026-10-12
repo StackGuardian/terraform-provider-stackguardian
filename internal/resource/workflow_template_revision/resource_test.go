@@ -1074,8 +1074,8 @@ func testAccWfTemplateRevisionLifecycleConfig(templateName, alias, isPublic stri
 
 // TestAccWorkflowTemplateRevision_Import creates a revision with a representative set of
 // attributes, then imports it by id ("<template_id>:<revision>") and verifies every
-// attribute in the imported state matches the state from the create step. Import only sets
-// id (ImportState); Read fills in everything else, including template_id.
+// attribute in the imported state matches the state from the create step. ImportState sets
+// id and template_id (parsed from the import ID); Read fills in everything else.
 func TestAccWorkflowTemplateRevision_Import(t *testing.T) {
 	templateID := acctest.ResourceName("tf-provider-wftr-import")
 
@@ -1143,21 +1143,64 @@ func TestAccWorkflowTemplateRevision_Import(t *testing.T) {
 				Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "id", templateID+":1"),
 			},
 			{
-				ResourceName:       "stackguardian_workflow_template_revision.test",
-				ImportState:        true,
-				ImportStateId:      templateID + ":1",
-				ImportStateVerify:  true,
-				ImportStatePersist: true,
+				// Imported into a separate state and compared with the created one. Updating
+				// an imported revision is covered by
+				// TestAccWorkflowTemplateRevision_ImportUserScheduleWithEmptyNameAndDesc, which
+				// imports into an empty state (ImportStatePersist can't import over a resource
+				// this test already created).
+				ResourceName:      "stackguardian_workflow_template_revision.test",
+				ImportState:       true,
+				ImportStateId:     templateID + ":1",
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// TestAccWorkflowTemplateRevision_UserSchedulesWithoutInputs verifies that inputs is optional:
+// a schedule written the way configurations were before inputs existed still validates, is
+// stored without inputs (the API adds no default inputs), reads back with inputs null, and plans
+// no changes afterwards.
+func TestAccWorkflowTemplateRevision_UserSchedulesWithoutInputs(t *testing.T) {
+	templateID := acctest.ResourceName("tf-provider-wftr-schedules-no-inputs")
+
+	registerWorkflowTemplateCleanup(t, templateID, 1)
+
+	err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	config := testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, `
+	  alias = "revision-schedules-no-inputs"
+
+	  user_schedules = [
+	    {
+	      cron  = "0 8 ? * MON *"
+	      state = "ENABLED"
+	    }
+	  ]
+	`)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "user_schedules.0.cron", "0 8 ? * MON *"),
+					resource.TestCheckNoResourceAttr("stackguardian_workflow_template_revision.test", "user_schedules.0.inputs.terraform_action.action"),
+				),
 			},
 			{
-				// Update the imported revision. Computed values such as
-				// user_schedules[*].inputs.enable_chaining come from the imported state, and a
-				// value the API doesn't return must not be invented and sent back.
-				Config: config("Imported revision, updated"),
-				Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "description", "Imported revision, updated"),
-			},
-			{
-				Config:   config("Imported revision, updated"),
+				Config:   config,
 				PlanOnly: true,
 			},
 		},

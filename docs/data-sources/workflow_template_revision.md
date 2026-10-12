@@ -597,7 +597,7 @@ Read-Only:
 Read-Only:
 
 - `enable_chaining` (Boolean) Whether the scheduled run triggers the workflows and stacks chained to it. Set by StackGuardian; read-only.
-- `terraform_action` (Attributes) Terraform action the scheduled run performs. (see [below for nested schema](#nestedatt--user_schedules--inputs--terraform_action))
+- `terraform_action` (Attributes) Terraform action the scheduled run performs. Only applies to revisions whose `source_config_kind` is `TERRAFORM` or `OPENTOFU`. (see [below for nested schema](#nestedatt--user_schedules--inputs--terraform_action))
 - `vcs_config` (Attributes) VCS configuration for the scheduled run. (see [below for nested schema](#nestedatt--user_schedules--inputs--vcs_config))
 
 <a id="nestedatt--user_schedules--inputs--terraform_action"></a>

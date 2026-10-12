@@ -132,7 +132,7 @@ const (
 	UserScheduleName  = "Name of the schedule."
 
 	UserScheduleInputs                       = "Run inputs used when this schedule triggers a workflow run."
-	UserScheduleInputsTerraformAction        = "Terraform action the scheduled run performs."
+	UserScheduleInputsTerraformAction        = "Terraform action the scheduled run performs. Only applies to revisions whose `source_config_kind` is `TERRAFORM` or `OPENTOFU`."
 	UserScheduleInputsTerraformActionAction  = "Action to run. One of `apply`, `destroy`, `plan`, `plan-destroy`, `plan-without-policy` or `refresh`."
 	UserScheduleInputsEnableChaining         = "Whether the scheduled run triggers the workflows and stacks chained to it. Set by StackGuardian; read-only."
 	UserScheduleInputsVcsConfig              = "VCS configuration for the scheduled run."

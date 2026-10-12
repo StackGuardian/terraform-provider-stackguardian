@@ -560,17 +560,21 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 								stringplanmodifier.UseStateForUnknown(),
 							},
 						},
+						// inputs and everything in it are Optional, so existing schedules without
+						// inputs keep working, except iac_input_data's schema_type and data, which
+						// are required once iac_input_data is set. Only enable_chaining is
+						// Computed: StackGuardian sets it and it is sent back unchanged on update.
 						"inputs": schema.SingleNestedAttribute{
 							MarkdownDescription: constants.UserScheduleInputs,
-							Required:            true,
+							Optional:            true,
 							Attributes: map[string]schema.Attribute{
 								"terraform_action": schema.SingleNestedAttribute{
 									MarkdownDescription: constants.UserScheduleInputsTerraformAction,
-									Required:            true,
+									Optional:            true,
 									Attributes: map[string]schema.Attribute{
 										"action": schema.StringAttribute{
 											MarkdownDescription: constants.UserScheduleInputsTerraformActionAction,
-											Required:            true,
+											Optional:            true,
 										},
 									},
 								},
@@ -601,7 +605,7 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 												},
 												"data": schema.StringAttribute{
 													MarkdownDescription: constants.WorkflowIacInputDataData,
-													Optional:            true,
+													Required:            true,
 												},
 											},
 										},

@@ -556,7 +556,9 @@ func convertUserScheduleInputsToAPI(ctx context.Context, obj types.Object) (*wor
 
 func convertUserScheduleTerraformActionFromAPI(ctx context.Context, action *sgsdkgo.TerraformAction) (types.Object, diag.Diagnostics) {
 	nullObj := types.ObjectNull(UserScheduleTerraformActionModel{}.AttributeTypes())
-	if action == nil || flatteners.IsEmptyObject(action) {
+	// Only a missing TerraformAction reads as null; an empty {} reads as an object whose
+	// attributes are null.
+	if action == nil {
 		return nullObj, nil
 	}
 
@@ -571,7 +573,9 @@ func convertUserScheduleTerraformActionFromAPI(ctx context.Context, action *sgsd
 
 func convertUserScheduleIacInputDataFromAPI(ctx context.Context, inputData *sgsdkgo.IacInputData) (types.Object, diag.Diagnostics) {
 	nullObj := types.ObjectNull(UserScheduleIacInputDataModel{}.AttributeTypes())
-	if inputData == nil || flatteners.IsEmptyObject(inputData) {
+	// Only a missing iacInputData reads as null; an empty {} reads as an object whose
+	// attributes are null.
+	if inputData == nil {
 		return nullObj, nil
 	}
 
@@ -620,11 +624,13 @@ func convertUserScheduleVcsConfigFromAPI(ctx context.Context, vcsConfig *sgsdkgo
 	return obj, diags
 }
 
-// convertUserScheduleInputsFromAPI converts a schedule's inputs, returning a null object when
-// the API has none (for example a schedule created outside Terraform).
+// convertUserScheduleInputsFromAPI converts a schedule's inputs, returning a null object only
+// when the API returned no inputs (nil); an empty "inputs": {} reads as an object.
 func convertUserScheduleInputsFromAPI(ctx context.Context, inputs *workflowtemplaterevisions.UserSchedulesInputs) (types.Object, diag.Diagnostics) {
 	nullObj := types.ObjectNull(UserScheduleInputsModel{}.AttributeTypes())
-	if inputs == nil || flatteners.IsEmptyObject(inputs) {
+	// Only a missing inputs reads as null. An empty "inputs": {} is a value the API returned,
+	// so it reads as an object whose attributes are null, not as null.
+	if inputs == nil {
 		return nullObj, nil
 	}
 

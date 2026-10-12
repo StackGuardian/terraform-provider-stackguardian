@@ -284,3 +284,81 @@ func TestUserSchedulesFromAPIResponse(t *testing.T) {
 		t.Errorf("desc = %s, want \"\"", models[0].Desc)
 	}
 }
+
+// TestUserScheduleInputsEmptyVsMissing checks that the read path keeps the difference between
+// a schedule with no inputs (null) and one whose inputs is an empty object (an object whose
+// attributes are null). UserSchedules.Inputs is a pointer so the two decode differently.
+func TestUserScheduleInputsEmptyVsMissing(t *testing.T) {
+	ctx := context.Background()
+
+	cases := []struct {
+		name     string
+		response string
+		wantNull bool
+	}{
+		{name: "missing inputs reads as null", response: `[{"cron":"0 12 ? * 2 *","state":"ENABLED"}]`, wantNull: true},
+		{name: "empty inputs reads as an object", response: `[{"cron":"0 12 ? * 2 *","state":"ENABLED","inputs":{}}]`, wantNull: false},
+		{name: "inputs with values reads as an object", response: `[{"cron":"0 12 ? * 2 *","state":"ENABLED","inputs":{"TerraformAction":{"action":"apply"}}}]`, wantNull: false},
+		{name: "empty iacInputData reads as an object", response: `[{"cron":"0 12 ? * 2 *","state":"ENABLED","inputs":{"VCSConfig":{"iacInputData":{}}}}]`, wantNull: false},
+		{name: "empty TerraformAction reads as an object", response: `[{"cron":"0 12 ? * 2 *","state":"ENABLED","inputs":{"TerraformAction":{}}}]`, wantNull: false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var schedules []workflowtemplaterevisions.UserSchedules
+			if err := json.Unmarshal([]byte(tc.response), &schedules); err != nil {
+				t.Fatal(err)
+			}
+			list, diags := ConvertUserSchedulesFromAPI(ctx, schedules)
+			if diags.HasError() {
+				t.Fatalf("ConvertUserSchedulesFromAPI: %v", diags)
+			}
+			var models []UserSchedulesModel
+			if diags := list.ElementsAs(ctx, &models, false); diags.HasError() {
+				t.Fatal(diags)
+			}
+
+			inputs := models[0].Inputs
+			if inputs.IsNull() != tc.wantNull {
+				t.Fatalf("inputs null = %v, want %v (got %s)", inputs.IsNull(), tc.wantNull, inputs)
+			}
+			if tc.name == "empty TerraformAction reads as an object" {
+				// TerraformAction {}: terraform_action is an object whose action is null.
+				action, ok := inputs.Attributes()["terraform_action"].(types.Object)
+				if !ok || action.IsNull() {
+					t.Fatalf("terraform_action = %s, want an object", inputs.Attributes()["terraform_action"])
+				}
+				if v := action.Attributes()["action"]; !v.IsNull() {
+					t.Errorf("terraform_action.action = %s, want null", v)
+				}
+				return
+			}
+			if tc.name == "empty iacInputData reads as an object" {
+				// iacInputData {}: vcs_config.iac_input_data is an object whose attributes are null.
+				vcsConfig, ok := inputs.Attributes()["vcs_config"].(types.Object)
+				if !ok || vcsConfig.IsNull() {
+					t.Fatalf("vcs_config = %s, want an object", inputs.Attributes()["vcs_config"])
+				}
+				iacInputData, ok := vcsConfig.Attributes()["iac_input_data"].(types.Object)
+				if !ok || iacInputData.IsNull() {
+					t.Fatalf("iac_input_data = %s, want an object", vcsConfig.Attributes()["iac_input_data"])
+				}
+				for name, v := range iacInputData.Attributes() {
+					if !v.IsNull() {
+						t.Errorf("iac_input_data.%s = %s, want null", name, v)
+					}
+				}
+				return
+			}
+			if tc.wantNull || tc.name != "empty inputs reads as an object" {
+				return
+			}
+			// {}: every attribute is null.
+			for name, v := range inputs.Attributes() {
+				if !v.IsNull() {
+					t.Errorf("inputs.%s = %s, want null", name, v)
+				}
+			}
+		})
+	}
+}

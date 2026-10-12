@@ -12,31 +12,14 @@ A **Breaking** change can require edits to existing configurations.
 
 ## [1.12.4]
 
-### Breaking
-
-- `stackguardian_workflow_template_revision`: every `user_schedules` entry now requires an
-  `inputs` block with `inputs.terraform_action.action` set. Existing configurations whose
-  schedules have no `inputs` fail validation after upgrading; add, for example:
-
-  ```hcl
-  user_schedules = [
-    {
-      cron  = "0 8 ? * MON *"
-      state = "ENABLED"
-      inputs = {
-        terraform_action = { action = "apply" }
-      }
-    }
-  ]
-  ```
-
 ### Added
 
-- `user_schedules[*].inputs` on `stackguardian_workflow_template_revision` and its data source:
-  the run inputs a schedule uses when it triggers a run — `terraform_action.action` and
-  `vcs_config.iac_input_data` (`schema_type` and `data`, a JSON string
-  such as `jsonencode({ test = "value" })`). `enable_chaining` is read-only: set by
-  StackGuardian and sent back unchanged on update
+- Optional `user_schedules[*].inputs` on `stackguardian_workflow_template_revision` and its data
+  source, so existing schedules without it keep working: the run inputs a schedule uses when it
+  triggers a run — `terraform_action.action` and `vcs_config.iac_input_data`, all optional.
+  When `iac_input_data` is set, both `schema_type` and `data` (a JSON string such as
+  `jsonencode({ test = "value" })`) are required.
+  `enable_chaining` is read-only: set by StackGuardian and sent back unchanged on update
 - Plan-time validation that `user_schedules[*].inputs.vcs_config.iac_input_data.schema_type`
   is `RAW_JSON` or `FORM_JSONSCHEMA`
 - `terraform_config.run_pre_plan_hooks_on_drift` and `terraform_config.run_post_plan_hooks_on_drift`
