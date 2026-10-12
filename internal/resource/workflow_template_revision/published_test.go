@@ -602,153 +602,152 @@ func TestAccWorkflowTemplateRevision_UnpublishRejected(t *testing.T) {
 // Commenting the test case as the fix for it is deferred. Currently it is failing since
 // we are sending in the effectiveDate even if it is not changed and the same goes for all
 // other attributes.
-//func TestAccWorkflowTemplateRevision_PublishedAndDeprecatedOnlyAliasChangeAllowed(t *testing.T) {
-//	const (
-//		sourceConfigKind = "TERRAFORM"
-//		baseCPU          = 500
-//		baseMemory       = 1024
-//		baseAlias        = "revision-deprecated-v1"
-//		changedAlias     = "revision-deprecated-v2"
-//	)
-//
-//	attributeOrder := []string{
-//		"is_public", "description", "notes", "deprecation", "tags", "context_tags",
-//		"environment_variables", "input_schemas", "mini_steps", "runner_constraints",
-//		"user_schedules", "approvers", "number_of_approvals_required", "runtime_source",
-//		"terraform_config", "deployment_platform_config",
-//	}
-//
-//	baseAttributes := map[string]string{
-//		"is_public":   `is_public = "1"`,
-//		"description": `description = "Deprecated revision"`,
-//		"notes":       `notes = "Deprecated revision notes"`,
-//		"deprecation": deprecationConfigBlock(true),
-//		"tags":        `tags = ["stable-tag"]`,
-//		"context_tags": `
-//  context_tags = {
-//    env = "stable"
-//  }`,
-//		"environment_variables": `
-//  environment_variables = [
-//    {
-//      kind = "PLAIN_TEXT"
-//      config = {
-//        var_name   = "STABLE_VAR"
-//        text_value = "stable-value"
-//      }
-//    }
-//  ]`,
-//		"input_schemas": `
-//  input_schemas = [
-//    {
-//      name = "stable-schema"
-//      type = "RAW_JSON"
-//    }
-//  ]`,
-//		"mini_steps": `
-//  mini_steps = {
-//    wf_chaining = {
-//      errored = [{
-//        workflow_group_id = "kk"
-//      }]
-//    }
-//  }`,
-//		"runner_constraints": `
-//  runner_constraints = {
-//    type = "shared"
-//  }`,
-//		"user_schedules": `
-//  user_schedules = [
-//    {
-//      cron  = "0 8 ? * MON *"
-//      state = "ENABLED"
-//    }
-//  ]`,
-//		"approvers":                    `approvers = ["approver@example.com"]`,
-//		"number_of_approvals_required": `number_of_approvals_required = 1`,
-//		"runtime_source": fmt.Sprintf(`
-//  runtime_source = {
-//    source_config_dest_kind = %q
-//    config = {
-//      is_private = false
-//      repo       = "https://github.com/StackGuardian/tf-null-resource.git"
-//      ref        = "main"
-//    }
-//  }`, constants.GitOther),
-//		"terraform_config": `
-//  terraform_config = {
-//    terraform_version = "1.5.0"
-//  }`,
-//		"deployment_platform_config": `
-//  deployment_platform_config = [{
-//    kind = "AWS_RBAC"
-//    config = {
-//      integration_id = "/integrations/test-integration"
-//    }
-//  }]`,
-//	}
-//
-//	render := func(alias string, withDeprecation bool, attributes map[string]string) string {
-//		hcl := fmt.Sprintf("alias = %q\n", alias)
-//		for _, name := range attributeOrder {
-//			if name == "deprecation" && !withDeprecation {
-//				continue
-//			}
-//			hcl += attributes[name] + "\n"
-//		}
-//		return hcl
-//	}
-//
-//	templateID := acctest.ResourceName("tf-provider-wftr-deprecated-alias")
-//
-//	registerWorkflowTemplateCleanup(t, templateID, 1)
-//
-//	err := createWorkflowTemplateFixture(templateID, sourceConfigKind)
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//
-//	customHeader := http.Header{}
-//	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
-//
-//	resource.Test(t, resource.TestCase{
-//		PreCheck: func() { acctest.TestAccPreCheck(t) },
-//		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-//			tfversion.SkipBelow(tfversion.Version1_1_0),
-//		},
-//		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
-//		Steps: []resource.TestStep{
-//			// Publish with every attribute set.
-//			{
-//				Config: testAccWorkflowTemplateRevision(templateID, sourceConfigKind, baseCPU, baseMemory, render(baseAlias, false, baseAttributes)),
-//				Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "is_public", "1"),
-//			},
-//			// Deprecate it — the revision stays deprecated for the post-test destroy.
-//			{
-//				Config: testAccWorkflowTemplateRevision(templateID, sourceConfigKind, baseCPU, baseMemory, render(baseAlias, true, baseAttributes)),
-//				Check: resource.ComposeAggregateTestCheckFunc(
-//					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "deprecation.message", "This revision is deprecated"),
-//					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "deprecation.effective_date", fmt.Sprintf("%d", deprecationEffectiveDate)),
-//				),
-//			},
-//			// Change only alias: accepted, everything else is untouched.
-//			{
-//				Config: testAccWorkflowTemplateRevision(templateID, sourceConfigKind, baseCPU, baseMemory, render(changedAlias, true, baseAttributes)),
-//				Check: resource.ComposeAggregateTestCheckFunc(
-//					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "alias", changedAlias),
-//					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "deprecation.message", "This revision is deprecated"),
-//					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "is_public", "1"),
-//					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "description", "Deprecated revision"),
-//					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "notes", "Deprecated revision notes"),
-//					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "tags.0", "stable-tag"),
-//					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "context_tags.env", "stable"),
-//					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "runtime_source.config.ref", "main"),
-//					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.terraform_version", "1.5.0"),
-//					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "user_job_cpu", "500"),
-//					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "user_job_memory", "1024"),
-//				),
-//			},
-//		},
-//	})
-//}
-//
+func TestAccWorkflowTemplateRevision_PublishedAndDeprecatedOnlyAliasChangeAllowed(t *testing.T) {
+	const (
+		sourceConfigKind = "TERRAFORM"
+		baseCPU          = 500
+		baseMemory       = 1024
+		baseAlias        = "revision-deprecated-v1"
+		changedAlias     = "revision-deprecated-v2"
+	)
+
+	attributeOrder := []string{
+		"is_public", "description", "notes", "deprecation", "tags", "context_tags",
+		"environment_variables", "input_schemas", "mini_steps", "runner_constraints",
+		"user_schedules", "approvers", "number_of_approvals_required", "runtime_source",
+		"terraform_config", "deployment_platform_config",
+	}
+
+	baseAttributes := map[string]string{
+		"is_public":   `is_public = "1"`,
+		"description": `description = "Deprecated revision"`,
+		"notes":       `notes = "Deprecated revision notes"`,
+		"deprecation": deprecationConfigBlock(true),
+		"tags":        `tags = ["stable-tag"]`,
+		"context_tags": `
+  context_tags = {
+    env = "stable"
+  }`,
+		"environment_variables": `
+  environment_variables = [
+    {
+      kind = "PLAIN_TEXT"
+      config = {
+        var_name   = "STABLE_VAR"
+        text_value = "stable-value"
+      }
+    }
+  ]`,
+		"input_schemas": `
+  input_schemas = [
+    {
+      name = "stable-schema"
+      type = "RAW_JSON"
+    }
+  ]`,
+		"mini_steps": `
+  mini_steps = {
+    wf_chaining = {
+      errored = [{
+        workflow_group_id = "kk"
+      }]
+    }
+  }`,
+		"runner_constraints": `
+  runner_constraints = {
+    type = "shared"
+  }`,
+		"user_schedules": `
+  user_schedules = [
+    {
+      cron  = "0 8 ? * MON *"
+      state = "ENABLED"
+    }
+  ]`,
+		"approvers":                    `approvers = ["approver@example.com"]`,
+		"number_of_approvals_required": `number_of_approvals_required = 1`,
+		"runtime_source": fmt.Sprintf(`
+  runtime_source = {
+    source_config_dest_kind = %q
+    config = {
+      is_private = false
+      repo       = "https://github.com/StackGuardian/tf-null-resource.git"
+      ref        = "main"
+    }
+  }`, constants.GitOther),
+		"terraform_config": `
+  terraform_config = {
+    terraform_version = "1.5.0"
+  }`,
+		"deployment_platform_config": `
+  deployment_platform_config = [{
+    kind = "AWS_RBAC"
+    config = {
+      integration_id = "/integrations/test-integration"
+    }
+  }]`,
+	}
+
+	render := func(alias string, withDeprecation bool, attributes map[string]string) string {
+		hcl := fmt.Sprintf("alias = %q\n", alias)
+		for _, name := range attributeOrder {
+			if name == "deprecation" && !withDeprecation {
+				continue
+			}
+			hcl += attributes[name] + "\n"
+		}
+		return hcl
+	}
+
+	templateID := acctest.ResourceName("tf-provider-wftr-deprecated-alias")
+
+	registerWorkflowTemplateCleanup(t, templateID, 1)
+
+	err := createWorkflowTemplateFixture(templateID, sourceConfigKind)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			// Publish with every attribute set.
+			{
+				Config: testAccWorkflowTemplateRevision(templateID, sourceConfigKind, baseCPU, baseMemory, render(baseAlias, false, baseAttributes)),
+				Check:  resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "is_public", "1"),
+			},
+			// Deprecate it — the revision stays deprecated for the post-test destroy.
+			{
+				Config: testAccWorkflowTemplateRevision(templateID, sourceConfigKind, baseCPU, baseMemory, render(baseAlias, true, baseAttributes)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "deprecation.message", "This revision is deprecated"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "deprecation.effective_date", fmt.Sprintf("%d", deprecationEffectiveDate)),
+				),
+			},
+			// Change only alias: accepted, everything else is untouched.
+			{
+				Config: testAccWorkflowTemplateRevision(templateID, sourceConfigKind, baseCPU, baseMemory, render(changedAlias, true, baseAttributes)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "alias", changedAlias),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "deprecation.message", "This revision is deprecated"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "is_public", "1"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "description", "Deprecated revision"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "notes", "Deprecated revision notes"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "tags.0", "stable-tag"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "context_tags.env", "stable"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "runtime_source.config.ref", "main"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.terraform_version", "1.5.0"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "user_job_cpu", "500"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "user_job_memory", "1024"),
+				),
+			},
+		},
+	})
+}
