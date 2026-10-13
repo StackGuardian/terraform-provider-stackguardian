@@ -308,10 +308,6 @@ func TestAccWorkflowTemplateRevision_AttributeUpdatesWhileUnpublished(t *testing
 				changedMemory = tc.changedUserJobMemory
 			}
 
-			if tc.name == "terraform_config" {
-				fmt.Println("")
-			}
-
 			templateID := acctest.ResourceName("tf-provider-wftr-unpublished-update-" + tc.name)
 			alias := "revision-unpublished-update-" + tc.name
 

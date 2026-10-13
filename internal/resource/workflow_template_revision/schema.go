@@ -581,9 +581,6 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 								"enable_chaining": schema.BoolAttribute{
 									MarkdownDescription: constants.UserScheduleInputsEnableChaining,
 									Computed:            true,
-									PlanModifiers: []planmodifier.Bool{
-										boolplanmodifier.UseStateForUnknown(),
-									},
 								},
 								"vcs_config": schema.SingleNestedAttribute{
 									MarkdownDescription: constants.UserScheduleInputsVcsConfig,
