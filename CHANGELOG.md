@@ -10,39 +10,21 @@ Entries describe changes that affect provider users: resources, data sources, at
 behavior, documentation and security. Internal refactors, tests and CI changes are left out.
 A **Breaking** change can require edits to existing configurations.
 
-## [1.12.4]
+## [Unreleased]
 
 ### Added
 
-- Optional `user_schedules[*].inputs` on `stackguardian_workflow_template_revision` and its data
-  source, so existing schedules without it keep working: the run inputs a schedule uses when it
-  triggers a run — `terraform_action.action` and `vcs_config.iac_input_data`, all optional.
-  When `iac_input_data` is set, both `schema_type` and `data` (a JSON string such as
-  `jsonencode({ test = "value" })`) are required.
-  `enable_chaining` is read-only: set by StackGuardian and sent back unchanged on update
-- Plan-time validation that `user_schedules[*].inputs.vcs_config.iac_input_data.schema_type`
-  is `RAW_JSON` or `FORM_JSONSCHEMA`
-- `terraform_config.run_pre_plan_hooks_on_drift` and `terraform_config.run_post_plan_hooks_on_drift`
-  on `stackguardian_workflow_template_revision` and its data source
+- `stackguardian_workflow_template_revision`: optional `user_schedules[*].inputs` on the resource and data source, the run inputs a schedule uses when it triggers a run. It accepts `terraform_action.action` and `vcs_config.iac_input_data`; when `iac_input_data` is set, both `schema_type` (`RAW_JSON` or `FORM_JSONSCHEMA`, validated at plan time) and `data` (a JSON string such as `jsonencode({ test = "value" })`) are required. `enable_chaining` is read-only: it is set by StackGuardian and sent back unchanged on update. Existing schedules without `inputs` keep working
+- `stackguardian_workflow_template_revision`: `terraform_config.run_pre_plan_hooks_on_drift` and `terraform_config.run_post_plan_hooks_on_drift` on the resource and data source
 
 ### Changed
 
-- `terraform_config.run_pre_init_hooks_on_drift`, `run_pre_plan_hooks_on_drift` and
-  `run_post_plan_hooks_on_drift` on `stackguardian_workflow_template_revision` default to
-  `false`. Omitting one (or setting it to `null`) now sends `false`; previously an omitted
-  `run_pre_init_hooks_on_drift` kept its last value.
+- `stackguardian_workflow_template_revision`: `terraform_config.run_pre_init_hooks_on_drift`, `run_pre_plan_hooks_on_drift` and `run_post_plan_hooks_on_drift` default to `false`. Omitting one, or setting it to `null`, now sends `false`; previously an omitted `run_pre_init_hooks_on_drift` kept its last value
 
 ### Fixed
 
-- Importing a `stackguardian_workflow_template_revision` (`<template_id>:<revision>`) now sets
-  `template_id`. It was left null, so the first plan after an import failed with
-  "template_id cannot be changed". A malformed import ID now returns a clear error.
-- `user_schedules[*].name` and `desc` on `stackguardian_workflow_template_revision` are now
-  Optional + Computed. Schedules created in the UI store `""` for both; leaving them out of the
-  config after an import planned a change to null on every run, and the update was then
-  rejected for published revisions ("Cannot update … UserSchedules … for a published template").
-
-## [Unreleased]
+- `stackguardian_workflow_template_revision`: importing a revision (`<template_id>:<revision>`) now sets `template_id`. It was left null, so the first plan after an import failed with "template_id cannot be changed". A malformed import ID now returns a clear error
+- `stackguardian_workflow_template_revision`: `user_schedules[*].name` and `desc` are now Optional + Computed. Schedules created in the UI store `""` for both, so leaving them out of the configuration after an import planned a change to null on every run, and the update was rejected for published revisions ("Cannot update … UserSchedules … for a published template")
 
 ## [1.12.4] - 2026-10-06
 
