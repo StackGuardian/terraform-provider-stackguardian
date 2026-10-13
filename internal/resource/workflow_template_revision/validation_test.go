@@ -90,6 +90,8 @@ func TestAccWorkflowTemplateRevision_ValidateRuntimeSourceAuthRequired(t *testin
 // FORM_JSONSCHEMA. The OneOf validator runs during validation, before Create, so no API call
 // happens and no fixture/cleanup is needed.
 func TestAccWorkflowTemplateRevision_ValidateUserScheduleInputsSchemaType(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 

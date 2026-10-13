@@ -38,6 +38,8 @@ func testAccWorkflowTemplate(name, sourceConfigKind, additionalConfig string) st
 }
 
 func TestAccWorkflowTemplate_Basic(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateName := acctest.ResourceName("tf-provider-workflow-template-1")
 
 	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })
@@ -100,6 +102,8 @@ func TestAccWorkflowTemplate_Basic(t *testing.T) {
 // nested-attribute-style regression where a field like this drifts or resets on an update
 // that doesn't touch it.
 func TestAccWorkflowTemplate_UpdateWithIsPublicUnchanged(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateName := acctest.ResourceName("tf-provider-workflow-template-5")
 
 	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })
@@ -145,6 +149,8 @@ func TestAccWorkflowTemplate_UpdateWithIsPublicUnchanged(t *testing.T) {
 }
 
 func TestAccWorkflowTemplate_WithRuntime(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateName := acctest.ResourceName("tf-provider-workflow-template-2")
 
 	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })
@@ -207,6 +213,8 @@ func TestAccWorkflowTemplate_WithRuntime(t *testing.T) {
 }
 
 func TestAccWorkflowTemplate_WithContextTagsAndSharedOrgs(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateName := acctest.ResourceName("tf-provider-workflow-template-3")
 
 	customHeader := http.Header{}
@@ -253,6 +261,8 @@ func TestAccWorkflowTemplate_WithContextTagsAndSharedOrgs(t *testing.T) {
 // which would delete every revision underneath it. template_name stays fixed
 // across both steps so only id itself differs.
 func TestAccWorkflowTemplate_IdRejectedOnChange(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	name1 := acctest.ResourceName("tf-provider-workflow-template-id-rejected-a")
 	name2 := acctest.ResourceName("tf-provider-workflow-template-id-rejected-b")
 
@@ -288,6 +298,8 @@ func TestAccWorkflowTemplate_IdRejectedOnChange(t *testing.T) {
 // then imports it by id and verifies every attribute in the imported state matches the state
 // from the create step. Import only sets id (ImportState); Read fills in everything else.
 func TestAccWorkflowTemplate_Import(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateName := acctest.ResourceName("tf-provider-workflow-template-import")
 
 	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })

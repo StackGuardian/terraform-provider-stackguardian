@@ -661,6 +661,8 @@ func TestAccWorkflowTemplateRevision_RepoRejectedOnChange(t *testing.T) {
 // them: the schema default plans false, the request sends false, and Read settles on the
 // false the API returns, so a follow-up plan shows no diff.
 func TestAccWorkflowTemplateRevision_TerraformConfigDriftHookFlagsDefaultFalse(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := acctest.ResourceName("tf-provider-wftr-drift-hooks-default")
 
 	registerWorkflowTemplateCleanup(t, templateID, 1)
@@ -710,6 +712,8 @@ func TestAccWorkflowTemplateRevision_TerraformConfigDriftHookFlagsDefaultFalse(t
 // false. Starting from true shows an explicit null resets them on update instead of keeping
 // the previous value.
 func TestAccWorkflowTemplateRevision_TerraformConfigDriftHookFlagsExplicitNull(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := acctest.ResourceName("tf-provider-wftr-drift-hooks-null")
 
 	registerWorkflowTemplateCleanup(t, templateID, 1)
@@ -773,6 +777,8 @@ func TestAccWorkflowTemplateRevision_TerraformConfigDriftHookFlagsExplicitNull(t
 // then plan no changes and accept an update. name/desc are Optional+Computed, so the imported
 // "" is carried forward and sent back unchanged instead of planning a change to null.
 func TestAccWorkflowTemplateRevision_ImportUserScheduleWithEmptyNameAndDesc(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := acctest.ResourceName("tf-provider-wftr-import-schedule")
 	revisionID := templateID + ":1"
 

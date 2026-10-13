@@ -23,6 +23,8 @@ import (
 // resetting to false or erroring. ref also changes between the two steps, so
 // this exercises a genuine Update, not a no-op plan.
 func TestAccWorkflowTemplate_GitCoreAutoCrlfPersistsAfterRemoval(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateName := acctest.ResourceName("tf-provider-workflow-template-crlf-persist")
 
 	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })
@@ -90,6 +92,8 @@ func TestAccWorkflowTemplate_GitCoreAutoCrlfPersistsAfterRemoval(t *testing.T) {
 // Terraform might skip calling Update() entirely — proving nothing about the
 // removal path this test exists to check.
 func TestAccWorkflowTemplate_GitCoreAutoCrlfAddedThenRemoved(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateName := acctest.ResourceName("tf-provider-workflow-template-crlf-addrm")
 
 	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })
@@ -165,6 +169,8 @@ func TestAccWorkflowTemplate_GitCoreAutoCrlfAddedThenRemoved(t *testing.T) {
 // step 2's check fails because the API never actually received the new
 // value.
 func TestAccWorkflowTemplate_RuntimeSourceAuthUpdates(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateName := acctest.ResourceName("tf-provider-workflow-template-auth-upd")
 
 	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })
@@ -215,6 +221,8 @@ func TestAccWorkflowTemplate_RuntimeSourceAuthUpdates(t *testing.T) {
 // Optional+Computed with UseStateForUnknown() (schema.go), so it must keep
 // its value rather than resetting.
 func TestAccWorkflowTemplate_IsPrivatePersistsAfterRemoval(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateName := acctest.ResourceName("tf-provider-workflow-template-ispriv-persist")
 
 	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })
@@ -274,6 +282,8 @@ func TestAccWorkflowTemplate_IsPrivatePersistsAfterRemoval(t *testing.T) {
 // time (ModifyPlan, resource.go) rather than silently updating in place or
 // destroying and recreating the template.
 func TestAccWorkflowTemplate_RepoRejectedOnChange(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateName := acctest.ResourceName("tf-provider-workflow-template-repo-rejected")
 
 	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })
@@ -317,6 +327,8 @@ func TestAccWorkflowTemplate_RepoRejectedOnChange(t *testing.T) {
 // create and update. `field = []` plans as a known empty list, so reading it back as
 // null fails with "Provider produced inconsistent result after apply".
 func TestAccWorkflowTemplate_EmptyStringListsRoundTrip(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	cases := []struct {
 		name      string
 		field     string
@@ -454,6 +466,8 @@ func TestAccWorkflowTemplate_CoreEmptyStringListBehavior(t *testing.T) {
 // A second step removes tags after they were set: UseStateForUnknown carries the state
 // value forward, so the old tags stay (set `tags = []` to clear them).
 func TestAccWorkflowTemplate_OmittedTags(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateName := acctest.ResourceName("tf-provider-workflow-template-omitted-tags")
 
 	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })

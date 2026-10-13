@@ -199,6 +199,8 @@ func attributeChangeCases() []attributeChangeCase {
 // that apply fails, not what it says. Tighten each case's pattern with acctest.ErrorPattern
 // once the real message is known from a live run.
 func TestAccWorkflowTemplateRevision_DisallowedFieldUpdatesWhilePublished(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	for _, tc := range attributeChangeCases() {
 		t.Run(tc.name, func(t *testing.T) {
 			sourceConfigKind := tc.sourceConfigKind
@@ -290,6 +292,8 @@ func TestAccWorkflowTemplateRevision_DisallowedFieldUpdatesWhilePublished(t *tes
 // SourceConfigKindRejectedOnChange and RepoRejectedOnChange). An unpublished revision can be
 // deleted directly, so no deprecation step is needed.
 func TestAccWorkflowTemplateRevision_AttributeUpdatesWhileUnpublished(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	for _, tc := range attributeChangeCases() {
 		if tc.immutable {
 			continue
@@ -599,6 +603,8 @@ func TestAccWorkflowTemplateRevision_UnpublishRejected(t *testing.T) {
 // we are sending in the effectiveDate even if it is not changed and the same goes for all
 // other attributes.
 func TestAccWorkflowTemplateRevision_PublishedAndDeprecatedOnlyAliasChangeAllowed(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	const (
 		sourceConfigKind = "TERRAFORM"
 		baseCPU          = 500

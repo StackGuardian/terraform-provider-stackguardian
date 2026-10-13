@@ -1077,6 +1077,8 @@ func testAccWfTemplateRevisionLifecycleConfig(templateName, alias, isPublic stri
 // attribute in the imported state matches the state from the create step. ImportState sets
 // id and template_id (parsed from the import ID); Read fills in everything else.
 func TestAccWorkflowTemplateRevision_Import(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := acctest.ResourceName("tf-provider-wftr-import")
 
 	registerWorkflowTemplateCleanup(t, templateID, 1)
@@ -1162,6 +1164,8 @@ func TestAccWorkflowTemplateRevision_Import(t *testing.T) {
 // stored without inputs (the API adds no default inputs), reads back with inputs null, and plans
 // no changes afterwards.
 func TestAccWorkflowTemplateRevision_UserSchedulesWithoutInputs(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateID := acctest.ResourceName("tf-provider-wftr-schedules-no-inputs")
 
 	registerWorkflowTemplateCleanup(t, templateID, 1)
