@@ -10,19 +10,30 @@ Entries describe changes that affect provider users: resources, data sources, at
 behavior, documentation and security. Internal refactors, tests and CI changes are left out.
 A **Breaking** change can require edits to existing configurations.
 
-## [Unreleased]
+## [1.13.0] - 2026-10-14
 
 ### Added
 
+- New resource `stackguardian_stack` (beta): creates a stack from a stack template revision set in `template_group_id`. `workflows_config.workflows` must list the `id` of every workflow the revision defines, in the same order; any per-workflow attribute left unset is inherited from the stack template revision, then from that workflow's workflow template revision. Changing `template_group_id` upgrades the stack to another revision: attributes you set are kept and unset ones take the new revision's values. `actions` is inherited from the revision unless you declare it, and is checked against the new revision on an upgrade. Each workflow's computed `workflow_id` gives the ID of the workflow the stack creates
+- New data source `stackguardian_stack` (beta): reads an existing stack by `id` and `workflow_group_id`, including its workflows and actions
 - `stackguardian_workflow_template_revision`: optional `user_schedules[*].inputs` on the resource and data source, the run inputs a schedule uses when it triggers a run. It accepts `terraform_action.action` and `vcs_config.iac_input_data`; when `iac_input_data` is set, both `schema_type` (`RAW_JSON` or `FORM_JSONSCHEMA`, validated at plan time) and `data` (a JSON string such as `jsonencode({ test = "value" })`) are required. `enable_chaining` is read-only: it is set by StackGuardian and sent back unchanged on update. Existing schedules without `inputs` keep working
 - `stackguardian_workflow_template_revision`: `terraform_config.run_pre_plan_hooks_on_drift` and `terraform_config.run_post_plan_hooks_on_drift` on the resource and data source
 
 ### Changed
 
+- **Breaking:** `stackguardian_stack_template_revision` resource, in `workflows_config.workflows`:
+  - `vcs_config`, `vcs_config.iac_vcs_config` and `vcs_config.iac_vcs_config.iac_template_id` are now required, so every workflow must name its workflow template
+  - `vcs_config.iac_vcs_config.use_marketplace_template` is removed; it is always sent as `true`
+  - `vcs_config.iac_vcs_config.custom_source` is removed
+  - `template_id` is removed; set the workflow template in `vcs_config.iac_vcs_config.iac_template_id` instead
+  - The workflow-level `iac_input_data` is removed; use `vcs_config.iac_input_data` instead
+  - `deployment_platform_config[*].config` is now an object with `integration_id` (required) and `profile_name`, instead of a JSON string. This also applies to `actions[*].order[*].parameters.deployment_platform_config`
+  - `input_schemas[*].id`, `description` and `is_committed` are removed; the StackGuardian API doesn't have these fields
 - `stackguardian_workflow_template_revision`: `terraform_config.run_pre_init_hooks_on_drift`, `run_pre_plan_hooks_on_drift` and `run_post_plan_hooks_on_drift` default to `false`. Omitting one, or setting it to `null`, now sends `false`; previously an omitted `run_pre_init_hooks_on_drift` kept its last value
 
 ### Fixed
 
+- `stackguardian_stack_template_revision`: `notes` and `description`, when not set in the configuration, keep their current value in the plan instead of showing as "(known after apply)" whenever another attribute changes
 - `stackguardian_workflow_template_revision`: importing a revision (`<template_id>:<revision>`) now sets `template_id`. It was left null, so the first plan after an import failed with "template_id cannot be changed". A malformed import ID now returns a clear error
 - `stackguardian_workflow_template_revision`: `user_schedules[*].name` and `desc` are now Optional + Computed. Schedules created in the UI store `""` for both, so leaving them out of the configuration after an import planned a change to null on every run, and the update was rejected for published revisions ("Cannot update … UserSchedules … for a published template")
 
@@ -162,7 +173,7 @@ for their notes.
 - TF Resource and Data-Source for StackGuardian Policy
 - TF Resource and Data-Source for StackGuardian Integration
 
-[Unreleased]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.4...HEAD
+[1.13.0]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.4...v1.13.0
 [1.12.4]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.3...v1.12.4
 [1.12.3]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.2...v1.12.3
 [1.12.2]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.1...v1.12.2

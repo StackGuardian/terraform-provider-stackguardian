@@ -52,6 +52,70 @@ func (d *stackTemplateRevisionDataSource) Configure(_ context.Context, req datas
 
 // Datasource-scoped schema helpers (mirrors resource/stack_template_revision/schema.go using datasource/schema types).
 
+// Shared schema attribute maps reused across workflows_config and actions.
+
+var dsMinistepsNotificationRecipients = schema.ListNestedAttribute{
+	Computed: true,
+	NestedObject: schema.NestedAttributeObject{
+		Attributes: map[string]schema.Attribute{
+			"recipients": schema.ListAttribute{
+				MarkdownDescription: constants.MiniStepsNotificationsRecipients,
+				Computed:            true,
+				ElementType:         types.StringType,
+			},
+		},
+	},
+}
+
+var dsMinistepsWebhooks = schema.ListNestedAttribute{
+	Computed: true,
+	NestedObject: schema.NestedAttributeObject{
+		Attributes: map[string]schema.Attribute{
+			"webhook_name": schema.StringAttribute{
+				MarkdownDescription: constants.MiniStepsWebhookName,
+				Computed:            true,
+			},
+			"webhook_url": schema.StringAttribute{
+				MarkdownDescription: constants.MiniStepsWebhookURL,
+				Computed:            true,
+			},
+			"webhook_secret": schema.StringAttribute{
+				MarkdownDescription: constants.MiniStepsWebhookSecret,
+				Computed:            true,
+				Sensitive:           true,
+			},
+		},
+	},
+}
+
+var dsMinistepsWorkflowChaining = schema.ListNestedAttribute{
+	Computed: true,
+	NestedObject: schema.NestedAttributeObject{
+		Attributes: map[string]schema.Attribute{
+			"workflow_group_id": schema.StringAttribute{
+				MarkdownDescription: constants.MiniStepsWfChainingWorkflowGroupId,
+				Computed:            true,
+			},
+			"stack_id": schema.StringAttribute{
+				MarkdownDescription: constants.MiniStepsWfChainingStackId,
+				Computed:            true,
+			},
+			"stack_run_payload": schema.StringAttribute{
+				MarkdownDescription: constants.MiniStepsWfChainingStackPayload,
+				Computed:            true,
+			},
+			"workflow_id": schema.StringAttribute{
+				MarkdownDescription: constants.MiniStepsWfChainingWorkflowId,
+				Computed:            true,
+			},
+			"workflow_run_payload": schema.StringAttribute{
+				MarkdownDescription: constants.MiniStepsWfChainingWorkflowPayload,
+				Computed:            true,
+			},
+		},
+	},
+}
+
 var dsEnvVarsAttrs = map[string]schema.Attribute{
 	"config": schema.SingleNestedAttribute{
 		MarkdownDescription: constants.EnvVarConfig,
@@ -147,28 +211,31 @@ var dsDeploymentPlatformConfigAttrs = map[string]schema.Attribute{
 		MarkdownDescription: constants.DeploymentPlatformKind,
 		Computed:            true,
 	},
-	"config": schema.StringAttribute{
-		MarkdownDescription: constants.DeploymentPlatformConfigDetails + " (JSON string)",
+	"config": schema.SingleNestedAttribute{
+		MarkdownDescription: constants.DeploymentPlatformConfigDetails,
 		Computed:            true,
+		Attributes: map[string]schema.Attribute{
+			"integration_id": schema.StringAttribute{
+				MarkdownDescription: constants.DeploymentPlatformIntegrationId,
+				Computed:            true,
+			},
+			"profile_name": schema.StringAttribute{
+				MarkdownDescription: constants.DeploymentPlatformProfileName,
+				Computed:            true,
+			},
+		},
 	},
 }
 
+// dsWorkflowInStackAttrs defines the schema attributes for a single workflow inside workflows_config.
+// Fields correspond to the SDK's StackTemplateRevisionWorkflow struct.
 var dsWorkflowInStackAttrs = map[string]schema.Attribute{
+	"id": schema.StringAttribute{
+		MarkdownDescription: "UUID identifying the workflow within the stack template.",
+		Computed:            true,
+	},
 	"resource_name": schema.StringAttribute{
 		MarkdownDescription: "Name of the workflow resource within the stack.",
-		Computed:            true,
-	},
-	"description": schema.StringAttribute{
-		MarkdownDescription: "Description of this workflow.",
-		Computed:            true,
-	},
-	"tags": schema.ListAttribute{
-		MarkdownDescription: "Tags for the workflow.",
-		ElementType:         types.StringType,
-		Computed:            true,
-	},
-	"wf_type": schema.StringAttribute{
-		MarkdownDescription: constants.WorkflowType,
 		Computed:            true,
 	},
 	"wf_steps_config": schema.ListNestedAttribute{
@@ -368,8 +435,75 @@ var dsWorkflowInStackAttrs = map[string]schema.Attribute{
 		MarkdownDescription: "Memory limit for the user job.",
 		Computed:            true,
 	},
+	"input_schemas": schema.ListNestedAttribute{
+		MarkdownDescription: "Input schema definitions for this workflow.",
+		Computed:            true,
+		NestedObject: schema.NestedAttributeObject{
+			Attributes: map[string]schema.Attribute{
+				"name": schema.StringAttribute{
+					MarkdownDescription: constants.InputSchemaName,
+					Computed:            true,
+				},
+				"type": schema.StringAttribute{
+					MarkdownDescription: "Schema type (e.g. FORM_JSONSCHEMA).",
+					Computed:            true,
+				},
+				"encoded_data": schema.StringAttribute{
+					MarkdownDescription: "Base64-encoded schema data.",
+					Computed:            true,
+				},
+				"ui_schema_data": schema.StringAttribute{
+					MarkdownDescription: constants.InputSchemaUISchemaData,
+					Computed:            true,
+				},
+			},
+		},
+	},
+	"mini_steps": schema.SingleNestedAttribute{
+		MarkdownDescription: constants.WfMiniSteps,
+		Computed:            true,
+		Attributes: map[string]schema.Attribute{
+			"notifications": schema.SingleNestedAttribute{
+				MarkdownDescription: constants.MiniStepsNotifications,
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"email": schema.SingleNestedAttribute{
+						MarkdownDescription: constants.MiniStepsNotificationsEmail,
+						Computed:            true,
+						Attributes: map[string]schema.Attribute{
+							"approval_required": dsMinistepsNotificationRecipients,
+							"cancelled":         dsMinistepsNotificationRecipients,
+							"completed":         dsMinistepsNotificationRecipients,
+							"drift_detected":    dsMinistepsNotificationRecipients,
+							"errored":           dsMinistepsNotificationRecipients,
+						},
+					},
+				},
+			},
+			"webhooks": schema.SingleNestedAttribute{
+				MarkdownDescription: constants.MiniStepsWebhooks,
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"approval_required": dsMinistepsWebhooks,
+					"cancelled":         dsMinistepsWebhooks,
+					"completed":         dsMinistepsWebhooks,
+					"drift_detected":    dsMinistepsWebhooks,
+					"errored":           dsMinistepsWebhooks,
+				},
+			},
+			"wf_chaining": schema.SingleNestedAttribute{
+				MarkdownDescription: constants.MiniStepsWorkflowChaining,
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"completed": dsMinistepsWorkflowChaining,
+					"errored":   dsMinistepsWorkflowChaining,
+				},
+			},
+		},
+	},
 }
 
+// dsActionOrderAttrs defines the schema for a single ActionOrder (value in the order map).
 var dsActionOrderAttrs = map[string]schema.Attribute{
 	"parameters": schema.SingleNestedAttribute{
 		MarkdownDescription: "Run configuration parameters for the action step.",
@@ -426,13 +560,20 @@ var dsActionOrderAttrs = map[string]schema.Attribute{
 	},
 }
 
+// Schema mirrors the stackguardian_stack_template_revision resource schema with every attribute
+// Computed except the id lookup key: Read reuses the resource's model, so the two schemas must have
+// the same type (see TestStackTemplateRevisionDataSourceSchemaMatchesResource).
 func (d *stackTemplateRevisionDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "> **Note:** This data source is currently in **BETA**. Features and behavior may change.\n\nReads a specific revision of a stack template, including its ordered workflows and their configuration.",
+		MarkdownDescription: "Reads a specific revision of a stack template, including its ordered workflows and their configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: constants.DatasourceId,
+				MarkdownDescription: constants.StackTemplateRevisionId,
 				Required:            true,
+			},
+			"parent_template_id": schema.StringAttribute{
+				MarkdownDescription: "ID of the parent stack template to create the revision under.",
+				Computed:            true,
 			},
 			"template_id": schema.StringAttribute{
 				MarkdownDescription: constants.StackTemplateRevisionTemplateId,
