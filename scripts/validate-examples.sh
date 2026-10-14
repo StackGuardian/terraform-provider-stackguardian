@@ -9,7 +9,7 @@
 # standalone projects that carry their own blocks, so they are validated as-is.
 #
 # Blocks embedded in guide and page prose are covered too, via
-# scripts/extract-doc-blocks.py. Only some of those are self-contained
+# scripts/extract-doc-blocks. Only some of those are self-contained
 # configuration; the rest are import blocks or bare attribute assignments, which
 # are checked against the provider schema instead. See that script for why.
 #
@@ -159,7 +159,7 @@ done < <(find "$REPO_ROOT/docs-guides-assets" -name '*.tf' -exec dirname {} \; \
 
 echo "==> validating terraform blocks embedded in prose"
 BLOCKS="$WORK/blocks"
-python3 "$REPO_ROOT/scripts/extract-doc-blocks.py" \
+go run "$REPO_ROOT/scripts/extract-doc-blocks" \
   --docs-dir "$REPO_ROOT/docs-templates" \
   --out "$BLOCKS" \
   --schema "$WORK/schema.json" \

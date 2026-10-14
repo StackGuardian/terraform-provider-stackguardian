@@ -3,9 +3,10 @@ package workflowsteptemplaterevision
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
-	core "github.com/StackGuardian/sg-sdk-go/core"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/apierrors"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -54,9 +55,21 @@ func (r *workflowStepTemplateRevisionResource) Configure(_ context.Context, req 
 	r.org_name = provider.OrgName
 }
 
-// ImportState imports a workflow step template revision using its ID (format: templateId:revisionNumber).
+// ImportState takes the revision id, "<template_id>:<revision>". Read copies
+// template_id from prior state, which an import does not have, so it is
+// recovered from the id here; without it the next plan would replace the
+// revision.
 func (r *workflowStepTemplateRevisionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	sep := strings.LastIndex(req.ID, ":")
+	if sep <= 0 || sep == len(req.ID)-1 {
+		resp.Diagnostics.AddError(
+			"Invalid import ID",
+			fmt.Sprintf("Expected format: <template_id>:<revision>, e.g. my-template:1, got: %q", req.ID),
+		)
+		return
+	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("template_id"), req.ID[:sep])...)
 }
 
 func (r *workflowStepTemplateRevisionResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
@@ -146,6 +159,10 @@ func (r *workflowStepTemplateRevisionResource) Read(ctx context.Context, req res
 
 	readResp, err := r.client.WorkflowStepTemplateRevision.ReadWorkflowStepTemplateRevision(ctx, r.org_name, revisionId)
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError("Error reading workflow step template revision", "Error in reading workflow step template revision API call: "+err.Error())
 		return
 	}
@@ -238,11 +255,9 @@ func (r *workflowStepTemplateRevisionResource) Delete(ctx context.Context, req r
 
 	err := r.client.WorkflowStepTemplateRevision.DeleteWorkflowStepTemplateRevision(ctx, r.org_name, revisionId, true)
 	if err != nil {
-		if apiErr, ok := err.(*core.APIError); ok {
-			if apiErr.StatusCode == 404 {
-				// Resource already deleted
-				return
-			}
+		if apierrors.IsNotFound(err) {
+			// Resource already deleted
+			return
 		}
 
 		tflog.Error(ctx, err.Error())

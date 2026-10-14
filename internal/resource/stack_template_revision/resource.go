@@ -3,9 +3,11 @@ package stacktemplaterevision
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/apierrors"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -53,9 +55,21 @@ func (r *stackTemplateRevisionResource) Configure(_ context.Context, req resourc
 	r.org_name = provider.OrgName
 }
 
-// ImportState imports a stack template revision using its ID.
+// ImportState takes the revision id, "<template_id>:<revision>". Read copies
+// parent_template_id from prior state, which an import does not have, so it is
+// recovered from the id here; without it the next plan would replace the
+// revision.
 func (r *stackTemplateRevisionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	sep := strings.LastIndex(req.ID, ":")
+	if sep <= 0 || sep == len(req.ID)-1 {
+		resp.Diagnostics.AddError(
+			"Invalid import ID",
+			fmt.Sprintf("Expected format: <template_id>:<revision>, e.g. my-template:1, got: %q", req.ID),
+		)
+		return
+	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("parent_template_id"), req.ID[:sep])...)
 }
 
 // Create creates the resource and sets the initial Terraform state.
@@ -124,6 +138,10 @@ func (r *stackTemplateRevisionResource) Read(ctx context.Context, req resource.R
 
 	readResp, err := r.client.StackTemplateRevisions.ReadStackTemplateRevision(ctx, r.org_name, revisionID)
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError("Error reading stack template revision", "Error in reading stack template revision API call: "+err.Error())
 		return
 	}
@@ -216,6 +234,10 @@ func (r *stackTemplateRevisionResource) Delete(ctx context.Context, req resource
 
 	err := r.client.StackTemplateRevisions.DeleteStackTemplateRevision(ctx, r.org_name, revisionID, true)
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// Already gone, which is what Delete wants.
+			return
+		}
 		resp.Diagnostics.AddError("Error deleting stack template revision", "Error in deleting stack template revision API call: "+err.Error())
 		return
 	}

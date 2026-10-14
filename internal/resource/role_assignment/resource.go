@@ -205,6 +205,12 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 		user.Data.Role = nil
 	}
 
+	// On import neither is in state yet, and the API returns both. Keep roles:
+	// role is deprecated, and keeping both would show a diff against any config.
+	if state.Role.IsNull() && state.Roles.IsNull() {
+		user.Data.Role = nil
+	}
+
 	roleResourceModel, diags := BuildAPIModelToRoleAssignmentModel(user.Data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

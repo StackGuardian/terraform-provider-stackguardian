@@ -28,6 +28,10 @@ A **Breaking** change can require edits to existing configurations.
 ### Fixed
 
 - `stackguardian_workflow_template_revision`: importing a revision (`<template_id>:<revision>`) now sets `template_id`. It was left null, so the first plan after an import failed with "template_id cannot be changed". A malformed import ID now returns a clear error
+- `stackguardian_stack_template_revision`: importing a revision now sets `parent_template_id` from the import ID (`<template_id>:<revision>`). It was left null, so the first plan after import replaced the revision. A malformed import ID now returns a clear error
+- `stackguardian_workflow_step_template_revision`: same fix — importing now sets `template_id` from the import ID, and a malformed import ID returns a clear error
+- `stackguardian_role_assignment`: on import, when both `role` (deprecated) and `roles` are null in state, keeps `roles` only, avoiding a perpetual diff against any config
+- When an object is deleted outside Terraform, Read now removes it from state instead of erroring, and Delete succeeds when the object is already gone. Added to `stackguardian_stack_template`, `stackguardian_stack_template_revision`, `stackguardian_workflow_git`, `stackguardian_workflow_template` and `stackguardian_workflow_template_revision`. `stackguardian_workflow_step_template` and `stackguardian_workflow_step_template_revision` already removed missing objects from state on Read but now also treat a `400 "does not exist"` response as not-found (the template APIs return 400 instead of 404 for missing objects)
 - `stackguardian_workflow_template_revision`: `user_schedules[*].name` and `desc` are now Optional + Computed. Schedules created in the UI store `""` for both, so leaving them out of the configuration after an import planned a change to null on every run, and the update was rejected for published revisions ("Cannot update … UserSchedules … for a published template")
 - Connector documentation: fixed malformed HTML (`</span></a>` → `</a></span>`, `</br>` → `<br>`) that caused broken rendering on the Terraform Registry
 

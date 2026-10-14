@@ -34,7 +34,9 @@ func TestSweepOrphans(t *testing.T) {
 		}
 	}
 
-	report := Sweep(context.Background(), SGClient(), config.Get().OrgName)
+	// The template listing and delete APIs reject a request without the
+	// template header (401); the other APIs ignore it.
+	report := Sweep(context.Background(), SGClientWithHeader(TemplateHeader()), config.Get().OrgName)
 
 	t.Logf("org %s\n%s", config.Get().OrgName, report)
 

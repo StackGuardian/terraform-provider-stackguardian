@@ -20,6 +20,7 @@ make install        # build + install to ~/.terraform.d/plugins
 # Tests
 make test           # unit tests (4 parallel, 30s timeout)
 make test-acc       # acceptance tests (requires env vars, 1 parallel, 15m timeout)
+make test-crud      # create/update/import/out-of-band delete/destroy per resource -> .crud-results/matrix.md
 
 # Documentation
 make docs-generate  # run tfplugindocs generate
@@ -37,6 +38,14 @@ STACKGUARDIAN_API_KEY=<key>
 STACKGUARDIAN_API_URI=<uri>
 STACKGUARDIAN_ORG_NAME=<org>
 ```
+
+`STACKGUARDIAN_API_URI` is the host only (e.g. `https://testapi.qa.stackguardian.io`): the SDK
+appends `/api/v1` itself, and a doubled `/api/v1/api/v1` path comes back as `403 Unauthorized`,
+not 404. Role tests need a user key (`sgu_`); org keys (`sgo_`) get 403 on roles.
+
+Every resource has a `TestAcc<Resource>_CRUD` built on `acctest.RunCRUD`: create → in-place
+update → import + verify → (with `Delete`) object deleted outside Terraform → destroy, then
+`CheckDestroy` confirms with the API that the object is gone. Add one for any new resource.
 
 ---
 
