@@ -131,7 +131,7 @@ resource "stackguardian_stack_template_revision" "with_vcs" {
 ### Read-Only
 
 - `id` (String) Identifier of the revision, in the form `<template-name>:<revision>` (e.g. `my-stack-template:1`).
-- `template_id` (String) Parent stack template, as its bare `template_name` (which is also its `id`) — not a path.
+- `template_id` (String) The revision's `id` qualified with its owning organization, in the form `/<org>/<template-name>:<revision>` (e.g. `/my-org/my-stack-template:1`).
 
 <a id="nestedatt--actions"></a>
 ### Nested Schema for `actions`

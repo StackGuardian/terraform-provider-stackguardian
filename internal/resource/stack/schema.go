@@ -442,7 +442,7 @@ var actionsAttrs = map[string]schema.Attribute{
 // Schema defines the schema for the stack resource.
 func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a stack resource.",
+		MarkdownDescription: "Manages a stack: a group of workflows created from a stack template revision and run together through the stack's actions.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.Id,
