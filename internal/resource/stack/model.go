@@ -1001,7 +1001,7 @@ func wfStepPointerSlice(vals []sgsdkgo.WfStepsConfig) []*sgsdkgo.WfStepsConfig {
 	return result
 }
 
-func expandDeploymentPlatformConfig(ctx context.Context, list types.List) ([]*sgsdkgo.DeploymentPlatformConfig, diag.Diagnostics) {
+func expandDeploymentPlatformConfig(ctx context.Context, list types.List) ([]*sgsdkgo.StackDeploymentPlatformConfig, diag.Diagnostics) {
 	if list.IsNull() || list.IsUnknown() {
 		return nil, nil
 	}
@@ -1009,13 +1009,13 @@ func expandDeploymentPlatformConfig(ctx context.Context, list types.List) ([]*sg
 	if diags := list.ElementsAs(ctx, &models, false); diags.HasError() {
 		return nil, diags
 	}
-	result := make([]*sgsdkgo.DeploymentPlatformConfig, len(models))
+	result := make([]*sgsdkgo.StackDeploymentPlatformConfig, len(models))
 	for i, m := range models {
 		kind, err := sgsdkgo.NewDeploymentPlatformConfigKindEnumFromString(m.Kind.ValueString())
 		if err != nil {
 			return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid deployment platform config kind", "Value '"+m.Kind.ValueString()+"' is not a valid kind")}
 		}
-		dpc := &sgsdkgo.DeploymentPlatformConfig{Kind: &kind}
+		dpc := &sgsdkgo.StackDeploymentPlatformConfig{Kind: &kind}
 		if !m.Config.IsNull() && !m.Config.IsUnknown() {
 			var cfgModel DeploymentPlatformConfigConfigModel
 			if diags := m.Config.As(ctx, &cfgModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
@@ -1036,7 +1036,7 @@ func expandDeploymentPlatformConfig(ctx context.Context, list types.List) ([]*sg
 	return result, nil
 }
 
-func flattenDeploymentPlatformConfig(ctx context.Context, dpcs []*sgsdkgo.DeploymentPlatformConfig) (types.List, diag.Diagnostics) {
+func flattenDeploymentPlatformConfig(ctx context.Context, dpcs []*sgsdkgo.StackDeploymentPlatformConfig) (types.List, diag.Diagnostics) {
 	listNull := types.ListNull(types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()})
 	if len(dpcs) == 0 {
 		return listNull, nil
@@ -1375,7 +1375,7 @@ func expandWfChaining(ctx context.Context, list types.List) ([]*sgsdkgo.MiniStep
 	return result, nil
 }
 
-func expandMiniSteps(ctx context.Context, obj types.Object) (*sgsdkgo.MiniStepsSchema, diag.Diagnostics) {
+func expandMiniSteps(ctx context.Context, obj types.Object) (*sgsdkgo.StackMiniStepsSchema, diag.Diagnostics) {
 	if obj.IsNull() || obj.IsUnknown() {
 		return nil, nil
 	}
@@ -1383,7 +1383,7 @@ func expandMiniSteps(ctx context.Context, obj types.Object) (*sgsdkgo.MiniStepsS
 	if diags := obj.As(ctx, &m, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 		return nil, diags
 	}
-	result := &sgsdkgo.MiniStepsSchema{}
+	result := &sgsdkgo.StackMiniStepsSchema{}
 
 	if !m.Notifications.IsNull() && !m.Notifications.IsUnknown() {
 		var notifModel MinistepsNotificationsModel
@@ -1425,7 +1425,7 @@ func expandMiniSteps(ctx context.Context, obj types.Object) (*sgsdkgo.MiniStepsS
 		if diags := m.Webhooks.As(ctx, &whModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 			return nil, diags
 		}
-		wh := &sgsdkgo.WebhookTypes{}
+		wh := &sgsdkgo.StackWebhookTypes{}
 		for _, pair := range []struct {
 			list *types.List
 			dest *[]*sgsdkgo.Webhook
@@ -1551,7 +1551,7 @@ func flattenWfChaining(ctx context.Context, items []*sgsdkgo.MiniSteps) (types.L
 	return list, nil
 }
 
-func flattenMiniSteps(ctx context.Context, miniSteps *sgsdkgo.MiniStepsSchema) (types.Object, diag.Diagnostics) {
+func flattenMiniSteps(ctx context.Context, miniSteps *sgsdkgo.StackMiniStepsSchema) (types.Object, diag.Diagnostics) {
 	nullObj := types.ObjectNull(MinistepsModel{}.AttributeTypes())
 	if miniSteps == nil {
 		return nullObj, nil
@@ -1805,17 +1805,17 @@ func envVarsPtrSliceFromValues(vals []sgsdkgo.EnvVars) []*sgsdkgo.EnvVars {
 // revision's own DeploymentPlatformConfig type (workflowtemplaterevisions
 // package) to the root SDK type StackWorkflowsConfigWorkflow expects — these
 // are distinct Go types with the same shape, not aliases of each other.
-func deploymentPlatformConfigFromWorkflowTemplate(items []*workflowtemplaterevisions.DeploymentPlatformConfig) []*sgsdkgo.DeploymentPlatformConfig {
+func deploymentPlatformConfigFromWorkflowTemplate(items []*workflowtemplaterevisions.DeploymentPlatformConfig) []*sgsdkgo.StackDeploymentPlatformConfig {
 	if len(items) == 0 {
 		return nil
 	}
-	result := make([]*sgsdkgo.DeploymentPlatformConfig, 0, len(items))
+	result := make([]*sgsdkgo.StackDeploymentPlatformConfig, 0, len(items))
 	for _, it := range items {
 		if it == nil {
 			continue
 		}
 		kind := sgsdkgo.DeploymentPlatformConfigKindEnum(it.Kind)
-		dpc := &sgsdkgo.DeploymentPlatformConfig{
+		dpc := &sgsdkgo.StackDeploymentPlatformConfig{
 			Kind: &kind,
 			Config: &sgsdkgo.DeploymentPlatformConfigConfig{
 				ProfileName: it.Config.ProfileName,
@@ -1932,7 +1932,7 @@ func mergeWorkflowWithStackTemplateOverride(wf *sgsdkgo.StackWorkflowsConfigWork
 // workflowTpl — the lowest precedence layer. Slice/map fields follow the same
 // == nil / non-empty-template-only rule as mergeWorkflowWithStackTemplateOverride.
 // mini_steps has no fallback here: the workflow template revision's Ministeps
-// type is structurally distinct from sgsdkgo.MiniStepsSchema (separate type
+// type is structurally distinct from sgsdkgo.StackMiniStepsSchema (separate type
 // trees for notifications/webhooks/wf_chaining), so it is intentionally not
 // bridged; mini_steps still resolves fully from the stack's own config and
 // the stack template override layer, which share the same type.
