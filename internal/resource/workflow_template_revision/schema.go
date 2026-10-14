@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	workflowtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
@@ -15,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -245,12 +249,22 @@ var terraformConfigSchema = schema.SingleNestedAttribute{
 			},
 		},
 		"run_pre_init_hooks_on_drift": schema.BoolAttribute{
-			MarkdownDescription: constants.TerraformRunPreInitHooksOnDrift,
+			MarkdownDescription: constants.WorkflowTemplateRevisionRunPreInitHooksOnDrift,
 			Optional:            true,
 			Computed:            true,
-			PlanModifiers: []planmodifier.Bool{
-				boolplanmodifier.UseStateForUnknown(),
-			},
+			Default:             booldefault.StaticBool(false),
+		},
+		"run_pre_plan_hooks_on_drift": schema.BoolAttribute{
+			MarkdownDescription: constants.WorkflowTemplateRevisionRunPrePlanHooksOnDrift,
+			Optional:            true,
+			Computed:            true,
+			Default:             booldefault.StaticBool(false),
+		},
+		"run_post_plan_hooks_on_drift": schema.BoolAttribute{
+			MarkdownDescription: constants.WorkflowTemplateRevisionRunPostPlanHooksOnDrift,
+			Optional:            true,
+			Computed:            true,
+			Default:             booldefault.StaticBool(false),
 		},
 	},
 }
@@ -527,13 +541,74 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 							MarkdownDescription: constants.UserScheduleState,
 							Optional:            true,
 						},
+						// desc and name are Optional+Computed: schedules created in the UI store
+						// "" for both, so an omitted value keeps the stored "" (and sends it back
+						// unchanged on update) instead of planning a change to null.
 						"desc": schema.StringAttribute{
 							MarkdownDescription: constants.UserScheduleDesc,
 							Optional:            true,
+							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 						"name": schema.StringAttribute{
 							MarkdownDescription: constants.UserScheduleName,
 							Optional:            true,
+							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
+						},
+						// inputs and everything in it are Optional, so existing schedules without
+						// inputs keep working, except iac_input_data's schema_type and data, which
+						// are required once iac_input_data is set. Only enable_chaining is
+						// Computed: StackGuardian sets it and it is sent back unchanged on update.
+						"inputs": schema.SingleNestedAttribute{
+							MarkdownDescription: constants.UserScheduleInputs,
+							Optional:            true,
+							Attributes: map[string]schema.Attribute{
+								"terraform_action": schema.SingleNestedAttribute{
+									MarkdownDescription: constants.UserScheduleInputsTerraformAction,
+									Optional:            true,
+									Attributes: map[string]schema.Attribute{
+										"action": schema.StringAttribute{
+											MarkdownDescription: constants.UserScheduleInputsTerraformActionAction,
+											Optional:            true,
+										},
+									},
+								},
+								"enable_chaining": schema.BoolAttribute{
+									MarkdownDescription: constants.UserScheduleInputsEnableChaining,
+									Computed:            true,
+								},
+								"vcs_config": schema.SingleNestedAttribute{
+									MarkdownDescription: constants.UserScheduleInputsVcsConfig,
+									Optional:            true,
+									Attributes: map[string]schema.Attribute{
+										"iac_input_data": schema.SingleNestedAttribute{
+											MarkdownDescription: constants.UserScheduleInputsIacInputData,
+											Optional:            true,
+											Attributes: map[string]schema.Attribute{
+												"schema_type": schema.StringAttribute{
+													MarkdownDescription: constants.UserScheduleInputsIacInputDataSchemaType,
+													Required:            true,
+													Validators: []validator.String{
+														stringvalidator.OneOf(
+															string(sgsdkgo.IacInputDataSchemaTypeEnumRawJson),
+															string(sgsdkgo.IacInputDataSchemaTypeEnumFormJsonschema),
+														),
+													},
+												},
+												"data": schema.StringAttribute{
+													MarkdownDescription: constants.WorkflowIacInputDataData,
+													Required:            true,
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 				},

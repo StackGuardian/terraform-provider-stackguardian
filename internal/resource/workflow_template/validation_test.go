@@ -16,6 +16,8 @@ import (
 // workflow_template_revision. Every case here fails at plan time (ValidateConfig runs
 // before Create), so no API call happens and no fixture/cleanup is needed.
 func TestAccWorkflowTemplate_ValidateRuntimeSourceAuth(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	customHeader := http.Header{}
 	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 
@@ -88,6 +90,8 @@ func TestAccWorkflowTemplate_ValidateRuntimeSourceAuth(t *testing.T) {
 // GIT_OTHER. Unlike the ValidateConfig cases above, this config is valid and actually
 // creates a resource.
 func TestAccWorkflowTemplate_RuntimeSourceGitOtherAuthWithPublicRepo(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
 	templateName := acctest.ResourceName("tf-provider-wt-git-other-public-auth")
 
 	t.Cleanup(func() { deleteWorkflowTemplateFixture(templateName) })

@@ -7,7 +7,7 @@ import (
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
-	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
+	workflowtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -59,9 +59,19 @@ func (r *workflowTemplateRevisionResource) Configure(_ context.Context, req reso
 	r.org_name = provider.OrgName
 }
 
-// ImportState imports a workflow template revision using its ID.
+// ImportState imports a workflow template revision using its ID, "<template_id>:<revision>".
+// template_id is set from the ID as well: Read carries it over from state rather than from
+// the API response, so without it an imported revision would have a null template_id and the
+// next plan would fail ModifyPlan's "template_id cannot be changed" check.
 func (r *workflowTemplateRevisionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	templateID, err := templateIDFromRevisionID(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid import ID", err.Error())
+		return
+	}
+
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("template_id"), templateID)...)
 }
 
 // ValidateConfig enforces:

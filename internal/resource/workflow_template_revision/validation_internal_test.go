@@ -127,3 +127,37 @@ func TestValidateTemplateIdUnchanged(t *testing.T) {
 		})
 	}
 }
+
+func TestTemplateIDFromRevisionID(t *testing.T) {
+	cases := []struct {
+		id        string
+		want      string
+		wantError bool
+	}{
+		{id: "my-template:1", want: "my-template"},
+		{id: "my-template:12", want: "my-template"},
+		{id: "a:b:3", want: "a:b"},
+		{id: "my-template", wantError: true},
+		{id: ":1", wantError: true},
+		{id: "my-template:", wantError: true},
+		{id: "", wantError: true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.id, func(t *testing.T) {
+			got, err := templateIDFromRevisionID(tc.id)
+			if tc.wantError {
+				if err == nil {
+					t.Fatalf("expected an error, got template_id %q", got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tc.want {
+				t.Fatalf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}

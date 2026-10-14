@@ -1,12 +1,17 @@
 package workflowtemplaterevision_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"regexp"
 	"testing"
 
+	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
+	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
+	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
@@ -646,6 +651,213 @@ func TestAccWorkflowTemplateRevision_RepoRejectedOnChange(t *testing.T) {
 			{
 				Config:      testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, config("https://github.com/StackGuardian/terraform-provider-stackguardian.git")),
 				ExpectError: regexp.MustCompile("runtime_source.config.repo cannot be changed"),
+			},
+		},
+	})
+}
+
+// TestAccWorkflowTemplateRevision_TerraformConfigDriftHookFlagsDefaultFalse verifies that the
+// three run_*_hooks_on_drift flags default to false when terraform_config is set without
+// them: the schema default plans false, the request sends false, and Read settles on the
+// false the API returns, so a follow-up plan shows no diff.
+func TestAccWorkflowTemplateRevision_TerraformConfigDriftHookFlagsDefaultFalse(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
+	templateID := acctest.ResourceName("tf-provider-wftr-drift-hooks-default")
+
+	registerWorkflowTemplateCleanup(t, templateID, 1)
+
+	err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	config := testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, `
+	  alias = "revision-drift-hooks-default"
+
+	  terraform_config = {
+	    terraform_version = "1.5.0"
+	  }
+	`)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.run_pre_init_hooks_on_drift", "false"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.run_pre_plan_hooks_on_drift", "false"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.run_post_plan_hooks_on_drift", "false"),
+				),
+			},
+			{
+				Config:   config,
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccWorkflowTemplateRevision_TerraformConfigDriftHookFlagsExplicitNull verifies that
+// setting the run_*_hooks_on_drift flags to an explicit null behaves like omitting them:
+// Terraform can't tell the two apart, so the schema default applies and the flags plan as
+// false. Starting from true shows an explicit null resets them on update instead of keeping
+// the previous value.
+func TestAccWorkflowTemplateRevision_TerraformConfigDriftHookFlagsExplicitNull(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
+	templateID := acctest.ResourceName("tf-provider-wftr-drift-hooks-null")
+
+	registerWorkflowTemplateCleanup(t, templateID, 1)
+
+	err := createWorkflowTemplateFixture(templateID, "TERRAFORM")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	config := func(value string) string {
+		return testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, fmt.Sprintf(`
+	  alias = "revision-drift-hooks-null"
+
+	  terraform_config = {
+	    terraform_version            = "1.5.0"
+	    run_pre_init_hooks_on_drift  = %[1]s
+	    run_pre_plan_hooks_on_drift  = %[1]s
+	    run_post_plan_hooks_on_drift = %[1]s
+	  }
+	`, value))
+	}
+
+	checkFlags := func(want string) resource.TestCheckFunc {
+		return resource.ComposeAggregateTestCheckFunc(
+			resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.run_pre_init_hooks_on_drift", want),
+			resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.run_pre_plan_hooks_on_drift", want),
+			resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "terraform_config.run_post_plan_hooks_on_drift", want),
+		)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: config("true"),
+				Check:  checkFlags("true"),
+			},
+			{
+				// Explicit null: the default applies and resets the flags to false.
+				Config: config("null"),
+				Check:  checkFlags("false"),
+			},
+			{
+				Config:   config("null"),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccWorkflowTemplateRevision_ImportUserScheduleWithEmptyNameAndDesc reproduces a schedule
+// created in the UI: the API stores "" for its name and desc. The revision is created directly
+// through the SDK with that shape, imported into a config that leaves name/desc out, and must
+// then plan no changes and accept an update. name/desc are Optional+Computed, so the imported
+// "" is carried forward and sent back unchanged instead of planning a change to null.
+func TestAccWorkflowTemplateRevision_ImportUserScheduleWithEmptyNameAndDesc(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
+	templateID := acctest.ResourceName("tf-provider-wftr-import-schedule")
+	revisionID := templateID + ":1"
+
+	registerWorkflowTemplateCleanup(t, templateID, 1)
+
+	if err := createWorkflowTemplateFixture(templateID, "TERRAFORM"); err != nil {
+		t.Fatal(err)
+	}
+
+	empty := ""
+	kind := workflowtemplates.WorkflowTemplateSourceConfigKindEnum("TERRAFORM")
+	cpu, memory := 500, 1024
+	_, err := GetClient().WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, templateID, &workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest{
+		OwnerOrg:         fmt.Sprintf("/orgs/%s", config.Get().OrgName),
+		Alias:            "revision-import-schedule",
+		SourceConfigKind: &kind,
+		UserJobCPU:       &cpu,
+		UserJobMemory:    &memory,
+		UserSchedules: []workflowtemplaterevisions.UserSchedules{{
+			Cron:  "0 12 ? * 2 *",
+			State: workflowtemplaterevisions.UserSchedulesStateEnum("ENABLED"),
+			Name:  &empty,
+			Desc:  &empty,
+			Inputs: &workflowtemplaterevisions.UserSchedulesInputs{
+				TerraformAction: &sgsdkgo.TerraformAction{Action: sgsdkgo.ActionEnum("apply").Ptr()},
+			},
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	revisionConfig := func(description string) string {
+		return testAccWorkflowTemplateRevision(templateID, "TERRAFORM", 500, 1024, fmt.Sprintf(`
+	  alias       = "revision-import-schedule"
+	  description = %q
+
+	  user_schedules = [
+	    {
+	      cron  = "0 12 ? * 2 *"
+	      state = "ENABLED"
+	      inputs = {
+	        terraform_action = { action = "apply" }
+	      }
+	    }
+	  ]
+	`, description))
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config:             revisionConfig("Imported"),
+				ResourceName:       "stackguardian_workflow_template_revision.test",
+				ImportState:        true,
+				ImportStateId:      revisionID,
+				ImportStatePersist: true,
+			},
+			{
+				// Update the imported revision; the schedule's stored "" name/desc and its
+				// enable_chaining are carried forward from the imported state.
+				Config: revisionConfig("Imported, then updated"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "description", "Imported, then updated"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "user_schedules.0.name", ""),
+					resource.TestCheckResourceAttr("stackguardian_workflow_template_revision.test", "user_schedules.0.desc", ""),
+				),
+			},
+			{
+				Config:   revisionConfig("Imported, then updated"),
+				PlanOnly: true,
 			},
 		},
 	})

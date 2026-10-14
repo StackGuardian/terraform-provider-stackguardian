@@ -130,6 +130,14 @@ const (
 	UserScheduleState = `State of the schedule. Options: <span style="background-color: #eff0f0; color: #e53835;">ENABLED</span>, <span style="background-color: #eff0f0; color: #e53835;">DISABLED</span>`
 	UserScheduleDesc  = "Description of the schedule."
 	UserScheduleName  = "Name of the schedule."
+
+	UserScheduleInputs                       = "Run inputs used when this schedule triggers a workflow run."
+	UserScheduleInputsTerraformAction        = "Terraform action the scheduled run performs. Only applies to revisions whose `source_config_kind` is `TERRAFORM` or `OPENTOFU`."
+	UserScheduleInputsTerraformActionAction  = "Action to run. One of `apply`, `destroy`, `plan`, `plan-destroy`, `plan-without-policy` or `refresh`."
+	UserScheduleInputsEnableChaining         = "Whether the scheduled run triggers the workflows and stacks chained to it. Set by StackGuardian; read-only."
+	UserScheduleInputsVcsConfig              = "VCS configuration for the scheduled run."
+	UserScheduleInputsIacInputData           = "IaC input data for the scheduled run."
+	UserScheduleInputsIacInputDataSchemaType = "How the value in `data` is formatted. One of `RAW_JSON` or `FORM_JSONSCHEMA`."
 )
 
 // Deployment Platform Config attributes
@@ -186,4 +194,13 @@ const (
 	TerraformRunPreInitHooksOnDrift  = "Run pre-init hooks on drift detection."
 	TerraformRunPrePlanHooksOnDrift  = "Run pre-plan hooks on drift detection."
 	TerraformRunPostPlanHooksOnDrift = "Run post-plan hooks on drift detection."
+)
+
+// The run_*_hooks_on_drift flags on stackguardian_workflow_template_revision default to
+// false; workflow_git and workflow_from_template have no default and keep the plain
+// descriptions above.
+const (
+	WorkflowTemplateRevisionRunPreInitHooksOnDrift  = TerraformRunPreInitHooksOnDrift + " Defaults to `false`."
+	WorkflowTemplateRevisionRunPrePlanHooksOnDrift  = TerraformRunPrePlanHooksOnDrift + " Defaults to `false`."
+	WorkflowTemplateRevisionRunPostPlanHooksOnDrift = TerraformRunPostPlanHooksOnDrift + " Defaults to `false`."
 )
