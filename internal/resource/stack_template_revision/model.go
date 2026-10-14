@@ -768,7 +768,7 @@ func convertTerraformConfigToAPI(ctx context.Context, obj types.Object) (*sgsdkg
 	return tc, nil
 }
 
-func convertDeploymentPlatformConfigToAPI(ctx context.Context, list types.List) ([]*sgsdkgo.DeploymentPlatformConfig, diag.Diagnostics) {
+func convertDeploymentPlatformConfigToAPI(ctx context.Context, list types.List) ([]*sgsdkgo.StackDeploymentPlatformConfig, diag.Diagnostics) {
 	if list.IsNull() || list.IsUnknown() {
 		return nil, nil
 	}
@@ -776,13 +776,13 @@ func convertDeploymentPlatformConfigToAPI(ctx context.Context, list types.List) 
 	if diags := list.ElementsAs(ctx, &models, false); diags.HasError() {
 		return nil, diags
 	}
-	result := make([]*sgsdkgo.DeploymentPlatformConfig, len(models))
+	result := make([]*sgsdkgo.StackDeploymentPlatformConfig, len(models))
 	for i, m := range models {
 		kind, err := sgsdkgo.NewDeploymentPlatformConfigKindEnumFromString(m.Kind.ValueString())
 		if err != nil {
 			return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid deployment platform config kind", fmt.Sprintf("Value '%s' is not a valid kind", m.Kind.ValueString()))}
 		}
-		dpc := &sgsdkgo.DeploymentPlatformConfig{Kind: &kind}
+		dpc := &sgsdkgo.StackDeploymentPlatformConfig{Kind: &kind}
 		if !m.Config.IsNull() && !m.Config.IsUnknown() {
 			var cfgModel DeploymentPlatformConfigConfigModel
 			if diags := m.Config.As(ctx, &cfgModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
@@ -961,7 +961,7 @@ func convertWfChainingToAPI(ctx context.Context, list types.List) ([]*sgsdkgo.Mi
 	return result, nil
 }
 
-func convertMiniStepsToAPI(ctx context.Context, obj types.Object) (*sgsdkgo.MiniStepsSchema, diag.Diagnostics) {
+func convertMiniStepsToAPI(ctx context.Context, obj types.Object) (*sgsdkgo.StackMiniStepsSchema, diag.Diagnostics) {
 	if obj.IsNull() || obj.IsUnknown() {
 		return nil, nil
 	}
@@ -969,7 +969,7 @@ func convertMiniStepsToAPI(ctx context.Context, obj types.Object) (*sgsdkgo.Mini
 	if diags := obj.As(ctx, &m, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 		return nil, diags
 	}
-	result := &sgsdkgo.MiniStepsSchema{}
+	result := &sgsdkgo.StackMiniStepsSchema{}
 
 	if !m.Notifications.IsNull() && !m.Notifications.IsUnknown() {
 		var notifModel MinistepsNotificationsModel
@@ -1011,7 +1011,7 @@ func convertMiniStepsToAPI(ctx context.Context, obj types.Object) (*sgsdkgo.Mini
 		if diags := m.Webhooks.As(ctx, &whModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 			return nil, diags
 		}
-		wh := &sgsdkgo.WebhookTypes{}
+		wh := &sgsdkgo.StackWebhookTypes{}
 		for _, pair := range []struct {
 			list *types.List
 			dest *[]*sgsdkgo.Webhook
@@ -1133,7 +1133,7 @@ func convertWfChainingFromAPI(ctx context.Context, items []*sgsdkgo.MiniSteps) (
 	return obj, nil
 }
 
-func miniStepsFromAPI(ctx context.Context, miniSteps *sgsdkgo.MiniStepsSchema) (types.Object, diag.Diagnostics) {
+func miniStepsFromAPI(ctx context.Context, miniSteps *sgsdkgo.StackMiniStepsSchema) (types.Object, diag.Diagnostics) {
 	nullObj := types.ObjectNull(MinistepsModel{}.AttributeTypes())
 	if miniSteps == nil {
 		return nullObj, nil
@@ -1657,7 +1657,7 @@ func terraformConfigFromAPI(tc *sgsdkgo.TerraformConfig) (types.Object, diag.Dia
 	return types.ObjectValueFrom(context.Background(), TerraformConfigModel{}.AttributeTypes(), m)
 }
 
-func deploymentPlatformConfigFromAPI(dpcs []*sgsdkgo.DeploymentPlatformConfig) (types.List, diag.Diagnostics) {
+func deploymentPlatformConfigFromAPI(dpcs []*sgsdkgo.StackDeploymentPlatformConfig) (types.List, diag.Diagnostics) {
 	listNull := types.ListNull(types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()})
 	if dpcs == nil {
 		return listNull, nil
