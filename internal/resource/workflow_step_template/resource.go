@@ -6,7 +6,7 @@ import (
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
-	core "github.com/StackGuardian/sg-sdk-go/core"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/apierrors"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -137,12 +137,10 @@ func (r *workflowStepTemplateResource) Read(ctx context.Context, req resource.Re
 
 	readResp, err := r.client.WorkflowStepTemplate.ReadWorkflowStepTemplate(ctx, r.org_name, templateId)
 	if err != nil {
-		if apiErr, ok := err.(*core.APIError); ok {
-			if apiErr.StatusCode == 404 {
-				tflog.Warn(ctx, "Workflow step template not found, removing from state")
-				resp.State.RemoveResource(ctx)
-				return
-			}
+		if apierrors.IsNotFound(err) {
+			tflog.Warn(ctx, "Workflow step template not found, removing from state")
+			resp.State.RemoveResource(ctx)
+			return
 		}
 
 		tflog.Error(ctx, err.Error())
@@ -236,11 +234,9 @@ func (r *workflowStepTemplateResource) Delete(ctx context.Context, req resource.
 
 	err := r.client.WorkflowStepTemplate.DeleteWorkflowStepTemplate(ctx, r.org_name, templateId)
 	if err != nil {
-		if apiErr, ok := err.(*core.APIError); ok {
-			if apiErr.StatusCode == 404 {
-				// Resource already deleted
-				return
-			}
+		if apierrors.IsNotFound(err) {
+			// Resource already deleted
+			return
 		}
 
 		tflog.Error(ctx, err.Error())

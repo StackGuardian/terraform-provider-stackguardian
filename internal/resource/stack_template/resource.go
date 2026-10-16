@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/apierrors"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -118,6 +119,10 @@ func (r *stackTemplateResource) Read(ctx context.Context, req resource.ReadReque
 
 	readResp, err := r.client.StackTemplates.ReadStackTemplate(ctx, r.org_name, templateID)
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError("Error reading stack template", "Error in reading stack template API call: "+err.Error())
 		return
 	}
@@ -190,6 +195,10 @@ func (r *stackTemplateResource) Delete(ctx context.Context, req resource.DeleteR
 
 	err := r.client.StackTemplates.DeleteStackTemplate(ctx, r.org_name, state.Id.ValueString())
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// Already gone, which is what Delete wants.
+			return
+		}
 		resp.Diagnostics.AddError("Error deleting stack template", "Error in deleting stack template API call: "+err.Error())
 		return
 	}

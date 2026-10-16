@@ -87,6 +87,7 @@ alongside eleven guides:
 | `make install` | Build and install into `~/.terraform.d/plugins` for local use |
 | `make test` | Unit tests |
 | `make test-acc` | Acceptance tests against a real organization |
+| `make test-crud` | Create/update/import/delete check of every resource, as a pass/fail matrix |
 | `make docs-generate` | Regenerate `docs/` from the schemas and templates |
 | `make docs-validate` | Structure and frontmatter checks |
 | `make docs-check` | Fail if `docs/` is out of date — the CI gate |
@@ -115,7 +116,7 @@ make docs-check              # fail if docs/ is stale
 it from a local filesystem mirror, and runs `terraform validate` over every example — the standalone
 files under `docs-examples/` and `docs-guides-assets/`, plus every ` ```terraform ` block embedded
 in page and guide prose. Prose blocks are not uniform, so
-[`scripts/extract-doc-blocks.py`](/scripts/extract-doc-blocks.py) classifies each one and checks it
+[`scripts/extract-doc-blocks`](/scripts/extract-doc-blocks) classifies each one and checks it
 the way it can actually be checked: self-contained snippets are validated, `import {}` blocks have
 their target verified against the schema, and bare attribute fragments have their names looked up.
 That catches unknown resource types, renamed attributes, bad references and type errors before a
@@ -142,6 +143,46 @@ make test-acc TEST=./internal/resource/workflow_git/            # one package
 make test-acc TESTARGS='-run TestAccWorkflowGit_WithVcsConfig'  # one test
 ```
 
+`STACKGUARDIAN_API_URI` is the host only, e.g. `https://testapi.qa.stackguardian.io`. The SDK
+appends `/api/v1` itself, and a doubled `/api/v1/api/v1` path comes back as `403 Unauthorized`
+rather than 404. Use a user API key (`sgu_…`): an organization key (`sgo_…`) gets 403 on roles.
+
+To keep the credentials out of your shell history, put the four variables in a `.env` file at the
+repository root (`KEY=value` lines; `.env` is gitignored) and load it for a single command:
+
+```bash
+(set -a; source .env; set +a; make test-crud)
+```
+
+#### CRUD matrix
+
+`make test-crud` runs one `TestAcc<Resource>_CRUD` test per resource and reports the result as a
+resource × operation table. Every resource goes through the same steps, defined once in
+[`internal/acctest/crud.go`](/internal/acctest/crud.go):
+
+| Step | What is checked |
+| --- | --- |
+| create | Apply, then refresh: the plan must be empty |
+| update | The plan must be an in-place update — not a replace, not a no-op — and apply cleanly |
+| import | Import by ID; the imported state must match what Terraform created |
+| gone | The object is deleted through the API behind Terraform's back; refresh must drop it and plan a recreate |
+| delete | Destroy, then ask the API: the object must really be gone |
+
+```bash
+(set -a; source .env; set +a; make test-crud)                                         # all resources
+(set -a; source .env; set +a; make test-crud TESTARGS='-run TestAccPolicy_CRUD')      # one resource
+```
+
+The whole run takes well under a minute. Results land in `.crud-results/`:
+
+- `matrix.md` — the table, followed by a one-line reason for each failure (the API error, or the
+  attribute diff of a failed import)
+- `matrix.json` — the same, for tooling
+- `go-test.json` — the raw `go test -json` output
+
+The target exits non-zero if any resource fails. When you add a resource, add a
+`resource_crud_test.go` that calls `acctest.RunCRUD`; the existing ones show the pattern.
+
 Every identifier the suite creates is generated per run and prefixed `tfacc-`, via
 `acctest.ResourceName`. Static names made the suite order-dependent: a run that failed before its
 destroy step left the name taken, and every later run failed at create with `409 already exists`.
@@ -155,7 +196,9 @@ make test-acc-sweep-apply  # delete it
 ```
 
 The sweep only ever touches names carrying the `tfacc-` prefix, and reports rather than deletes
-unless you ask it to.
+unless you ask it to. It covers workflow groups (with their workflows), connectors, and workflow,
+workflow step and stack templates (with their revisions). Policies, roles and runner groups cannot
+be listed through `sg-sdk-go`, so the report names them as not swept.
 
 ### Running the workflows locally
 

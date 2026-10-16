@@ -313,8 +313,12 @@ func setupWorkflowStepTemplate(t *testing.T, name string) string {
 		t.Fatalf("setupWorkflowStepTemplate: create %q: %s", name, err)
 	}
 
+	// Revision :1 has to go first, or the template delete fails and leaks.
 	t.Cleanup(func() {
-		_ = client.WorkflowStepTemplate.DeleteWorkflowStepTemplate(context.TODO(), config.Get().OrgName, name)
+		if err := acctest.DeleteTemplate(context.TODO(), acctest.SGClientWithHeader(acctest.TemplateHeader()),
+			config.Get().OrgName, "WORKFLOW_STEP", name, 1); err != nil {
+			t.Logf("cleanup: deleting step template %s: %s", name, err)
+		}
 	})
 
 	return fmt.Sprintf("/%s/%s:1", config.Get().OrgName, name)
