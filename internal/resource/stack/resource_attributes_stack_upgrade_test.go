@@ -37,6 +37,7 @@ import (
 // reference always has at least one action (see resource_attributes_test.go's "actions resolution
 // rules" comment).
 func TestAccStack_TemplateGroupIdReResolution(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-tmplswitch-wfgrp"
 	wfTemplateName := "tf-provider-stack-tmplswitch-wftmpl"
 	stackTemplateName := "tf-provider-stack-tmplswitch-stmpl"
@@ -95,6 +96,7 @@ func TestAccStack_TemplateGroupIdReResolution(t *testing.T) {
 // revision2 (setupSecondStackTemplateRevision) only re-declares testWorkflowUUID, so secondWorkflowUUID
 // is the removed workflow.
 func TestAccStack_ActionsRevisionRemovedWorkflow(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-actrmwf-wfgrp"
 	wfTemplateName := "tf-provider-stack-actrmwf-wftmpl"
 	stackTemplateName := "tf-provider-stack-actrmwf-stmpl"
@@ -268,6 +270,7 @@ func TestAccStack_ActionsRevisionRemovedWorkflow(t *testing.T) {
 // explicit clear rather than leaving the old context_tags in place. Same failure mode as the
 // description/tags versions of this test.
 func TestAccStack_ContextTags_ClearedWhenTemplateHasNone(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-ctxtagsclr-wfgrp"
 	wfTemplateName := "tf-provider-stack-ctxtagsclr-wftmpl"
 	stackTemplateName := "tf-provider-stack-ctxtagsclr-stmpl"
@@ -319,6 +322,7 @@ func TestAccStack_ContextTags_ClearedWhenTemplateHasNone(t *testing.T) {
 // assertion below ever running, since ToUpdateAPIModel would then omit the field (leaving the
 // old value in place) while the plan had predicted null.
 func TestAccStack_Description_ClearedWhenTemplateHasNone(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-descclr-wfgrp"
 	wfTemplateName := "tf-provider-stack-descclr-wftmpl"
 	stackTemplateName := "tf-provider-stack-descclr-stmpl"
@@ -366,6 +370,7 @@ func TestAccStack_Description_ClearedWhenTemplateHasNone(t *testing.T) {
 // rather than leaving the old tags in place. Same failure mode as
 // TestAccStack_Description_ClearedWhenTemplateHasNone.
 func TestAccStack_Tags_ClearedWhenTemplateHasNone(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-tagsclr-wfgrp"
 	wfTemplateName := "tf-provider-stack-tagsclr-wftmpl"
 	stackTemplateName := "tf-provider-stack-tagsclr-stmpl"

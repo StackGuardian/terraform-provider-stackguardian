@@ -878,6 +878,7 @@ func defaultSecondRevisionActions() map[string]*sgsdkgo.Actions {
 // TestAccStack_Basic covers Create/Read/Update of a stack whose dependency
 // chain is set up via SDK fixtures. Step 2 updates the stack only.
 func TestAccStack_Basic(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-basic-wfgrp"
 	wfTemplateName := "tf-provider-stack-basic-wftmpl"
 	stackTemplateName := "tf-provider-stack-basic-stmpl"
@@ -932,6 +933,7 @@ func TestAccStack_Basic(t *testing.T) {
 // TestAccStack_Import covers importing a stack via "workflow_group_id/id"
 // and verifies the imported state matches what was just applied.
 func TestAccStack_Import(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-import-wfgrp"
 	wfTemplateName := "tf-provider-stack-import-wftmpl"
 	stackTemplateName := "tf-provider-stack-import-stmpl"
@@ -964,6 +966,7 @@ func TestAccStack_Import(t *testing.T) {
 // other way to apply a change) rather than an in-place update, and that the
 // new id is correctly applied afterward.
 func TestAccStack_IdRequiresReplace(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-idreplace-wfgrp"
 	wfTemplateName := "tf-provider-stack-idreplace-wftmpl"
 	stackTemplateName := "tf-provider-stack-idreplace-stmpl"
@@ -999,6 +1002,7 @@ func TestAccStack_IdRequiresReplace(t *testing.T) {
 // instead of erroring, leaving a non-empty plan (a pending create) since the
 // config still declares the resource.
 func TestAccStack_ReadRemovesOnNotFound(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-read404-wfgrp"
 	wfTemplateName := "tf-provider-stack-read404-wftmpl"
 	stackTemplateName := "tf-provider-stack-read404-stmpl"
@@ -1035,6 +1039,7 @@ func TestAccStack_ReadRemovesOnNotFound(t *testing.T) {
 // then dropping it from Terraform config entirely so a real Delete() call is
 // issued against an already-gone stack.
 func TestAccStack_DeleteAlreadyGone(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-del404-wfgrp"
 	wfTemplateName := "tf-provider-stack-del404-wftmpl"
 	stackTemplateName := "tf-provider-stack-del404-stmpl"

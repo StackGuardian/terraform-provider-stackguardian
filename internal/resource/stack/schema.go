@@ -49,6 +49,7 @@ var ministepsWebhooks = schema.ListNestedAttribute{
 			"webhook_secret": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWebhookSecret,
 				Optional:            true,
+				Sensitive:           true,
 			},
 		},
 	},

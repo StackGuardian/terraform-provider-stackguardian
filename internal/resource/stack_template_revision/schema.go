@@ -543,6 +543,9 @@ var actionOrderAttrs = map[string]schema.Attribute{
 // Schema defines the schema for the resource.
 func (r *stackTemplateRevisionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		// Version 1: deployment_platform_config[*].config changed from a JSON string to an
+		// object. State written at version 0 is migrated by UpgradeState (upgrade_state.go).
+		Version:             1,
 		MarkdownDescription: "Manages a versioned revision of a `stackguardian_stack_template` — the ordered workflows, inputs and configuration a stack is actually created from.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

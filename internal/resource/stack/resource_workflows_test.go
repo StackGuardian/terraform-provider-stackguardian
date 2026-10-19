@@ -27,6 +27,7 @@ import (
 // real server-assigned values, not the forced-empty/zero values
 // ValueStringPointer()/ValueInt64Pointer() return for unknown.
 func TestAccStack_WorkflowsConfigMinimalEntry(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-wfmin-wfgrp"
 	wfTemplateName := "tf-provider-stack-wfmin-wftmpl"
 	stackTemplateName := "tf-provider-stack-wfmin-stmpl"
@@ -75,6 +76,7 @@ func TestAccStack_WorkflowsConfigMinimalEntry(t *testing.T) {
 // step's apply fails before anything is created, so they can safely share
 // one resource address across steps.
 func TestAccStack_WorkflowsConfigInvalidEnums(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-wfenum-wfgrp"
 	wfTemplateName := "tf-provider-stack-wfenum-wftmpl"
 	stackTemplateName := "tf-provider-stack-wfenum-stmpl"
@@ -126,6 +128,7 @@ func TestAccStack_WorkflowsConfigInvalidEnums(t *testing.T) {
 // apply fails before anything is created, so they can safely share one
 // resource address across steps (mirrors TestAccStack_WorkflowsConfigInvalidEnums).
 func TestAccStack_WorkflowsConfigMismatchRejected(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-wfmismatch-wfgrp"
 	wfTemplateName := "tf-provider-stack-wfmismatch-wftmpl"
 	stackTemplateName := "tf-provider-stack-wfmismatch-stmpl"
@@ -223,6 +226,7 @@ func TestAccStack_WorkflowsConfigMismatchRejected(t *testing.T) {
 // API no longer supports Terraform versions past that; precedence here
 // doesn't depend on numeric ordering, only on which layer declared a value.
 func TestAccStack_WorkflowsConfigPrecedenceMerge(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-wfmerge-wfgrp"
 	wfTemplateName := "tf-provider-stack-wfmerge-wftmpl"
 	stackTemplateName := "tf-provider-stack-wfmerge-stmpl"
@@ -277,6 +281,7 @@ func TestAccStack_WorkflowsConfigPrecedenceMerge(t *testing.T) {
 // Computed-only and always inherited from the matched stack-template-revision
 // workflow (see resolveWorkflowTemplates/mergeWorkflowWithStackTemplateOverride).
 func TestAccStack_WorkflowsConfigVcsConfigComputedOnly(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-wfvcs-wfgrp"
 	wfTemplateName := "tf-provider-stack-wfvcs-wftmpl"
 	stackTemplateName := "tf-provider-stack-wfvcs-stmpl"
@@ -319,6 +324,7 @@ func TestAccStack_WorkflowsConfigVcsConfigComputedOnly(t *testing.T) {
 // shape — cron/state Required, no "inputs" field, unlike the stack-level
 // copy), context_tags, runner_constraints, and mini_steps.
 func TestAccStack_WorkflowsConfigRoundTrip(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-wfrt-wfgrp"
 	wfTemplateName := "tf-provider-stack-wfrt-wftmpl"
 	stackTemplateName := "tf-provider-stack-wfrt-stmpl"
@@ -402,6 +408,7 @@ func TestAccStack_WorkflowsConfigRoundTrip(t *testing.T) {
 // empty rather than erroring or keeping a stale value — exercising that path
 // on a genuine update, not just a fresh create.
 func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-wfupd-wfgrp"
 	wfTemplateName := "tf-provider-stack-wfupd-wftmpl"
 	stackTemplateName := "tf-provider-stack-wfupd-stmpl"
@@ -555,6 +562,7 @@ func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
 // ("Provider produced inconsistent result after apply") — and the second step checks it then
 // re-plans with no diff.
 func TestAccStack_WorkflowsConfigRoundTripRemainingFields(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := acctest.ResourceName("stack-wfrest-wfgrp")
 	wfTemplateName := acctest.ResourceName("stack-wfrest-wftmpl")
 	stackTemplateName := acctest.ResourceName("stack-wfrest-stmpl")
@@ -712,6 +720,7 @@ func TestAccStack_WorkflowsConfigRoundTripRemainingFields(t *testing.T) {
 // is built on a CUSTOM workflow template rather than the TERRAFORM one the other tests use. The
 // declared steps must come back from the API exactly as sent, then re-plan with no diff.
 func TestAccStack_WorkflowsConfigCustomWfStepsConfig(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := acctest.ResourceName("stack-wfcustom-wfgrp")
 	wfTemplateName := acctest.ResourceName("stack-wfcustom-wftmpl")
 	stackTemplateName := acctest.ResourceName("stack-wfcustom-stmpl")

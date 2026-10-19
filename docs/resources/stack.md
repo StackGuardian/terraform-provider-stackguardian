@@ -344,7 +344,7 @@ Required:
 
 Optional:
 
-- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
 
 
 <a id="nestedatt--workflows_config--workflows--mini_steps--webhooks--cancelled"></a>
@@ -357,7 +357,7 @@ Required:
 
 Optional:
 
-- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
 
 
 <a id="nestedatt--workflows_config--workflows--mini_steps--webhooks--completed"></a>
@@ -370,7 +370,7 @@ Required:
 
 Optional:
 
-- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
 
 
 <a id="nestedatt--workflows_config--workflows--mini_steps--webhooks--drift_detected"></a>
@@ -383,7 +383,7 @@ Required:
 
 Optional:
 
-- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
 
 
 <a id="nestedatt--workflows_config--workflows--mini_steps--webhooks--errored"></a>
@@ -396,7 +396,7 @@ Required:
 
 Optional:
 
-- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
 
 
 

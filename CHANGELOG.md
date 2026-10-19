@@ -27,7 +27,7 @@ A **Breaking** change can require edits to existing configurations.
   - `vcs_config.iac_vcs_config.custom_source` is removed
   - `template_id` is removed; set the workflow template in `vcs_config.iac_vcs_config.iac_template_id` instead
   - The workflow-level `iac_input_data` is removed; use `vcs_config.iac_input_data` instead
-  - `deployment_platform_config[*].config` is now an object with `integration_id` (required) and `profile_name`, instead of a JSON string. This also applies to `actions[*].order[*].parameters.deployment_platform_config`
+  - `deployment_platform_config[*].config` is now an object with `integration_id` (required) and `profile_name`, instead of a JSON string. This also applies to `actions[*].order[*].parameters.deployment_platform_config`. Existing state is migrated automatically; update the configuration from `config = jsonencode({ integrationId = "..." })` to `config = { integration_id = "..." }`
   - `input_schemas[*].id`, `description` and `is_committed` are removed; the StackGuardian API doesn't have these fields
 - `stackguardian_workflow_template_revision`: `terraform_config.run_pre_init_hooks_on_drift`, `run_pre_plan_hooks_on_drift` and `run_post_plan_hooks_on_drift` default to `false`. Omitting one, or setting it to `null`, now sends `false`; previously an omitted `run_pre_init_hooks_on_drift` kept its last value
 
