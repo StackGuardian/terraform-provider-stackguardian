@@ -1782,6 +1782,7 @@ func TestAccWorkflowUsingTemplate_DriftDetection(t *testing.T) {
 // caught as drift on the next plan, exactly as for a user-declared attribute (see
 // TestAccWorkflowUsingTemplate_DriftDetection).
 func TestAccWorkflowUsingTemplate_DriftDetectionOnTemplateDefault(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-drift-default") + ":1"
 	wfGrpName := "tf-provider-wf-template-drift-default-wfgrp"
 	id := "tf-provider-wf-template-drift-default"

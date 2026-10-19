@@ -363,7 +363,7 @@ Read-Only:
 Read-Only:
 
 - `webhook_name` (String) Webhook name
-- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
 - `webhook_url` (String) Webhook URL
 
 
@@ -373,7 +373,7 @@ Read-Only:
 Read-Only:
 
 - `webhook_name` (String) Webhook name
-- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
 - `webhook_url` (String) Webhook URL
 
 
@@ -383,7 +383,7 @@ Read-Only:
 Read-Only:
 
 - `webhook_name` (String) Webhook name
-- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
 - `webhook_url` (String) Webhook URL
 
 
@@ -393,7 +393,7 @@ Read-Only:
 Read-Only:
 
 - `webhook_name` (String) Webhook name
-- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
 - `webhook_url` (String) Webhook URL
 
 
@@ -403,7 +403,7 @@ Read-Only:
 Read-Only:
 
 - `webhook_name` (String) Webhook name
-- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
 - `webhook_url` (String) Webhook URL
 
 

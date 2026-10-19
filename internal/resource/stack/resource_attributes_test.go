@@ -75,6 +75,7 @@ import (
 // override, not a per-key merge, so plan/destroy (not redeclared) disappear
 // rather than staying inherited alongside the user's own "apply".
 func TestAccStack_ActionsGeneratedFromTemplate(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-gendef-wfgrp"
 	wfTemplateName := "tf-provider-stack-gendef-wftmpl"
 	stackTemplateName := "tf-provider-stack-gendef-stmpl"
@@ -217,6 +218,7 @@ func TestAccStack_ActionsGeneratedFromTemplate(t *testing.T) {
 // aren't covered here — both need a real integration_id / workflow step
 // template fixture this test doesn't set up.
 func TestAccStack_ActionsRoundTrip(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-actrt-wfgrp"
 	wfTemplateName := "tf-provider-stack-actrt-wftmpl"
 	stackTemplateName := "tf-provider-stack-actrt-stmpl"
@@ -333,6 +335,7 @@ func TestAccStack_ActionsRoundTrip(t *testing.T) {
 // mapvalidator.SizeAtLeast(1) on "actions" (schema.go), rather than reaching the API and
 // surfacing its own less actionable "Stack actions are empty" error.
 func TestAccStack_ActionsRejectsEmpty(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-actempty-wfgrp"
 	wfTemplateName := "tf-provider-stack-actempty-wftmpl"
 	stackTemplateName := "tf-provider-stack-actempty-stmpl"
@@ -373,6 +376,7 @@ func TestAccStack_ActionsRejectsEmpty(t *testing.T) {
 //     resolves to {} (see TestAccStack_ContextTags_ClearedWhenTemplateHasNone,
 //     resource_attributes_stack_upgrade_test.go).
 func TestAccStack_ContextTags_Resolution(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-ctxtagsres-wfgrp"
 	wfTemplateName := "tf-provider-stack-ctxtagsres-wftmpl"
 	stackTemplateName := "tf-provider-stack-ctxtagsres-stmpl"
@@ -442,6 +446,7 @@ func TestAccStack_ContextTags_Resolution(t *testing.T) {
 //     TestAccStack_Description_ClearedWhenTemplateHasNone,
 //     resource_attributes_stack_upgrade_test.go).
 func TestAccStack_Description_Resolution(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-descres-wfgrp"
 	wfTemplateName := "tf-provider-stack-descres-wftmpl"
 	stackTemplateName := "tf-provider-stack-descres-stmpl"
@@ -514,6 +519,7 @@ func TestAccStack_Description_Resolution(t *testing.T) {
 //     TestAccStack_Tags_ClearedWhenTemplateHasNone,
 //     resource_attributes_stack_upgrade_test.go).
 func TestAccStack_Tags_Resolution(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-tagsres-wfgrp"
 	wfTemplateName := "tf-provider-stack-tagsres-wftmpl"
 	stackTemplateName := "tf-provider-stack-tagsres-stmpl"
