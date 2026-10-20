@@ -80,7 +80,7 @@ func TestStack_PlanRejectsWorkflowsConfigMismatch(t *testing.T) {
 		{"unknown workflow", []string{"wf-a", "wf-b", "wf-c"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			resource.UnitTest(t, resource.TestCase{
+			runFakeAPITest(t, resource.TestCase{
 				ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 				Steps: []resource.TestStep{{
 					Config:      planValidationConfig(srv.URL, "tpl:1", tc.ids...),
@@ -95,7 +95,7 @@ func TestStack_PlanRejectsWorkflowsConfigMismatch(t *testing.T) {
 func TestStack_PlanAcceptsMatchingWorkflowsConfig(t *testing.T) {
 	srv, reads := fakeStackTemplateRevisionAPI(t, map[string][]string{"tpl:1": {"wf-a", "wf-b"}})
 
-	resource.UnitTest(t, resource.TestCase{
+	runFakeAPITest(t, resource.TestCase{
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{{
 			Config:             planValidationConfig(srv.URL, "tpl:1", "wf-a", "wf-b"),
@@ -113,7 +113,7 @@ func TestStack_PlanAcceptsMatchingWorkflowsConfig(t *testing.T) {
 func TestStack_PlanSkipsCheckWhenRevisionNotFoundOnCreate(t *testing.T) {
 	srv, _ := fakeStackTemplateRevisionAPI(t, map[string][]string{})
 
-	resource.UnitTest(t, resource.TestCase{
+	runFakeAPITest(t, resource.TestCase{
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{{
 			Config:             planValidationConfig(srv.URL, "tpl:1", "wf-a"),

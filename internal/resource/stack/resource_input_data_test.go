@@ -111,7 +111,7 @@ func TestStack_InputDataReferencesResolvedAndKept(t *testing.T) {
 	// State keeps the configured form, so plan, apply and refresh agree.
 	wantData, _ := json.Marshal(map[string]string{"region": "eu-central-1", "vpc_id": reference})
 
-	resource.UnitTest(t, resource.TestCase{
+	runFakeAPITest(t, resource.TestCase{
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -143,7 +143,7 @@ func TestStack_InputDataFormattingKept(t *testing.T) {
 	srv, _ := newFakeStackAPI(t, twoWorkflowRevision)
 	data := `"{ \"region\": \"eu-central-1\",  \"count\": 2 }"`
 
-	resource.UnitTest(t, resource.TestCase{
+	runFakeAPITest(t, resource.TestCase{
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -158,7 +158,7 @@ func TestStack_InputDataFormattingKept(t *testing.T) {
 func TestStack_InputDataInvalidJSONRejectedAtPlan(t *testing.T) {
 	srv, _ := newFakeStackAPI(t, twoWorkflowRevision)
 
-	resource.UnitTest(t, resource.TestCase{
+	runFakeAPITest(t, resource.TestCase{
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
