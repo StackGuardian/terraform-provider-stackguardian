@@ -72,6 +72,18 @@ vcs_config = {
 
 `data` must be a JSON object; a value that is not is rejected at plan time.
 
+## Destroying a stack
+
+Destroying a stack — including the replacement that changing `id` or `workflow_group_id` causes —
+deletes the stack and **all of its workflows** with their run history. It does **not** run the
+workflows' destroy action: cloud resources they deployed stay in your account, and StackGuardian no
+longer holds their Terraform state. Run the stack's destroy action first if those resources should
+go too. The plan shows a warning for every such deletion.
+
+StackGuardian refuses to delete a stack while one of its workflows has a run in progress or queued;
+the apply then fails and the stack stays in the state, so applying again once the runs are over
+finishes the job.
+
 ## If creating a stack fails
 
 StackGuardian stores a stack before it creates the stack's workflows, and does not undo it when a

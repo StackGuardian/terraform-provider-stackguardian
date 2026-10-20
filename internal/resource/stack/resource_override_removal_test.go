@@ -38,7 +38,9 @@ type fakeStackAPI struct {
 	failCreate bool
 	// failReadsAfterCreate makes stack reads fail with a 500 once a create was served.
 	failReadsAfterCreate bool
-	creates, deletes     int
+	// failDelete answers deletes with a 403, as the platform does while a run is active.
+	failDelete       bool
+	creates, deletes int
 }
 
 // newFakeStackAPI serves one stack template revision, "tpl:1".
@@ -139,6 +141,10 @@ func (f *fakeStackAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		fmt.Fprint(w, `{"msg":"updated"}`)
 	case http.MethodDelete:
+		if f.failDelete {
+			http.Error(w, `{"msg":"Cannot force delete stack override-removal. 1 workflow(s) are not in a safe state for deletion"}`, http.StatusForbidden)
+			return
+		}
 		f.deletes++
 		delete(f.stacks, id)
 		fmt.Fprint(w, `{"msg":"deleted"}`)

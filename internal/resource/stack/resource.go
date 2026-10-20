@@ -130,6 +130,28 @@ func stackExistsDetail(plan StackResourceModel) string {
 		plan.Id.ValueString(), plan.WorkflowGroupId.ValueString(), plan.WorkflowGroupId.ValueString(), plan.Id.ValueString())
 }
 
+// isForbidden reports whether err from an API call is a 403.
+func isForbidden(err error) bool {
+	var apiErr *core.APIError
+	return errors.As(err, &apiErr) && apiErr.StatusCode == 403
+}
+
+const stackDeletionSummary = "Deleting a stack does not destroy what it deployed"
+
+// stackDeletionDetail explains a stack deletion to whoever is about to make
+// one: the platform deletes the stack's workflows with it, but runs none of
+// them, so the cloud resources they deployed stay — and so does the cost.
+func stackDeletionDetail(ctx context.Context, state StackResourceModel) string {
+	workflows := "its workflows"
+	if ids, ok := declaredWorkflowIds(ctx, state.WorkflowsConfig); ok {
+		workflows = fmt.Sprintf("its %d workflow(s)", len(ids))
+	}
+	return fmt.Sprintf("Deleting stack %q also deletes %s and their run history in StackGuardian. "+
+		"It does not run their destroy action: cloud resources the workflows deployed stay in your account, "+
+		"and StackGuardian no longer holds the Terraform state for them. If those resources should go too, "+
+		"run the stack's destroy action before applying this.", state.Id.ValueString(), workflows)
+}
+
 // isNotFound reports whether err from an API call is a 404: the stack was
 // deleted out-of-band, or the stack template revision does not exist (yet).
 func isNotFound(err error) bool {
@@ -364,7 +386,15 @@ func (r *stackResource) resolveWorkflowTemplates(ctx context.Context, plan Stack
 // error, not a silent carry-forward.
 func (r *stackResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	if req.Plan.Raw.IsNull() {
-		return // destroy
+		// Destroy: say what deleting a stack does and does not do.
+		if !req.State.Raw.IsNull() {
+			var state StackResourceModel
+			resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+			if !resp.Diagnostics.HasError() {
+				resp.Diagnostics.AddWarning(stackDeletionSummary, stackDeletionDetail(ctx, state))
+			}
+		}
+		return
 	}
 	creating := req.State.Raw.IsNull()
 
@@ -376,6 +406,11 @@ func (r *stackResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	}
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	// Changing id or workflow_group_id replaces the stack, which deletes it first.
+	if !creating && (!plan.Id.Equal(state.Id) || !plan.WorkflowGroupId.Equal(state.WorkflowGroupId)) {
+		resp.Diagnostics.AddWarning(stackDeletionSummary, stackDeletionDetail(ctx, state))
 	}
 
 	if plan.TemplateGroupId.IsUnknown() {
@@ -749,6 +784,10 @@ func (r *stackResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	stackId := state.Id.ValueString()
 	wfGrpId := state.WorkflowGroupId.ValueString()
 
+	// force_delete is required, not a shortcut: without it the platform refuses
+	// to delete any stack that still has workflows, and every stack has them. It
+	// deletes the workflows with the stack, but never one with a run in progress
+	// or queued. It does not run their destroy action — see stackDeletionDetail.
 	_, err := r.client.Stacks.DeleteStack(ctx, r.org_name, stackId, wfGrpId, &sgsdkgo.DeleteStackRequest{
 		ForceDelete: sgsdkgo.Bool(true),
 	})
@@ -760,7 +799,11 @@ func (r *stackResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 			return
 		}
 		tflog.Error(ctx, err.Error())
-		resp.Diagnostics.AddError("Error deleting stack", "Error in deleting stack "+state.ResourceName.ValueString()+": "+err.Error())
+		detail := "Error in deleting stack " + stackId + ": " + err.Error()
+		if isForbidden(err) {
+			detail += "\n\nStackGuardian does not delete a stack while one of its workflows has a run in progress or queued. Wait for the runs to finish, or cancel them, then apply again."
+		}
+		resp.Diagnostics.AddError("Error deleting stack", detail)
 		return
 	}
 }
