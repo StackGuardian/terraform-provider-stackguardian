@@ -25,10 +25,11 @@ const overrideRemovalOrg = "override-removal-org"
 // create request (Stack) and the read response (StackData) share their JSON keys, and an
 // update merges the top-level keys it carries, like a PATCH.
 type fakeStackAPI struct {
-	mu        sync.Mutex
-	revisions map[string]string // stack template revision id -> its read "msg"
-	stacks    map[string]map[string]any
-	patches   []map[string]any // every update body, in order
+	mu            sync.Mutex
+	revisions     map[string]string // stack template revision id -> its read "msg"
+	stacks        map[string]map[string]any
+	patches       []map[string]any // every update body, in order
+	templateReads []string         // workflow template revision ids read, in order
 }
 
 // newFakeStackAPI serves one stack template revision, "tpl:1".
@@ -70,6 +71,7 @@ func (f *fakeStackAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"msg":%s}`, revision)
 		return
 	case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/api/v1/templatetypes/IAC/"):
+		f.templateReads = append(f.templateReads, strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/api/v1/templatetypes/IAC/"), "/"))
 		// A workflow template revision with no defaults of its own.
 		fmt.Fprint(w, `{"msg":{}}`)
 		return
@@ -223,4 +225,11 @@ func (f *fakeStackAPI) lastPatch() map[string]any {
 		return nil
 	}
 	return f.patches[len(f.patches)-1]
+}
+
+// workflowTemplateReads returns the workflow template revision ids read so far.
+func (f *fakeStackAPI) workflowTemplateReads() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]string(nil), f.templateReads...)
 }
