@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -81,6 +82,52 @@ func (r *stackResource) ImportState(ctx context.Context, req resource.ImportStat
 	workflowGroupId := strings.Join(parts[0:len(parts)-1], "/")
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("workflow_group_id"), workflowGroupId)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), stackId)...)
+}
+
+// isConflict reports whether err from an API call is a 409: the stack id is
+// already taken in the workflow group.
+func isConflict(err error) bool {
+	var apiErr *core.APIError
+	return errors.As(err, &apiErr) && apiErr.StatusCode == 409
+}
+
+// stackIdIsFree reports whether no stack exists yet under the planned id. A
+// non-404 error means it cannot tell.
+func (r *stackResource) stackIdIsFree(ctx context.Context, plan StackResourceModel) (bool, error) {
+	_, err := r.client.Stacks.ReadStack(ctx, r.org_name, plan.Id.ValueString(), plan.WorkflowGroupId.ValueString(), nil)
+	if err == nil {
+		return false, nil
+	}
+	if isNotFound(err) {
+		return true, nil
+	}
+	return false, err
+}
+
+// stackExists reports whether the planned stack can be read, i.e. a create
+// that returned an error still stored it.
+func (r *stackResource) stackExists(ctx context.Context, plan StackResourceModel) bool {
+	readResp, err := r.client.Stacks.ReadStack(ctx, r.org_name, plan.Id.ValueString(), plan.WorkflowGroupId.ValueString(), nil)
+	return err == nil && readResp.GetMsg() != nil
+}
+
+// trackCreatedStack puts the identifying attributes of a created stack in
+// state — enough for Read to refresh it and Delete to remove it. When Create
+// then returns an error, Terraform keeps the resource as tainted instead of
+// forgetting a stack that exists.
+func trackCreatedStack(ctx context.Context, state *tfsdk.State, plan StackResourceModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+	diags.Append(state.SetAttribute(ctx, path.Root("id"), plan.Id)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("workflow_group_id"), plan.WorkflowGroupId)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("template_group_id"), plan.TemplateGroupId)...)
+	return diags
+}
+
+func stackExistsDetail(plan StackResourceModel) string {
+	return fmt.Sprintf("A stack with id %q already exists in workflow group %q, so it was not created. "+
+		"To manage it with this configuration, import it: terraform import <resource address> %s/%s. "+
+		"Otherwise choose another id.",
+		plan.Id.ValueString(), plan.WorkflowGroupId.ValueString(), plan.WorkflowGroupId.ValueString(), plan.Id.ValueString())
 }
 
 // isNotFound reports whether err from an API call is a 404: the stack was
@@ -485,11 +532,46 @@ func (r *stackResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	wfGrpId := plan.WorkflowGroupId.ValueString()
 
-	createResp, err := r.client.Stacks.CreateStack(ctx, r.org_name, wfGrpId, payload)
-	if err != nil {
-		resp.Diagnostics.AddError("failed to create stack", err.Error())
+	// Check the id is free first. Besides reporting a taken id clearly, this is
+	// what makes the partial-create recovery below safe: some failures are
+	// reported before the platform checks the id, so without it a stack found
+	// after a failed create could be someone else's.
+	idFree, err := r.stackIdIsFree(ctx, plan)
+	if err == nil && !idFree {
+		resp.Diagnostics.AddError("Stack already exists", stackExistsDetail(plan))
 		return
 	}
+
+	createResp, err := r.client.Stacks.CreateStack(ctx, r.org_name, wfGrpId, payload)
+	if err != nil {
+		if isConflict(err) {
+			resp.Diagnostics.AddError("Stack already exists", stackExistsDetail(plan))
+			return
+		}
+		detail := err.Error()
+		// The platform stores the stack before creating its workflows and does
+		// not roll back, so a failure part-way leaves a partial stack under the
+		// configured id. Track it so the next apply replaces it.
+		if idFree && r.stackExists(ctx, plan) {
+			resp.Diagnostics.Append(trackCreatedStack(ctx, &resp.State, plan)...)
+			detail += fmt.Sprintf("\n\nStackGuardian had already stored stack %q before the failure. It is now in the Terraform state as tainted: the next apply deletes it and creates it again.", plan.Id.ValueString())
+		}
+		resp.Diagnostics.AddError("Error creating stack", detail)
+		return
+	}
+
+	// Record the stack before anything else can fail, so a failed read-back
+	// below leaves it tracked (as tainted) rather than created but unknown.
+	resp.Diagnostics.Append(trackCreatedStack(ctx, &resp.State, plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	defer func() {
+		if resp.Diagnostics.HasError() {
+			resp.Diagnostics.AddWarning("Stack created but not fully recorded",
+				fmt.Sprintf("Stack %q was created, but reading it back failed, so it is in the Terraform state as tainted. The next apply replaces it; run `terraform untaint` on it to keep it instead.", plan.Id.ValueString()))
+		}
+	}()
 
 	// The platform creates the stack under the configured id, so fall back to it
 	// when the response carries no stack rather than lose track of one that exists.

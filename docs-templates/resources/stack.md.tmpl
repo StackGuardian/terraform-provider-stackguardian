@@ -68,6 +68,16 @@ vcs_config = {
 
 `data` must be a JSON object; a value that is not is rejected at plan time.
 
+## If creating a stack fails
+
+StackGuardian stores a stack before it creates the stack's workflows, and does not undo it when a
+workflow fails. When that happens, or when the stack is created but cannot be read back, the
+provider keeps the stack in the Terraform state as **tainted**: the next apply deletes it and
+creates it again, and `terraform untaint` keeps it as it is.
+
+Before creating, the provider checks that no stack exists under the configured `id`. If one does,
+the apply fails without touching it; import it to manage it from this configuration.
+
 ## Limitations
 
 - **Removing a declaration is detected from the last apply.** Terraform does not pass the
