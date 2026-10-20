@@ -36,6 +36,7 @@ A **Breaking** change can require edits to existing configurations.
 
 ### Fixed
 
+- `stackguardian_stack_template_revision` data source: `parent_template_id` is now set to the parent stack template name, the part of `id` before the `:`. It was always null
 - `stackguardian_stack_template_revision`: `notes` and `description`, when not set in the configuration, keep their current value in the plan instead of showing as "(known after apply)" whenever another attribute changes
 - `stackguardian_workflow_template_revision`: importing a revision (`<template_id>:<revision>`) now sets `template_id`. It was left null, so the first plan after an import failed with "template_id cannot be changed". A malformed import ID now returns a clear error
 - `stackguardian_workflow_template_revision`: `user_schedules[*].name` and `desc` are now Optional + Computed. Schedules created in the UI store `""` for both, so leaving them out of the configuration after an import planned a change to null on every run, and the update was rejected for published revisions ("Cannot update … UserSchedules … for a published template")

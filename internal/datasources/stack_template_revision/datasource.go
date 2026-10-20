@@ -3,6 +3,7 @@ package stacktemplaterevisiondatasource
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
@@ -572,7 +573,7 @@ func (d *stackTemplateRevisionDataSource) Schema(_ context.Context, _ datasource
 				Required:            true,
 			},
 			"parent_template_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the parent stack template to create the revision under.",
+				MarkdownDescription: "Parent stack template of the revision, as its bare `template_name` (e.g. `my-stack-template`): the part of `id` before the `:`.",
 				Computed:            true,
 			},
 			"template_id": schema.StringAttribute{
@@ -699,5 +700,19 @@ func (d *stackTemplateRevisionDataSource) Read(ctx context.Context, req datasour
 		return
 	}
 
+	// The API response does not name the parent template, and the resource only keeps
+	// parent_template_id from its configuration, so derive it from the revision id.
+	model.ParentTemplateId = types.StringValue(parentTemplateId(revisionID))
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+}
+
+// parentTemplateId returns the parent stack template name of a revision id given as
+// `<template-name>:<revision>`, also accepting the org-qualified `/<org>/<template-name>:<revision>`.
+func parentTemplateId(revisionID string) string {
+	name := revisionID[strings.LastIndex(revisionID, "/")+1:]
+	if i := strings.LastIndex(name, ":"); i >= 0 {
+		name = name[:i]
+	}
+	return name
 }

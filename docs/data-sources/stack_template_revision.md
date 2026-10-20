@@ -20,8 +20,9 @@ Reads a specific revision of a stack template, including its ordered workflows a
 - `id` is the revision you read, `<template-name>:<revision>` (e.g. `my-stack-template:1`).
 - `template_id` is that revision's ID qualified with its organization,
   `/<org>/<template-name>:<revision>` (e.g. `/my-org/my-stack-template:1`). It is not the
-  bare parent template name. To get the parent template name, take the part of `id` before the `:`,
-  for example `split(":", data.stackguardian_stack_template_revision.example.id)[0]`.
+  bare parent template name.
+- `parent_template_id` is the parent stack template name (e.g. `my-stack-template`), the part
+  of `id` before the `:`.
 
 ## Workflow sources
 
@@ -82,7 +83,7 @@ output "revision_notes" {
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
 	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)
 - `notes` (String) Release notes or changelog for this revision.
-- `parent_template_id` (String) ID of the parent stack template to create the revision under.
+- `parent_template_id` (String) Parent stack template of the revision, as its bare `template_name` (e.g. `my-stack-template`): the part of `id` before the `:`.
 - `source_config_kind` (String) What the stack contains. Use `MIXED` — a stack groups workflows built from different tools, and the tool used by each individual workflow is recorded on that workflow rather than here. The other values (`TERRAFORM`, `OPENTOFU`, `ANSIBLE_PLAYBOOK`, `HELM`, `KUBECTL`, `CLOUDFORMATION`, `CUSTOM`) belong on a `stackguardian_workflow_template`, which describes a single workflow.
 - `tags` (List of String) A list of tags associated with the stack template revision. A maximum of 10 tags are allowed.
 - `template_id` (String) The revision's `id` qualified with its owning organization, in the form `/<org>/<template-name>:<revision>` (e.g. `/my-org/my-stack-template:1`).
