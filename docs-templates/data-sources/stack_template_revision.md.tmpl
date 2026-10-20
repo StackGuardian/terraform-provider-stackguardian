@@ -16,8 +16,9 @@ description: |-
 - `id` is the revision you read, `<template-name>:<revision>` (e.g. `my-stack-template:1`).
 - `template_id` is that revision's ID qualified with its organization,
   `/<org>/<template-name>:<revision>` (e.g. `/my-org/my-stack-template:1`). It is not the
-  bare parent template name. To get the parent template name, take the part of `id` before the `:`,
-  for example `split(":", data.stackguardian_stack_template_revision.example.id)[0]`.
+  bare parent template name.
+- `parent_template_id` is the parent stack template name (e.g. `my-stack-template`), the part
+  of `id` before the `:`.
 
 ## Workflow sources
 
