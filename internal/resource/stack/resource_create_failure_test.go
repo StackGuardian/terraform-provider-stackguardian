@@ -117,3 +117,29 @@ func TestStack_ExistingStackNotTakenOver(t *testing.T) {
 		})
 	}
 }
+
+// A delete the platform refuses because a run is active explains why, and leaves the stack in
+// state so a later destroy can finish the job.
+func TestStack_DeleteRefusedWhileRunActiveExplainsWhy(t *testing.T) {
+	srv, api := newFakeStackAPI(t, createFailureRevision)
+	config := actionsConfig(srv.URL, "tpl:1", "", "first", "wf-a")
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
+		Steps: []resource.TestStep{
+			{Config: config},
+			{
+				PreConfig:   func() { api.set(func(f *fakeStackAPI) { f.failDelete = true }) },
+				Config:      config,
+				Destroy:     true,
+				ExpectError: regexp.MustCompile(`run\s+in\s+progress\s+or\s+queued`),
+			},
+			{
+				// Still tracked: once the run is over, the closing destroy succeeds.
+				PreConfig: func() { api.set(func(f *fakeStackAPI) { f.failDelete = false }) },
+				Config:    config,
+				Check:     resource.TestCheckResourceAttr("stackguardian_stack.test", "id", "override-removal"),
+			},
+		},
+	})
+}
