@@ -30,6 +30,9 @@ type fakeStackAPI struct {
 	stacks        map[string]map[string]any
 	patches       []map[string]any // every update body, in order
 	templateReads []string         // workflow template revision ids read, in order
+	// emptyCreateResponse answers a create with no stack in the body, as an API
+	// response the provider must survive.
+	emptyCreateResponse bool
 }
 
 // newFakeStackAPI serves one stack template revision, "tpl:1".
@@ -90,6 +93,10 @@ func (f *fakeStackAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		stackId, _ := body["Id"].(string)
 		f.stacks[stackId] = body
+		if f.emptyCreateResponse {
+			fmt.Fprint(w, `{"msg":"created"}`)
+			return
+		}
 		stored, _ := json.Marshal(body)
 		fmt.Fprintf(w, `{"msg":"created","data":{"stack":%s}}`, stored)
 	case http.MethodGet:

@@ -491,8 +491,12 @@ func (r *stackResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// Get the stack ID from create response (use SubResourceId as the primary identifier)
-	stackID := createResp.Data.Stack.Id
+	// The platform creates the stack under the configured id, so fall back to it
+	// when the response carries no stack rather than lose track of one that exists.
+	stackID := createResp.GetData().GetStack().GetId()
+	if stackID == "" {
+		stackID = plan.Id.ValueString()
+	}
 
 	// Call read to get the full state since create response may not return all values
 	readResp, err := r.client.Stacks.ReadStack(ctx, r.org_name, stackID, wfGrpId, &sgsdkgo.ReadStackQueryParams{RefreshWorkflowsConfig: sgsdkgo.Bool(true)})
@@ -501,7 +505,7 @@ func (r *stackResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	stackModel, diags := BuildAPIModelToStackModel(ctx, r.org_name, readResp.Msg, plan.WorkflowGroupId)
+	stackModel, diags := BuildAPIModelToStackModel(ctx, r.org_name, readResp.GetMsg(), plan.WorkflowGroupId)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -550,7 +554,7 @@ func (r *stackResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	stackModel, diags := BuildAPIModelToStackModel(ctx, r.org_name, readResp.Msg, state.WorkflowGroupId)
+	stackModel, diags := BuildAPIModelToStackModel(ctx, r.org_name, readResp.GetMsg(), state.WorkflowGroupId)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -629,7 +633,7 @@ func (r *stackResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	stackModel, diags := BuildAPIModelToStackModel(ctx, r.org_name, updatedStack.Msg, plan.WorkflowGroupId)
+	stackModel, diags := BuildAPIModelToStackModel(ctx, r.org_name, updatedStack.GetMsg(), plan.WorkflowGroupId)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

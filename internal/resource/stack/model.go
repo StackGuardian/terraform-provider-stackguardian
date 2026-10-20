@@ -764,7 +764,7 @@ func flattenWfStepsConfig(ctx context.Context, steps []*sgsdkgo.WfStepsConfig) (
 		inputDataObj := types.ObjectNull(WfStepInputDataModel{}.AttributeTypes())
 		if s.WfStepInputData != nil {
 			idm := WfStepInputDataModel{
-				SchemaType: flatteners.String(string(*s.WfStepInputData.SchemaType)),
+				SchemaType: flatteners.StringPtr((*string)(s.WfStepInputData.SchemaType)),
 				Data:       flatteners.JSONInterfaceToString(s.WfStepInputData.Data),
 			}
 			obj, diags := types.ObjectValueFrom(ctx, WfStepInputDataModel{}.AttributeTypes(), idm)
@@ -1213,7 +1213,7 @@ func flattenVcsConfig(ctx context.Context, vc *sgsdkgo.VcsConfig) (types.Object,
 		}
 		idM := VcsIacInputDataModel{
 			SchemaId:   flatteners.StringPtr(vc.IacInputData.SchemaId),
-			SchemaType: flatteners.String(string(*vc.IacInputData.SchemaType)),
+			SchemaType: flatteners.StringPtr((*string)(vc.IacInputData.SchemaType)),
 			Data:       dataStr,
 		}
 		obj, diags := types.ObjectValueFrom(ctx, VcsIacInputDataModel{}.AttributeTypes(), idM)
@@ -3544,6 +3544,10 @@ func runnerConstraintsByWorkflowUUID(ctx context.Context, workflowsConfig types.
 // ToAPIModel — so state stays bare, matching what the user types in config.
 func BuildAPIModelToStackModel(ctx context.Context, orgName string, apiResponse *sgsdkgo.StackData, workflowGroupId types.String) (*StackResourceModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
+	if apiResponse == nil {
+		diags.AddError("Error reading stack", "The StackGuardian API returned a response with no stack in it.")
+		return nil, diags
+	}
 
 	// Strip the owning-org prefix the API returns ("/<org>/<name>:<rev>") back
 	// to bare ("<name>:<rev>") — mirrors stack_template_revision's own

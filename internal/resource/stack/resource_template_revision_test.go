@@ -59,3 +59,18 @@ func TestStack_PinnedWorkflowTemplateRead(t *testing.T) {
 		}},
 	})
 }
+
+// A create response without the stack in it must not crash the provider: the stack exists
+// under the configured id, so it is read back by that id.
+func TestStack_CreateSurvivesResponseWithoutStack(t *testing.T) {
+	srv, api := newFakeStackAPI(t, `{"WorkflowsConfig": {"workflows": [{"id": "wf-a", "ResourceName": "wf-a-0"}]}}`)
+	api.emptyCreateResponse = true
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
+		Steps: []resource.TestStep{{
+			Config: actionsConfig(srv.URL, "tpl:1", "", "first", "wf-a"),
+			Check:  resource.TestCheckResourceAttr("stackguardian_stack.test", "id", "override-removal"),
+		}},
+	})
+}
