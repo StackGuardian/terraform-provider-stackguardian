@@ -39,6 +39,10 @@ revision, then that workflow's workflow template revision.
   workflow template revision.
 - **Declare an attribute** → **your value is used** and the template defaults for that attribute
   are ignored.
+- **Remove a declaration** → the next plan shows the attribute going back to the value it would
+  inherit (or to its default when no template sets it), and the apply sends it. This also works
+  for a single field inside `terraform_config` and for `vcs_config.iac_input_data`, and for the
+  stack-level `description`, `tags`, `context_tags` and `actions`.
 
 ## Upgrading a template revision
 
@@ -47,13 +51,61 @@ To upgrade, change the revision in `template_group_id` (e.g. `:1` → `:2`):
 - Attributes you **declared** are **preserved** (your values still win over the new revision).
 - Attributes you **left unset** adopt the **new revision's** defaults.
 
+## Referencing another workflow's outputs
+
+`vcs_config.iac_input_data.data` and `PLAIN_TEXT` environment variables can take another
+workflow's output, in the form a stack template uses:
+`${reference::template-group.<index>.outputs.<key>}`, where `<index>` is the workflow's position
+in `workflows_config.workflows` (starting at 0). The provider sends it as
+`${workflow::<workflow-group>.<stack>.<workflow-id>.outputs.<key>}`, on create and on update, and
+keeps the form you wrote in state. In HCL, double the `$` so Terraform does not read the value as
+its own interpolation:
+
+```terraform
+vcs_config = {
+  iac_input_data = {
+    schema_type = "RAW_JSON"
+    data        = jsonencode({ vpc_id = "$${reference::template-group.0.outputs.vpc_id}" })
+  }
+}
+```
+
+`data` must be a JSON object; a value that is not is rejected at plan time.
+
+## Destroying a stack
+
+Destroying a stack — including the replacement that changing `id` or `workflow_group_id` causes —
+deletes the stack and **all of its workflows** with their run history. It does **not** run the
+workflows' destroy action: cloud resources they deployed stay in your account, and StackGuardian no
+longer holds their Terraform state. Run the stack's destroy action first if those resources should
+go too. The plan shows a warning for every such deletion.
+
+StackGuardian refuses to delete a stack while one of its workflows has a run in progress or queued;
+the apply then fails and the stack stays in the state, so applying again once the runs are over
+finishes the job.
+
+## If creating a stack fails
+
+StackGuardian stores a stack before it creates the stack's workflows, and does not undo it when a
+workflow fails. When that happens, or when the stack is created but cannot be read back, the
+provider keeps the stack in the Terraform state as **tainted**: the next apply deletes it and
+creates it again, and `terraform untaint` keeps it as it is.
+
+Before creating, the provider checks that no stack exists under the configured `id`. If one does,
+the apply fails without touching it; import it to manage it from this configuration.
+
 ## Limitations
 
-- **Removing an attribute from config does not clear it.** Terraform cannot distinguish "this
-  attribute was deleted from config" from "this attribute was never set" — both look identical
-  at plan time. If an Optional+Computed attribute already has a value in state (set explicitly,
-  or inherited from a template), simply deleting its declaration leaves the old value in place
-  indefinitely, with no diff shown. To actually clear it, set it to an **explicit empty value** of
+- **Removing a declaration is detected from the last apply.** Terraform does not pass the
+  previous configuration to the provider, so the provider records which attributes your
+  configuration declared each time it applies. A stack that was imported, or last applied by an
+  older provider version, has no record yet: removing a declaration takes effect only after its
+  next apply.
+- **Some values cannot be cleared by removing them.** When no template sets `resource_name`,
+  `description`, `user_job_cpu`, `user_job_memory`, `terraform_config` or
+  `vcs_config.iac_input_data` on a workflow, StackGuardian keeps the workflow's current value, so
+  removing the declaration leaves it unchanged. The same holds for `actions` when the stack
+  template revision defines none. To clear a value explicitly, set it to an **empty value** of
   the right type: `""` for a string, `[]` for a list, `{}` for a map/object.
 
 ## Example Usage
@@ -344,7 +396,7 @@ Required:
 
 Optional:
 
-- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
 
 
 <a id="nestedatt--workflows_config--workflows--mini_steps--webhooks--cancelled"></a>
@@ -357,7 +409,7 @@ Required:
 
 Optional:
 
-- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
 
 
 <a id="nestedatt--workflows_config--workflows--mini_steps--webhooks--completed"></a>
@@ -370,7 +422,7 @@ Required:
 
 Optional:
 
-- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
 
 
 <a id="nestedatt--workflows_config--workflows--mini_steps--webhooks--drift_detected"></a>
@@ -383,7 +435,7 @@ Required:
 
 Optional:
 
-- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
 
 
 <a id="nestedatt--workflows_config--workflows--mini_steps--webhooks--errored"></a>
@@ -396,7 +448,7 @@ Required:
 
 Optional:
 
-- `webhook_secret` (String) Secret to be sent with API request to webhook url
+- `webhook_secret` (String, Sensitive) Secret to be sent with API request to webhook url
 
 
 
@@ -860,6 +912,7 @@ Required:
 
 Optional:
 
+- `default` (Boolean) Whether this is one of the stack template's default actions (`true`) or a custom one (`false`). When StackGuardian upgrades a stack, it replaces default actions with the new template's and keeps custom ones. Leave unset to keep the value StackGuardian holds.
 - `description` (String) Description of the action.
 - `order` (Attributes Map) Execution order for workflows in this action, keyed by each workflow's `id` (its UUID) as defined in the stack template revision's `workflows_config.workflows` — the same `id` declared in this stack's `workflows_config.workflows`. (see [below for nested schema](#nestedatt--actions--order))
 

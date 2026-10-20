@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/validators"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -332,6 +334,7 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 					"iac_template_id": schema.StringAttribute{
 						MarkdownDescription: constants.StackTemplateRevisionIacTemplateId,
 						Required:            true,
+						Validators:          []validator.String{validators.WarnUnpinnedTemplateRevision()},
 					},
 				},
 			},
@@ -543,6 +546,9 @@ var actionOrderAttrs = map[string]schema.Attribute{
 // Schema defines the schema for the resource.
 func (r *stackTemplateRevisionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		// Version 1: deployment_platform_config[*].config changed from a JSON string to an
+		// object. State written at version 0 is migrated by UpgradeState (upgrade_state.go).
+		Version:             1,
 		MarkdownDescription: "Manages a versioned revision of a `stackguardian_stack_template` — the ordered workflows, inputs and configuration a stack is actually created from.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

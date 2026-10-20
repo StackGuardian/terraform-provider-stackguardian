@@ -681,6 +681,68 @@ func setupSecondStackTemplateRevision(t *testing.T, stackTemplateID, workflowTem
 	return setupSecondStackTemplateRevisionWithFields(t, stackTemplateID, workflowTemplateID, description, numberOfApprovalsRequired, nil, nil, defaultSecondRevisionActions())
 }
 
+// setupSecondStackTemplateRevisionBare creates and publishes revision :2 of an
+// existing stack template whose workflow entry carries only its id and workflow
+// template — no ResourceName and no TerraformConfig, unlike revision :1. On the
+// upgrade those fields resolve to nothing from the stack template, which is the
+// case resolveUnsentWorkflowFields covers. Registers cleanup. Returns the bare
+// revision id ("<name>:2").
+func setupSecondStackTemplateRevisionBare(t *testing.T, stackTemplateID, workflowTemplateID string) string {
+	t.Helper()
+	client := getClient()
+	revisionID := fmt.Sprintf("%s:2", stackTemplateID)
+	sourceConfigKind := stacktemplates.StackTemplateSourceConfigKindTerraform
+
+	t.Cleanup(func() {
+		logCleanupErr(t, fmt.Sprintf("deprecate stack template revision %q", revisionID), deprecateStackTemplateRevisionFixture(revisionID))
+		logCleanupErr(t, fmt.Sprintf("delete stack template revision %q", revisionID), deleteStackTemplateRevisionFixture(revisionID))
+	})
+
+	prefixedWorkflowTemplateID := fmt.Sprintf("/%s/%s", org, workflowTemplateID)
+	prefixedWorkflowRevisionID := fmt.Sprintf("/%s/%s:1", org, workflowTemplateID)
+	useMarketplace := true
+
+	_, err := client.StackTemplateRevisions.CreateStackTemplateRevision(
+		context.TODO(), org, stackTemplateID,
+		&stacktemplaterevisions.CreateStackTemplateRevisionRequest{
+			Alias:            "v2",
+			SourceConfigKind: &sourceConfigKind,
+			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			WorkflowsConfig: &stacktemplaterevisions.StackTemplateRevisionWorkflowsConfig{
+				Workflows: []*stacktemplaterevisions.StackTemplateRevisionWorkflow{
+					{
+						Id:         sgsdkgo.String(testWorkflowUUID),
+						TemplateId: &prefixedWorkflowTemplateID,
+						VcsConfig: &sgsdkgo.VcsConfig{
+							IacVcsConfig: &sgsdkgo.IacvcsConfig{
+								UseMarketplaceTemplate: &useMarketplace,
+								IacTemplateId:          &prefixedWorkflowRevisionID,
+							},
+						},
+					},
+				},
+			},
+			Actions: defaultSecondRevisionActions(),
+		},
+	)
+	if err != nil && !is409(err) {
+		t.Fatalf("setupSecondStackTemplateRevisionBare: create revision for %q: %s", stackTemplateID, err)
+	}
+
+	_, err = client.StackTemplateRevisions.UpdateStackTemplateRevision(
+		context.TODO(), org, revisionID,
+		&stacktemplaterevisions.UpdateStackTemplateRevisionRequest{
+			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
+		},
+	)
+	if err != nil {
+		t.Fatalf("setupSecondStackTemplateRevisionBare: publish revision %q: %s", revisionID, err)
+	}
+
+	return revisionID
+}
+
 // setupSecondStackTemplateRevisionTwoWorkflows creates and publishes revision :2
 // of an existing stack template (already created by setupStackTemplateChain /
 // setupStackDependencyChain, whose revision :1 wires only testWorkflowUUID),
@@ -878,6 +940,7 @@ func defaultSecondRevisionActions() map[string]*sgsdkgo.Actions {
 // TestAccStack_Basic covers Create/Read/Update of a stack whose dependency
 // chain is set up via SDK fixtures. Step 2 updates the stack only.
 func TestAccStack_Basic(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-basic-wfgrp"
 	wfTemplateName := "tf-provider-stack-basic-wftmpl"
 	stackTemplateName := "tf-provider-stack-basic-stmpl"
@@ -932,6 +995,7 @@ func TestAccStack_Basic(t *testing.T) {
 // TestAccStack_Import covers importing a stack via "workflow_group_id/id"
 // and verifies the imported state matches what was just applied.
 func TestAccStack_Import(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-import-wfgrp"
 	wfTemplateName := "tf-provider-stack-import-wftmpl"
 	stackTemplateName := "tf-provider-stack-import-stmpl"
@@ -964,6 +1028,7 @@ func TestAccStack_Import(t *testing.T) {
 // other way to apply a change) rather than an in-place update, and that the
 // new id is correctly applied afterward.
 func TestAccStack_IdRequiresReplace(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-idreplace-wfgrp"
 	wfTemplateName := "tf-provider-stack-idreplace-wftmpl"
 	stackTemplateName := "tf-provider-stack-idreplace-stmpl"
@@ -999,6 +1064,7 @@ func TestAccStack_IdRequiresReplace(t *testing.T) {
 // instead of erroring, leaving a non-empty plan (a pending create) since the
 // config still declares the resource.
 func TestAccStack_ReadRemovesOnNotFound(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-read404-wfgrp"
 	wfTemplateName := "tf-provider-stack-read404-wftmpl"
 	stackTemplateName := "tf-provider-stack-read404-stmpl"
@@ -1031,10 +1097,11 @@ func TestAccStack_ReadRemovesOnNotFound(t *testing.T) {
 
 // TestAccStack_DeleteAlreadyGone verifies that deleting a stack that's
 // already gone (API 404) is treated as a successful delete instead of
-// erroring (isStackNotFound in resource.go), by deleting it out-of-band and
+// erroring (isNotFound in resource.go), by deleting it out-of-band and
 // then dropping it from Terraform config entirely so a real Delete() call is
 // issued against an already-gone stack.
 func TestAccStack_DeleteAlreadyGone(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-del404-wfgrp"
 	wfTemplateName := "tf-provider-stack-del404-wftmpl"
 	stackTemplateName := "tf-provider-stack-del404-stmpl"
@@ -1072,7 +1139,7 @@ func TestAccStack_DeleteAlreadyGone(t *testing.T) {
 // resource_attributes_stack_upgrade_test.go / resource_workflows_test.go:
 //   - id RequiresReplace; template_group_id round trip + re-resolution on
 //     revision change; Read removes state on 404; Delete treats 404 as
-//     success (resource.go's isStackNotFound, added alongside its test —
+//     success (resource.go's isNotFound, added alongside its test —
 //     all four above, in this file).
 //   - workflows_config.workflows[]: minimal entry + Optional+Computed guard
 //     regression; invalid wf_type/parallel_execution diagnostics;

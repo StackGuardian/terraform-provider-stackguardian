@@ -212,6 +212,7 @@ func setupStackPrerequisites(t *testing.T, wfGrpName, wfTemplateName, stackTempl
 // attributes, reads it back through the data source, and checks every attribute the data source
 // returns against the value the stack was created with.
 func TestAccStackDataSource_Basic(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := acctest.ResourceName("ds-stack-wfgrp")
 	wfTemplateName := acctest.ResourceName("ds-stack-wftmpl")
 	stackTemplateName := acctest.ResourceName("ds-stack-stmpl")
@@ -391,6 +392,7 @@ data "stackguardian_stack" "test" {
 // TestAccStackDataSource_NotFound verifies that looking up a stack that doesn't exist fails
 // instead of returning an empty result.
 func TestAccStackDataSource_NotFound(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := acctest.ResourceName("ds-stack-missing-wfgrp")
 	client := getClient()
 

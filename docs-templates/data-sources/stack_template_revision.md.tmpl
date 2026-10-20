@@ -11,6 +11,42 @@ description: |-
 
 {{ .Description | trimspace }}
 
+## Identifiers
+
+- `id` is the revision you read, `<template-name>:<revision>` (e.g. `my-stack-template:1`).
+- `template_id` is that revision's ID qualified with its organization,
+  `/<org>/<template-name>:<revision>` (e.g. `/my-org/my-stack-template:1`). It is not the
+  bare parent template name.
+- `parent_template_id` is the parent stack template name (e.g. `my-stack-template`), the part
+  of `id` before the `:`.
+
+## Workflow sources
+
+Every workflow in `workflows_config.workflows` is created from a workflow template, named in
+`vcs_config.iac_vcs_config.iac_template_id`. StackGuardian can only create a stack from a
+workflow that references a workflow template, so the data source has no `custom_source` (a git
+repository as the workflow's source) and no `use_marketplace_template` flag, which would always
+be `true`. Both were removed in 1.13.0, together with `custom_source.config` and its `repo`, `ref`,
+`auth`, `working_dir`, `is_private`, `include_sub_module`, `git_core_auto_crlf` and
+`git_sparse_checkout_config`.
+
+## Deployment platform configuration
+
+`deployment_platform_config[*].config`, on workflows and in `actions[*].order[*].parameters`,
+is an object with `integration_id` and `profile_name`. Before 1.13.0 it was a JSON string, so
+read the attributes directly instead of decoding them:
+
+```terraform
+data "stackguardian_stack_template_revision" "example" {
+  id = "my-stack-template:1"
+}
+
+locals {
+  # Before 1.13.0: jsondecode(...config).integrationId
+  first_workflow_integration = data.stackguardian_stack_template_revision.example.workflows_config.workflows[0].deployment_platform_config[0].config.integration_id
+}
+```
+
 ## Example Usage
 
 {{tffile "docs-examples/datasources/stack_template_revision/datasource.tf"}}

@@ -15,6 +15,42 @@ description: |-
 
 Reads a specific revision of a stack template, including its ordered workflows and their configuration.
 
+## Identifiers
+
+- `id` is the revision you read, `<template-name>:<revision>` (e.g. `my-stack-template:1`).
+- `template_id` is that revision's ID qualified with its organization,
+  `/<org>/<template-name>:<revision>` (e.g. `/my-org/my-stack-template:1`). It is not the
+  bare parent template name.
+- `parent_template_id` is the parent stack template name (e.g. `my-stack-template`), the part
+  of `id` before the `:`.
+
+## Workflow sources
+
+Every workflow in `workflows_config.workflows` is created from a workflow template, named in
+`vcs_config.iac_vcs_config.iac_template_id`. StackGuardian can only create a stack from a
+workflow that references a workflow template, so the data source has no `custom_source` (a git
+repository as the workflow's source) and no `use_marketplace_template` flag, which would always
+be `true`. Both were removed in 1.13.0, together with `custom_source.config` and its `repo`, `ref`,
+`auth`, `working_dir`, `is_private`, `include_sub_module`, `git_core_auto_crlf` and
+`git_sparse_checkout_config`.
+
+## Deployment platform configuration
+
+`deployment_platform_config[*].config`, on workflows and in `actions[*].order[*].parameters`,
+is an object with `integration_id` and `profile_name`. Before 1.13.0 it was a JSON string, so
+read the attributes directly instead of decoding them:
+
+```terraform
+data "stackguardian_stack_template_revision" "example" {
+  id = "my-stack-template:1"
+}
+
+locals {
+  # Before 1.13.0: jsondecode(...config).integrationId
+  first_workflow_integration = data.stackguardian_stack_template_revision.example.workflows_config.workflows[0].deployment_platform_config[0].config.integration_id
+}
+```
+
 ## Example Usage
 
 ```terraform
@@ -47,7 +83,7 @@ output "revision_notes" {
 	<span style="background-color: #eff0f0; color: #e53835;">0</span> (false),
 	<span style="background-color: #eff0f0; color: #e53835;">1</span> (true)
 - `notes` (String) Release notes or changelog for this revision.
-- `parent_template_id` (String) ID of the parent stack template to create the revision under.
+- `parent_template_id` (String) Parent stack template of the revision, as its bare `template_name` (e.g. `my-stack-template`): the part of `id` before the `:`.
 - `source_config_kind` (String) What the stack contains. Use `MIXED` — a stack groups workflows built from different tools, and the tool used by each individual workflow is recorded on that workflow rather than here. The other values (`TERRAFORM`, `OPENTOFU`, `ANSIBLE_PLAYBOOK`, `HELM`, `KUBECTL`, `CLOUDFORMATION`, `CUSTOM`) belong on a `stackguardian_workflow_template`, which describes a single workflow.
 - `tags` (List of String) A list of tags associated with the stack template revision. A maximum of 10 tags are allowed.
 - `template_id` (String) The revision's `id` qualified with its owning organization, in the form `/<org>/<template-name>:<revision>` (e.g. `/my-org/my-stack-template:1`).
@@ -740,7 +776,7 @@ Read-Only:
 
 Read-Only:
 
-- `iac_template_id` (String) Workflow template this stack workflow is created from, as the bare `template_name` of a template in your own organization (e.g. `my-workflow-template`). The provider qualifies it with your organization, so do not give the `/<org>/…` form.
+- `iac_template_id` (String) Workflow template revision this stack workflow is created from, as `<template-name>:<revision>` of a template in your own organization (e.g. `my-workflow-template:1`, or `my-workflow-template:latest` for the newest revision). The provider qualifies it with your organization, so do not give the `/<org>/…` form. A template name without a revision is accepted with a warning, but StackGuardian then uses the template itself, which holds none of a revision's content: stacks created from this revision get no inputs, Terraform settings or other defaults from it.
 
 
 

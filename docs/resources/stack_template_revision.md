@@ -57,7 +57,7 @@ resource "stackguardian_stack_template_revision" "basic" {
 
         vcs_config = {
           iac_vcs_config = {
-            iac_template_id = "my-workflow-template"
+            iac_template_id = "my-workflow-template:1"
           }
         }
 
@@ -86,7 +86,7 @@ resource "stackguardian_stack_template_revision" "with_vcs" {
 
         vcs_config = {
           iac_vcs_config = {
-            iac_template_id = "my-workflow-template"
+            iac_template_id = "my-workflow-template:1"
           }
           iac_input_data = {
             schema_type = "RAW_JSON"
@@ -350,7 +350,7 @@ Optional:
 
 Required:
 
-- `iac_template_id` (String) Workflow template this stack workflow is created from, as the bare `template_name` of a template in your own organization (e.g. `my-workflow-template`). The provider qualifies it with your organization, so do not give the `/<org>/…` form.
+- `iac_template_id` (String) Workflow template revision this stack workflow is created from, as `<template-name>:<revision>` of a template in your own organization (e.g. `my-workflow-template:1`, or `my-workflow-template:latest` for the newest revision). The provider qualifies it with your organization, so do not give the `/<org>/…` form. A template name without a revision is accepted with a warning, but StackGuardian then uses the template itself, which holds none of a revision's content: stacks created from this revision get no inputs, Terraform settings or other defaults from it.
 
 
 <a id="nestedatt--workflows_config--workflows--vcs_config--iac_input_data"></a>

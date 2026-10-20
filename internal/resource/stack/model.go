@@ -2,8 +2,11 @@ package stack
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
@@ -13,6 +16,7 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/flatteners"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
@@ -539,6 +543,7 @@ func (ActionOrderModel) AttributeTypes() map[string]attr.Type {
 type ActionsModel struct {
 	Name        types.String `tfsdk:"name"`
 	Description types.String `tfsdk:"description"`
+	Default     types.Bool   `tfsdk:"default"`
 	Order       types.Map    `tfsdk:"order"`
 }
 
@@ -546,6 +551,7 @@ func (ActionsModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"name":        types.StringType,
 		"description": types.StringType,
+		"default":     types.BoolType,
 		"order":       types.MapType{ElemType: types.ObjectType{AttrTypes: ActionOrderModel{}.AttributeTypes()}},
 	}
 }
@@ -700,14 +706,26 @@ func expandWfStepsConfig(ctx context.Context, list types.List) ([]*sgsdkgo.WfSte
 			if err != nil {
 				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid schema type", "Value '"+idm.SchemaType.ValueString()+"' is not a valid schema type")}
 			}
+			data, err := expanders.JSONStringToMapStrict(idm.Data.ValueString())
+			if err != nil {
+				return nil, diag.Diagnostics{invalidJSONDiagnostic("wf_step_input_data.data", err)}
+			}
 			step.WfStepInputData = &sgsdkgo.WfStepInputData{
 				SchemaType: &schemaType,
-				Data:       expanders.JSONStringToMap(idm.Data.ValueString()),
+				Data:       data,
 			}
 		}
 		result[i] = step
 	}
 	return result, nil
+}
+
+// invalidJSONDiagnostic reports a JSON-string attribute that does not hold a
+// JSON object. The schema validator catches this at plan time; this covers a
+// value that was still unknown then.
+func invalidJSONDiagnostic(attribute string, err error) diag.Diagnostic {
+	return diag.NewErrorDiagnostic("Invalid JSON object",
+		fmt.Sprintf("%s must be a JSON object, for example jsonencode({ key = \"value\" }): %s", attribute, err))
 }
 
 // envVarSlice converts a []*sgsdkgo.EnvVars (as produced by expandEnvironmentVariables)
@@ -746,7 +764,7 @@ func flattenWfStepsConfig(ctx context.Context, steps []*sgsdkgo.WfStepsConfig) (
 		inputDataObj := types.ObjectNull(WfStepInputDataModel{}.AttributeTypes())
 		if s.WfStepInputData != nil {
 			idm := WfStepInputDataModel{
-				SchemaType: flatteners.String(string(*s.WfStepInputData.SchemaType)),
+				SchemaType: flatteners.StringPtr((*string)(s.WfStepInputData.SchemaType)),
 				Data:       flatteners.JSONInterfaceToString(s.WfStepInputData.Data),
 			}
 			obj, diags := types.ObjectValueFrom(ctx, WfStepInputDataModel{}.AttributeTypes(), idm)
@@ -1154,7 +1172,11 @@ func expandVcsConfig(ctx context.Context, obj types.Object) (*sgsdkgo.VcsConfig,
 			SchemaId:   idModel.SchemaId.ValueStringPointer(),
 			SchemaType: &schemaType,
 		}
-		if dataMap := expanders.JSONStringToMap(idModel.Data.ValueString()); dataMap != nil {
+		dataMap, err := expanders.JSONStringToMapStrict(idModel.Data.ValueString())
+		if err != nil {
+			return nil, diag.Diagnostics{invalidJSONDiagnostic("vcs_config.iac_input_data.data", err)}
+		}
+		if dataMap != nil {
 			vcsConfig.IacInputData.Data = &dataMap
 		}
 	}
@@ -1191,7 +1213,7 @@ func flattenVcsConfig(ctx context.Context, vc *sgsdkgo.VcsConfig) (types.Object,
 		}
 		idM := VcsIacInputDataModel{
 			SchemaId:   flatteners.StringPtr(vc.IacInputData.SchemaId),
-			SchemaType: flatteners.String(string(*vc.IacInputData.SchemaType)),
+			SchemaType: flatteners.StringPtr((*string)(vc.IacInputData.SchemaType)),
 			Data:       dataStr,
 		}
 		obj, diags := types.ObjectValueFrom(ctx, VcsIacInputDataModel{}.AttributeTypes(), idM)
@@ -1365,10 +1387,18 @@ func expandWfChaining(ctx context.Context, list types.List) ([]*sgsdkgo.MiniStep
 			StackId:         m.StackId.ValueStringPointer(),
 		}
 		if !m.WorkflowRunPayload.IsNull() && !m.WorkflowRunPayload.IsUnknown() {
-			ms.WorkflowRunPayload = expanders.JSONStringToMap(m.WorkflowRunPayload.ValueString())
+			payload, err := expanders.JSONStringToMapStrict(m.WorkflowRunPayload.ValueString())
+			if err != nil {
+				return nil, diag.Diagnostics{invalidJSONDiagnostic("wf_chaining.workflow_run_payload", err)}
+			}
+			ms.WorkflowRunPayload = payload
 		}
 		if !m.StackRunPayload.IsNull() && !m.StackRunPayload.IsUnknown() {
-			ms.StackRunPayload = expanders.JSONStringToMap(m.StackRunPayload.ValueString())
+			payload, err := expanders.JSONStringToMapStrict(m.StackRunPayload.ValueString())
+			if err != nil {
+				return nil, diag.Diagnostics{invalidJSONDiagnostic("wf_chaining.stack_run_payload", err)}
+			}
+			ms.StackRunPayload = payload
 		}
 		result[i] = ms
 	}
@@ -2081,7 +2111,9 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 			}
 			wf.Tags = tags
 		}
-		if !wm.WfType.IsNull() && !wm.WfType.IsUnknown() {
+		// "" is what flattenWorkflowsConfig stores when the platform returns no
+		// WfType; treat it as unset rather than as an invalid enum value.
+		if isNonEmpty(wm.WfType) {
 			wfType, err := sgsdkgo.NewWfTypeEnumFromString(wm.WfType.ValueString())
 			if err != nil {
 				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid wf_type", "Value '"+wm.WfType.ValueString()+"' is not a valid workflow type")}
@@ -2329,9 +2361,11 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 // Actions converters
 // ---------------------------------------------------------------------------
 
-// expandSingleActionsMap converts a Terraform actions map to API format,
-// stamping isDefault onto every action's Default field.
-func expandSingleActionsMap(ctx context.Context, actions types.Map, isDefault bool) (map[string]*sgsdkgo.Actions, diag.Diagnostics) {
+// expandSingleActionsMap converts a Terraform actions map to API format. Each
+// action's default flag is sent only when known: the platform keeps a default
+// (template) action in sync with the template on an upgrade and leaves a custom
+// one alone, so the flag must never be overwritten with a guess.
+func expandSingleActionsMap(ctx context.Context, actions types.Map) (map[string]*sgsdkgo.Actions, diag.Diagnostics) {
 	if actions.IsNull() || actions.IsUnknown() {
 		return nil, nil
 	}
@@ -2343,11 +2377,12 @@ func expandSingleActionsMap(ctx context.Context, actions types.Map, isDefault bo
 
 	result := make(map[string]*sgsdkgo.Actions, len(models))
 	for k, am := range models {
-		def := isDefault
 		action := &sgsdkgo.Actions{
 			Name:        am.Name.ValueString(),
 			Description: am.Description.ValueStringPointer(),
-			Default:     &def,
+		}
+		if isSetBool(am.Default) {
+			action.Default = am.Default.ValueBoolPointer()
 		}
 
 		if !am.Order.IsNull() && !am.Order.IsUnknown() {
@@ -2462,7 +2497,7 @@ func expandSingleActionsMap(ctx context.Context, actions types.Map, isDefault bo
 // Create-time default.
 func expandActionsMap(ctx context.Context, actions types.Map, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel) (map[string]*sgsdkgo.Actions, diag.Diagnostics) {
 	if !actions.IsNull() && !actions.IsUnknown() {
-		return expandSingleActionsMap(ctx, actions, false)
+		return expandSingleActionsMap(ctx, actions)
 	}
 	if tpl != nil && len(tpl.Actions) > 0 {
 		return tpl.Actions, nil
@@ -2640,7 +2675,9 @@ func flattenActionsMap(ctx context.Context, actions map[string]*sgsdkgo.Actions)
 		am := ActionsModel{
 			Name:        flatteners.String(a.Name),
 			Description: flatteners.StringPtr(a.Description),
-			Order:       orderObj,
+			// Absent means custom, as the platform reads it.
+			Default: flatteners.BoolPtrDefault(a.Default),
+			Order:   orderObj,
 		}
 		obj, d := types.ObjectValueFrom(ctx, ActionsModel{}.AttributeTypes(), am)
 		if d.HasError() {
@@ -2804,6 +2841,7 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context, orgName string, tpl
 		if diags.HasError() {
 			return nil, diags
 		}
+		resolveRequestReferences(stackReferencesForRequest(m, wfc), wfc)
 		apiModel.WorkflowsConfig = wfc
 	}
 
@@ -2837,7 +2875,12 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context, orgName string, tpl
 // fields). Clearing one of these fields requires sending an explicit empty
 // value ("", [], {}), which is a known non-null plan value and already takes
 // the first branch below.
-func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName string, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) (*sgsdkgo.PatchedStack, diag.Diagnostics) {
+//
+// actions is the exception: it is sent only when sendActions is true (see
+// actionsToSend). Otherwise the planned value is just the state's copy of what
+// the platform holds, and re-sending it would overwrite the platform's actions
+// with a stale copy.
+func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName string, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel, sendActions bool) (*sgsdkgo.PatchedStack, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	apiModel := &sgsdkgo.PatchedStack{}
 
@@ -2872,17 +2915,18 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 		apiModel.TemplateGroupId = sgsdkgo.Optional(fmt.Sprintf("/%s/%s", orgName, m.TemplateGroupId.ValueString()))
 	}
 
-	// actions: the user's own declared value always wins; otherwise falls
-	// back to the template's own value verbatim; otherwise omitted so the
-	// API's already-established value (from Create, or from a prior Update)
-	// is left untouched. See expandActionsMap.
-	actions, actionDiags := expandActionsMap(ctx, m.Actions, tpl)
-	diags.Append(actionDiags...)
-	if diags.HasError() {
-		return nil, diags
-	}
-	if actions != nil {
-		apiModel.Actions = sgsdkgo.Optional(actions)
+	// actions: when sent, the planned value — the configured actions, or the
+	// new revision's as re-resolved by ModifyPlan. Otherwise omitted, so the
+	// platform keeps its own.
+	if sendActions {
+		actions, actionDiags := expandActionsMap(ctx, m.Actions, tpl)
+		diags.Append(actionDiags...)
+		if diags.HasError() {
+			return nil, diags
+		}
+		if actions != nil {
+			apiModel.Actions = sgsdkgo.Optional(actions)
+		}
 	}
 
 	// workflows_config resolves per-slot from up to three layers — see
@@ -2907,6 +2951,7 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 		// — this guard is kept anyway since *wfc below would otherwise panic
 		// if that invariant were ever broken by a future change.
 		if wfc != nil {
+			resolveRequestReferences(stackReferencesForRequest(m, wfc), wfc)
 			apiModel.WorkflowsConfig = sgsdkgo.Optional(*wfc)
 			sync := true
 			apiModel.UpdateWorkflowsFromConfig = &sync
@@ -2928,19 +2973,31 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 	return apiModel, diags
 }
 
-// validateActionsAgainstRevision errors when a user-declared actions entry's
-// order key or dependency id references a workflow slot that no longer
-// exists on the new stack template revision tpl. actions left unset in
-// config gets rebuilt from tpl's own workflow list automatically (see
-// reResolveOnRevisionChange), but a value the user explicitly declared can't
-// be silently rewritten — a dangling reference must be caught here rather
-// than surfacing as an opaque API error. Ids also present in the stack's own
-// workflows_config.workflows are exempt: those are user-declared slots that
-// may have no template backing at all. actions is expected to be the CONFIG
-// value (not plan) — the check only applies when the user actually declared
-// it for this apply.
-func validateActionsAgainstRevision(ctx context.Context, actions types.Map, workflowsConfig types.Object, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel) diag.Diagnostics {
+// actionsToSend reports whether an update must send actions: when the config
+// declares them, or when ModifyPlan planned a value different from state (a
+// revision change, or a removed declaration, re-resolved them from the
+// template). Otherwise the planned value is only state's copy of what the
+// platform holds, and sending it would overwrite the platform's own actions.
+func actionsToSend(configActions, planActions, stateActions types.Map) bool {
+	return !configActions.IsNull() || !planActions.Equal(stateActions)
+}
+
+// validateActionsAgainstRevision errors when an actions entry's order key or
+// dependency id references a workflow slot that no longer exists on the new
+// stack template revision tpl, so the dangling reference is caught at plan
+// time rather than surfacing as an opaque API error. Ids also present in the
+// stack's own workflows_config.workflows are exempt.
+//
+// It checks either the actions the config declares (inherited false) — the
+// provider cannot rewrite those — or, when the config declares none and the
+// new revision defines no actions to replace them, the stack's current actions
+// (inherited true), which would otherwise be kept and rejected by the platform.
+func validateActionsAgainstRevision(ctx context.Context, actions types.Map, workflowsConfig types.Object, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, inherited bool) diag.Diagnostics {
 	var diags diag.Diagnostics
+	hint := "Update actions to remove it before changing template_group_id."
+	if inherited {
+		hint = "actions is not in your configuration: these are the stack's current actions, and the new revision defines none to replace them. Declare actions for the new revision's workflows."
+	}
 	if actions.IsNull() || actions.IsUnknown() {
 		return diags
 	}
@@ -2967,7 +3024,7 @@ func validateActionsAgainstRevision(ctx context.Context, actions types.Map, work
 		}
 	}
 
-	declared, d := expandSingleActionsMap(ctx, actions, false)
+	declared, d := expandSingleActionsMap(ctx, actions)
 	diags.Append(d...)
 	if diags.HasError() {
 		return diags
@@ -2980,7 +3037,7 @@ func validateActionsAgainstRevision(ctx context.Context, actions types.Map, work
 			if !valid[orderKey] {
 				diags.AddError(
 					"actions references a removed workflow",
-					fmt.Sprintf("actions[%q].order references workflow %q, which no longer exists on the new stack template revision. Update actions to remove it before changing template_group_id.", actionKey, orderKey),
+					fmt.Sprintf("actions[%q].order references workflow %q, which no longer exists on the new stack template revision. %s", actionKey, orderKey, hint),
 				)
 			}
 			if ao == nil {
@@ -2990,7 +3047,7 @@ func validateActionsAgainstRevision(ctx context.Context, actions types.Map, work
 				if dep != nil && !valid[dep.Id] {
 					diags.AddError(
 						"actions references a removed workflow",
-						fmt.Sprintf("actions[%q].order[%q].dependencies references workflow %q, which no longer exists on the new stack template revision. Update actions to remove it before changing template_group_id.", actionKey, orderKey, dep.Id),
+						fmt.Sprintf("actions[%q].order[%q].dependencies references workflow %q, which no longer exists on the new stack template revision. %s", actionKey, orderKey, dep.Id, hint),
 					)
 				}
 			}
@@ -3001,9 +3058,10 @@ func validateActionsAgainstRevision(ctx context.Context, actions types.Map, work
 
 // validateWorkflowsConfigMatchesRevision errors unless workflows_config.workflows
 // declares exactly the workflow slots the referenced stack template revision
-// defines, in the same order. Called from ModifyPlan on every Create/Update,
-// not just a revision change, so no apply can ever leave workflows_config out
-// of sync with the revision it's pinned to.
+// defines, in the same order. ModifyPlan calls it at plan time (on create, on a
+// revision change, and when the declared ids change), and Create/Update call it
+// again at apply for the cases the plan could not check, so no apply can leave
+// workflows_config out of sync with the revision it's pinned to.
 //
 // Why this needs to be enforced at all, rather than left to the old
 // Optional+Computed "inherit whatever the template has" behavior:
@@ -3185,7 +3243,11 @@ func reResolveOnRevisionChange(ctx context.Context, plan *StackResourceModel, co
 // (mirrors workflow_from_template's identical fix for this identical field,
 // model.go:2616-2634 there — confirmed live: an unset runner_constraints
 // resolves to {type: "shared"}, not to nothing).
-func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackResourceModel, config StackResourceModel, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) diag.Diagnostics {
+//
+// Fields the merge leaves null are a second exception, see
+// resolveUnsentWorkflowFields: prior is the stack's current state, used to
+// predict what the platform keeps for workflows that already exist.
+func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackResourceModel, config StackResourceModel, prior types.Object, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	if config.WorkflowsConfig.IsNull() || config.WorkflowsConfig.IsUnknown() {
@@ -3226,9 +3288,209 @@ func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackRe
 		return diags
 	}
 
+	wfcObj, d = resolveUnsentWorkflowFields(wfcObj, prior)
+	diags.Append(d...)
+	if diags.HasError() {
+		return diags
+	}
+
 	plan.WorkflowsConfig = wfcObj
 
 	return diags
+}
+
+// unsentWhenNullWorkflowFields are the per-workflow attributes that flatten to
+// null when no layer (config, stack template, workflow template) resolves them.
+// A null plan value is not sent on apply, so the platform decides the result:
+// update_wf keeps an existing workflow's current value, and create_wf fills a
+// new workflow's from its own template defaults. Every other per-workflow
+// attribute flattens to a known default ("", [], {}, 0, "disabled") that apply
+// sends explicitly, so its prediction already holds.
+var unsentWhenNullWorkflowFields = []string{
+	"resource_name",
+	"description",
+	"user_job_cpu",
+	"user_job_memory",
+	"terraform_config",
+}
+
+// resolveUnsentWorkflowFields fixes the plan for the per-workflow values the
+// provider cannot predict from the templates, so a revision change does not end
+// in "Provider produced inconsistent result after apply":
+//
+//   - A workflow already in the stack (present in prior) gets its prior value for
+//     each field in unsentWhenNullWorkflowFields and for vcs_config.iac_input_data
+//     when they resolve to null. That is what the platform keeps, and because the
+//     plan value is then known it is sent on apply, which also stops a VCSConfig
+//     update from dropping the workflow's inputs. workflow_id and wf_type always
+//     keep their prior value: the platform ignores WorkflowId and strips WfType
+//     when updating an existing workflow.
+//   - A workflow the new revision adds gets unknown for those fields instead of a
+//     guessed null. Its workflow_id stays as computed: the platform creates the
+//     workflow with the id the provider sends.
+func resolveUnsentWorkflowFields(wfc types.Object, prior types.Object) (types.Object, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if wfc.IsNull() || wfc.IsUnknown() {
+		return wfc, diags
+	}
+	workflows, ok := wfc.Attributes()["workflows"].(types.List)
+	if !ok || workflows.IsNull() || workflows.IsUnknown() {
+		return wfc, diags
+	}
+
+	priorById := workflowObjectsById(prior)
+	wfAttrTypes := WorkflowInStackModel{}.AttributeTypes()
+
+	elements := make([]attr.Value, 0, len(workflows.Elements()))
+	for _, elem := range workflows.Elements() {
+		obj, ok := elem.(types.Object)
+		if !ok || obj.IsNull() || obj.IsUnknown() {
+			elements = append(elements, elem)
+			continue
+		}
+		attrs := make(map[string]attr.Value, len(obj.Attributes()))
+		for k, v := range obj.Attributes() {
+			attrs[k] = v
+		}
+
+		id, _ := attrs["id"].(types.String)
+		priorObj, existing := priorById[id.ValueString()]
+		if existing {
+			priorAttrs := priorObj.Attributes()
+			for _, name := range []string{"workflow_id", "wf_type"} {
+				if v, ok := priorAttrs[name].(types.String); ok && !v.IsNull() && !v.IsUnknown() && v.ValueString() != "" {
+					attrs[name] = v
+				}
+			}
+			for _, name := range unsentWhenNullWorkflowFields {
+				if attrs[name].IsNull() {
+					attrs[name] = priorAttrs[name]
+				}
+			}
+		} else {
+			for _, name := range unsentWhenNullWorkflowFields {
+				if attrs[name].IsNull() {
+					attrs[name] = newUnknownValue(wfAttrTypes[name])
+				}
+			}
+			if v, ok := attrs["wf_type"].(types.String); ok && v.ValueString() == "" {
+				attrs["wf_type"] = types.StringUnknown()
+			}
+		}
+
+		vcs, d := resolveUnsentIacInputData(attrs["vcs_config"], priorObj, existing)
+		diags.Append(d...)
+		if diags.HasError() {
+			return wfc, diags
+		}
+		attrs["vcs_config"] = vcs
+
+		newObj, d := types.ObjectValue(wfAttrTypes, attrs)
+		diags.Append(d...)
+		if diags.HasError() {
+			return wfc, diags
+		}
+		elements = append(elements, newObj)
+	}
+
+	newList, d := types.ListValue(types.ObjectType{AttrTypes: wfAttrTypes}, elements)
+	diags.Append(d...)
+	if diags.HasError() {
+		return wfc, diags
+	}
+	result, d := types.ObjectValue(WorkflowsConfigModel{}.AttributeTypes(), map[string]attr.Value{"workflows": newList})
+	diags.Append(d...)
+	if diags.HasError() {
+		return wfc, diags
+	}
+	return result, diags
+}
+
+// resolveUnsentIacInputData applies resolveUnsentWorkflowFields' rule to
+// vcs_config.iac_input_data, which sits one level down: the provider never merges
+// it from a template layer, so it is null whenever the config leaves it unset.
+func resolveUnsentIacInputData(vcs attr.Value, priorWorkflow types.Object, existing bool) (attr.Value, diag.Diagnostics) {
+	vcsObj, ok := vcs.(types.Object)
+	if !ok || vcsObj.IsUnknown() {
+		return vcs, nil
+	}
+	vcsAttrTypes := VcsConfigModel{}.AttributeTypes()
+
+	var priorVcs types.Object
+	if existing {
+		priorVcs, _ = priorWorkflow.Attributes()["vcs_config"].(types.Object)
+	}
+
+	if vcsObj.IsNull() {
+		if existing {
+			return priorVcs, nil
+		}
+		return types.ObjectUnknown(vcsAttrTypes), nil
+	}
+
+	attrs := make(map[string]attr.Value, len(vcsObj.Attributes()))
+	for k, v := range vcsObj.Attributes() {
+		attrs[k] = v
+	}
+	if !attrs["iac_input_data"].IsNull() {
+		return vcs, nil
+	}
+	switch {
+	case !existing:
+		attrs["iac_input_data"] = types.ObjectUnknown(VcsIacInputDataModel{}.AttributeTypes())
+	case !priorVcs.IsNull() && !priorVcs.IsUnknown():
+		attrs["iac_input_data"] = priorVcs.Attributes()["iac_input_data"]
+	default:
+		return vcs, nil
+	}
+	return types.ObjectValue(vcsAttrTypes, attrs)
+}
+
+// workflowObjectsById indexes a workflows_config object's workflows by their
+// stack-template slot id. A null or unknown value yields an empty map.
+func workflowObjectsById(wfc types.Object) map[string]types.Object {
+	result := make(map[string]types.Object)
+	if wfc.IsNull() || wfc.IsUnknown() {
+		return result
+	}
+	workflows, ok := wfc.Attributes()["workflows"].(types.List)
+	if !ok || workflows.IsNull() || workflows.IsUnknown() {
+		return result
+	}
+	for _, elem := range workflows.Elements() {
+		obj, ok := elem.(types.Object)
+		if !ok || obj.IsNull() || obj.IsUnknown() {
+			continue
+		}
+		if id, ok := obj.Attributes()["id"].(types.String); ok && !id.IsNull() && !id.IsUnknown() {
+			result[id.ValueString()] = obj
+		}
+	}
+	return result
+}
+
+// newUnknownValue returns a typed unknown attr.Value for the given attr.Type.
+func newUnknownValue(t attr.Type) attr.Value {
+	switch tt := t.(type) {
+	case types.ObjectType:
+		return types.ObjectUnknown(tt.AttrTypes)
+	case types.ListType:
+		return types.ListUnknown(tt.ElemType)
+	case types.MapType:
+		return types.MapUnknown(tt.ElemType)
+	case types.SetType:
+		return types.SetUnknown(tt.ElemType)
+	case basetypes.BoolType:
+		return types.BoolUnknown()
+	case basetypes.Int64Type:
+		return types.Int64Unknown()
+	case basetypes.Float64Type:
+		return types.Float64Unknown()
+	case basetypes.NumberType:
+		return types.NumberUnknown()
+	default:
+		return types.StringUnknown()
+	}
 }
 
 // runnerConstraintsByWorkflowUUID extracts each workflow's currently-resolved
@@ -3282,6 +3544,10 @@ func runnerConstraintsByWorkflowUUID(ctx context.Context, workflowsConfig types.
 // ToAPIModel — so state stays bare, matching what the user types in config.
 func BuildAPIModelToStackModel(ctx context.Context, orgName string, apiResponse *sgsdkgo.StackData, workflowGroupId types.String) (*StackResourceModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
+	if apiResponse == nil {
+		diags.AddError("Error reading stack", "The StackGuardian API returned a response with no stack in it.")
+		return nil, diags
+	}
 
 	// Strip the owning-org prefix the API returns ("/<org>/<name>:<rev>") back
 	// to bare ("<name>:<rev>") — mirrors stack_template_revision's own
@@ -3334,4 +3600,643 @@ func BuildAPIModelToStackModel(ctx context.Context, orgName string, apiResponse 
 	stackModel.ContextTags = knownEmptyMapIfNull(ctMap, types.StringType)
 
 	return stackModel, diags
+}
+
+// ---------------------------------------------------------------------------
+// Declared overrides (private state)
+//
+// Every overridable attribute is Optional+Computed with UseStateForUnknown, so
+// when the config stops declaring one the plan just carries the state value
+// forward and the field never returns to what the template resolves. Terraform
+// does not pass the previous config to the provider, and state cannot tell an
+// override from a template-derived value, so the fields the config declared are
+// recorded in the resource's private state on every apply. ModifyPlan compares
+// that record with the current config to find the overrides that were removed.
+// ---------------------------------------------------------------------------
+
+// declaredFieldsPrivateKey is the private state key holding declaredFields.
+const declaredFieldsPrivateKey = "declared_fields"
+
+// stackOverridableFields are the stack-level attributes that fall back to the
+// stack template revision when not declared.
+var stackOverridableFields = []string{"description", "tags", "context_tags", "actions"}
+
+// declaredFields lists the overridable attributes a config declared. Workflow
+// entries are keyed by the workflow's slot id; nested attributes are written as
+// "terraform_config.<name>" and "vcs_config.iac_input_data".
+type declaredFields struct {
+	Stack     []string            `json:"stack,omitempty"`
+	Workflows map[string][]string `json:"workflows,omitempty"`
+}
+
+func (d declaredFields) isEmpty() bool {
+	if len(d.Stack) > 0 {
+		return false
+	}
+	for _, paths := range d.Workflows {
+		if len(paths) > 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// without returns the fields declared in d that are not declared in current.
+func (d declaredFields) without(current declaredFields) declaredFields {
+	result := declaredFields{Stack: difference(d.Stack, current.Stack)}
+	for id, paths := range d.Workflows {
+		if removed := difference(paths, current.Workflows[id]); len(removed) > 0 {
+			if result.Workflows == nil {
+				result.Workflows = make(map[string][]string)
+			}
+			result.Workflows[id] = removed
+		}
+	}
+	return result
+}
+
+func difference(a, b []string) []string {
+	var result []string
+	for _, s := range a {
+		if !slices.Contains(b, s) {
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
+// declaredFieldsFromConfig records which overridable attributes config sets. An
+// unknown value counts as declared: it is set, just not resolved yet.
+func declaredFieldsFromConfig(config StackResourceModel) declaredFields {
+	var result declaredFields
+	stackValues := map[string]attr.Value{
+		"description":  config.Description,
+		"tags":         config.Tags,
+		"context_tags": config.ContextTags,
+		"actions":      config.Actions,
+	}
+	for _, name := range stackOverridableFields {
+		if !stackValues[name].IsNull() {
+			result.Stack = append(result.Stack, name)
+		}
+	}
+
+	for id, wf := range workflowObjectsById(config.WorkflowsConfig) {
+		var paths []string
+		for name, value := range wf.Attributes() {
+			if name == "id" || name == "workflow_id" || value.IsNull() {
+				continue
+			}
+			paths = append(paths, name)
+			obj, ok := value.(types.Object)
+			if !ok || obj.IsUnknown() {
+				continue
+			}
+			switch name {
+			case "terraform_config":
+				for sub, subValue := range obj.Attributes() {
+					if !subValue.IsNull() {
+						paths = append(paths, name+"."+sub)
+					}
+				}
+			case "vcs_config":
+				if !obj.Attributes()["iac_input_data"].IsNull() {
+					paths = append(paths, name+".iac_input_data")
+				}
+			}
+		}
+		if len(paths) == 0 {
+			continue
+		}
+		slices.Sort(paths)
+		if result.Workflows == nil {
+			result.Workflows = make(map[string][]string)
+		}
+		result.Workflows[id] = paths
+	}
+	return result
+}
+
+type privateStateGetter interface {
+	GetKey(ctx context.Context, key string) ([]byte, diag.Diagnostics)
+}
+
+type privateStateSetter interface {
+	SetKey(ctx context.Context, key string, value []byte) diag.Diagnostics
+}
+
+// loadDeclaredFields reads the record saved by the last apply. A resource with
+// none yet — imported, or created by an older build — yields an empty record,
+// so no removal is detected until its next apply.
+func loadDeclaredFields(ctx context.Context, private privateStateGetter) (declaredFields, diag.Diagnostics) {
+	var result declaredFields
+	raw, diags := private.GetKey(ctx, declaredFieldsPrivateKey)
+	if diags.HasError() || len(raw) == 0 {
+		return result, diags
+	}
+	if err := json.Unmarshal(raw, &result); err != nil {
+		// A record this build cannot read only costs removal detection for one
+		// plan; the next apply rewrites it.
+		return declaredFields{}, diags
+	}
+	return result, diags
+}
+
+// saveDeclaredFieldsFromConfig records which overrides config declares, for the
+// next plan's loadDeclaredFields.
+func saveDeclaredFieldsFromConfig(ctx context.Context, config tfsdk.Config, private privateStateSetter) diag.Diagnostics {
+	var model StackResourceModel
+	diags := config.Get(ctx, &model)
+	if diags.HasError() {
+		return diags
+	}
+	raw, err := json.Marshal(declaredFieldsFromConfig(model))
+	if err != nil {
+		diags.AddError("Unable to record declared stack attributes", err.Error())
+		return diags
+	}
+	diags.Append(private.SetKey(ctx, declaredFieldsPrivateKey, raw)...)
+	return diags
+}
+
+// applyRemovedFields copies each field in removed from resolved into plan.
+func applyRemovedFields(plan *StackResourceModel, resolved StackResourceModel, removed declaredFields) diag.Diagnostics {
+	for _, name := range removed.Stack {
+		switch name {
+		case "description":
+			plan.Description = resolved.Description
+		case "tags":
+			plan.Tags = resolved.Tags
+		case "context_tags":
+			plan.ContextTags = resolved.ContextTags
+		case "actions":
+			plan.Actions = resolved.Actions
+		}
+	}
+	if len(removed.Workflows) == 0 {
+		return nil
+	}
+	wfc, diags := copyWorkflowFields(plan.WorkflowsConfig, resolved.WorkflowsConfig, removed.Workflows)
+	if diags.HasError() {
+		return diags
+	}
+	plan.WorkflowsConfig = wfc
+	return diags
+}
+
+// copyWorkflowFields returns plan with, for each workflow in paths, the listed
+// attributes taken from resolved. A nested path ("terraform_config.drift_check")
+// copies its whole parent object: fields inside one depend on each other
+// (drift_cron is cleared whenever drift_check is false), so re-resolving one
+// alone could leave its sibling stale. That is safe because resolved was
+// expanded from the current config, so the parent's still-declared fields hold
+// their configured values.
+func copyWorkflowFields(plan, resolved types.Object, paths map[string][]string) (types.Object, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if plan.IsNull() || plan.IsUnknown() {
+		return plan, diags
+	}
+	workflows, ok := plan.Attributes()["workflows"].(types.List)
+	if !ok || workflows.IsNull() || workflows.IsUnknown() {
+		return plan, diags
+	}
+	resolvedById := workflowObjectsById(resolved)
+	wfAttrTypes := WorkflowInStackModel{}.AttributeTypes()
+
+	elements := make([]attr.Value, 0, len(workflows.Elements()))
+	for _, elem := range workflows.Elements() {
+		obj, ok := elem.(types.Object)
+		if !ok || obj.IsNull() || obj.IsUnknown() {
+			elements = append(elements, elem)
+			continue
+		}
+		id, _ := obj.Attributes()["id"].(types.String)
+		resolvedObj, found := resolvedById[id.ValueString()]
+		if !found || len(paths[id.ValueString()]) == 0 {
+			elements = append(elements, elem)
+			continue
+		}
+
+		attrs := make(map[string]attr.Value, len(obj.Attributes()))
+		for k, v := range obj.Attributes() {
+			attrs[k] = v
+		}
+		resolvedAttrs := resolvedObj.Attributes()
+
+		for _, p := range paths[id.ValueString()] {
+			name, _, _ := strings.Cut(p, ".")
+			if v, ok := resolvedAttrs[name]; ok {
+				attrs[name] = v
+			}
+		}
+
+		newObj, d := types.ObjectValue(wfAttrTypes, attrs)
+		diags.Append(d...)
+		if diags.HasError() {
+			return plan, diags
+		}
+		elements = append(elements, newObj)
+	}
+
+	newList, d := types.ListValue(types.ObjectType{AttrTypes: wfAttrTypes}, elements)
+	diags.Append(d...)
+	if diags.HasError() {
+		return plan, diags
+	}
+	result, d := types.ObjectValue(WorkflowsConfigModel{}.AttributeTypes(), map[string]attr.Value{"workflows": newList})
+	diags.Append(d...)
+	if diags.HasError() {
+		return plan, diags
+	}
+	return result, diags
+}
+
+// ---------------------------------------------------------------------------
+// Stack output references
+//
+// ${reference::template-group.<index>.outputs.<key>} is how a stack template
+// revision wires one workflow's input to another workflow's output. The
+// platform rewrites it to ${workflow::<group>.<stack>.<workflow id>.outputs.<key>}
+// — but only when it creates the stack. A value sent on an update is stored as
+// is, and a run cannot resolve the template form. So the provider resolves the
+// references itself before every create and update, and keeps the configured
+// form in state whenever the platform's value is that form resolved.
+// ---------------------------------------------------------------------------
+
+// stackReferences carries what resolving a reference needs: the stack's group,
+// id and name, and its workflows' ids by position (the <index>) and by name.
+type stackReferences struct {
+	wfGrpId           string
+	stackId           string
+	stackName         string
+	workflowIds       []string
+	workflowIdsByName map[string]string
+}
+
+// resolve applies resolveString to every string in a decoded JSON value, keys
+// included, as the platform does.
+func (sr stackReferences) resolve(v any) any {
+	switch t := v.(type) {
+	case string:
+		return sr.resolveString(t)
+	case map[string]any:
+		out := make(map[string]any, len(t))
+		for k, val := range t {
+			out[sr.resolveString(k)] = sr.resolve(val)
+		}
+		return out
+	case []any:
+		out := make([]any, len(t))
+		for i, val := range t {
+			out[i] = sr.resolve(val)
+		}
+		return out
+	}
+	return v
+}
+
+// resolveString mirrors the platform's Stacks.__process_string_reference: a
+// value starting with ${reference:: gets the stack's path and the id of the
+// workflow at <index>; a value starting with ${workflow:: has the stack's and
+// workflows' names replaced by their ids. A reference that cannot be resolved
+// is returned unchanged, for the platform to reject.
+func (sr stackReferences) resolveString(s string) string {
+	switch {
+	case strings.HasPrefix(s, "${reference::"):
+		if len(sr.workflowIds) == 0 {
+			return s
+		}
+		resolved := strings.ReplaceAll(s, "${reference::", "${workflow::")
+		resolved = strings.ReplaceAll(resolved, "template-group", sr.wfGrpId+"."+sr.stackId)
+		parts := strings.Split(resolved, ".")
+		if len(parts) < 3 {
+			return s
+		}
+		index, err := strconv.Atoi(parts[2])
+		if err != nil || index < 0 || index >= len(sr.workflowIds) || sr.workflowIds[index] == "" {
+			return s
+		}
+		parts[2] = sr.workflowIds[index]
+		return strings.Join(parts, ".")
+	case strings.HasPrefix(s, "${workflow::"):
+		resolved := s
+		if sr.stackName != "" {
+			resolved = strings.ReplaceAll(resolved, "."+sr.stackName+".", "."+sr.stackId+".")
+		}
+		for name, id := range sr.workflowIdsByName {
+			if name != "" && name != id {
+				resolved = strings.ReplaceAll(resolved, "."+sr.stackId+"."+name+".outputs.", "."+sr.stackId+"."+id+".outputs.")
+			}
+		}
+		return resolved
+	}
+	return s
+}
+
+// stackReferencesForRequest builds the resolver for a create or update request:
+// a workflow's id is its planned workflow_id when known, otherwise the id
+// expandWorkflowsConfig computed (what the platform will create it under).
+func stackReferencesForRequest(m *StackResourceModel, wfc *sgsdkgo.StackWorkflowsConfig) stackReferences {
+	sr := stackReferences{
+		wfGrpId:           m.WorkflowGroupId.ValueString(),
+		stackId:           m.Id.ValueString(),
+		workflowIdsByName: make(map[string]string),
+	}
+	if !m.ResourceName.IsNull() && !m.ResourceName.IsUnknown() {
+		sr.stackName = m.ResourceName.ValueString()
+	}
+	planned := workflowObjectsById(m.WorkflowsConfig)
+	for _, wf := range wfc.Workflows {
+		id := ""
+		if wf != nil {
+			if wf.Id != nil {
+				if obj, ok := planned[*wf.Id]; ok {
+					if v, ok := obj.Attributes()["workflow_id"].(types.String); ok && !v.IsNull() && !v.IsUnknown() {
+						id = v.ValueString()
+					}
+				}
+			}
+			if id == "" && wf.WorkflowId != nil {
+				id = *wf.WorkflowId
+			}
+			if wf.ResourceName != nil && id != "" {
+				sr.workflowIdsByName[*wf.ResourceName] = id
+			}
+		}
+		sr.workflowIds = append(sr.workflowIds, id)
+	}
+	return sr
+}
+
+// stackReferencesFromState builds the resolver from a model read back from the
+// platform, whose workflow ids are the real ones.
+func stackReferencesFromState(m *StackResourceModel) stackReferences {
+	sr := stackReferences{
+		wfGrpId:           m.WorkflowGroupId.ValueString(),
+		stackId:           m.Id.ValueString(),
+		stackName:         m.ResourceName.ValueString(),
+		workflowIdsByName: make(map[string]string),
+	}
+	if m.WorkflowsConfig.IsNull() || m.WorkflowsConfig.IsUnknown() {
+		return sr
+	}
+	workflows, ok := m.WorkflowsConfig.Attributes()["workflows"].(types.List)
+	if !ok || workflows.IsNull() || workflows.IsUnknown() {
+		return sr
+	}
+	for _, elem := range workflows.Elements() {
+		id, name := "", ""
+		if obj, ok := elem.(types.Object); ok && !obj.IsNull() && !obj.IsUnknown() {
+			if v, ok := obj.Attributes()["workflow_id"].(types.String); ok {
+				id = v.ValueString()
+			}
+			if v, ok := obj.Attributes()["resource_name"].(types.String); ok {
+				name = v.ValueString()
+			}
+		}
+		if name != "" && id != "" {
+			sr.workflowIdsByName[name] = id
+		}
+		sr.workflowIds = append(sr.workflowIds, id)
+	}
+	return sr
+}
+
+// resolveRequestReferences resolves the references in each workflow's
+// iac_input_data and PLAIN_TEXT environment variables before they are sent.
+func resolveRequestReferences(sr stackReferences, wfc *sgsdkgo.StackWorkflowsConfig) {
+	if wfc == nil {
+		return
+	}
+	for _, wf := range wfc.Workflows {
+		if wf == nil {
+			continue
+		}
+		if wf.VcsConfig != nil && wf.VcsConfig.IacInputData != nil && wf.VcsConfig.IacInputData.Data != nil {
+			if resolved, ok := sr.resolve(*wf.VcsConfig.IacInputData.Data).(map[string]any); ok {
+				wf.VcsConfig.IacInputData.Data = &resolved
+			}
+		}
+		for _, ev := range wf.EnvironmentVariables {
+			if ev != nil && ev.Kind == sgsdkgo.EnvVarsKindEnumPlainText && ev.Config != nil && ev.Config.TextValue != nil {
+				resolved := sr.resolveString(*ev.Config.TextValue)
+				ev.Config.TextValue = &resolved
+			}
+		}
+	}
+}
+
+// preserveConfiguredReferences returns api's workflows_config with each
+// workflow's iac_input_data.data and PLAIN_TEXT environment variable values
+// taken from prior wherever the platform's value is prior's value resolved —
+// for data, compared as JSON, so key order and whitespace do not count either.
+// prior is the plan after a create or update and the state on a refresh: it
+// holds what the configuration says, which must stay in state for plan, apply
+// and refresh to agree.
+func preserveConfiguredReferences(api *StackResourceModel, prior types.Object) (types.Object, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	wfc := api.WorkflowsConfig
+	if wfc.IsNull() || wfc.IsUnknown() {
+		return wfc, diags
+	}
+	workflows, ok := wfc.Attributes()["workflows"].(types.List)
+	if !ok || workflows.IsNull() || workflows.IsUnknown() {
+		return wfc, diags
+	}
+	priorById := workflowObjectsById(prior)
+	if len(priorById) == 0 {
+		return wfc, diags
+	}
+	sr := stackReferencesFromState(api)
+	wfAttrTypes := WorkflowInStackModel{}.AttributeTypes()
+
+	changed := false
+	elements := make([]attr.Value, 0, len(workflows.Elements()))
+	for _, elem := range workflows.Elements() {
+		obj, ok := elem.(types.Object)
+		if !ok || obj.IsNull() || obj.IsUnknown() {
+			elements = append(elements, elem)
+			continue
+		}
+		id, _ := obj.Attributes()["id"].(types.String)
+		priorObj, found := priorById[id.ValueString()]
+		if !found {
+			elements = append(elements, elem)
+			continue
+		}
+
+		attrs := make(map[string]attr.Value, len(obj.Attributes()))
+		for k, v := range obj.Attributes() {
+			attrs[k] = v
+		}
+		vcs, vcsChanged, d := preserveInputData(sr, attrs["vcs_config"], priorObj.Attributes()["vcs_config"])
+		diags.Append(d...)
+		envs, envsChanged, d := preserveEnvTextValues(sr, attrs["environment_variables"], priorObj.Attributes()["environment_variables"])
+		diags.Append(d...)
+		if diags.HasError() {
+			return wfc, diags
+		}
+		if !vcsChanged && !envsChanged {
+			elements = append(elements, elem)
+			continue
+		}
+		attrs["vcs_config"], attrs["environment_variables"] = vcs, envs
+		newObj, d := types.ObjectValue(wfAttrTypes, attrs)
+		diags.Append(d...)
+		if diags.HasError() {
+			return wfc, diags
+		}
+		elements = append(elements, newObj)
+		changed = true
+	}
+	if !changed {
+		return wfc, diags
+	}
+
+	newList, d := types.ListValue(types.ObjectType{AttrTypes: wfAttrTypes}, elements)
+	diags.Append(d...)
+	if diags.HasError() {
+		return wfc, diags
+	}
+	result, d := types.ObjectValue(WorkflowsConfigModel{}.AttributeTypes(), map[string]attr.Value{"workflows": newList})
+	diags.Append(d...)
+	return result, diags
+}
+
+// preserveInputData applies preserveConfiguredReferences to vcs_config.iac_input_data.data.
+func preserveInputData(sr stackReferences, apiVcs, priorVcs attr.Value) (attr.Value, bool, diag.Diagnostics) {
+	apiData, apiInput, ok := inputDataString(apiVcs)
+	if !ok {
+		return apiVcs, false, nil
+	}
+	priorData, _, ok := inputDataString(priorVcs)
+	if !ok || priorData == apiData || !equivalentInputData(sr, priorData, apiData) {
+		return apiVcs, false, nil
+	}
+
+	inputAttrs := make(map[string]attr.Value, len(apiInput.Attributes()))
+	for k, v := range apiInput.Attributes() {
+		inputAttrs[k] = v
+	}
+	inputAttrs["data"] = types.StringValue(priorData)
+	newInput, diags := types.ObjectValue(VcsIacInputDataModel{}.AttributeTypes(), inputAttrs)
+	if diags.HasError() {
+		return apiVcs, false, diags
+	}
+	vcsAttrs := make(map[string]attr.Value, len(apiVcs.(types.Object).Attributes()))
+	for k, v := range apiVcs.(types.Object).Attributes() {
+		vcsAttrs[k] = v
+	}
+	vcsAttrs["iac_input_data"] = newInput
+	newVcs, d := types.ObjectValue(VcsConfigModel{}.AttributeTypes(), vcsAttrs)
+	diags.Append(d...)
+	if diags.HasError() {
+		return apiVcs, false, diags
+	}
+	return newVcs, true, diags
+}
+
+// inputDataString returns vcs_config.iac_input_data.data and its parent object,
+// and false unless the value is a known, non-null string.
+func inputDataString(vcs attr.Value) (string, types.Object, bool) {
+	vcsObj, ok := vcs.(types.Object)
+	if !ok || vcsObj.IsNull() || vcsObj.IsUnknown() {
+		return "", types.Object{}, false
+	}
+	input, ok := vcsObj.Attributes()["iac_input_data"].(types.Object)
+	if !ok || input.IsNull() || input.IsUnknown() {
+		return "", types.Object{}, false
+	}
+	data, ok := input.Attributes()["data"].(types.String)
+	if !ok || data.IsNull() || data.IsUnknown() {
+		return "", types.Object{}, false
+	}
+	return data.ValueString(), input, true
+}
+
+// equivalentInputData reports whether the JSON in configured, once its
+// references are resolved, equals the JSON in stored.
+func equivalentInputData(sr stackReferences, configured, stored string) bool {
+	var c, s any
+	if json.Unmarshal([]byte(configured), &c) != nil || json.Unmarshal([]byte(stored), &s) != nil {
+		return false
+	}
+	return reflect.DeepEqual(sr.resolve(c), s)
+}
+
+// preserveEnvTextValues applies preserveConfiguredReferences to the
+// text_value of PLAIN_TEXT environment variables, matched by var_name.
+func preserveEnvTextValues(sr stackReferences, apiEnvs, priorEnvs attr.Value) (attr.Value, bool, diag.Diagnostics) {
+	apiList, ok := apiEnvs.(types.List)
+	priorList, ok2 := priorEnvs.(types.List)
+	if !ok || !ok2 || apiList.IsNull() || apiList.IsUnknown() || priorList.IsNull() || priorList.IsUnknown() {
+		return apiEnvs, false, nil
+	}
+
+	priorText := make(map[string]string)
+	for _, elem := range priorList.Elements() {
+		if name, text, ok := plainTextEnv(elem); ok {
+			priorText[name] = text
+		}
+	}
+
+	var diags diag.Diagnostics
+	changed := false
+	envAttrTypes := EnvironmentVariableModel{}.AttributeTypes()
+	elements := make([]attr.Value, 0, len(apiList.Elements()))
+	for _, elem := range apiList.Elements() {
+		name, text, ok := plainTextEnv(elem)
+		configured, found := priorText[name]
+		if !ok || !found || configured == text || sr.resolveString(configured) != text {
+			elements = append(elements, elem)
+			continue
+		}
+		envObj := elem.(types.Object)
+		cfgObj := envObj.Attributes()["config"].(types.Object)
+		cfgAttrs := make(map[string]attr.Value, len(cfgObj.Attributes()))
+		for k, v := range cfgObj.Attributes() {
+			cfgAttrs[k] = v
+		}
+		cfgAttrs["text_value"] = types.StringValue(configured)
+		newCfg, d := types.ObjectValue(EnvVarConfigModel{}.AttributeTypes(), cfgAttrs)
+		diags.Append(d...)
+		newEnv, d := types.ObjectValue(envAttrTypes, map[string]attr.Value{"config": newCfg, "kind": envObj.Attributes()["kind"]})
+		diags.Append(d...)
+		if diags.HasError() {
+			return apiEnvs, false, diags
+		}
+		elements = append(elements, newEnv)
+		changed = true
+	}
+	if !changed {
+		return apiEnvs, false, diags
+	}
+	newList, d := types.ListValue(types.ObjectType{AttrTypes: envAttrTypes}, elements)
+	diags.Append(d...)
+	if diags.HasError() {
+		return apiEnvs, false, diags
+	}
+	return newList, true, diags
+}
+
+// plainTextEnv returns a PLAIN_TEXT environment variable's name and text_value,
+// and false for any other kind or an incomplete value.
+func plainTextEnv(elem attr.Value) (string, string, bool) {
+	envObj, ok := elem.(types.Object)
+	if !ok || envObj.IsNull() || envObj.IsUnknown() {
+		return "", "", false
+	}
+	if kind, ok := envObj.Attributes()["kind"].(types.String); !ok || kind.ValueString() != string(sgsdkgo.EnvVarsKindEnumPlainText) {
+		return "", "", false
+	}
+	cfg, ok := envObj.Attributes()["config"].(types.Object)
+	if !ok || cfg.IsNull() || cfg.IsUnknown() {
+		return "", "", false
+	}
+	name, ok := cfg.Attributes()["var_name"].(types.String)
+	text, ok2 := cfg.Attributes()["text_value"].(types.String)
+	if !ok || !ok2 || name.IsNull() || text.IsNull() || text.IsUnknown() {
+		return "", "", false
+	}
+	return name.ValueString(), text.ValueString(), true
 }

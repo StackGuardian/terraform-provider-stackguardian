@@ -2,7 +2,9 @@ package stack
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
@@ -11,9 +13,12 @@ import (
 	"github.com/StackGuardian/sg-sdk-go/stacktemplaterevisions"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/validators"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -79,11 +84,79 @@ func (r *stackResource) ImportState(ctx context.Context, req resource.ImportStat
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), stackId)...)
 }
 
-// isStackNotFound reports whether err from a Stack API call indicates the
-// stack no longer exists (deleted out-of-band).
-func isStackNotFound(err error) bool {
-	apiErr, ok := err.(*core.APIError)
-	return ok && apiErr.StatusCode == 404
+// isConflict reports whether err from an API call is a 409: the stack id is
+// already taken in the workflow group.
+func isConflict(err error) bool {
+	var apiErr *core.APIError
+	return errors.As(err, &apiErr) && apiErr.StatusCode == 409
+}
+
+// stackIdIsFree reports whether no stack exists yet under the planned id. A
+// non-404 error means it cannot tell.
+func (r *stackResource) stackIdIsFree(ctx context.Context, plan StackResourceModel) (bool, error) {
+	_, err := r.client.Stacks.ReadStack(ctx, r.org_name, plan.Id.ValueString(), plan.WorkflowGroupId.ValueString(), nil)
+	if err == nil {
+		return false, nil
+	}
+	if isNotFound(err) {
+		return true, nil
+	}
+	return false, err
+}
+
+// stackExists reports whether the planned stack can be read, i.e. a create
+// that returned an error still stored it.
+func (r *stackResource) stackExists(ctx context.Context, plan StackResourceModel) bool {
+	readResp, err := r.client.Stacks.ReadStack(ctx, r.org_name, plan.Id.ValueString(), plan.WorkflowGroupId.ValueString(), nil)
+	return err == nil && readResp.GetMsg() != nil
+}
+
+// trackCreatedStack puts the identifying attributes of a created stack in
+// state — enough for Read to refresh it and Delete to remove it. When Create
+// then returns an error, Terraform keeps the resource as tainted instead of
+// forgetting a stack that exists.
+func trackCreatedStack(ctx context.Context, state *tfsdk.State, plan StackResourceModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+	diags.Append(state.SetAttribute(ctx, path.Root("id"), plan.Id)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("workflow_group_id"), plan.WorkflowGroupId)...)
+	diags.Append(state.SetAttribute(ctx, path.Root("template_group_id"), plan.TemplateGroupId)...)
+	return diags
+}
+
+func stackExistsDetail(plan StackResourceModel) string {
+	return fmt.Sprintf("A stack with id %q already exists in workflow group %q, so it was not created. "+
+		"To manage it with this configuration, import it: terraform import <resource address> %s/%s. "+
+		"Otherwise choose another id.",
+		plan.Id.ValueString(), plan.WorkflowGroupId.ValueString(), plan.WorkflowGroupId.ValueString(), plan.Id.ValueString())
+}
+
+// isForbidden reports whether err from an API call is a 403.
+func isForbidden(err error) bool {
+	var apiErr *core.APIError
+	return errors.As(err, &apiErr) && apiErr.StatusCode == 403
+}
+
+const stackDeletionSummary = "Deleting a stack does not destroy what it deployed"
+
+// stackDeletionDetail explains a stack deletion to whoever is about to make
+// one: the platform deletes the stack's workflows with it, but runs none of
+// them, so the cloud resources they deployed stay — and so does the cost.
+func stackDeletionDetail(ctx context.Context, state StackResourceModel) string {
+	workflows := "its workflows"
+	if ids, ok := declaredWorkflowIds(ctx, state.WorkflowsConfig); ok {
+		workflows = fmt.Sprintf("its %d workflow(s)", len(ids))
+	}
+	return fmt.Sprintf("Deleting stack %q also deletes %s and their run history in StackGuardian. "+
+		"It does not run their destroy action: cloud resources the workflows deployed stay in your account, "+
+		"and StackGuardian no longer holds the Terraform state for them. If those resources should go too, "+
+		"run the stack's destroy action before applying this.", state.Id.ValueString(), workflows)
+}
+
+// isNotFound reports whether err from an API call is a 404: the stack was
+// deleted out-of-band, or the stack template revision does not exist (yet).
+func isNotFound(err error) bool {
+	var apiErr *core.APIError
+	return errors.As(err, &apiErr) && apiErr.StatusCode == 404
 }
 
 // fetchTemplateRevision reads the stack template revision referenced by the
@@ -105,13 +178,65 @@ func (r *stackResource) fetchTemplateRevision(ctx context.Context, m StackResour
 		return nil, diags
 	}
 
-	readResp, err := r.client.StackTemplateRevisions.ReadStackTemplateRevision(ctx, r.org_name, templateGroupId)
+	tpl, err := r.readTemplateRevision(ctx, templateGroupId)
 	if err != nil {
 		diags.AddError("Error reading stack template revision",
 			fmt.Sprintf("Could not read template revision %q to resolve stack defaults: %s", templateGroupId, err.Error()))
 		return nil, diags
 	}
-	return &readResp.Msg, diags
+	return tpl, diags
+}
+
+// readTemplateRevision reads a stack template revision by its bare id, keeping
+// the API error so the caller can tell a missing revision (404) from a failure.
+func (r *stackResource) readTemplateRevision(ctx context.Context, templateGroupId string) (*stacktemplaterevisions.ReadStackTemplateRevisionModel, error) {
+	readResp, err := r.client.StackTemplateRevisions.ReadStackTemplateRevision(ctx, r.org_name, templateGroupId)
+	if err != nil {
+		return nil, err
+	}
+	if readResp == nil {
+		return nil, fmt.Errorf("API returned an empty response")
+	}
+	return &readResp.Msg, nil
+}
+
+// workflowIdsChanged reports whether the workflow ids declared in plan differ
+// from those in state, in order. An unknown or null value on either side
+// counts as a change, so the caller re-validates rather than assuming.
+func workflowIdsChanged(ctx context.Context, plan, state types.Object) bool {
+	planIds, ok := declaredWorkflowIds(ctx, plan)
+	if !ok {
+		return true
+	}
+	stateIds, ok := declaredWorkflowIds(ctx, state)
+	if !ok {
+		return true
+	}
+	return !slices.Equal(planIds, stateIds)
+}
+
+// declaredWorkflowIds returns workflows_config.workflows[*].id in order, and
+// false when the value or any id is null or unknown.
+func declaredWorkflowIds(ctx context.Context, wfc types.Object) ([]string, bool) {
+	if wfc.IsNull() || wfc.IsUnknown() {
+		return nil, false
+	}
+	var m WorkflowsConfigModel
+	if d := wfc.As(ctx, &m, basetypes.ObjectAsOptions{}); d.HasError() || m.Workflows.IsNull() || m.Workflows.IsUnknown() {
+		return nil, false
+	}
+	var wfs []WorkflowInStackModel
+	if d := m.Workflows.ElementsAs(ctx, &wfs, false); d.HasError() {
+		return nil, false
+	}
+	ids := make([]string, 0, len(wfs))
+	for _, wf := range wfs {
+		if wf.Id.IsNull() || wf.Id.IsUnknown() {
+			return nil, false
+		}
+		ids = append(ids, wf.Id.ValueString())
+	}
+	return ids, true
 }
 
 // fetchWorkflowTemplateRevision reads the workflow template revision referenced by
@@ -214,6 +339,15 @@ func (r *stackResource) resolveWorkflowTemplates(ctx context.Context, plan Stack
 		if templateId == nil || *templateId == "" {
 			continue
 		}
+		// Without a revision the id reads the workflow template itself, which
+		// has none of a revision's content — the platform gets no defaults from
+		// it either. Skip the layer rather than read that record as a revision.
+		if !validators.HasTemplateRevision(*templateId) {
+			diags.AddWarning("Workflow template has no revision",
+				fmt.Sprintf("Workflow %q of stack template revision %q uses workflow template %q without a revision, so there are no workflow template defaults to inherit: attributes this stack leaves unset on that workflow get StackGuardian's defaults. Name a revision in the stack template revision's iac_template_id, for example %q.",
+					slotId, plan.TemplateGroupId.ValueString(), *templateId, *templateId+":1"))
+			continue
+		}
 		tpl, d := r.fetchWorkflowTemplateRevision(ctx, *templateId)
 		diags.Append(d...)
 		if diags.HasError() {
@@ -227,62 +361,122 @@ func (r *stackResource) resolveWorkflowTemplates(ctx context.Context, plan Stack
 	return result, diags
 }
 
-// ModifyPlan handles a template_group_id change: when it changes, the
-// Optional+Computed fields the user did NOT declare must be re-resolved
-// against the new revision. Without that re-resolution, UseStateForUnknown
-// carries the OLD revision's values forward (they were never unknown), so
-// the merge never runs for them. Setting those fields to concrete resolved
-// values here lets plan == apply. Fields the user declared in config are
-// left untouched. Mirrors workflow_from_template's ModifyPlan: this function
-// is never reached at all on create or destroy, so it never needs its own
-// create-time validation path — Create() validates workflows_config itself
-// (validateWorkflowsConfigMatchesRevision), reusing the fetchTemplateRevision
-// call it already makes to build the request, instead of this function
-// fetching the revision a second time just to validate it.
+// ModifyPlan does two things.
 //
-// It covers description/tags/context_tags/actions (stack-level) and
-// workflows_config's per-workflow template-derived fields. actions the user
-// declared in config has no re-resolution to do, but is validated here: a
-// reference to a workflow the new revision dropped is an error, not a silent
-// carry-forward. workflows_config's completeness/order against the revision
-// is validated here too (validateWorkflowsConfigMatchesRevision) — Update()
-// runs that same check itself for an update with no revision change, again
-// reusing its own fetchTemplateRevision call.
+// It rejects, at plan time, a workflows_config.workflows that does not declare
+// exactly the workflows of the stack template revision, in its order
+// (validateWorkflowsConfigMatchesRevision). That runs on create, on a
+// template_group_id change, and on an update that changes the declared
+// workflow ids; a plan that changes none of these was already checked when
+// the current state was applied, so it skips the extra template read. The
+// check is skipped when template_group_id is unknown at plan time, or on
+// create when the revision is not found yet — both happen when the revision
+// is created in the same apply. Create and Update repeat the check against
+// the revision they read, so those cases are still caught at apply.
+//
+// On a template_group_id change it also re-resolves the Optional+Computed
+// fields the user did NOT declare against the new revision. Without that,
+// UseStateForUnknown carries the OLD revision's values forward (they were
+// never unknown), so the merge never runs for them. Setting those fields to
+// concrete resolved values here lets plan == apply. Fields the user declared
+// in config are left untouched. This covers description/tags/context_tags/
+// actions (stack-level) and workflows_config's per-workflow template-derived
+// fields. actions the user declared in config has no re-resolution to do, but
+// is validated: a reference to a workflow the new revision dropped is an
+// error, not a silent carry-forward.
 func (r *stackResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
-		return // create or destroy — no revision transition to handle
+	if req.Plan.Raw.IsNull() {
+		// Destroy: say what deleting a stack does and does not do.
+		if !req.State.Raw.IsNull() {
+			var state StackResourceModel
+			resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+			if !resp.Diagnostics.HasError() {
+				resp.Diagnostics.AddWarning(stackDeletionSummary, stackDeletionDetail(ctx, state))
+			}
+		}
+		return
 	}
+	creating := req.State.Raw.IsNull()
 
 	var plan, state, config StackResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if !creating {
+		resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	}
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	// Changing id or workflow_group_id replaces the stack, which deletes it first.
+	if !creating && (!plan.Id.Equal(state.Id) || !plan.WorkflowGroupId.Equal(state.WorkflowGroupId)) {
+		resp.Diagnostics.AddWarning(stackDeletionSummary, stackDeletionDetail(ctx, state))
 	}
 
 	if plan.TemplateGroupId.IsUnknown() {
-		return // template not resolved yet — nothing to validate against
+		return // template not resolved yet — Create/Update validate at apply
 	}
 
-	if plan.TemplateGroupId.ValueString() == state.TemplateGroupId.ValueString() {
-		return // no revision change
+	revisionChanged := !creating && plan.TemplateGroupId.ValueString() != state.TemplateGroupId.ValueString()
+	checkWorkflows := creating || revisionChanged || workflowIdsChanged(ctx, plan.WorkflowsConfig, state.WorkflowsConfig)
+
+	// Overrides the config declared at the last apply but no longer does. A
+	// revision change re-resolves every undeclared field anyway, so this is
+	// only needed for an update that keeps the revision.
+	var removed declaredFields
+	if !creating && !revisionChanged {
+		prev, d := loadDeclaredFields(ctx, req.Private)
+		resp.Diagnostics.Append(d...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		removed = prev.without(declaredFieldsFromConfig(config))
 	}
 
-	tpl, d := r.fetchTemplateRevision(ctx, plan)
-	resp.Diagnostics.Append(d...)
-	if resp.Diagnostics.HasError() || tpl == nil {
+	if !checkWorkflows && removed.isEmpty() {
+		return // the current state already matched this revision when it was applied
+	}
+
+	tpl, err := r.readTemplateRevision(ctx, plan.TemplateGroupId.ValueString())
+	if err != nil {
+		if creating && isNotFound(err) {
+			return // the revision may be created by this apply — Create validates it
+		}
+		resp.Diagnostics.AddError("Error reading stack template revision",
+			fmt.Sprintf("Could not read template revision %q to resolve stack defaults: %s", plan.TemplateGroupId.ValueString(), err.Error()))
 		return
 	}
 
-	resp.Diagnostics.Append(validateWorkflowsConfigMatchesRevision(ctx, plan.WorkflowsConfig, tpl)...)
+	if checkWorkflows {
+		resp.Diagnostics.Append(validateWorkflowsConfigMatchesRevision(ctx, plan.WorkflowsConfig, tpl)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	if !revisionChanged {
+		if !removed.isEmpty() {
+			resp.Diagnostics.Append(r.revertRemovedOverrides(ctx, &plan, config, state, tpl, removed)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
+		}
+		return
+	}
+
+	resp.Diagnostics.Append(validateActionsAgainstRevision(ctx, config.Actions, plan.WorkflowsConfig, tpl, false)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	resp.Diagnostics.Append(validateActionsAgainstRevision(ctx, config.Actions, plan.WorkflowsConfig, tpl)...)
-	if resp.Diagnostics.HasError() {
-		return
+	// Undeclared actions are replaced by the new revision's when it has any
+	// (reResolveOnRevisionChange). When it has none the stack keeps its current
+	// actions, which must not reference a workflow the revision drops.
+	if config.Actions.IsNull() && len(tpl.Actions) == 0 {
+		resp.Diagnostics.Append(validateActionsAgainstRevision(ctx, state.Actions, plan.WorkflowsConfig, tpl, true)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	workflowTemplates, d := r.resolveWorkflowTemplates(ctx, plan, tpl)
@@ -296,12 +490,42 @@ func (r *stackResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 		return
 	}
 
-	resp.Diagnostics.Append(reResolveWorkflowsConfigOnRevisionChange(ctx, &plan, config, tpl, workflowTemplates)...)
+	resp.Diagnostics.Append(reResolveWorkflowsConfigOnRevisionChange(ctx, &plan, config, state.WorkflowsConfig, tpl, workflowTemplates)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
+}
+
+// revertRemovedOverrides sets each field in removed — an override the config no
+// longer declares — back to the value it resolves to without the override. It
+// re-resolves the whole stack against tpl the same way a revision change does
+// (template value, else the attribute's default, else the prior value for the
+// fields the platform cannot clear; see resolveUnsentWorkflowFields), then
+// copies only the removed fields into plan. Every other field keeps its planned
+// value, so an in-place change to a template does not show up as a diff.
+func (r *stackResource) revertRemovedOverrides(ctx context.Context, plan *StackResourceModel, config, state StackResourceModel, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, removed declaredFields) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	workflowTemplates, d := r.resolveWorkflowTemplates(ctx, *plan, tpl)
+	diags.Append(d...)
+	if diags.HasError() {
+		return diags
+	}
+
+	resolved := *plan
+	diags.Append(reResolveOnRevisionChange(ctx, &resolved, config, tpl)...)
+	if diags.HasError() {
+		return diags
+	}
+	diags.Append(reResolveWorkflowsConfigOnRevisionChange(ctx, &resolved, config, state.WorkflowsConfig, tpl, workflowTemplates)...)
+	if diags.HasError() {
+		return diags
+	}
+
+	diags.Append(applyRemovedFields(plan, resolved, removed)...)
+	return diags
 }
 
 // Create creates the resource and sets the initial Terraform state.
@@ -320,10 +544,10 @@ func (r *stackResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// ModifyPlan only re-validates workflows_config against the revision on an
-	// actual revision change (it has no reason to fetch tpl otherwise); a
-	// plain create needs the same check, done here against the tpl this
-	// function already fetched to build the request.
+	// ModifyPlan already ran this check at plan time unless template_group_id
+	// was unknown then or the revision did not exist yet (both happen when the
+	// revision is created in the same apply). Repeat it against the tpl this
+	// function read to build the request, so those cases fail here.
 	resp.Diagnostics.Append(validateWorkflowsConfigMatchesRevision(ctx, plan.WorkflowsConfig, tpl)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -343,14 +567,53 @@ func (r *stackResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	wfGrpId := plan.WorkflowGroupId.ValueString()
 
-	createResp, err := r.client.Stacks.CreateStack(ctx, r.org_name, wfGrpId, payload)
-	if err != nil {
-		resp.Diagnostics.AddError("failed to create stack", err.Error())
+	// Check the id is free first. Besides reporting a taken id clearly, this is
+	// what makes the partial-create recovery below safe: some failures are
+	// reported before the platform checks the id, so without it a stack found
+	// after a failed create could be someone else's.
+	idFree, err := r.stackIdIsFree(ctx, plan)
+	if err == nil && !idFree {
+		resp.Diagnostics.AddError("Stack already exists", stackExistsDetail(plan))
 		return
 	}
 
-	// Get the stack ID from create response (use SubResourceId as the primary identifier)
-	stackID := createResp.Data.Stack.Id
+	createResp, err := r.client.Stacks.CreateStack(ctx, r.org_name, wfGrpId, payload)
+	if err != nil {
+		if isConflict(err) {
+			resp.Diagnostics.AddError("Stack already exists", stackExistsDetail(plan))
+			return
+		}
+		detail := err.Error()
+		// The platform stores the stack before creating its workflows and does
+		// not roll back, so a failure part-way leaves a partial stack under the
+		// configured id. Track it so the next apply replaces it.
+		if idFree && r.stackExists(ctx, plan) {
+			resp.Diagnostics.Append(trackCreatedStack(ctx, &resp.State, plan)...)
+			detail += fmt.Sprintf("\n\nStackGuardian had already stored stack %q before the failure. It is now in the Terraform state as tainted: the next apply deletes it and creates it again.", plan.Id.ValueString())
+		}
+		resp.Diagnostics.AddError("Error creating stack", detail)
+		return
+	}
+
+	// Record the stack before anything else can fail, so a failed read-back
+	// below leaves it tracked (as tainted) rather than created but unknown.
+	resp.Diagnostics.Append(trackCreatedStack(ctx, &resp.State, plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	defer func() {
+		if resp.Diagnostics.HasError() {
+			resp.Diagnostics.AddWarning("Stack created but not fully recorded",
+				fmt.Sprintf("Stack %q was created, but reading it back failed, so it is in the Terraform state as tainted. The next apply replaces it; run `terraform untaint` on it to keep it instead.", plan.Id.ValueString()))
+		}
+	}()
+
+	// The platform creates the stack under the configured id, so fall back to it
+	// when the response carries no stack rather than lose track of one that exists.
+	stackID := createResp.GetData().GetStack().GetId()
+	if stackID == "" {
+		stackID = plan.Id.ValueString()
+	}
 
 	// Call read to get the full state since create response may not return all values
 	readResp, err := r.client.Stacks.ReadStack(ctx, r.org_name, stackID, wfGrpId, &sgsdkgo.ReadStackQueryParams{RefreshWorkflowsConfig: sgsdkgo.Bool(true)})
@@ -359,7 +622,15 @@ func (r *stackResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	stackModel, diags := BuildAPIModelToStackModel(ctx, r.org_name, readResp.Msg, plan.WorkflowGroupId)
+	stackModel, diags := BuildAPIModelToStackModel(ctx, r.org_name, readResp.GetMsg(), plan.WorkflowGroupId)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Keep the configured form of an input or variable the platform stored with
+	// its references resolved; see preserveConfiguredReferences.
+	stackModel.WorkflowsConfig, diags = preserveConfiguredReferences(stackModel, plan.WorkflowsConfig)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -367,6 +638,11 @@ func (r *stackResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	// Set state to fully populated data
 	resp.Diagnostics.Append(resp.State.Set(ctx, &stackModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(saveDeclaredFieldsFromConfig(ctx, req.Config, resp.Private)...)
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -386,7 +662,7 @@ func (r *stackResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	readResp, err := r.client.Stacks.ReadStack(ctx, r.org_name, stackId, wfGrpId, &sgsdkgo.ReadStackQueryParams{RefreshWorkflowsConfig: sgsdkgo.Bool(true)})
 	if err != nil {
 		// If a managed resource is no longer found then remove it from the state
-		if isStackNotFound(err) {
+		if isNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -395,7 +671,15 @@ func (r *stackResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	stackModel, diags := BuildAPIModelToStackModel(ctx, r.org_name, readResp.Msg, state.WorkflowGroupId)
+	stackModel, diags := BuildAPIModelToStackModel(ctx, r.org_name, readResp.GetMsg(), state.WorkflowGroupId)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Keep the configured form of an input or variable the platform stored with
+	// its references resolved; see preserveConfiguredReferences.
+	stackModel.WorkflowsConfig, diags = preserveConfiguredReferences(stackModel, state.WorkflowsConfig)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -419,11 +703,9 @@ func (r *stackResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	// ModifyPlan only re-validates workflows_config against the revision on an
-	// actual revision change; an update with no revision change needs the
-	// same check, done here against the tpl this function already fetched to
-	// build the request. Redundant (but free — tpl is already in hand) on a
-	// revision-change update, where ModifyPlan already validated it.
+	// ModifyPlan already ran this check at plan time unless template_group_id
+	// was unknown then. Repeat it against the tpl this function read to build
+	// the request: it costs nothing, and covers that case.
 	resp.Diagnostics.Append(validateWorkflowsConfigMatchesRevision(ctx, plan.WorkflowsConfig, tpl)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -435,7 +717,14 @@ func (r *stackResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	payload, diags := plan.ToUpdateAPIModel(ctx, r.org_name, tpl, workflowTemplates)
+	var configActions, stateActions types.Map
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("actions"), &configActions)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("actions"), &stateActions)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	payload, diags := plan.ToUpdateAPIModel(ctx, r.org_name, tpl, workflowTemplates, actionsToSend(configActions, plan.Actions, stateActions))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -461,13 +750,26 @@ func (r *stackResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	stackModel, diags := BuildAPIModelToStackModel(ctx, r.org_name, updatedStack.Msg, plan.WorkflowGroupId)
+	stackModel, diags := BuildAPIModelToStackModel(ctx, r.org_name, updatedStack.GetMsg(), plan.WorkflowGroupId)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Keep the configured form of an input or variable the platform stored with
+	// its references resolved; see preserveConfiguredReferences.
+	stackModel.WorkflowsConfig, diags = preserveConfiguredReferences(stackModel, plan.WorkflowsConfig)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, stackModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(saveDeclaredFieldsFromConfig(ctx, req.Config, resp.Private)...)
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -482,18 +784,26 @@ func (r *stackResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	stackId := state.Id.ValueString()
 	wfGrpId := state.WorkflowGroupId.ValueString()
 
+	// force_delete is required, not a shortcut: without it the platform refuses
+	// to delete any stack that still has workflows, and every stack has them. It
+	// deletes the workflows with the stack, but never one with a run in progress
+	// or queued. It does not run their destroy action — see stackDeletionDetail.
 	_, err := r.client.Stacks.DeleteStack(ctx, r.org_name, stackId, wfGrpId, &sgsdkgo.DeleteStackRequest{
 		ForceDelete: sgsdkgo.Bool(true),
 	})
 	if err != nil {
 		// Already gone (deleted out-of-band) — treat as a successful delete so
 		// the resource is removed from state instead of erroring.
-		if isStackNotFound(err) {
+		if isNotFound(err) {
 			tflog.Warn(ctx, "stack already deleted; treating delete as success")
 			return
 		}
 		tflog.Error(ctx, err.Error())
-		resp.Diagnostics.AddError("Error deleting stack", "Error in deleting stack "+state.ResourceName.ValueString()+": "+err.Error())
+		detail := "Error in deleting stack " + stackId + ": " + err.Error()
+		if isForbidden(err) {
+			detail += "\n\nStackGuardian does not delete a stack while one of its workflows has a run in progress or queued. Wait for the runs to finish, or cancel them, then apply again."
+		}
+		resp.Diagnostics.AddError("Error deleting stack", detail)
 		return
 	}
 }

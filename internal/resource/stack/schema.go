@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/validators"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -49,6 +50,7 @@ var ministepsWebhooks = schema.ListNestedAttribute{
 			"webhook_secret": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWebhookSecret,
 				Optional:            true,
+				Sensitive:           true,
 			},
 		},
 	},
@@ -69,6 +71,7 @@ var ministepsWorkflowChaining = schema.ListNestedAttribute{
 			"stack_run_payload": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingStackPayload,
 				Optional:            true,
+				Validators:          []validator.String{validators.JSONObject()},
 			},
 			"workflow_id": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingWorkflowId,
@@ -77,6 +80,7 @@ var ministepsWorkflowChaining = schema.ListNestedAttribute{
 			"workflow_run_payload": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingWorkflowPayload,
 				Optional:            true,
+				Validators:          []validator.String{validators.JSONObject()},
 			},
 		},
 	},
@@ -165,6 +169,7 @@ var wfStepsConfigNestedObj = schema.NestedAttributeObject{
 				"data": schema.StringAttribute{
 					MarkdownDescription: constants.WfStepInputDataData,
 					Optional:            true,
+					Validators:          []validator.String{validators.JSONObject()},
 				},
 			},
 		},
@@ -377,6 +382,14 @@ var actionsAttrs = map[string]schema.Attribute{
 	"description": schema.StringAttribute{
 		MarkdownDescription: "Description of the action.",
 		Optional:            true,
+	},
+	"default": schema.BoolAttribute{
+		MarkdownDescription: "Whether this is one of the stack template's default actions (`true`) or a custom one (`false`). When StackGuardian upgrades a stack, it replaces default actions with the new template's and keeps custom ones. Leave unset to keep the value StackGuardian holds.",
+		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.Bool{
+			boolplanmodifier.UseStateForUnknown(),
+		},
 	},
 	"order": schema.MapNestedAttribute{
 		MarkdownDescription: "Execution order for workflows in this action, keyed by each workflow's `id` (its UUID) as defined in the stack template revision's `workflows_config.workflows` — the same `id` declared in this stack's `workflows_config.workflows`.",
@@ -634,9 +647,16 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 												},
 											},
 										},
+										// Optional+Computed: when left unset the platform fills it from the
+										// stack template revision (or the workflow template's input
+										// defaults), so it can hold a value the config never set.
 										"iac_input_data": schema.SingleNestedAttribute{
 											MarkdownDescription: constants.WorkflowIacInputData,
 											Optional:            true,
+											Computed:            true,
+											PlanModifiers: []planmodifier.Object{
+												objectplanmodifier.UseStateForUnknown(),
+											},
 											Attributes: map[string]schema.Attribute{
 												"schema_id": schema.StringAttribute{
 													MarkdownDescription: constants.WorkflowIacInputDataSchemaId,
@@ -649,6 +669,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 												"data": schema.StringAttribute{
 													MarkdownDescription: constants.WorkflowIacInputDataData,
 													Optional:            true,
+													Validators:          []validator.String{validators.JSONObject()},
 												},
 											},
 										},

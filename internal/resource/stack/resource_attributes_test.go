@@ -75,6 +75,7 @@ import (
 // override, not a per-key merge, so plan/destroy (not redeclared) disappear
 // rather than staying inherited alongside the user's own "apply".
 func TestAccStack_ActionsGeneratedFromTemplate(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-gendef-wfgrp"
 	wfTemplateName := "tf-provider-stack-gendef-wftmpl"
 	stackTemplateName := "tf-provider-stack-gendef-stmpl"
@@ -217,6 +218,7 @@ func TestAccStack_ActionsGeneratedFromTemplate(t *testing.T) {
 // aren't covered here — both need a real integration_id / workflow step
 // template fixture this test doesn't set up.
 func TestAccStack_ActionsRoundTrip(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-actrt-wfgrp"
 	wfTemplateName := "tf-provider-stack-actrt-wftmpl"
 	stackTemplateName := "tf-provider-stack-actrt-stmpl"
@@ -333,6 +335,7 @@ func TestAccStack_ActionsRoundTrip(t *testing.T) {
 // mapvalidator.SizeAtLeast(1) on "actions" (schema.go), rather than reaching the API and
 // surfacing its own less actionable "Stack actions are empty" error.
 func TestAccStack_ActionsRejectsEmpty(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-actempty-wfgrp"
 	wfTemplateName := "tf-provider-stack-actempty-wftmpl"
 	stackTemplateName := "tf-provider-stack-actempty-stmpl"
@@ -373,6 +376,7 @@ func TestAccStack_ActionsRejectsEmpty(t *testing.T) {
 //     resolves to {} (see TestAccStack_ContextTags_ClearedWhenTemplateHasNone,
 //     resource_attributes_stack_upgrade_test.go).
 func TestAccStack_ContextTags_Resolution(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-ctxtagsres-wfgrp"
 	wfTemplateName := "tf-provider-stack-ctxtagsres-wftmpl"
 	stackTemplateName := "tf-provider-stack-ctxtagsres-stmpl"
@@ -414,11 +418,14 @@ func TestAccStack_ContextTags_Resolution(t *testing.T) {
 				Check:  resource.TestCheckResourceAttr("stackguardian_stack.test", "context_tags.%", "0"),
 			},
 			{
-				// Removing the attribute again does NOT re-inherit the template's
-				// context_tags — it carries forward whatever's already in state
-				// (the explicit {} from the previous step).
+				// Removing the attribute again re-inherits the template's
+				// context_tags — the override-removal mechanism (private state
+				// tracking via declaredFields) detects the declaration was
+				// dropped and re-resolves from the template revision, same as
+				// rule 2. See TestStack_RemovedOverrideRevertsToTemplateValue
+				// (resource_override_removal_test.go) for the unit-level guard.
 				Config: testAccStackConfig(wfGrpName, revision, id, ""),
-				Check:  resource.TestCheckResourceAttr("stackguardian_stack.test", "context_tags.%", "0"),
+				Check:  resource.TestCheckResourceAttr("stackguardian_stack.test", "context_tags.team", "platform"),
 			},
 		},
 	})
@@ -442,6 +449,7 @@ func TestAccStack_ContextTags_Resolution(t *testing.T) {
 //     TestAccStack_Description_ClearedWhenTemplateHasNone,
 //     resource_attributes_stack_upgrade_test.go).
 func TestAccStack_Description_Resolution(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-descres-wfgrp"
 	wfTemplateName := "tf-provider-stack-descres-wftmpl"
 	stackTemplateName := "tf-provider-stack-descres-stmpl"
@@ -481,13 +489,14 @@ func TestAccStack_Description_Resolution(t *testing.T) {
 				Check:  resource.TestCheckResourceAttr("stackguardian_stack.test", "description", ""),
 			},
 			{
-				// Removing the attribute again does NOT re-inherit the template's
-				// description — it carries forward whatever's already in state
-				// (the explicit "" from the previous step). Optional+Computed
-				// attributes can't distinguish "never set" from "explicitly
-				// cleared, then the declaration removed".
+				// Removing the attribute again re-inherits the template's
+				// description — the override-removal mechanism (private state
+				// tracking via declaredFields) detects the declaration was
+				// dropped and re-resolves from the template revision, same as
+				// rule 2. See TestStack_RemovedOverrideRevertsToTemplateValue
+				// (resource_override_removal_test.go) for the unit-level guard.
 				Config: testAccStackConfig(wfGrpName, revision, id, ""),
-				Check:  resource.TestCheckResourceAttr("stackguardian_stack.test", "description", ""),
+				Check:  resource.TestCheckResourceAttr("stackguardian_stack.test", "description", templateDescription),
 			},
 		},
 	})
@@ -514,6 +523,7 @@ func TestAccStack_Description_Resolution(t *testing.T) {
 //     TestAccStack_Tags_ClearedWhenTemplateHasNone,
 //     resource_attributes_stack_upgrade_test.go).
 func TestAccStack_Tags_Resolution(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-tagsres-wfgrp"
 	wfTemplateName := "tf-provider-stack-tagsres-wftmpl"
 	stackTemplateName := "tf-provider-stack-tagsres-stmpl"
@@ -559,11 +569,17 @@ func TestAccStack_Tags_Resolution(t *testing.T) {
 				Check:  resource.TestCheckResourceAttr("stackguardian_stack.test", "tags.#", "0"),
 			},
 			{
-				// Removing the attribute again does NOT re-inherit the template's
-				// tags — it carries forward whatever's already in state (the
-				// explicit [] from the previous step).
+				// Removing the attribute again re-inherits the template's
+				// tags — the override-removal mechanism (private state
+				// tracking via declaredFields) detects the declaration was
+				// dropped and re-resolves from the template revision, same as
+				// rule 2. See TestStack_RemovedOverrideRevertsToTemplateValue
+				// (resource_override_removal_test.go) for the unit-level guard.
 				Config: testAccStackConfig(wfGrpName, revision, id, ""),
-				Check:  resource.TestCheckResourceAttr("stackguardian_stack.test", "tags.#", "0"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "tags.#", "1"),
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "tags.0", "tmpl-tag"),
+				),
 			},
 		},
 	})
