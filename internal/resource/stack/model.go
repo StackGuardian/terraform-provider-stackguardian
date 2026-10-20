@@ -2,6 +2,7 @@ package stack
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/flatteners"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
@@ -2081,7 +2083,9 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 			}
 			wf.Tags = tags
 		}
-		if !wm.WfType.IsNull() && !wm.WfType.IsUnknown() {
+		// "" is what flattenWorkflowsConfig stores when the platform returns no
+		// WfType; treat it as unset rather than as an invalid enum value.
+		if isNonEmpty(wm.WfType) {
 			wfType, err := sgsdkgo.NewWfTypeEnumFromString(wm.WfType.ValueString())
 			if err != nil {
 				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid wf_type", "Value '"+wm.WfType.ValueString()+"' is not a valid workflow type")}
@@ -3539,4 +3543,253 @@ func BuildAPIModelToStackModel(ctx context.Context, orgName string, apiResponse 
 	stackModel.ContextTags = knownEmptyMapIfNull(ctMap, types.StringType)
 
 	return stackModel, diags
+}
+
+// ---------------------------------------------------------------------------
+// Declared overrides (private state)
+//
+// Every overridable attribute is Optional+Computed with UseStateForUnknown, so
+// when the config stops declaring one the plan just carries the state value
+// forward and the field never returns to what the template resolves. Terraform
+// does not pass the previous config to the provider, and state cannot tell an
+// override from a template-derived value, so the fields the config declared are
+// recorded in the resource's private state on every apply. ModifyPlan compares
+// that record with the current config to find the overrides that were removed.
+// ---------------------------------------------------------------------------
+
+// declaredFieldsPrivateKey is the private state key holding declaredFields.
+const declaredFieldsPrivateKey = "declared_fields"
+
+// stackOverridableFields are the stack-level attributes that fall back to the
+// stack template revision when not declared.
+var stackOverridableFields = []string{"description", "tags", "context_tags", "actions"}
+
+// declaredFields lists the overridable attributes a config declared. Workflow
+// entries are keyed by the workflow's slot id; nested attributes are written as
+// "terraform_config.<name>" and "vcs_config.iac_input_data".
+type declaredFields struct {
+	Stack     []string            `json:"stack,omitempty"`
+	Workflows map[string][]string `json:"workflows,omitempty"`
+}
+
+func (d declaredFields) isEmpty() bool {
+	if len(d.Stack) > 0 {
+		return false
+	}
+	for _, paths := range d.Workflows {
+		if len(paths) > 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// without returns the fields declared in d that are not declared in current.
+func (d declaredFields) without(current declaredFields) declaredFields {
+	result := declaredFields{Stack: difference(d.Stack, current.Stack)}
+	for id, paths := range d.Workflows {
+		if removed := difference(paths, current.Workflows[id]); len(removed) > 0 {
+			if result.Workflows == nil {
+				result.Workflows = make(map[string][]string)
+			}
+			result.Workflows[id] = removed
+		}
+	}
+	return result
+}
+
+func difference(a, b []string) []string {
+	var result []string
+	for _, s := range a {
+		if !slices.Contains(b, s) {
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
+// declaredFieldsFromConfig records which overridable attributes config sets. An
+// unknown value counts as declared: it is set, just not resolved yet.
+func declaredFieldsFromConfig(config StackResourceModel) declaredFields {
+	var result declaredFields
+	stackValues := map[string]attr.Value{
+		"description":  config.Description,
+		"tags":         config.Tags,
+		"context_tags": config.ContextTags,
+		"actions":      config.Actions,
+	}
+	for _, name := range stackOverridableFields {
+		if !stackValues[name].IsNull() {
+			result.Stack = append(result.Stack, name)
+		}
+	}
+
+	for id, wf := range workflowObjectsById(config.WorkflowsConfig) {
+		var paths []string
+		for name, value := range wf.Attributes() {
+			if name == "id" || name == "workflow_id" || value.IsNull() {
+				continue
+			}
+			paths = append(paths, name)
+			obj, ok := value.(types.Object)
+			if !ok || obj.IsUnknown() {
+				continue
+			}
+			switch name {
+			case "terraform_config":
+				for sub, subValue := range obj.Attributes() {
+					if !subValue.IsNull() {
+						paths = append(paths, name+"."+sub)
+					}
+				}
+			case "vcs_config":
+				if !obj.Attributes()["iac_input_data"].IsNull() {
+					paths = append(paths, name+".iac_input_data")
+				}
+			}
+		}
+		if len(paths) == 0 {
+			continue
+		}
+		slices.Sort(paths)
+		if result.Workflows == nil {
+			result.Workflows = make(map[string][]string)
+		}
+		result.Workflows[id] = paths
+	}
+	return result
+}
+
+type privateStateGetter interface {
+	GetKey(ctx context.Context, key string) ([]byte, diag.Diagnostics)
+}
+
+type privateStateSetter interface {
+	SetKey(ctx context.Context, key string, value []byte) diag.Diagnostics
+}
+
+// loadDeclaredFields reads the record saved by the last apply. A resource with
+// none yet — imported, or created by an older build — yields an empty record,
+// so no removal is detected until its next apply.
+func loadDeclaredFields(ctx context.Context, private privateStateGetter) (declaredFields, diag.Diagnostics) {
+	var result declaredFields
+	raw, diags := private.GetKey(ctx, declaredFieldsPrivateKey)
+	if diags.HasError() || len(raw) == 0 {
+		return result, diags
+	}
+	if err := json.Unmarshal(raw, &result); err != nil {
+		// A record this build cannot read only costs removal detection for one
+		// plan; the next apply rewrites it.
+		return declaredFields{}, diags
+	}
+	return result, diags
+}
+
+// saveDeclaredFieldsFromConfig records which overrides config declares, for the
+// next plan's loadDeclaredFields.
+func saveDeclaredFieldsFromConfig(ctx context.Context, config tfsdk.Config, private privateStateSetter) diag.Diagnostics {
+	var model StackResourceModel
+	diags := config.Get(ctx, &model)
+	if diags.HasError() {
+		return diags
+	}
+	raw, err := json.Marshal(declaredFieldsFromConfig(model))
+	if err != nil {
+		diags.AddError("Unable to record declared stack attributes", err.Error())
+		return diags
+	}
+	diags.Append(private.SetKey(ctx, declaredFieldsPrivateKey, raw)...)
+	return diags
+}
+
+// applyRemovedFields copies each field in removed from resolved into plan.
+func applyRemovedFields(plan *StackResourceModel, resolved StackResourceModel, removed declaredFields) diag.Diagnostics {
+	for _, name := range removed.Stack {
+		switch name {
+		case "description":
+			plan.Description = resolved.Description
+		case "tags":
+			plan.Tags = resolved.Tags
+		case "context_tags":
+			plan.ContextTags = resolved.ContextTags
+		case "actions":
+			plan.Actions = resolved.Actions
+		}
+	}
+	if len(removed.Workflows) == 0 {
+		return nil
+	}
+	wfc, diags := copyWorkflowFields(plan.WorkflowsConfig, resolved.WorkflowsConfig, removed.Workflows)
+	if diags.HasError() {
+		return diags
+	}
+	plan.WorkflowsConfig = wfc
+	return diags
+}
+
+// copyWorkflowFields returns plan with, for each workflow in paths, the listed
+// attributes taken from resolved. A nested path ("terraform_config.drift_check")
+// copies its whole parent object: fields inside one depend on each other
+// (drift_cron is cleared whenever drift_check is false), so re-resolving one
+// alone could leave its sibling stale. That is safe because resolved was
+// expanded from the current config, so the parent's still-declared fields hold
+// their configured values.
+func copyWorkflowFields(plan, resolved types.Object, paths map[string][]string) (types.Object, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if plan.IsNull() || plan.IsUnknown() {
+		return plan, diags
+	}
+	workflows, ok := plan.Attributes()["workflows"].(types.List)
+	if !ok || workflows.IsNull() || workflows.IsUnknown() {
+		return plan, diags
+	}
+	resolvedById := workflowObjectsById(resolved)
+	wfAttrTypes := WorkflowInStackModel{}.AttributeTypes()
+
+	elements := make([]attr.Value, 0, len(workflows.Elements()))
+	for _, elem := range workflows.Elements() {
+		obj, ok := elem.(types.Object)
+		if !ok || obj.IsNull() || obj.IsUnknown() {
+			elements = append(elements, elem)
+			continue
+		}
+		id, _ := obj.Attributes()["id"].(types.String)
+		resolvedObj, found := resolvedById[id.ValueString()]
+		if !found || len(paths[id.ValueString()]) == 0 {
+			elements = append(elements, elem)
+			continue
+		}
+
+		attrs := make(map[string]attr.Value, len(obj.Attributes()))
+		for k, v := range obj.Attributes() {
+			attrs[k] = v
+		}
+		resolvedAttrs := resolvedObj.Attributes()
+
+		for _, p := range paths[id.ValueString()] {
+			name, _, _ := strings.Cut(p, ".")
+			if v, ok := resolvedAttrs[name]; ok {
+				attrs[name] = v
+			}
+		}
+
+		newObj, d := types.ObjectValue(wfAttrTypes, attrs)
+		diags.Append(d...)
+		if diags.HasError() {
+			return plan, diags
+		}
+		elements = append(elements, newObj)
+	}
+
+	newList, d := types.ListValue(types.ObjectType{AttrTypes: wfAttrTypes}, elements)
+	diags.Append(d...)
+	if diags.HasError() {
+		return plan, diags
+	}
+	result, d := types.ObjectValue(WorkflowsConfigModel{}.AttributeTypes(), map[string]attr.Value{"workflows": newList})
+	diags.Append(d...)
+	if diags.HasError() {
+		return plan, diags
+	}
+	return result, diags
 }
