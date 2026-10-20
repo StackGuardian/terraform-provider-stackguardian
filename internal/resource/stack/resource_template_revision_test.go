@@ -39,7 +39,7 @@ func templateReadsCheck(api *fakeStackAPI, want []string) resource.TestCheckFunc
 func TestStack_UnpinnedWorkflowTemplateNotReadAsRevision(t *testing.T) {
 	srv, api := newFakeStackAPI(t, singleWorkflowRevision("/override-removal-org/net-tpl"))
 
-	resource.UnitTest(t, resource.TestCase{
+	runFakeAPITest(t, resource.TestCase{
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{{
 			Config: actionsConfig(srv.URL, "tpl:1", "", "first", "wf-a"),
@@ -51,7 +51,7 @@ func TestStack_UnpinnedWorkflowTemplateNotReadAsRevision(t *testing.T) {
 func TestStack_PinnedWorkflowTemplateRead(t *testing.T) {
 	srv, api := newFakeStackAPI(t, singleWorkflowRevision("/override-removal-org/net-tpl:3"))
 
-	resource.UnitTest(t, resource.TestCase{
+	runFakeAPITest(t, resource.TestCase{
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{{
 			Config: actionsConfig(srv.URL, "tpl:1", "", "first", "wf-a"),
@@ -66,7 +66,7 @@ func TestStack_CreateSurvivesResponseWithoutStack(t *testing.T) {
 	srv, api := newFakeStackAPI(t, `{"WorkflowsConfig": {"workflows": [{"id": "wf-a", "ResourceName": "wf-a-0"}]}}`)
 	api.emptyCreateResponse = true
 
-	resource.UnitTest(t, resource.TestCase{
+	runFakeAPITest(t, resource.TestCase{
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{{
 			Config: actionsConfig(srv.URL, "tpl:1", "", "first", "wf-a"),

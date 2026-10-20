@@ -63,7 +63,7 @@ func TestStack_UndeclaredActionsKeepDefaultAndAreNotResent(t *testing.T) {
 		return nil
 	}
 
-	resource.UnitTest(t, resource.TestCase{
+	runFakeAPITest(t, resource.TestCase{
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -100,7 +100,7 @@ func TestStack_DeclaredActionsSentWithKnownDefault(t *testing.T) {
 		return nil
 	}
 
-	resource.UnitTest(t, resource.TestCase{
+	runFakeAPITest(t, resource.TestCase{
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -133,7 +133,7 @@ func TestStack_InheritedActionsReferencingRemovedWorkflowRejectedAtPlan(t *testi
 		"tpl:2": `{"WorkflowsConfig": {"workflows": [{"id": "wf-a", "ResourceName": "a"}]}}`,
 	})
 
-	resource.UnitTest(t, resource.TestCase{
+	runFakeAPITest(t, resource.TestCase{
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{

@@ -187,7 +187,7 @@ func TestStack_RemovedOverrideRevertsToTemplateValue(t *testing.T) {
 	  ]}
 	}`)
 
-	resource.UnitTest(t, resource.TestCase{
+	runFakeAPITest(t, resource.TestCase{
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -231,7 +231,7 @@ func TestStack_RemovedOverrideRevertsToTemplateValue(t *testing.T) {
 func TestStack_RemovedOverrideWithoutTemplateValueResets(t *testing.T) {
 	srv, _ := newFakeStackAPI(t, `{"WorkflowsConfig": {"workflows": [{"id": "wf-a", "ResourceName": "wf-a-0"}]}}`)
 
-	resource.UnitTest(t, resource.TestCase{
+	runFakeAPITest(t, resource.TestCase{
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -282,4 +282,14 @@ func (f *fakeStackAPI) set(change func(*fakeStackAPI)) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	change(f)
+}
+
+// runFakeAPITest runs a Terraform test case against a fake API. It needs no
+// credentials or TF_ACC, only a Terraform CLI (see acctest.SkipUnlessTerraformCLI),
+// and runs in parallel with the other fake-API tests: each one has its own server.
+func runFakeAPITest(t *testing.T, tc resource.TestCase) {
+	t.Helper()
+	acctest.SkipUnlessTerraformCLI(t)
+	tc.IsUnitTest = true
+	resource.ParallelTest(t, tc)
 }

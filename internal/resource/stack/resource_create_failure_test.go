@@ -35,7 +35,7 @@ func TestStack_CreatedStackTrackedWhenReadBackFails(t *testing.T) {
 	api.set(func(f *fakeStackAPI) { f.failReadsAfterCreate = true })
 	config := actionsConfig(srv.URL, "tpl:1", "", "first", "wf-a")
 
-	resource.UnitTest(t, resource.TestCase{
+	runFakeAPITest(t, resource.TestCase{
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -62,7 +62,7 @@ func TestStack_PartialStackTrackedWhenCreateFails(t *testing.T) {
 	api.set(func(f *fakeStackAPI) { f.failCreate = true })
 	config := actionsConfig(srv.URL, "tpl:1", "", "first", "wf-a")
 
-	resource.UnitTest(t, resource.TestCase{
+	runFakeAPITest(t, resource.TestCase{
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{
@@ -97,7 +97,7 @@ func TestStack_ExistingStackNotTakenOver(t *testing.T) {
 			api.preload("override-removal", map[string]any{"Id": "override-removal", "ResourceName": "someone else's"})
 			api.set(func(f *fakeStackAPI) { f.failCreate = tc.failCreate })
 
-			resource.UnitTest(t, resource.TestCase{
+			runFakeAPITest(t, resource.TestCase{
 				ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 				Steps: []resource.TestStep{{
 					Config:      actionsConfig(srv.URL, "tpl:1", "", "first", "wf-a"),
@@ -124,7 +124,7 @@ func TestStack_DeleteRefusedWhileRunActiveExplainsWhy(t *testing.T) {
 	srv, api := newFakeStackAPI(t, createFailureRevision)
 	config := actionsConfig(srv.URL, "tpl:1", "", "first", "wf-a")
 
-	resource.UnitTest(t, resource.TestCase{
+	runFakeAPITest(t, resource.TestCase{
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
 		Steps: []resource.TestStep{
 			{Config: config},
