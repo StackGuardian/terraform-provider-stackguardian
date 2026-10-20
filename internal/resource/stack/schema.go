@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/validators"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -70,6 +71,7 @@ var ministepsWorkflowChaining = schema.ListNestedAttribute{
 			"stack_run_payload": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingStackPayload,
 				Optional:            true,
+				Validators:          []validator.String{validators.JSONObject()},
 			},
 			"workflow_id": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingWorkflowId,
@@ -78,6 +80,7 @@ var ministepsWorkflowChaining = schema.ListNestedAttribute{
 			"workflow_run_payload": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingWorkflowPayload,
 				Optional:            true,
+				Validators:          []validator.String{validators.JSONObject()},
 			},
 		},
 	},
@@ -166,6 +169,7 @@ var wfStepsConfigNestedObj = schema.NestedAttributeObject{
 				"data": schema.StringAttribute{
 					MarkdownDescription: constants.WfStepInputDataData,
 					Optional:            true,
+					Validators:          []validator.String{validators.JSONObject()},
 				},
 			},
 		},
@@ -657,6 +661,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 												"data": schema.StringAttribute{
 													MarkdownDescription: constants.WorkflowIacInputDataData,
 													Optional:            true,
+													Validators:          []validator.String{validators.JSONObject()},
 												},
 											},
 										},

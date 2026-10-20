@@ -30,12 +30,19 @@ type fakeStackAPI struct {
 	stacks   map[string]map[string]any
 }
 
-func newFakeStackAPI(t *testing.T, revision string) *httptest.Server {
+func newFakeStackAPI(t *testing.T, revision string) (*httptest.Server, *fakeStackAPI) {
 	t.Helper()
 	api := &fakeStackAPI{revision: revision, stacks: map[string]map[string]any{}}
 	srv := httptest.NewServer(api)
 	t.Cleanup(srv.Close)
-	return srv
+	return srv, api
+}
+
+// storedStack returns the stack as the fake last stored it, round-tripped through JSON.
+func (f *fakeStackAPI) storedStack(id string) map[string]any {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.stacks[id]
 }
 
 func (f *fakeStackAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -49,6 +56,10 @@ func (f *fakeStackAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.Method == http.MethodGet && r.URL.Path == revisionPath:
 		fmt.Fprintf(w, `{"msg":%s}`, f.revision)
+		return
+	case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/api/v1/templatetypes/IAC/"):
+		// A workflow template revision with no defaults of its own.
+		fmt.Fprint(w, `{"msg":{}}`)
 		return
 	case !strings.HasPrefix(r.URL.Path, stacksPrefix):
 		http.Error(w, `{"msg":"not found"}`, http.StatusNotFound)
@@ -124,7 +135,7 @@ resource "stackguardian_stack" "test" {
 }
 
 func TestStack_RemovedOverrideRevertsToTemplateValue(t *testing.T) {
-	srv := newFakeStackAPI(t, `{
+	srv, _ := newFakeStackAPI(t, `{
 	  "LongDescription": "from template",
 	  "WorkflowsConfig": {"workflows": [
 	    {"id": "wf-a", "ResourceName": "wf-a-0", "NumberOfApprovalsRequired": 1,
@@ -174,7 +185,7 @@ func TestStack_RemovedOverrideRevertsToTemplateValue(t *testing.T) {
 
 // A field the template does not set goes back to its default when its override is removed.
 func TestStack_RemovedOverrideWithoutTemplateValueResets(t *testing.T) {
-	srv := newFakeStackAPI(t, `{"WorkflowsConfig": {"workflows": [{"id": "wf-a", "ResourceName": "wf-a-0"}]}}`)
+	srv, _ := newFakeStackAPI(t, `{"WorkflowsConfig": {"workflows": [{"id": "wf-a", "ResourceName": "wf-a-0"}]}}`)
 
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),

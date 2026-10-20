@@ -47,6 +47,27 @@ To upgrade, change the revision in `template_group_id` (e.g. `:1` → `:2`):
 - Attributes you **declared** are **preserved** (your values still win over the new revision).
 - Attributes you **left unset** adopt the **new revision's** defaults.
 
+## Referencing another workflow's outputs
+
+`vcs_config.iac_input_data.data` and `PLAIN_TEXT` environment variables can take another
+workflow's output, in the form a stack template uses:
+`${reference::template-group.<index>.outputs.<key>}`, where `<index>` is the workflow's position
+in `workflows_config.workflows` (starting at 0). The provider sends it as
+`${workflow::<workflow-group>.<stack>.<workflow-id>.outputs.<key>}`, on create and on update, and
+keeps the form you wrote in state. In HCL, double the `$` so Terraform does not read the value as
+its own interpolation:
+
+```terraform
+vcs_config = {
+  iac_input_data = {
+    schema_type = "RAW_JSON"
+    data        = jsonencode({ vpc_id = "$${reference::template-group.0.outputs.vpc_id}" })
+  }
+}
+```
+
+`data` must be a JSON object; a value that is not is rejected at plan time.
+
 ## Limitations
 
 - **Removing a declaration is detected from the last apply.** Terraform does not pass the
