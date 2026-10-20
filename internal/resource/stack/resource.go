@@ -13,6 +13,7 @@ import (
 	"github.com/StackGuardian/sg-sdk-go/stacktemplaterevisions"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/validators"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -267,6 +268,15 @@ func (r *stackResource) resolveWorkflowTemplates(ctx context.Context, plan Stack
 		}
 		templateId := matched.VcsConfig.IacVcsConfig.IacTemplateId
 		if templateId == nil || *templateId == "" {
+			continue
+		}
+		// Without a revision the id reads the workflow template itself, which
+		// has none of a revision's content — the platform gets no defaults from
+		// it either. Skip the layer rather than read that record as a revision.
+		if !validators.HasTemplateRevision(*templateId) {
+			diags.AddWarning("Workflow template has no revision",
+				fmt.Sprintf("Workflow %q of stack template revision %q uses workflow template %q without a revision, so there are no workflow template defaults to inherit: attributes this stack leaves unset on that workflow get StackGuardian's defaults. Name a revision in the stack template revision's iac_template_id, for example %q.",
+					slotId, plan.TemplateGroupId.ValueString(), *templateId, *templateId+":1"))
 			continue
 		}
 		tpl, d := r.fetchWorkflowTemplateRevision(ctx, *templateId)

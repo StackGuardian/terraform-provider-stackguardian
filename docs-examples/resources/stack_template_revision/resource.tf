@@ -21,7 +21,7 @@ resource "stackguardian_stack_template_revision" "basic" {
 
         vcs_config = {
           iac_vcs_config = {
-            iac_template_id = "my-workflow-template"
+            iac_template_id = "my-workflow-template:1"
           }
         }
 
@@ -50,7 +50,7 @@ resource "stackguardian_stack_template_revision" "with_vcs" {
 
         vcs_config = {
           iac_vcs_config = {
-            iac_template_id = "my-workflow-template"
+            iac_template_id = "my-workflow-template:1"
           }
           iac_input_data = {
             schema_type = "RAW_JSON"
