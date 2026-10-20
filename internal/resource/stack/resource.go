@@ -296,7 +296,7 @@ func (r *stackResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 		return
 	}
 
-	resp.Diagnostics.Append(reResolveWorkflowsConfigOnRevisionChange(ctx, &plan, config, tpl, workflowTemplates)...)
+	resp.Diagnostics.Append(reResolveWorkflowsConfigOnRevisionChange(ctx, &plan, config, state.WorkflowsConfig, tpl, workflowTemplates)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

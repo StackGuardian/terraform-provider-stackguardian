@@ -635,9 +635,16 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 												},
 											},
 										},
+										// Optional+Computed: when left unset the platform fills it from the
+										// stack template revision (or the workflow template's input
+										// defaults), so it can hold a value the config never set.
 										"iac_input_data": schema.SingleNestedAttribute{
 											MarkdownDescription: constants.WorkflowIacInputData,
 											Optional:            true,
+											Computed:            true,
+											PlanModifiers: []planmodifier.Object{
+												objectplanmodifier.UseStateForUnknown(),
+											},
 											Attributes: map[string]schema.Attribute{
 												"schema_id": schema.StringAttribute{
 													MarkdownDescription: constants.WorkflowIacInputDataSchemaId,

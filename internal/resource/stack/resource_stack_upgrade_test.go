@@ -268,3 +268,66 @@ func TestAccStack_WorkflowsConfigRemoveAndAddWorkflow(t *testing.T) {
 		},
 	})
 }
+
+// TestAccStack_WorkflowsConfigRevisionKeepsUnresolvedFields — REVISION SWITCH test.
+// Purpose: a per-workflow field that neither the config nor the new revision sets must
+// keep the value the platform holds, not be planned as null. Revision1 names the
+// workflow "wf-1"; revision2 has no ResourceName (setupSecondStackTemplateRevisionBare).
+// The platform keeps the existing name on the upgrade, so planning null for it ended in
+// "Provider produced inconsistent result after apply" (resolveUnsentWorkflowFields).
+// workflow_id must also stay put: the platform never renames an existing workflow.
+func TestAccStack_WorkflowsConfigRevisionKeepsUnresolvedFields(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+	wfGrpName := acctest.ResourceName("stack-wfkeep-wfgrp")
+	wfTemplateName := acctest.ResourceName("stack-wfkeep-wftmpl")
+	stackTemplateName := acctest.ResourceName("stack-wfkeep-stmpl")
+	id := acctest.ResourceName("stack-wfkeep")
+
+	revision1 := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+	revision2 := setupSecondStackTemplateRevisionBare(t, stackTemplateName, wfTemplateName)
+
+	config := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      { id = %q }
+    ]
+  }
+`, testWorkflowUUID)
+
+	var workflowId string
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision1, id, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.resource_name", "wf-1"),
+					func(s *terraform.State) error {
+						workflowId = s.RootModule().Resources["stackguardian_stack.test"].Primary.Attributes["workflows_config.workflows.0.workflow_id"]
+						return nil
+					},
+				),
+			},
+			{
+				Config: testAccStackConfig(wfGrpName, revision2, id, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "workflows_config.workflows.0.resource_name", "wf-1"),
+					resource.TestCheckResourceAttrWith("stackguardian_stack.test", "workflows_config.workflows.0.workflow_id", func(v string) error {
+						if v != workflowId {
+							return fmt.Errorf("workflow_id changed across the upgrade: %q -> %q", workflowId, v)
+						}
+						return nil
+					}),
+				),
+			},
+			{
+				Config:   testAccStackConfig(wfGrpName, revision2, id, config),
+				PlanOnly: true,
+			},
+		},
+	})
+}

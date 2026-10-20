@@ -3185,7 +3185,11 @@ func reResolveOnRevisionChange(ctx context.Context, plan *StackResourceModel, co
 // (mirrors workflow_from_template's identical fix for this identical field,
 // model.go:2616-2634 there — confirmed live: an unset runner_constraints
 // resolves to {type: "shared"}, not to nothing).
-func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackResourceModel, config StackResourceModel, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) diag.Diagnostics {
+//
+// Fields the merge leaves null are a second exception, see
+// resolveUnsentWorkflowFields: prior is the stack's current state, used to
+// predict what the platform keeps for workflows that already exist.
+func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackResourceModel, config StackResourceModel, prior types.Object, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	if config.WorkflowsConfig.IsNull() || config.WorkflowsConfig.IsUnknown() {
@@ -3226,9 +3230,209 @@ func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackRe
 		return diags
 	}
 
+	wfcObj, d = resolveUnsentWorkflowFields(wfcObj, prior)
+	diags.Append(d...)
+	if diags.HasError() {
+		return diags
+	}
+
 	plan.WorkflowsConfig = wfcObj
 
 	return diags
+}
+
+// unsentWhenNullWorkflowFields are the per-workflow attributes that flatten to
+// null when no layer (config, stack template, workflow template) resolves them.
+// A null plan value is not sent on apply, so the platform decides the result:
+// update_wf keeps an existing workflow's current value, and create_wf fills a
+// new workflow's from its own template defaults. Every other per-workflow
+// attribute flattens to a known default ("", [], {}, 0, "disabled") that apply
+// sends explicitly, so its prediction already holds.
+var unsentWhenNullWorkflowFields = []string{
+	"resource_name",
+	"description",
+	"user_job_cpu",
+	"user_job_memory",
+	"terraform_config",
+}
+
+// resolveUnsentWorkflowFields fixes the plan for the per-workflow values the
+// provider cannot predict from the templates, so a revision change does not end
+// in "Provider produced inconsistent result after apply":
+//
+//   - A workflow already in the stack (present in prior) gets its prior value for
+//     each field in unsentWhenNullWorkflowFields and for vcs_config.iac_input_data
+//     when they resolve to null. That is what the platform keeps, and because the
+//     plan value is then known it is sent on apply, which also stops a VCSConfig
+//     update from dropping the workflow's inputs. workflow_id and wf_type always
+//     keep their prior value: the platform ignores WorkflowId and strips WfType
+//     when updating an existing workflow.
+//   - A workflow the new revision adds gets unknown for those fields instead of a
+//     guessed null. Its workflow_id stays as computed: the platform creates the
+//     workflow with the id the provider sends.
+func resolveUnsentWorkflowFields(wfc types.Object, prior types.Object) (types.Object, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if wfc.IsNull() || wfc.IsUnknown() {
+		return wfc, diags
+	}
+	workflows, ok := wfc.Attributes()["workflows"].(types.List)
+	if !ok || workflows.IsNull() || workflows.IsUnknown() {
+		return wfc, diags
+	}
+
+	priorById := workflowObjectsById(prior)
+	wfAttrTypes := WorkflowInStackModel{}.AttributeTypes()
+
+	elements := make([]attr.Value, 0, len(workflows.Elements()))
+	for _, elem := range workflows.Elements() {
+		obj, ok := elem.(types.Object)
+		if !ok || obj.IsNull() || obj.IsUnknown() {
+			elements = append(elements, elem)
+			continue
+		}
+		attrs := make(map[string]attr.Value, len(obj.Attributes()))
+		for k, v := range obj.Attributes() {
+			attrs[k] = v
+		}
+
+		id, _ := attrs["id"].(types.String)
+		priorObj, existing := priorById[id.ValueString()]
+		if existing {
+			priorAttrs := priorObj.Attributes()
+			for _, name := range []string{"workflow_id", "wf_type"} {
+				if v, ok := priorAttrs[name].(types.String); ok && !v.IsNull() && !v.IsUnknown() && v.ValueString() != "" {
+					attrs[name] = v
+				}
+			}
+			for _, name := range unsentWhenNullWorkflowFields {
+				if attrs[name].IsNull() {
+					attrs[name] = priorAttrs[name]
+				}
+			}
+		} else {
+			for _, name := range unsentWhenNullWorkflowFields {
+				if attrs[name].IsNull() {
+					attrs[name] = newUnknownValue(wfAttrTypes[name])
+				}
+			}
+			if v, ok := attrs["wf_type"].(types.String); ok && v.ValueString() == "" {
+				attrs["wf_type"] = types.StringUnknown()
+			}
+		}
+
+		vcs, d := resolveUnsentIacInputData(attrs["vcs_config"], priorObj, existing)
+		diags.Append(d...)
+		if diags.HasError() {
+			return wfc, diags
+		}
+		attrs["vcs_config"] = vcs
+
+		newObj, d := types.ObjectValue(wfAttrTypes, attrs)
+		diags.Append(d...)
+		if diags.HasError() {
+			return wfc, diags
+		}
+		elements = append(elements, newObj)
+	}
+
+	newList, d := types.ListValue(types.ObjectType{AttrTypes: wfAttrTypes}, elements)
+	diags.Append(d...)
+	if diags.HasError() {
+		return wfc, diags
+	}
+	result, d := types.ObjectValue(WorkflowsConfigModel{}.AttributeTypes(), map[string]attr.Value{"workflows": newList})
+	diags.Append(d...)
+	if diags.HasError() {
+		return wfc, diags
+	}
+	return result, diags
+}
+
+// resolveUnsentIacInputData applies resolveUnsentWorkflowFields' rule to
+// vcs_config.iac_input_data, which sits one level down: the provider never merges
+// it from a template layer, so it is null whenever the config leaves it unset.
+func resolveUnsentIacInputData(vcs attr.Value, priorWorkflow types.Object, existing bool) (attr.Value, diag.Diagnostics) {
+	vcsObj, ok := vcs.(types.Object)
+	if !ok || vcsObj.IsUnknown() {
+		return vcs, nil
+	}
+	vcsAttrTypes := VcsConfigModel{}.AttributeTypes()
+
+	var priorVcs types.Object
+	if existing {
+		priorVcs, _ = priorWorkflow.Attributes()["vcs_config"].(types.Object)
+	}
+
+	if vcsObj.IsNull() {
+		if existing {
+			return priorVcs, nil
+		}
+		return types.ObjectUnknown(vcsAttrTypes), nil
+	}
+
+	attrs := make(map[string]attr.Value, len(vcsObj.Attributes()))
+	for k, v := range vcsObj.Attributes() {
+		attrs[k] = v
+	}
+	if !attrs["iac_input_data"].IsNull() {
+		return vcs, nil
+	}
+	switch {
+	case !existing:
+		attrs["iac_input_data"] = types.ObjectUnknown(VcsIacInputDataModel{}.AttributeTypes())
+	case !priorVcs.IsNull() && !priorVcs.IsUnknown():
+		attrs["iac_input_data"] = priorVcs.Attributes()["iac_input_data"]
+	default:
+		return vcs, nil
+	}
+	return types.ObjectValue(vcsAttrTypes, attrs)
+}
+
+// workflowObjectsById indexes a workflows_config object's workflows by their
+// stack-template slot id. A null or unknown value yields an empty map.
+func workflowObjectsById(wfc types.Object) map[string]types.Object {
+	result := make(map[string]types.Object)
+	if wfc.IsNull() || wfc.IsUnknown() {
+		return result
+	}
+	workflows, ok := wfc.Attributes()["workflows"].(types.List)
+	if !ok || workflows.IsNull() || workflows.IsUnknown() {
+		return result
+	}
+	for _, elem := range workflows.Elements() {
+		obj, ok := elem.(types.Object)
+		if !ok || obj.IsNull() || obj.IsUnknown() {
+			continue
+		}
+		if id, ok := obj.Attributes()["id"].(types.String); ok && !id.IsNull() && !id.IsUnknown() {
+			result[id.ValueString()] = obj
+		}
+	}
+	return result
+}
+
+// newUnknownValue returns a typed unknown attr.Value for the given attr.Type.
+func newUnknownValue(t attr.Type) attr.Value {
+	switch tt := t.(type) {
+	case types.ObjectType:
+		return types.ObjectUnknown(tt.AttrTypes)
+	case types.ListType:
+		return types.ListUnknown(tt.ElemType)
+	case types.MapType:
+		return types.MapUnknown(tt.ElemType)
+	case types.SetType:
+		return types.SetUnknown(tt.ElemType)
+	case basetypes.BoolType:
+		return types.BoolUnknown()
+	case basetypes.Int64Type:
+		return types.Int64Unknown()
+	case basetypes.Float64Type:
+		return types.Float64Unknown()
+	case basetypes.NumberType:
+		return types.NumberUnknown()
+	default:
+		return types.StringUnknown()
+	}
 }
 
 // runnerConstraintsByWorkflowUUID extracts each workflow's currently-resolved
