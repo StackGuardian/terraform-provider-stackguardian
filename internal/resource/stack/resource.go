@@ -326,7 +326,22 @@ func (r *stackResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	}
 
 	revisionChanged := !creating && plan.TemplateGroupId.ValueString() != state.TemplateGroupId.ValueString()
-	if !creating && !revisionChanged && !workflowIdsChanged(ctx, plan.WorkflowsConfig, state.WorkflowsConfig) {
+	checkWorkflows := creating || revisionChanged || workflowIdsChanged(ctx, plan.WorkflowsConfig, state.WorkflowsConfig)
+
+	// Overrides the config declared at the last apply but no longer does. A
+	// revision change re-resolves every undeclared field anyway, so this is
+	// only needed for an update that keeps the revision.
+	var removed declaredFields
+	if !creating && !revisionChanged {
+		prev, d := loadDeclaredFields(ctx, req.Private)
+		resp.Diagnostics.Append(d...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		removed = prev.without(declaredFieldsFromConfig(config))
+	}
+
+	if !checkWorkflows && removed.isEmpty() {
 		return // the current state already matched this revision when it was applied
 	}
 
@@ -340,8 +355,21 @@ func (r *stackResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 		return
 	}
 
-	resp.Diagnostics.Append(validateWorkflowsConfigMatchesRevision(ctx, plan.WorkflowsConfig, tpl)...)
-	if resp.Diagnostics.HasError() || !revisionChanged {
+	if checkWorkflows {
+		resp.Diagnostics.Append(validateWorkflowsConfigMatchesRevision(ctx, plan.WorkflowsConfig, tpl)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	if !revisionChanged {
+		if !removed.isEmpty() {
+			resp.Diagnostics.Append(r.revertRemovedOverrides(ctx, &plan, config, state, tpl, removed)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
+		}
 		return
 	}
 
@@ -367,6 +395,36 @@ func (r *stackResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
+}
+
+// revertRemovedOverrides sets each field in removed — an override the config no
+// longer declares — back to the value it resolves to without the override. It
+// re-resolves the whole stack against tpl the same way a revision change does
+// (template value, else the attribute's default, else the prior value for the
+// fields the platform cannot clear; see resolveUnsentWorkflowFields), then
+// copies only the removed fields into plan. Every other field keeps its planned
+// value, so an in-place change to a template does not show up as a diff.
+func (r *stackResource) revertRemovedOverrides(ctx context.Context, plan *StackResourceModel, config, state StackResourceModel, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, removed declaredFields) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	workflowTemplates, d := r.resolveWorkflowTemplates(ctx, *plan, tpl)
+	diags.Append(d...)
+	if diags.HasError() {
+		return diags
+	}
+
+	resolved := *plan
+	diags.Append(reResolveOnRevisionChange(ctx, &resolved, config, tpl)...)
+	if diags.HasError() {
+		return diags
+	}
+	diags.Append(reResolveWorkflowsConfigOnRevisionChange(ctx, &resolved, config, state.WorkflowsConfig, tpl, workflowTemplates)...)
+	if diags.HasError() {
+		return diags
+	}
+
+	diags.Append(applyRemovedFields(plan, resolved, removed)...)
+	return diags
 }
 
 // Create creates the resource and sets the initial Terraform state.
@@ -432,6 +490,11 @@ func (r *stackResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	// Set state to fully populated data
 	resp.Diagnostics.Append(resp.State.Set(ctx, &stackModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(saveDeclaredFieldsFromConfig(ctx, req.Config, resp.Private)...)
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -531,6 +594,11 @@ func (r *stackResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, stackModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(saveDeclaredFieldsFromConfig(ctx, req.Config, resp.Private)...)
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
