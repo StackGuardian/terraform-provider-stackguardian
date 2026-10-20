@@ -155,3 +155,35 @@ func assertString(t *testing.T, attrs map[string]attr.Value, name, want string) 
 		t.Errorf("%s = %v, want %q", name, attrs[name], want)
 	}
 }
+
+func TestWorkflowIdsChanged(t *testing.T) {
+	ctx := context.Background()
+	wfc := func(ids ...string) types.Object {
+		workflows := make([]*sgsdkgo.StackWorkflowsConfigWorkflow, 0, len(ids))
+		for _, id := range ids {
+			workflows = append(workflows, &sgsdkgo.StackWorkflowsConfigWorkflow{Id: sgsdkgo.String(id)})
+		}
+		return mustFlattenWorkflows(t, workflows...)
+	}
+	null := types.ObjectNull(WorkflowsConfigModel{}.AttributeTypes())
+	unknown := types.ObjectUnknown(WorkflowsConfigModel{}.AttributeTypes())
+
+	for _, tc := range []struct {
+		name        string
+		plan, state types.Object
+		want        bool
+	}{
+		{"same ids, same order", wfc("a", "b"), wfc("a", "b"), false},
+		{"reordered", wfc("b", "a"), wfc("a", "b"), true},
+		{"added", wfc("a", "b"), wfc("a"), true},
+		{"removed", wfc("a"), wfc("a", "b"), true},
+		{"unknown plan", unknown, wfc("a"), true},
+		{"null state", wfc("a"), null, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := workflowIdsChanged(ctx, tc.plan, tc.state); got != tc.want {
+				t.Errorf("workflowIdsChanged = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}

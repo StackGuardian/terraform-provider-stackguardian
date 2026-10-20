@@ -2,7 +2,9 @@ package stack
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
@@ -14,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -79,11 +82,11 @@ func (r *stackResource) ImportState(ctx context.Context, req resource.ImportStat
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), stackId)...)
 }
 
-// isStackNotFound reports whether err from a Stack API call indicates the
-// stack no longer exists (deleted out-of-band).
-func isStackNotFound(err error) bool {
-	apiErr, ok := err.(*core.APIError)
-	return ok && apiErr.StatusCode == 404
+// isNotFound reports whether err from an API call is a 404: the stack was
+// deleted out-of-band, or the stack template revision does not exist (yet).
+func isNotFound(err error) bool {
+	var apiErr *core.APIError
+	return errors.As(err, &apiErr) && apiErr.StatusCode == 404
 }
 
 // fetchTemplateRevision reads the stack template revision referenced by the
@@ -105,13 +108,65 @@ func (r *stackResource) fetchTemplateRevision(ctx context.Context, m StackResour
 		return nil, diags
 	}
 
-	readResp, err := r.client.StackTemplateRevisions.ReadStackTemplateRevision(ctx, r.org_name, templateGroupId)
+	tpl, err := r.readTemplateRevision(ctx, templateGroupId)
 	if err != nil {
 		diags.AddError("Error reading stack template revision",
 			fmt.Sprintf("Could not read template revision %q to resolve stack defaults: %s", templateGroupId, err.Error()))
 		return nil, diags
 	}
-	return &readResp.Msg, diags
+	return tpl, diags
+}
+
+// readTemplateRevision reads a stack template revision by its bare id, keeping
+// the API error so the caller can tell a missing revision (404) from a failure.
+func (r *stackResource) readTemplateRevision(ctx context.Context, templateGroupId string) (*stacktemplaterevisions.ReadStackTemplateRevisionModel, error) {
+	readResp, err := r.client.StackTemplateRevisions.ReadStackTemplateRevision(ctx, r.org_name, templateGroupId)
+	if err != nil {
+		return nil, err
+	}
+	if readResp == nil {
+		return nil, fmt.Errorf("API returned an empty response")
+	}
+	return &readResp.Msg, nil
+}
+
+// workflowIdsChanged reports whether the workflow ids declared in plan differ
+// from those in state, in order. An unknown or null value on either side
+// counts as a change, so the caller re-validates rather than assuming.
+func workflowIdsChanged(ctx context.Context, plan, state types.Object) bool {
+	planIds, ok := declaredWorkflowIds(ctx, plan)
+	if !ok {
+		return true
+	}
+	stateIds, ok := declaredWorkflowIds(ctx, state)
+	if !ok {
+		return true
+	}
+	return !slices.Equal(planIds, stateIds)
+}
+
+// declaredWorkflowIds returns workflows_config.workflows[*].id in order, and
+// false when the value or any id is null or unknown.
+func declaredWorkflowIds(ctx context.Context, wfc types.Object) ([]string, bool) {
+	if wfc.IsNull() || wfc.IsUnknown() {
+		return nil, false
+	}
+	var m WorkflowsConfigModel
+	if d := wfc.As(ctx, &m, basetypes.ObjectAsOptions{}); d.HasError() || m.Workflows.IsNull() || m.Workflows.IsUnknown() {
+		return nil, false
+	}
+	var wfs []WorkflowInStackModel
+	if d := m.Workflows.ElementsAs(ctx, &wfs, false); d.HasError() {
+		return nil, false
+	}
+	ids := make([]string, 0, len(wfs))
+	for _, wf := range wfs {
+		if wf.Id.IsNull() || wf.Id.IsUnknown() {
+			return nil, false
+		}
+		ids = append(ids, wf.Id.ValueString())
+	}
+	return ids, true
 }
 
 // fetchWorkflowTemplateRevision reads the workflow template revision referenced by
@@ -227,56 +282,66 @@ func (r *stackResource) resolveWorkflowTemplates(ctx context.Context, plan Stack
 	return result, diags
 }
 
-// ModifyPlan handles a template_group_id change: when it changes, the
-// Optional+Computed fields the user did NOT declare must be re-resolved
-// against the new revision. Without that re-resolution, UseStateForUnknown
-// carries the OLD revision's values forward (they were never unknown), so
-// the merge never runs for them. Setting those fields to concrete resolved
-// values here lets plan == apply. Fields the user declared in config are
-// left untouched. Mirrors workflow_from_template's ModifyPlan: this function
-// is never reached at all on create or destroy, so it never needs its own
-// create-time validation path — Create() validates workflows_config itself
-// (validateWorkflowsConfigMatchesRevision), reusing the fetchTemplateRevision
-// call it already makes to build the request, instead of this function
-// fetching the revision a second time just to validate it.
+// ModifyPlan does two things.
 //
-// It covers description/tags/context_tags/actions (stack-level) and
-// workflows_config's per-workflow template-derived fields. actions the user
-// declared in config has no re-resolution to do, but is validated here: a
-// reference to a workflow the new revision dropped is an error, not a silent
-// carry-forward. workflows_config's completeness/order against the revision
-// is validated here too (validateWorkflowsConfigMatchesRevision) — Update()
-// runs that same check itself for an update with no revision change, again
-// reusing its own fetchTemplateRevision call.
+// It rejects, at plan time, a workflows_config.workflows that does not declare
+// exactly the workflows of the stack template revision, in its order
+// (validateWorkflowsConfigMatchesRevision). That runs on create, on a
+// template_group_id change, and on an update that changes the declared
+// workflow ids; a plan that changes none of these was already checked when
+// the current state was applied, so it skips the extra template read. The
+// check is skipped when template_group_id is unknown at plan time, or on
+// create when the revision is not found yet — both happen when the revision
+// is created in the same apply. Create and Update repeat the check against
+// the revision they read, so those cases are still caught at apply.
+//
+// On a template_group_id change it also re-resolves the Optional+Computed
+// fields the user did NOT declare against the new revision. Without that,
+// UseStateForUnknown carries the OLD revision's values forward (they were
+// never unknown), so the merge never runs for them. Setting those fields to
+// concrete resolved values here lets plan == apply. Fields the user declared
+// in config are left untouched. This covers description/tags/context_tags/
+// actions (stack-level) and workflows_config's per-workflow template-derived
+// fields. actions the user declared in config has no re-resolution to do, but
+// is validated: a reference to a workflow the new revision dropped is an
+// error, not a silent carry-forward.
 func (r *stackResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
-		return // create or destroy — no revision transition to handle
+	if req.Plan.Raw.IsNull() {
+		return // destroy
 	}
+	creating := req.State.Raw.IsNull()
 
 	var plan, state, config StackResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if !creating {
+		resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	}
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	if plan.TemplateGroupId.IsUnknown() {
-		return // template not resolved yet — nothing to validate against
+		return // template not resolved yet — Create/Update validate at apply
 	}
 
-	if plan.TemplateGroupId.ValueString() == state.TemplateGroupId.ValueString() {
-		return // no revision change
+	revisionChanged := !creating && plan.TemplateGroupId.ValueString() != state.TemplateGroupId.ValueString()
+	if !creating && !revisionChanged && !workflowIdsChanged(ctx, plan.WorkflowsConfig, state.WorkflowsConfig) {
+		return // the current state already matched this revision when it was applied
 	}
 
-	tpl, d := r.fetchTemplateRevision(ctx, plan)
-	resp.Diagnostics.Append(d...)
-	if resp.Diagnostics.HasError() || tpl == nil {
+	tpl, err := r.readTemplateRevision(ctx, plan.TemplateGroupId.ValueString())
+	if err != nil {
+		if creating && isNotFound(err) {
+			return // the revision may be created by this apply — Create validates it
+		}
+		resp.Diagnostics.AddError("Error reading stack template revision",
+			fmt.Sprintf("Could not read template revision %q to resolve stack defaults: %s", plan.TemplateGroupId.ValueString(), err.Error()))
 		return
 	}
 
 	resp.Diagnostics.Append(validateWorkflowsConfigMatchesRevision(ctx, plan.WorkflowsConfig, tpl)...)
-	if resp.Diagnostics.HasError() {
+	if resp.Diagnostics.HasError() || !revisionChanged {
 		return
 	}
 
@@ -320,10 +385,10 @@ func (r *stackResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// ModifyPlan only re-validates workflows_config against the revision on an
-	// actual revision change (it has no reason to fetch tpl otherwise); a
-	// plain create needs the same check, done here against the tpl this
-	// function already fetched to build the request.
+	// ModifyPlan already ran this check at plan time unless template_group_id
+	// was unknown then or the revision did not exist yet (both happen when the
+	// revision is created in the same apply). Repeat it against the tpl this
+	// function read to build the request, so those cases fail here.
 	resp.Diagnostics.Append(validateWorkflowsConfigMatchesRevision(ctx, plan.WorkflowsConfig, tpl)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -386,7 +451,7 @@ func (r *stackResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	readResp, err := r.client.Stacks.ReadStack(ctx, r.org_name, stackId, wfGrpId, &sgsdkgo.ReadStackQueryParams{RefreshWorkflowsConfig: sgsdkgo.Bool(true)})
 	if err != nil {
 		// If a managed resource is no longer found then remove it from the state
-		if isStackNotFound(err) {
+		if isNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -419,11 +484,9 @@ func (r *stackResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	// ModifyPlan only re-validates workflows_config against the revision on an
-	// actual revision change; an update with no revision change needs the
-	// same check, done here against the tpl this function already fetched to
-	// build the request. Redundant (but free — tpl is already in hand) on a
-	// revision-change update, where ModifyPlan already validated it.
+	// ModifyPlan already ran this check at plan time unless template_group_id
+	// was unknown then. Repeat it against the tpl this function read to build
+	// the request: it costs nothing, and covers that case.
 	resp.Diagnostics.Append(validateWorkflowsConfigMatchesRevision(ctx, plan.WorkflowsConfig, tpl)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -488,7 +551,7 @@ func (r *stackResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	if err != nil {
 		// Already gone (deleted out-of-band) — treat as a successful delete so
 		// the resource is removed from state instead of erroring.
-		if isStackNotFound(err) {
+		if isNotFound(err) {
 			tflog.Warn(ctx, "stack already deleted; treating delete as success")
 			return
 		}
