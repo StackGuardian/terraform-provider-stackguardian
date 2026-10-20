@@ -681,6 +681,68 @@ func setupSecondStackTemplateRevision(t *testing.T, stackTemplateID, workflowTem
 	return setupSecondStackTemplateRevisionWithFields(t, stackTemplateID, workflowTemplateID, description, numberOfApprovalsRequired, nil, nil, defaultSecondRevisionActions())
 }
 
+// setupSecondStackTemplateRevisionBare creates and publishes revision :2 of an
+// existing stack template whose workflow entry carries only its id and workflow
+// template — no ResourceName and no TerraformConfig, unlike revision :1. On the
+// upgrade those fields resolve to nothing from the stack template, which is the
+// case resolveUnsentWorkflowFields covers. Registers cleanup. Returns the bare
+// revision id ("<name>:2").
+func setupSecondStackTemplateRevisionBare(t *testing.T, stackTemplateID, workflowTemplateID string) string {
+	t.Helper()
+	client := getClient()
+	revisionID := fmt.Sprintf("%s:2", stackTemplateID)
+	sourceConfigKind := stacktemplates.StackTemplateSourceConfigKindTerraform
+
+	t.Cleanup(func() {
+		logCleanupErr(t, fmt.Sprintf("deprecate stack template revision %q", revisionID), deprecateStackTemplateRevisionFixture(revisionID))
+		logCleanupErr(t, fmt.Sprintf("delete stack template revision %q", revisionID), deleteStackTemplateRevisionFixture(revisionID))
+	})
+
+	prefixedWorkflowTemplateID := fmt.Sprintf("/%s/%s", org, workflowTemplateID)
+	prefixedWorkflowRevisionID := fmt.Sprintf("/%s/%s:1", org, workflowTemplateID)
+	useMarketplace := true
+
+	_, err := client.StackTemplateRevisions.CreateStackTemplateRevision(
+		context.TODO(), org, stackTemplateID,
+		&stacktemplaterevisions.CreateStackTemplateRevisionRequest{
+			Alias:            "v2",
+			SourceConfigKind: &sourceConfigKind,
+			IsPublic:         sgsdkgo.IsPublicEnumZero.Ptr(),
+			OwnerOrg:         fmt.Sprintf("/orgs/%s", org),
+			WorkflowsConfig: &stacktemplaterevisions.StackTemplateRevisionWorkflowsConfig{
+				Workflows: []*stacktemplaterevisions.StackTemplateRevisionWorkflow{
+					{
+						Id:         sgsdkgo.String(testWorkflowUUID),
+						TemplateId: &prefixedWorkflowTemplateID,
+						VcsConfig: &sgsdkgo.VcsConfig{
+							IacVcsConfig: &sgsdkgo.IacvcsConfig{
+								UseMarketplaceTemplate: &useMarketplace,
+								IacTemplateId:          &prefixedWorkflowRevisionID,
+							},
+						},
+					},
+				},
+			},
+			Actions: defaultSecondRevisionActions(),
+		},
+	)
+	if err != nil && !is409(err) {
+		t.Fatalf("setupSecondStackTemplateRevisionBare: create revision for %q: %s", stackTemplateID, err)
+	}
+
+	_, err = client.StackTemplateRevisions.UpdateStackTemplateRevision(
+		context.TODO(), org, revisionID,
+		&stacktemplaterevisions.UpdateStackTemplateRevisionRequest{
+			IsPublic: sgsdkgo.Optional(sgsdkgo.IsPublicEnumOne),
+		},
+	)
+	if err != nil {
+		t.Fatalf("setupSecondStackTemplateRevisionBare: publish revision %q: %s", revisionID, err)
+	}
+
+	return revisionID
+}
+
 // setupSecondStackTemplateRevisionTwoWorkflows creates and publishes revision :2
 // of an existing stack template (already created by setupStackTemplateChain /
 // setupStackDependencyChain, whose revision :1 wires only testWorkflowUUID),
