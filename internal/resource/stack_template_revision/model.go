@@ -1530,7 +1530,7 @@ func wfStepsConfigFromAPI(steps []sgsdkgo.WfStepsConfig) (types.List, diag.Diagn
 		if s.WfStepInputData != nil {
 			dataStr := flatteners.JSONInterfaceToString(s.WfStepInputData.Data)
 			idm := WfStepInputDataModel{
-				SchemaType: flatteners.String(string(*s.WfStepInputData.SchemaType)),
+				SchemaType: flatteners.StringPtr((*string)(s.WfStepInputData.SchemaType)),
 				Data:       dataStr,
 			}
 			var diags2 diag.Diagnostics
@@ -1768,7 +1768,7 @@ func vcsConfigFromAPI(vc *sgsdkgo.VcsConfig) (types.Object, diag.Diagnostics) {
 		}
 		idM := IacInputDataModel{
 			SchemaId:   flatteners.StringPtr(vc.IacInputData.SchemaId),
-			SchemaType: flatteners.String(string(*vc.IacInputData.SchemaType)),
+			SchemaType: flatteners.StringPtr((*string)(vc.IacInputData.SchemaType)),
 			Data:       dataStr,
 		}
 		var diags diag.Diagnostics
