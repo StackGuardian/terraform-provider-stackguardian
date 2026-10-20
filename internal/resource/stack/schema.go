@@ -383,6 +383,14 @@ var actionsAttrs = map[string]schema.Attribute{
 		MarkdownDescription: "Description of the action.",
 		Optional:            true,
 	},
+	"default": schema.BoolAttribute{
+		MarkdownDescription: "Whether this is one of the stack template's default actions (`true`) or a custom one (`false`). When StackGuardian upgrades a stack, it replaces default actions with the new template's and keeps custom ones. Leave unset to keep the value StackGuardian holds.",
+		Optional:            true,
+		Computed:            true,
+		PlanModifiers: []planmodifier.Bool{
+			boolplanmodifier.UseStateForUnknown(),
+		},
+	},
 	"order": schema.MapNestedAttribute{
 		MarkdownDescription: "Execution order for workflows in this action, keyed by each workflow's `id` (its UUID) as defined in the stack template revision's `workflows_config.workflows` — the same `id` declared in this stack's `workflows_config.workflows`.",
 		Optional:            true,

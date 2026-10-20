@@ -373,9 +373,18 @@ func (r *stackResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 		return
 	}
 
-	resp.Diagnostics.Append(validateActionsAgainstRevision(ctx, config.Actions, plan.WorkflowsConfig, tpl)...)
+	resp.Diagnostics.Append(validateActionsAgainstRevision(ctx, config.Actions, plan.WorkflowsConfig, tpl, false)...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+	// Undeclared actions are replaced by the new revision's when it has any
+	// (reResolveOnRevisionChange). When it has none the stack keeps its current
+	// actions, which must not reference a workflow the revision drops.
+	if config.Actions.IsNull() && len(tpl.Actions) == 0 {
+		resp.Diagnostics.Append(validateActionsAgainstRevision(ctx, state.Actions, plan.WorkflowsConfig, tpl, true)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	workflowTemplates, d := r.resolveWorkflowTemplates(ctx, plan, tpl)
@@ -577,7 +586,14 @@ func (r *stackResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	payload, diags := plan.ToUpdateAPIModel(ctx, r.org_name, tpl, workflowTemplates)
+	var configActions, stateActions types.Map
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("actions"), &configActions)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("actions"), &stateActions)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	payload, diags := plan.ToUpdateAPIModel(ctx, r.org_name, tpl, workflowTemplates, actionsToSend(configActions, plan.Actions, stateActions))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

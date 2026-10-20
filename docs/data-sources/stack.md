@@ -67,6 +67,7 @@ output "stack_workflow_ids" {
 
 Read-Only:
 
+- `default` (Boolean) Whether this is one of the stack template's default actions (`true`) or a custom one (`false`). When StackGuardian upgrades a stack, it replaces default actions with the new template's and keeps custom ones. Leave unset to keep the value StackGuardian holds.
 - `description` (String) Description of the action.
 - `name` (String) Name of the action.
 - `order` (Attributes Map) Execution order for workflows in this action, keyed by each workflow's `id` (its UUID) as defined in the stack template revision's `workflows_config.workflows` — the same `id` declared in this stack's `workflows_config.workflows`. (see [below for nested schema](#nestedatt--actions--order))

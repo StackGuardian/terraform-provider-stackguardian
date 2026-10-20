@@ -25,14 +25,21 @@ const overrideRemovalOrg = "override-removal-org"
 // create request (Stack) and the read response (StackData) share their JSON keys, and an
 // update merges the top-level keys it carries, like a PATCH.
 type fakeStackAPI struct {
-	mu       sync.Mutex
-	revision string // the stack template revision, as the "msg" of a read
-	stacks   map[string]map[string]any
+	mu        sync.Mutex
+	revisions map[string]string // stack template revision id -> its read "msg"
+	stacks    map[string]map[string]any
+	patches   []map[string]any // every update body, in order
 }
 
+// newFakeStackAPI serves one stack template revision, "tpl:1".
 func newFakeStackAPI(t *testing.T, revision string) (*httptest.Server, *fakeStackAPI) {
 	t.Helper()
-	api := &fakeStackAPI{revision: revision, stacks: map[string]map[string]any{}}
+	return newFakeStackAPIWithRevisions(t, map[string]string{"tpl:1": revision})
+}
+
+func newFakeStackAPIWithRevisions(t *testing.T, revisions map[string]string) (*httptest.Server, *fakeStackAPI) {
+	t.Helper()
+	api := &fakeStackAPI{revisions: revisions, stacks: map[string]map[string]any{}}
 	srv := httptest.NewServer(api)
 	t.Cleanup(srv.Close)
 	return srv, api
@@ -50,12 +57,17 @@ func (f *fakeStackAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer f.mu.Unlock()
 	w.Header().Set("Content-Type", "application/json")
 
-	revisionPath := fmt.Sprintf("/api/v1/templatetypes/IAC_GROUP/%s/tpl:1/", overrideRemovalOrg)
+	revisionPrefix := fmt.Sprintf("/api/v1/templatetypes/IAC_GROUP/%s/", overrideRemovalOrg)
 	stacksPrefix := fmt.Sprintf("/api/v1/orgs/%s/wfgrps/override-removal-wfgrp/stacks/", overrideRemovalOrg)
 
 	switch {
-	case r.Method == http.MethodGet && r.URL.Path == revisionPath:
-		fmt.Fprintf(w, `{"msg":%s}`, f.revision)
+	case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, revisionPrefix):
+		revision, ok := f.revisions[strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, revisionPrefix), "/")]
+		if !ok {
+			http.Error(w, `{"msg":"not found"}`, http.StatusNotFound)
+			return
+		}
+		fmt.Fprintf(w, `{"msg":%s}`, revision)
 		return
 	case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/api/v1/templatetypes/IAC/"):
 		// A workflow template revision with no defaults of its own.
@@ -97,6 +109,7 @@ func (f *fakeStackAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, `{"msg":"bad request"}`, http.StatusBadRequest)
 			return
 		}
+		f.patches = append(f.patches, body)
 		for k, v := range body {
 			stack[k] = v
 		}
@@ -200,4 +213,14 @@ func TestStack_RemovedOverrideWithoutTemplateValueResets(t *testing.T) {
 			},
 		},
 	})
+}
+
+// lastPatch returns the body of the most recent update.
+func (f *fakeStackAPI) lastPatch() map[string]any {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if len(f.patches) == 0 {
+		return nil
+	}
+	return f.patches[len(f.patches)-1]
 }

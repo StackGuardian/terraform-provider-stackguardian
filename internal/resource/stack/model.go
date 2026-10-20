@@ -543,6 +543,7 @@ func (ActionOrderModel) AttributeTypes() map[string]attr.Type {
 type ActionsModel struct {
 	Name        types.String `tfsdk:"name"`
 	Description types.String `tfsdk:"description"`
+	Default     types.Bool   `tfsdk:"default"`
 	Order       types.Map    `tfsdk:"order"`
 }
 
@@ -550,6 +551,7 @@ func (ActionsModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"name":        types.StringType,
 		"description": types.StringType,
+		"default":     types.BoolType,
 		"order":       types.MapType{ElemType: types.ObjectType{AttrTypes: ActionOrderModel{}.AttributeTypes()}},
 	}
 }
@@ -2359,9 +2361,11 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 // Actions converters
 // ---------------------------------------------------------------------------
 
-// expandSingleActionsMap converts a Terraform actions map to API format,
-// stamping isDefault onto every action's Default field.
-func expandSingleActionsMap(ctx context.Context, actions types.Map, isDefault bool) (map[string]*sgsdkgo.Actions, diag.Diagnostics) {
+// expandSingleActionsMap converts a Terraform actions map to API format. Each
+// action's default flag is sent only when known: the platform keeps a default
+// (template) action in sync with the template on an upgrade and leaves a custom
+// one alone, so the flag must never be overwritten with a guess.
+func expandSingleActionsMap(ctx context.Context, actions types.Map) (map[string]*sgsdkgo.Actions, diag.Diagnostics) {
 	if actions.IsNull() || actions.IsUnknown() {
 		return nil, nil
 	}
@@ -2373,11 +2377,12 @@ func expandSingleActionsMap(ctx context.Context, actions types.Map, isDefault bo
 
 	result := make(map[string]*sgsdkgo.Actions, len(models))
 	for k, am := range models {
-		def := isDefault
 		action := &sgsdkgo.Actions{
 			Name:        am.Name.ValueString(),
 			Description: am.Description.ValueStringPointer(),
-			Default:     &def,
+		}
+		if isSetBool(am.Default) {
+			action.Default = am.Default.ValueBoolPointer()
 		}
 
 		if !am.Order.IsNull() && !am.Order.IsUnknown() {
@@ -2492,7 +2497,7 @@ func expandSingleActionsMap(ctx context.Context, actions types.Map, isDefault bo
 // Create-time default.
 func expandActionsMap(ctx context.Context, actions types.Map, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel) (map[string]*sgsdkgo.Actions, diag.Diagnostics) {
 	if !actions.IsNull() && !actions.IsUnknown() {
-		return expandSingleActionsMap(ctx, actions, false)
+		return expandSingleActionsMap(ctx, actions)
 	}
 	if tpl != nil && len(tpl.Actions) > 0 {
 		return tpl.Actions, nil
@@ -2670,7 +2675,9 @@ func flattenActionsMap(ctx context.Context, actions map[string]*sgsdkgo.Actions)
 		am := ActionsModel{
 			Name:        flatteners.String(a.Name),
 			Description: flatteners.StringPtr(a.Description),
-			Order:       orderObj,
+			// Absent means custom, as the platform reads it.
+			Default: flatteners.BoolPtrDefault(a.Default),
+			Order:   orderObj,
 		}
 		obj, d := types.ObjectValueFrom(ctx, ActionsModel{}.AttributeTypes(), am)
 		if d.HasError() {
@@ -2868,7 +2875,12 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context, orgName string, tpl
 // fields). Clearing one of these fields requires sending an explicit empty
 // value ("", [], {}), which is a known non-null plan value and already takes
 // the first branch below.
-func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName string, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) (*sgsdkgo.PatchedStack, diag.Diagnostics) {
+//
+// actions is the exception: it is sent only when sendActions is true (see
+// actionsToSend). Otherwise the planned value is just the state's copy of what
+// the platform holds, and re-sending it would overwrite the platform's actions
+// with a stale copy.
+func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName string, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel, sendActions bool) (*sgsdkgo.PatchedStack, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	apiModel := &sgsdkgo.PatchedStack{}
 
@@ -2903,17 +2915,18 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 		apiModel.TemplateGroupId = sgsdkgo.Optional(fmt.Sprintf("/%s/%s", orgName, m.TemplateGroupId.ValueString()))
 	}
 
-	// actions: the user's own declared value always wins; otherwise falls
-	// back to the template's own value verbatim; otherwise omitted so the
-	// API's already-established value (from Create, or from a prior Update)
-	// is left untouched. See expandActionsMap.
-	actions, actionDiags := expandActionsMap(ctx, m.Actions, tpl)
-	diags.Append(actionDiags...)
-	if diags.HasError() {
-		return nil, diags
-	}
-	if actions != nil {
-		apiModel.Actions = sgsdkgo.Optional(actions)
+	// actions: when sent, the planned value — the configured actions, or the
+	// new revision's as re-resolved by ModifyPlan. Otherwise omitted, so the
+	// platform keeps its own.
+	if sendActions {
+		actions, actionDiags := expandActionsMap(ctx, m.Actions, tpl)
+		diags.Append(actionDiags...)
+		if diags.HasError() {
+			return nil, diags
+		}
+		if actions != nil {
+			apiModel.Actions = sgsdkgo.Optional(actions)
+		}
 	}
 
 	// workflows_config resolves per-slot from up to three layers — see
@@ -2960,19 +2973,31 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 	return apiModel, diags
 }
 
-// validateActionsAgainstRevision errors when a user-declared actions entry's
-// order key or dependency id references a workflow slot that no longer
-// exists on the new stack template revision tpl. actions left unset in
-// config gets rebuilt from tpl's own workflow list automatically (see
-// reResolveOnRevisionChange), but a value the user explicitly declared can't
-// be silently rewritten — a dangling reference must be caught here rather
-// than surfacing as an opaque API error. Ids also present in the stack's own
-// workflows_config.workflows are exempt: those are user-declared slots that
-// may have no template backing at all. actions is expected to be the CONFIG
-// value (not plan) — the check only applies when the user actually declared
-// it for this apply.
-func validateActionsAgainstRevision(ctx context.Context, actions types.Map, workflowsConfig types.Object, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel) diag.Diagnostics {
+// actionsToSend reports whether an update must send actions: when the config
+// declares them, or when ModifyPlan planned a value different from state (a
+// revision change, or a removed declaration, re-resolved them from the
+// template). Otherwise the planned value is only state's copy of what the
+// platform holds, and sending it would overwrite the platform's own actions.
+func actionsToSend(configActions, planActions, stateActions types.Map) bool {
+	return !configActions.IsNull() || !planActions.Equal(stateActions)
+}
+
+// validateActionsAgainstRevision errors when an actions entry's order key or
+// dependency id references a workflow slot that no longer exists on the new
+// stack template revision tpl, so the dangling reference is caught at plan
+// time rather than surfacing as an opaque API error. Ids also present in the
+// stack's own workflows_config.workflows are exempt.
+//
+// It checks either the actions the config declares (inherited false) — the
+// provider cannot rewrite those — or, when the config declares none and the
+// new revision defines no actions to replace them, the stack's current actions
+// (inherited true), which would otherwise be kept and rejected by the platform.
+func validateActionsAgainstRevision(ctx context.Context, actions types.Map, workflowsConfig types.Object, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, inherited bool) diag.Diagnostics {
 	var diags diag.Diagnostics
+	hint := "Update actions to remove it before changing template_group_id."
+	if inherited {
+		hint = "actions is not in your configuration: these are the stack's current actions, and the new revision defines none to replace them. Declare actions for the new revision's workflows."
+	}
 	if actions.IsNull() || actions.IsUnknown() {
 		return diags
 	}
@@ -2999,7 +3024,7 @@ func validateActionsAgainstRevision(ctx context.Context, actions types.Map, work
 		}
 	}
 
-	declared, d := expandSingleActionsMap(ctx, actions, false)
+	declared, d := expandSingleActionsMap(ctx, actions)
 	diags.Append(d...)
 	if diags.HasError() {
 		return diags
@@ -3012,7 +3037,7 @@ func validateActionsAgainstRevision(ctx context.Context, actions types.Map, work
 			if !valid[orderKey] {
 				diags.AddError(
 					"actions references a removed workflow",
-					fmt.Sprintf("actions[%q].order references workflow %q, which no longer exists on the new stack template revision. Update actions to remove it before changing template_group_id.", actionKey, orderKey),
+					fmt.Sprintf("actions[%q].order references workflow %q, which no longer exists on the new stack template revision. %s", actionKey, orderKey, hint),
 				)
 			}
 			if ao == nil {
@@ -3022,7 +3047,7 @@ func validateActionsAgainstRevision(ctx context.Context, actions types.Map, work
 				if dep != nil && !valid[dep.Id] {
 					diags.AddError(
 						"actions references a removed workflow",
-						fmt.Sprintf("actions[%q].order[%q].dependencies references workflow %q, which no longer exists on the new stack template revision. Update actions to remove it before changing template_group_id.", actionKey, orderKey, dep.Id),
+						fmt.Sprintf("actions[%q].order[%q].dependencies references workflow %q, which no longer exists on the new stack template revision. %s", actionKey, orderKey, dep.Id, hint),
 					)
 				}
 			}
