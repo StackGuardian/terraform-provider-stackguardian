@@ -33,6 +33,12 @@ type fakeStackAPI struct {
 	// emptyCreateResponse answers a create with no stack in the body, as an API
 	// response the provider must survive.
 	emptyCreateResponse bool
+	// failCreate stores the stack and then answers the create with a 500, as the
+	// platform does when a workflow fails after the stack is written.
+	failCreate bool
+	// failReadsAfterCreate makes stack reads fail with a 500 once a create was served.
+	failReadsAfterCreate bool
+	creates, deletes     int
 }
 
 // newFakeStackAPI serves one stack template revision, "tpl:1".
@@ -91,8 +97,13 @@ func (f *fakeStackAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, `{"msg":"bad request"}`, http.StatusBadRequest)
 			return
 		}
+		f.creates++
 		stackId, _ := body["Id"].(string)
 		f.stacks[stackId] = body
+		if f.failCreate {
+			http.Error(w, `{"msg":"Failed to create workflow"}`, http.StatusInternalServerError)
+			return
+		}
 		if f.emptyCreateResponse {
 			fmt.Fprint(w, `{"msg":"created"}`)
 			return
@@ -100,6 +111,10 @@ func (f *fakeStackAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		stored, _ := json.Marshal(body)
 		fmt.Fprintf(w, `{"msg":"created","data":{"stack":%s}}`, stored)
 	case http.MethodGet:
+		if f.failReadsAfterCreate && f.creates > 0 {
+			http.Error(w, `{"msg":"internal error"}`, http.StatusInternalServerError)
+			return
+		}
 		stack, ok := f.stacks[id]
 		if !ok {
 			http.Error(w, `{"msg":"not found"}`, http.StatusNotFound)
@@ -124,6 +139,7 @@ func (f *fakeStackAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		fmt.Fprint(w, `{"msg":"updated"}`)
 	case http.MethodDelete:
+		f.deletes++
 		delete(f.stacks, id)
 		fmt.Fprint(w, `{"msg":"deleted"}`)
 	default:
@@ -239,4 +255,25 @@ func (f *fakeStackAPI) workflowTemplateReads() []string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return append([]string(nil), f.templateReads...)
+}
+
+// counts returns how many creates and deletes the fake has served.
+func (f *fakeStackAPI) counts() (creates, deletes int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.creates, f.deletes
+}
+
+// preload stores a stack as if it had been created outside this test.
+func (f *fakeStackAPI) preload(id string, stack map[string]any) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.stacks[id] = stack
+}
+
+// set changes the fake's failure switches between test steps.
+func (f *fakeStackAPI) set(change func(*fakeStackAPI)) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	change(f)
 }
