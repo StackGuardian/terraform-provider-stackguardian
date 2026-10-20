@@ -3001,9 +3001,10 @@ func validateActionsAgainstRevision(ctx context.Context, actions types.Map, work
 
 // validateWorkflowsConfigMatchesRevision errors unless workflows_config.workflows
 // declares exactly the workflow slots the referenced stack template revision
-// defines, in the same order. Called from ModifyPlan on every Create/Update,
-// not just a revision change, so no apply can ever leave workflows_config out
-// of sync with the revision it's pinned to.
+// defines, in the same order. ModifyPlan calls it at plan time (on create, on a
+// revision change, and when the declared ids change), and Create/Update call it
+// again at apply for the cases the plan could not check, so no apply can leave
+// workflows_config out of sync with the revision it's pinned to.
 //
 // Why this needs to be enforced at all, rather than left to the old
 // Optional+Computed "inherit whatever the template has" behavior:

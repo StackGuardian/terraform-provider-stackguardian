@@ -1097,7 +1097,7 @@ func TestAccStack_ReadRemovesOnNotFound(t *testing.T) {
 
 // TestAccStack_DeleteAlreadyGone verifies that deleting a stack that's
 // already gone (API 404) is treated as a successful delete instead of
-// erroring (isStackNotFound in resource.go), by deleting it out-of-band and
+// erroring (isNotFound in resource.go), by deleting it out-of-band and
 // then dropping it from Terraform config entirely so a real Delete() call is
 // issued against an already-gone stack.
 func TestAccStack_DeleteAlreadyGone(t *testing.T) {
@@ -1139,7 +1139,7 @@ func TestAccStack_DeleteAlreadyGone(t *testing.T) {
 // resource_attributes_stack_upgrade_test.go / resource_workflows_test.go:
 //   - id RequiresReplace; template_group_id round trip + re-resolution on
 //     revision change; Read removes state on 404; Delete treats 404 as
-//     success (resource.go's isStackNotFound, added alongside its test —
+//     success (resource.go's isNotFound, added alongside its test —
 //     all four above, in this file).
 //   - workflows_config.workflows[]: minimal entry + Optional+Computed guard
 //     regression; invalid wf_type/parallel_execution diagnostics;
