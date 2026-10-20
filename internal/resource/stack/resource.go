@@ -488,6 +488,14 @@ func (r *stackResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
+	// Keep the configured form of an input or variable the platform stored with
+	// its references resolved; see preserveConfiguredReferences.
+	stackModel.WorkflowsConfig, diags = preserveConfiguredReferences(stackModel, plan.WorkflowsConfig)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Set state to fully populated data
 	resp.Diagnostics.Append(resp.State.Set(ctx, &stackModel)...)
 	if resp.Diagnostics.HasError() {
@@ -524,6 +532,14 @@ func (r *stackResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	stackModel, diags := BuildAPIModelToStackModel(ctx, r.org_name, readResp.Msg, state.WorkflowGroupId)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Keep the configured form of an input or variable the platform stored with
+	// its references resolved; see preserveConfiguredReferences.
+	stackModel.WorkflowsConfig, diags = preserveConfiguredReferences(stackModel, state.WorkflowsConfig)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -588,6 +604,14 @@ func (r *stackResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	stackModel, diags := BuildAPIModelToStackModel(ctx, r.org_name, updatedStack.Msg, plan.WorkflowGroupId)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Keep the configured form of an input or variable the platform stored with
+	// its references resolved; see preserveConfiguredReferences.
+	stackModel.WorkflowsConfig, diags = preserveConfiguredReferences(stackModel, plan.WorkflowsConfig)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
