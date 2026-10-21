@@ -410,6 +410,13 @@ func TestAccStack_WorkflowsConfigRoundTrip(t *testing.T) {
 // flatten default (tags/approvers/user_schedules/context_tags) settle to
 // empty rather than erroring or keeping a stale value — exercising that path
 // on a genuine update, not just a fresh create.
+//
+// This also covers the updateWorkflowsFromConfig query param ToUpdateAPIModel
+// sets: it tells the platform to push the updated workflows_config down to the
+// live workflows. Every read, including the one Update does after the PATCH,
+// passes refresh_workflows_config=true, so workflows_config is rebuilt from
+// those live workflows. Without the param they would keep their old values,
+// and the update steps here would fail with "inconsistent result after apply".
 func TestAccStack_WorkflowsConfigUpdate(t *testing.T) {
 	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-wfupd-wfgrp"

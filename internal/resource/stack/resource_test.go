@@ -1111,51 +1111,6 @@ func TestAccStack_DeleteAlreadyGone(t *testing.T) {
 	})
 }
 
-// --- Remaining cases (not yet implemented) ---
-//
-// Covered, split across resource_attributes_test.go /
-// resource_attributes_stack_upgrade_test.go / resource_workflows_test.go:
-//   - id RequiresReplace; template_group_id round trip + re-resolution on
-//     revision change; Read removes state on 404; Delete treats 404 as
-//     success (resource.go's isStackNotFound, added alongside its test —
-//     all four above, in this file).
-//   - workflows_config.workflows[]: minimal entry + Optional+Computed guard
-//     regression; invalid wf_type/parallel_execution diagnostics;
-//     three-way terraform_config precedence merge; vcs_config.iac_vcs_config
-//     Computed-only rejection; approvers, user_schedules, context_tags,
-//     runner_constraints, mini_steps round trip.
-//   - actions: template fallback when unset (generated apply/plan/destroy,
-//     and verbatim template Actions), wholesale override once the user
-//     declares actions (see TestAccStack_ActionsGeneratedFromTemplate);
-//     nested round trip (terraform_action, environment_variables,
-//     dependencies) + removal on update (TestAccStack_ActionsRoundTrip);
-//     dangling workflow reference rejected on a template_group_id change
-//     (TestAccStack_ActionsRevisionRemovedWorkflow).
-//
-// Deferred — each needs infrastructure or live-API knowledge this session
-// doesn't have:
-//   - wf_steps_config round trip (top-level, per-workflow, and inside
-//     actions[].order[].parameters), and actions'
-//     deployment_platform_config: both need wf_step_template_id /
-//     integration_id fixtures respectively (workflow_from_template's tests
-//     have a setupWorkflowStepTemplate fixture that could be ported over).
-// - vcs_config.iac_input_data: needs a schema_type value confirmed valid
-//     against the live API to write a meaningful round trip. (The root-level
-//     iac_input_data on workflows_config.workflows[] — TemplatesIacInputData
-//     — was removed: it doesn't apply to stacks.)
-// - Multiple workflows in workflows_config.workflows[]: needs a second
-//     workflow registered on the stack template revision fixture (a
-//     second workflow template + revision, or a second workflow on the same
-//     one) — setupStackTemplateChain only declares one workflow currently.
-// - updateWorkflowsFromConfig query param: not observable through
-//     resource.Test's black-box testing (would need an HTTP-level
-//     interceptor to inspect the actual request query string).
-// - actions read/refresh reflecting an out-of-band API-side Actions change:
-//     doable, but needs the raw PATCH payload to exactly reproduce the
-//     existing "apply" action's shape alongside the injected one to avoid an
-//     unrelated diff — deferred as the highest-effort-for-value item in this
-//     group.
-
 // TestAccStack_TemplateGroupIdRequiresOrg verifies template_group_id is rejected
 // at plan time unless it is the full "/<org>/<template-id>:<revision>" id, the org given
 // even for your own organization (validators.QualifiedTemplateRevisionId). The

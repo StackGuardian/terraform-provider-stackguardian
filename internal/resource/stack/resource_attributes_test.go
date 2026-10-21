@@ -214,9 +214,8 @@ func TestAccStack_ActionsGeneratedFromTemplate(t *testing.T) {
 // template defines its own "apply"/"plan" Actions, but since this test
 // declares "actions" explicitly, none of the template's own actions (e.g.
 // "plan") are merged in — only what the resource itself declares exists.
-// deployment_platform_config and wf_steps_config inside order[].parameters
-// aren't covered here — both need a real integration_id / workflow step
-// template fixture this test doesn't set up.
+// deployment_platform_config and wf_steps_config inside order[].parameters are
+// covered by TestAccStack_ActionsParametersStepsAndDeploymentPlatform.
 func TestAccStack_ActionsRoundTrip(t *testing.T) {
 	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-actrt-wfgrp"
@@ -325,6 +324,110 @@ func TestAccStack_ActionsRoundTrip(t *testing.T) {
 				// Remove "destroy" — must actually disappear, not linger.
 				Config: testAccStackConfig(wfGrpName, revision, id, withoutDestroy),
 				Check:  resource.TestCheckNoResourceAttr("stackguardian_stack.test", "actions.destroy"),
+			},
+		},
+	})
+}
+
+// TestAccStack_ActionsParametersStepsAndDeploymentPlatform covers the two
+// order[].parameters fields TestAccStack_ActionsRoundTrip doesn't:
+// wf_steps_config and deployment_platform_config. Each goes through its own
+// expand/flatten path, separate from the workflow-level fields of the same
+// name, and deployment_platform_config's shape changed from a JSON string to
+// an object with integration_id/profile_name, so both are checked to round
+// trip with no diff. wf_step_template_id needs a real workflow step template
+// revision (setupStackWorkflowStepTemplate); integration_id is a placeholder,
+// as in TestAccStack_WorkflowsConfigRoundTripRemainingFields, since nothing
+// runs the action.
+func TestAccStack_ActionsParametersStepsAndDeploymentPlatform(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+	wfGrpName := acctest.ResourceName("stack-actparams-wfgrp")
+	wfTemplateName := acctest.ResourceName("stack-actparams-wftmpl")
+	stackTemplateName := acctest.ResourceName("stack-actparams-stmpl")
+	id := acctest.ResourceName("stack-actparams")
+
+	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+	stepTemplateID := setupStackWorkflowStepTemplate(t, acctest.ResourceName("stack-actparams-step"))
+
+	config := fmt.Sprintf(`
+  actions = {
+    apply = {
+      name = "apply"
+      order = {
+        %[1]q = {
+          parameters = {
+            terraform_action = {
+              action = "apply"
+            }
+            wf_steps_config = [
+              {
+                name                = "action-step"
+                wf_step_template_id = %[2]q
+                approval            = true
+                timeout             = 300
+                cmd_override        = "echo from-action"
+
+                environment_variables = [
+                  {
+                    kind = "PLAIN_TEXT"
+                    config = {
+                      var_name   = "ACTION_STEP_VAR"
+                      text_value = "action-step-value"
+                    }
+                  }
+                ]
+              }
+            ]
+            deployment_platform_config = [
+              {
+                kind = "AWS_RBAC"
+                config = {
+                  integration_id = "/integrations/test-integration"
+                  profile_name   = "action-profile"
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+`, testWorkflowUUID, stepTemplateID)
+
+	const res = "stackguardian_stack.test"
+	params := fmt.Sprintf("actions.apply.order.%s.parameters.", testWorkflowUUID)
+	step := params + "wf_steps_config.0."
+	dpc := params + "deployment_platform_config.0."
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(res, params+"terraform_action.action", "apply"),
+					resource.TestCheckResourceAttr(res, params+"wf_steps_config.#", "1"),
+					resource.TestCheckResourceAttr(res, step+"name", "action-step"),
+					resource.TestCheckResourceAttr(res, step+"wf_step_template_id", stepTemplateID),
+					resource.TestCheckResourceAttr(res, step+"approval", "true"),
+					resource.TestCheckResourceAttr(res, step+"timeout", "300"),
+					resource.TestCheckResourceAttr(res, step+"cmd_override", "echo from-action"),
+					resource.TestCheckResourceAttr(res, step+"environment_variables.0.config.var_name", "ACTION_STEP_VAR"),
+					resource.TestCheckResourceAttr(res, step+"environment_variables.0.config.text_value", "action-step-value"),
+					resource.TestCheckResourceAttr(res, params+"deployment_platform_config.#", "1"),
+					resource.TestCheckResourceAttr(res, dpc+"kind", "AWS_RBAC"),
+					resource.TestCheckResourceAttr(res, dpc+"config.integration_id", "/integrations/test-integration"),
+					resource.TestCheckResourceAttr(res, dpc+"config.profile_name", "action-profile"),
+				),
+			},
+			{
+				// Round trips with no diff.
+				Config:   testAccStackConfig(wfGrpName, revision, id, config),
+				PlanOnly: true,
 			},
 		},
 	})
