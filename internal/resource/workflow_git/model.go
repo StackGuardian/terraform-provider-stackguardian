@@ -2238,8 +2238,13 @@ func convertVcsConfigFromAPI(ctx context.Context, vcsConfig *sgsdkgo.VcsConfig) 
 		iacVcsConfigObj = types.ObjectNull(IacVcsConfigModel{}.AttributeTypes(ctx))
 	}
 
+	// The platform stores an explicit `iacInputData: {}` ("no inputs"). Read it as no
+	// iac_input_data: schema_type is required here, so an object without one could not be
+	// written in a configuration and would show as a change on every plan.
 	var iacInputDataObj types.Object
-	if vcsConfig.IacInputData != nil {
+	if vcsConfig.IacInputData != nil && vcsConfig.IacInputData.SchemaType == nil && vcsConfig.IacInputData.Data == nil {
+		iacInputDataObj = types.ObjectNull(IacInputDataModel{}.AttributeTypes())
+	} else if vcsConfig.IacInputData != nil {
 		// Data is *map: guard the nil pointer — a typed nil inside interface{} would slip
 		// past JSONInterfaceToString's nil check and marshal to the string "null".
 		dataStr := types.StringNull()
@@ -2248,7 +2253,7 @@ func convertVcsConfigFromAPI(ctx context.Context, vcsConfig *sgsdkgo.VcsConfig) 
 		}
 		iacInputDataModel := IacInputDataModel{
 			SchemaId:   flatteners.StringPtr(vcsConfig.IacInputData.SchemaId),
-			SchemaType: types.StringValue(string(*vcsConfig.IacInputData.SchemaType)),
+			SchemaType: flatteners.StringPtr((*string)(vcsConfig.IacInputData.SchemaType)),
 			Data:       dataStr,
 		}
 		var diags diag.Diagnostics

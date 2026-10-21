@@ -716,7 +716,7 @@ Read-Only:
 
 Read-Only:
 
-- `iac_input_data` (Attributes) IaC input data for the workflow. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_input_data))
+- `iac_input_data` (Attributes) Input values for this workflow. Leave it unset to inherit them from the stack template revision, set it to `{}` for no inputs, or set both `schema_type` and `data`. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_input_data))
 - `iac_vcs_config` (Attributes) IaC VCS configuration. Not user-editable — always inherited from the matching workflow on the stack template revision. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config))
 
 <a id="nestedatt--workflows_config--workflows--vcs_config--iac_input_data"></a>
@@ -724,9 +724,9 @@ Read-Only:
 
 Read-Only:
 
-- `data` (String) Input data as a JSON string. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+- `data` (String) Input data as a JSON string. Required together with `schema_type` unless `iac_input_data` is `{}`. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `schema_id` (String) Schema ID for the input data.
-- `schema_type` (String) How the value in `data` is formatted. <ul><li>`FORM_JSONSCHEMA` — a StackGuardian NoCode form; `data` holds the values that form collects.</li><li>`RAW_HCL` — HCL-formatted input, as you would write in a `.tfvars` file.</li><li>`RAW_JSON` — the same input expressed as JSON.</li><li>`NONE` — the workflow takes no inputs.</li></ul>The platform also returns `NO_CODE_JSON` on some existing workflows. The provider passes that value through unchanged, but it is outside the set above and should not be written by hand.
+- `schema_type` (String) How the value in `data` is formatted. <ul><li>`FORM_JSONSCHEMA` — a StackGuardian NoCode form; `data` holds the values that form collects.</li><li>`RAW_HCL` — HCL-formatted input, as you would write in a `.tfvars` file.</li><li>`RAW_JSON` — the same input expressed as JSON.</li><li>`NONE` — no inputs. Legacy: StackGuardian now records no inputs as an empty input data object.</li></ul>The platform also returns `NO_CODE_JSON` on some existing workflows. The provider passes that value through unchanged, but it is outside the set above and should not be written by hand. Required together with `data` unless `iac_input_data` is `{}`.
 
 
 <a id="nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config"></a>

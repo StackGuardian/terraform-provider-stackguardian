@@ -339,19 +339,20 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 				},
 			},
 			"iac_input_data": schema.SingleNestedAttribute{
-				MarkdownDescription: "IaC input data for the workflow.",
+				MarkdownDescription: constants.StackTemplateRevisionWorkflowIacInputData,
 				Optional:            true,
+				Validators:          []validator.Object{validators.IacInputData()},
 				Attributes: map[string]schema.Attribute{
 					"schema_id": schema.StringAttribute{
 						MarkdownDescription: constants.WorkflowIacInputDataSchemaId,
 						Optional:            true,
 					},
 					"schema_type": schema.StringAttribute{
-						MarkdownDescription: constants.WorkflowIacInputDataSchemaType,
-						Required:            true,
+						MarkdownDescription: constants.StackWorkflowIacInputDataSchemaType,
+						Optional:            true,
 					},
 					"data": schema.StringAttribute{
-						MarkdownDescription: constants.WorkflowIacInputDataData,
+						MarkdownDescription: constants.StackWorkflowIacInputDataData,
 						Optional:            true,
 					},
 				},

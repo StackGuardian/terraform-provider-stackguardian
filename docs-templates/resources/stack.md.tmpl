@@ -68,6 +68,10 @@ vcs_config = {
 
 `data` must be a JSON object; a value that is not is rejected at plan time.
 
+For a workflow that takes no inputs, set `iac_input_data = {}`. Leaving `iac_input_data` unset
+instead inherits the stack template revision's input data. Otherwise set both `schema_type` and
+`data`: setting only one of them is rejected at plan time.
+
 ## Destroying a stack
 
 Destroying a stack — including the replacement that changing `id` or `workflow_group_id` causes —

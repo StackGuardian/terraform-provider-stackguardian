@@ -651,23 +651,24 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 										// stack template revision (or the workflow template's input
 										// defaults), so it can hold a value the config never set.
 										"iac_input_data": schema.SingleNestedAttribute{
-											MarkdownDescription: constants.WorkflowIacInputData,
+											MarkdownDescription: constants.StackWorkflowIacInputData,
 											Optional:            true,
 											Computed:            true,
 											PlanModifiers: []planmodifier.Object{
 												objectplanmodifier.UseStateForUnknown(),
 											},
+											Validators: []validator.Object{validators.IacInputData()},
 											Attributes: map[string]schema.Attribute{
 												"schema_id": schema.StringAttribute{
 													MarkdownDescription: constants.WorkflowIacInputDataSchemaId,
 													Optional:            true,
 												},
 												"schema_type": schema.StringAttribute{
-													MarkdownDescription: constants.WorkflowIacInputDataSchemaType,
-													Required:            true,
+													MarkdownDescription: constants.StackWorkflowIacInputDataSchemaType,
+													Optional:            true,
 												},
 												"data": schema.StringAttribute{
-													MarkdownDescription: constants.WorkflowIacInputDataData,
+													MarkdownDescription: constants.StackWorkflowIacInputDataData,
 													Optional:            true,
 													Validators:          []validator.String{validators.JSONObject()},
 												},

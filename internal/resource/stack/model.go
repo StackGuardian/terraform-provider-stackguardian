@@ -1164,13 +1164,12 @@ func expandVcsConfig(ctx context.Context, obj types.Object) (*sgsdkgo.VcsConfig,
 		if diags := m.IacInputData.As(ctx, &idModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 			return nil, diags
 		}
-		schemaType, err := sgsdkgo.NewIacInputDataSchemaTypeEnumFromString(idModel.SchemaType.ValueString())
-		if err != nil {
-			return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid schema type", "Value '"+idModel.SchemaType.ValueString()+"' is not a valid schema type")}
-		}
-		vcsConfig.IacInputData = &sgsdkgo.IacInputData{
-			SchemaId:   idModel.SchemaId.ValueStringPointer(),
-			SchemaType: &schemaType,
+		// An object with nothing set is sent as {}: StackGuardian's "no inputs".
+		vcsConfig.IacInputData = &sgsdkgo.IacInputData{SchemaId: idModel.SchemaId.ValueStringPointer()}
+		if !idModel.SchemaType.IsNull() {
+			// Passed through unchanged, as the workflow resources do: the platform also uses
+			// NO_CODE_JSON, which the SDK enum lacks, and validates the value itself.
+			vcsConfig.IacInputData.SchemaType = sgsdkgo.IacInputDataSchemaTypeEnum(idModel.SchemaType.ValueString()).Ptr()
 		}
 		dataMap, err := expanders.JSONStringToMapStrict(idModel.Data.ValueString())
 		if err != nil {

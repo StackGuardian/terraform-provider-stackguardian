@@ -25,6 +25,11 @@ const (
 	WorkflowCustomSource                = "Custom VCS source configuration."
 	WorkflowIacInputData                = "IaC input data for the workflow."
 	WorkflowIacInputDataSchemaId        = "Schema ID for the input data."
-	WorkflowIacInputDataSchemaType      = "How the value in `data` is formatted. <ul><li>`FORM_JSONSCHEMA` — a StackGuardian NoCode form; `data` holds the values that form collects.</li><li>`RAW_HCL` — HCL-formatted input, as you would write in a `.tfvars` file.</li><li>`RAW_JSON` — the same input expressed as JSON.</li><li>`NONE` — the workflow takes no inputs.</li></ul>The platform also returns `NO_CODE_JSON` on some existing workflows. The provider passes that value through unchanged, but it is outside the set above and should not be written by hand."
+	WorkflowIacInputDataSchemaType      = "How the value in `data` is formatted. <ul><li>`FORM_JSONSCHEMA` — a StackGuardian NoCode form; `data` holds the values that form collects.</li><li>`RAW_HCL` — HCL-formatted input, as you would write in a `.tfvars` file.</li><li>`RAW_JSON` — the same input expressed as JSON.</li><li>`NONE` — no inputs. Legacy: StackGuardian now records no inputs as an empty input data object.</li></ul>The platform also returns `NO_CODE_JSON` on some existing workflows. The provider passes that value through unchanged, but it is outside the set above and should not be written by hand."
 	WorkflowIacInputDataData            = "Input data as a JSON string. " + RuntimeReferenceNote
+	// The stack and stack template revision forms of iac_input_data, which accept {} for "no inputs".
+	StackWorkflowIacInputData                 = "Input values for this workflow. Leave it unset to inherit them from the stack template revision, set it to `{}` for no inputs, or set both `schema_type` and `data`."
+	StackTemplateRevisionWorkflowIacInputData = "Input values for this workflow. Leave it unset to use the defaults of the workflow template's input schema, set it to `{}` for no inputs (those defaults are then not applied), or set both `schema_type` and `data`."
+	StackWorkflowIacInputDataSchemaType       = WorkflowIacInputDataSchemaType + " Required together with `data` unless `iac_input_data` is `{}`."
+	StackWorkflowIacInputDataData             = "Input data as a JSON string. Required together with `schema_type` unless `iac_input_data` is `{}`. " + RuntimeReferenceNote
 )
