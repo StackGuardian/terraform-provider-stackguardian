@@ -115,9 +115,10 @@ func (r *stackResource) fetchTemplateRevision(ctx context.Context, m StackResour
 }
 
 // fetchWorkflowTemplateRevision reads the workflow template revision referenced by
-// templateId — a stack-template-revision workflow slot's
+// templateId — a stack template revision workflow entry's
 // vcs_config.iac_vcs_config.iac_template_id (never the stack's own, since that
-// attribute is Computed-only and always inherited from the matched slot). Returns
+// attribute is Computed-only and always inherited from the matching workflow
+// entry on the stack template revision). Returns
 // nil (without an error) when templateId is empty. Mirrors
 // workflow_from_template's fetchTemplateRevision.
 func (r *stackResource) fetchWorkflowTemplateRevision(ctx context.Context, templateId string) (*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel, diag.Diagnostics) {
@@ -161,16 +162,17 @@ func splitTemplateOrg(id, callerOrg string) (org, revisionId string) {
 	return callerOrg, id
 }
 
-// resolveWorkflowTemplates fetches, for every workflow slot declared in
-// plan.WorkflowsConfig, the workflow template revision that slot resolves
-// against — read from the MATCHING slot on stackTpl (the stack template
-// revision), never from the stack's own entry, since
+// resolveWorkflowTemplates fetches, for every workflow entry declared in
+// plan.WorkflowsConfig, the workflow template revision that workflow resolves
+// against — read from the MATCHING workflow entry on stackTpl (the stack
+// template revision), never from the stack's own entry, since
 // vcs_config.iac_vcs_config is Computed-only on the stack resource and is
-// always inherited from the stack template. Slots are matched by id (the
-// stack-template-defined workflow slot UUID). A slot with no match on
-// stackTpl, or whose matched slot has no iac_template_id, is simply omitted
-// from the result — expandWorkflowsConfig then merges only the layers that
-// exist for that slot. The returned map is keyed by workflow slot id.
+// always inherited from the stack template. Entries are matched by id (the
+// workflowUUID the stack template revision declares for the workflow). A
+// workflow with no match on stackTpl, or whose matching entry has no
+// iac_template_id, is simply omitted from the result — expandWorkflowsConfig
+// then merges only the layers that exist for that workflow. The returned map
+// is keyed by workflowUUID.
 func (r *stackResource) resolveWorkflowTemplates(ctx context.Context, plan StackResourceModel, stackTpl *stacktemplaterevisions.ReadStackTemplateRevisionModel) (map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 

@@ -1666,9 +1666,9 @@ func flattenMiniSteps(ctx context.Context, miniSteps *sgsdkgo.StackMiniStepsSche
 // ---------------------------------------------------------------------------
 // Workflow template merge (provider-side resolution)
 //
-// A workflow slot in a stack's workflows_config resolves from up to three
+// A workflow entry in a stack's workflows_config resolves from up to three
 // layers, lowest to highest precedence:
-//  1. the workflow template revision the slot's stack-template entry points
+//  1. the workflow template revision the workflow's stack template entry points
 //     to (vcs_config.iac_vcs_config.iac_template_id)
 //  2. the matching workflow entry on the stack template revision (an
 //     override layer)
@@ -2004,7 +2004,7 @@ func mergeWorkflowWithWorkflowTemplateDefaults(wf *sgsdkgo.StackWorkflowsConfigW
 // WorkflowsConfig converters
 // ---------------------------------------------------------------------------
 
-// computeWorkflowId predicts the workflow resource id the platform assigns for a slot,
+// computeWorkflowId predicts the workflow resource id the platform assigns for a workflow entry,
 // matching the platform's own generation scheme: "<template-name>-<first octet of the
 // stack workflow UUID>", where <template-name> is the bare name segment of the resolved
 // iac_template_id ("/<org>/<name>:<revision>" -> "<name>"). Computed client-side rather than
@@ -2041,7 +2041,7 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 	}
 
 	// stackTplWorkflowsById indexes the stack template revision's own workflow
-	// entries by slot id, for matching against this stack's own entries below.
+	// entries by workflowUUID, for matching against this stack's own entries below.
 	stackTplWorkflowsById := make(map[string]*stacktemplaterevisions.StackTemplateRevisionWorkflow)
 	if stackTpl != nil && stackTpl.WorkflowsConfig != nil {
 		for _, w := range stackTpl.WorkflowsConfig.Workflows {
@@ -2174,17 +2174,18 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 			wf.ContextTags = ct
 		}
 
-		// Layer 2: fill whatever the user left unset from the matching stack
-		// template workflow slot (also the sole source for iac_vcs_config).
+		// Layer 2: fill whatever the user left unset from the matching workflow
+		// entry on the stack template revision (also the sole source for
+		// iac_vcs_config).
 		stackTplWf := stackTplWorkflowsById[wm.Id.ValueString()]
 		mergeWorkflowWithStackTemplateOverride(wf, stackTplWf)
 
 		// Layer 1: fill whatever is STILL unset from the workflow template
-		// revision the matched slot points to.
+		// revision the matching stack template workflow entry points to.
 		mergeWorkflowWithWorkflowTemplateDefaults(wf, workflowTemplates[wm.Id.ValueString()])
 
 		// workflow_id is computed here, not merged from a template layer: it's
-		// derived purely from this slot's own id and the iac_template_id the two
+		// derived purely from this workflow's own id and the iac_template_id the two
 		// merge layers above just resolved onto wf.VcsConfig.
 		if wf.VcsConfig != nil && wf.VcsConfig.IacVcsConfig != nil && wf.VcsConfig.IacVcsConfig.IacTemplateId != nil && wf.Id != nil {
 			workflowId := computeWorkflowId(*wf.VcsConfig.IacVcsConfig.IacTemplateId, *wf.Id)
@@ -2481,9 +2482,9 @@ func expandActionsMap(ctx context.Context, actions types.Map, tpl *stacktemplate
 }
 
 // translateActionsOrderKeys rewrites action order map keys AND dependency ids
-// back to slot uuid using relations (WorkflowRelationsMap: {slot uuid:
+// back to the workflowUUID using relations (WorkflowRelationsMap: {workflowUUID:
 // workflow's own resource id, e.g. "/wfs/<name>"}). Once a workflow exists,
-// the platform substitutes its real id for the slot uuid everywhere in
+// the platform substitutes its real id for the workflowUUID everywhere in
 // returned Actions — both the order key and dependencies[].id (see
 // default_actions.json) — flattening that directly caused "inconsistent
 // result after apply" (state must stay keyed by the uuid the user
@@ -2523,7 +2524,7 @@ func translateActionsOrderKeys(actions map[string]*sgsdkgo.Actions, relations ma
 	return result
 }
 
-// translateDependencyIds applies the same slot-uuid translation to an order
+// translateDependencyIds applies the same workflowUUID translation to an order
 // entry's dependency ids — they reference other workflows, so the API
 // substitutes real workflow ids there too, not just in the order key.
 func translateDependencyIds(ao *sgsdkgo.ActionOrder, reverse map[string]string) *sgsdkgo.ActionOrder {
@@ -2806,7 +2807,7 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context, orgName string, tpl
 		apiModel.Actions = actions
 	}
 
-	// workflows_config resolves per-slot from up to three layers — see
+	// workflows_config resolves per workflow from up to three layers — see
 	// expandWorkflowsConfig.
 	if !m.WorkflowsConfig.IsUnknown() && !m.WorkflowsConfig.IsNull() {
 		wfc, wfcDiags := expandWorkflowsConfig(ctx, m.WorkflowsConfig, tpl, workflowTemplates)
@@ -2895,7 +2896,7 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 		apiModel.Actions = sgsdkgo.Optional(actions)
 	}
 
-	// workflows_config resolves per-slot from up to three layers — see
+	// workflows_config resolves per workflow from up to three layers — see
 	// expandWorkflowsConfig; that nested resolution already treats "unset" as
 	// "inherit through the template layers" with no explicit-null concept, so
 	// there's no tpl fallback to add here — only workflows_config itself
@@ -2939,13 +2940,13 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 }
 
 // validateActionsAgainstRevision errors when a user-declared actions entry's
-// order key or dependency id references a workflow slot that no longer
+// order key or dependency id references a workflow that no longer
 // exists on the new stack template revision tpl. actions left unset in
 // config gets rebuilt from tpl's own workflow list automatically (see
 // reResolveOnRevisionChange), but a value the user explicitly declared can't
 // be silently rewritten — a dangling reference must be caught here rather
 // than surfacing as an opaque API error. Ids also present in the stack's own
-// workflows_config.workflows are exempt: those are user-declared slots that
+// workflows_config.workflows are exempt: those are user-declared workflows that
 // may have no template backing at all. actions is expected to be the CONFIG
 // value (not plan) — the check only applies when the user actually declared
 // it for this apply.
@@ -3010,8 +3011,8 @@ func validateActionsAgainstRevision(ctx context.Context, actions types.Map, work
 }
 
 // validateWorkflowsConfigMatchesRevision errors unless workflows_config.workflows
-// declares exactly the workflow slots the referenced stack template revision
-// defines, in the same order. Called from ModifyPlan on every Create/Update,
+// declares exactly the workflows the referenced stack template revision
+// defines in its workflows_config.workflows, by id and in the same order. Called from ModifyPlan on every Create/Update,
 // not just a revision change, so no apply can ever leave workflows_config out
 // of sync with the revision it's pinned to.
 //
@@ -3022,10 +3023,10 @@ func validateActionsAgainstRevision(ctx context.Context, actions types.Map, work
 //     HCL is a self-contained description of every workflow it manages, not
 //     something you have to go cross-reference the stack template revision
 //     to discover. Under the old Optional+Computed behavior, a template
-//     revision could gain a new workflow slot and a stack referencing it
+//     revision could gain a new workflow and a stack referencing it
 //     would silently start managing that workflow too, with nothing in the
 //     stack's own config ever having declared it. Requiring an exact-set
-//     match turns "the template grew a slot you haven't looked at" into an
+//     match turns "the template added a workflow you haven't looked at" into an
 //     explicit plan-time error pointing at the missing id, instead of a
 //     silent, invisible change in what the stack does.
 //  2. Order — the API's own default action generation chains
@@ -3033,7 +3034,7 @@ func validateActionsAgainstRevision(ctx context.Context, actions types.Map, work
 //     revision's own declaration order (see
 //     TestAccStack_ActionsGeneratedFromTemplate's dependency-chain
 //     assertions in resource_attributes_test.go). Letting workflows_config
-//     declare the same slots in a different order would desynchronize the
+//     declare the same workflows in a different order would desynchronize the
 //     stack's own listing from the order actions/dependency-chaining is
 //     actually derived from, with no corresponding diff ever showing up to
 //     explain why generated dependencies don't match the order the user
@@ -3070,7 +3071,7 @@ func validateWorkflowsConfigMatchesRevision(ctx context.Context, workflowsConfig
 	if wfc.Workflows.IsNull() || wfc.Workflows.IsUnknown() {
 		diags.AddError(
 			"workflows_config.workflows does not match the stack template revision",
-			fmt.Sprintf("The stack template revision defines %d workflow slot(s) (%s), but workflows_config.workflows is empty.",
+			fmt.Sprintf("The stack template revision defines %d workflow(s) in workflows_config.workflows (%s), but this stack's workflows_config.workflows is empty.",
 				len(required), strings.Join(required, ", ")),
 		)
 		return diags
@@ -3098,7 +3099,7 @@ func validateWorkflowsConfigMatchesRevision(ctx context.Context, workflowsConfig
 	diags.AddError(
 		"workflows_config.workflows does not match the stack template revision",
 		fmt.Sprintf(
-			"workflows_config.workflows must declare exactly the workflow slots defined by the stack template revision, in the same order.\n\nExpected: %s\nGot:      %s",
+			"workflows_config.workflows must declare exactly the workflows defined in the stack template revision's workflows_config.workflows, by id and in the same order.\n\nExpected: %s\nGot:      %s",
 			strings.Join(required, ", "), strings.Join(declared, ", "),
 		),
 	)
