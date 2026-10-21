@@ -572,6 +572,11 @@ func expandEnvironmentVariables(ctx context.Context, list types.List) ([]*sgsdkg
 			if diags := m.Config.As(ctx, &cfgModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 				return nil, diags
 			}
+			// Unknown values become "" here. That is harmless at apply time,
+			// when every value is known, but on a revision change ModifyPlan
+			// flattens this result into the plan, so
+			// reResolveWorkflowsConfigOnRevisionChange restores the unknowns
+			// from config (overlayConfigUnknowns).
 			ev.Config = &sgsdkgo.EnvVarConfig{
 				VarName:   cfgModel.VarName.ValueString(),
 				SecretId:  cfgModel.SecretId.ValueStringPointer(),
@@ -2057,6 +2062,10 @@ func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stac
 		// user_job_memory are all Optional+Computed: ValueStringPointer()/
 		// ValueInt64Pointer() return &""/&0 for unknown, which would send spurious empty/zero
 		// values on create whenever the user hasn't set them. Only set when known.
+		// A declared value that is unknown at plan time is therefore treated as
+		// unset here and filled by the template merge below; on a revision change
+		// reResolveWorkflowsConfigOnRevisionChange puts the unknown back into the
+		// plan (overlayConfigUnknowns). At apply time the value is known.
 		if !wm.ResourceName.IsNull() && !wm.ResourceName.IsUnknown() {
 			wf.ResourceName = wm.ResourceName.ValueStringPointer()
 		}
@@ -3186,6 +3195,9 @@ func reResolveOnRevisionChange(ctx context.Context, plan *StackResourceModel, co
 // (mirrors workflow_from_template's identical fix for this identical field,
 // model.go:2616-2634 there — confirmed live: an unset runner_constraints
 // resolves to {type: "shared"}, not to nothing).
+// Because the rebuild starts from config, any declared value that is unknown
+// at plan time is lost in it; those are restored before the plan is written
+// (overlayConfigUnknowns — see the comment at that call for why).
 func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackResourceModel, config StackResourceModel, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
@@ -3227,9 +3239,157 @@ func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackRe
 		return diags
 	}
 
-	plan.WorkflowsConfig = wfcObj
+	// Restore values the user declared but that are not known until apply.
+	//
+	// Example: description = "Deploys ${aws_s3_bucket.new.arn}", with the bucket
+	// created in the same apply that changes template_group_id. The config value
+	// is unknown, and the rebuild above loses that:
+	//   - expandWorkflowsConfig guards each field with !IsNull() && !IsUnknown(),
+	//     so an unknown declared value is treated as unset, and
+	//     mergeWorkflowWithStackTemplateOverride / mergeWorkflowWithWorkflowTemplateDefaults
+	//     then fill it from the new revision;
+	//   - leaf expanders such as expandEnvironmentVariables call
+	//     ValueStringPointer(), which turns an unknown into "".
+	// Either way the rebuilt object holds a known value where config is unknown.
+	// Terraform requires the planned value of any attribute set in config to
+	// equal the config value (an unknown must stay unknown), so without this
+	// step the plan is rejected with "Provider produced invalid plan" and the
+	// only workaround is splitting the change into two applies.
+	//
+	// This only changes the plan. At apply time the value is known, Update
+	// expands it like any other declared value, and the platform receives the
+	// same payload as when the value is known at plan time.
+	overlaid, d := overlayConfigUnknowns(ctx, config.WorkflowsConfig, wfcObj)
+	diags.Append(d...)
+	if diags.HasError() {
+		return diags
+	}
+
+	// overlayConfigUnknowns returns the planned value's own type for an object,
+	// and config.WorkflowsConfig is known and non-null here (checked at the top
+	// of this function), so the result is always a types.Object.
+	plan.WorkflowsConfig = overlaid.(types.Object)
 
 	return diags
+}
+
+// overlayConfigUnknowns returns planned with every value that is unknown in cfg
+// replaced by that unknown, recursing into objects, lists and maps, so a value
+// the user declared but that is not known until apply stays "(known after
+// apply)" in the plan. See its call site in
+// reResolveWorkflowsConfigOnRevisionChange for the failure this prevents.
+//
+// Why cfg (req.Config) and not the incoming plan decides what is unknown: an
+// Optional+Computed attribute the user did not set is also unknown in the
+// plan (Terraform marks it "known after apply"), but it is NULL in config.
+// Only a declared value that references something not yet known (another
+// resource's attribute, a computed output) is unknown in config itself. So:
+//   - cfg unknown  -> the user set it; keep it unknown.
+//   - cfg null     -> the user did not set it; keep planned, which holds the
+//     value re-resolved from the new revision (the reason the rebuild exists).
+//   - cfg known    -> recurse for objects/lists/maps, since an unknown can sit
+//     deep inside (e.g. environment_variables[0].config.text_value); for a
+//     scalar keep planned, which the expanders already copied from cfg.
+//
+// Why list elements are paired by position and not by workflow id: planned is
+// built from cfg itself (expandWorkflowsConfig emits workflows[i] from cfg
+// entry i, and flattenWorkflowsConfig keeps that order), so element i of each
+// is the same workflow by construction. id cannot be used because it may
+// itself be unknown (id = some_resource.x.uuid), leaving nothing to match on.
+// Whether the declared order matches the revision is a separate concern,
+// enforced by validateWorkflowsConfigMatchesRevision in ModifyPlan (before
+// this runs) and again in Create/Update once every id is known.
+//
+// Generic over attr.Value rather than field-by-field so new workflow
+// attributes are covered without having to remember to update this.
+func overlayConfigUnknowns(ctx context.Context, cfg, planned attr.Value) (attr.Value, diag.Diagnostics) {
+	// Not set by the user: keep the re-resolved value.
+	if cfg == nil || planned == nil || cfg.IsNull() {
+		return planned, nil
+	}
+	// Declared but not known until apply: must stay unknown in the plan.
+	if cfg.IsUnknown() {
+		return cfg, nil
+	}
+	// Nothing to descend into; for a known cfg with a known planned value the
+	// cases below apply.
+	if planned.IsNull() || planned.IsUnknown() {
+		return planned, nil
+	}
+
+	switch c := cfg.(type) {
+	case types.Object:
+		p, ok := planned.(types.Object)
+		if !ok {
+			return planned, nil
+		}
+		// Attributes() returns a copy, so writing into attrs does not mutate p.
+		attrs := p.Attributes()
+		for name, cv := range c.Attributes() {
+			// Both sides come from the same schema, so a missing attribute
+			// is not expected; skip it rather than invent a value.
+			pv, ok := attrs[name]
+			if !ok {
+				continue
+			}
+			v, diags := overlayConfigUnknowns(ctx, cv, pv)
+			if diags.HasError() {
+				return planned, diags
+			}
+			attrs[name] = v
+		}
+		return types.ObjectValue(p.AttributeTypes(ctx), attrs)
+
+	case types.List:
+		p, ok := planned.(types.List)
+		if !ok {
+			return planned, nil
+		}
+		// Elements() returns a copy, so writing into pElems does not mutate p.
+		cElems, pElems := c.Elements(), p.Elements()
+		// Lengths always match today: a list declared in config is kept
+		// verbatim by the merge (== nil checks only fill unset lists), and
+		// expandWorkflowsConfig emits exactly one workflow per config entry.
+		// Guard anyway so a future change that adds or drops elements falls
+		// back to the rebuilt value instead of pairing the wrong elements.
+		if len(cElems) != len(pElems) {
+			return planned, nil
+		}
+		for i := range cElems {
+			v, diags := overlayConfigUnknowns(ctx, cElems[i], pElems[i])
+			if diags.HasError() {
+				return planned, diags
+			}
+			pElems[i] = v
+		}
+		return types.ListValue(p.ElementType(ctx), pElems)
+
+	case types.Map:
+		p, ok := planned.(types.Map)
+		if !ok {
+			return planned, nil
+		}
+		// Maps (e.g. context_tags) pair naturally by key. A key only in cfg
+		// cannot occur for a declared map, which the merge keeps verbatim.
+		// Elements() returns a copy, so writing into pElems does not mutate p.
+		pElems := p.Elements()
+		for key, cv := range c.Elements() {
+			pv, ok := pElems[key]
+			if !ok {
+				continue
+			}
+			v, diags := overlayConfigUnknowns(ctx, cv, pv)
+			if diags.HasError() {
+				return planned, diags
+			}
+			pElems[key] = v
+		}
+		return types.MapValue(p.ElementType(ctx), pElems)
+	}
+
+	// Known scalar: the expanders copied it from config, so planned already
+	// holds the same value.
+	return planned, nil
 }
 
 // runnerConstraintsByWorkflowUUID extracts each workflow's currently-resolved

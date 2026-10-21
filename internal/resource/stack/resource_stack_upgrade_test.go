@@ -3,6 +3,7 @@ package stack_test
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -260,6 +261,80 @@ func TestAccStack_WorkflowsConfigRemoveAndAddWorkflow(t *testing.T) {
 						fmt.Sprintf("actions.plan.order.%s.parameters.terraform_action.action", secondWorkflowUUID), "plan"),
 					resource.TestCheckNoResourceAttr("stackguardian_stack.test",
 						fmt.Sprintf("actions.plan.order.%s.parameters.terraform_action.action", testWorkflowUUID)),
+				),
+			},
+		},
+	})
+}
+
+// TestAccStack_WorkflowsConfigUnknownValuesOnRevisionChange — REVISION SWITCH test.
+// Purpose: a per-workflow value declared in config but not known until apply (here it
+// references terraform_data.dep.id, created in the same apply) must stay "(known after
+// apply)" in the plan when template_group_id changes in the same step. ModifyPlan rebuilds
+// workflows_config against the new revision, and the expanders treat an unknown value as
+// unset (description) or as "" (environment_variables text_value). Without restoring those
+// unknowns (overlayConfigUnknowns in model.go) Terraform rejects the plan with "Provider
+// produced invalid plan". Once applied, both must hold the real terraform_data id.
+func TestAccStack_WorkflowsConfigUnknownValuesOnRevisionChange(t *testing.T) {
+	wfGrpName := acctest.ResourceName("stack-wfunknown-wfgrp")
+	wfTemplateName := acctest.ResourceName("stack-wfunknown-wftmpl")
+	stackTemplateName := acctest.ResourceName("stack-wfunknown-stmpl")
+	id := acctest.ResourceName("stack-wfunknown")
+
+	revision1 := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+	revision2 := setupSecondStackTemplateRevision(t, stackTemplateName, wfTemplateName, "revision two", nil)
+
+	workflowsConfig := func(description, textValue string) string {
+		return fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id          = %q
+        description = %s
+        environment_variables = [
+          {
+            kind = "PLAIN_TEXT"
+            config = {
+              var_name   = "DEP_ID"
+              text_value = %s
+            }
+          }
+        ]
+      }
+    ]
+  }
+`, testWorkflowUUID, description, textValue)
+	}
+
+	knownConfig := testAccStackConfig(wfGrpName, revision1, id, workflowsConfig(`"Deploys app"`, `"static"`))
+	unknownConfig := `
+resource "terraform_data" "dep" {}
+` + testAccStackConfig(wfGrpName, revision2, id, workflowsConfig(`"Deploys ${terraform_data.dep.id}"`, `terraform_data.dep.id`))
+
+	res := "stackguardian_stack.test"
+	wf := "workflows_config.workflows.0."
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_4_0), // terraform_data
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: knownConfig,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(res, wf+"description", "Deploys app"),
+					resource.TestCheckResourceAttr(res, wf+"environment_variables.0.config.text_value", "static"),
+				),
+			},
+			{
+				// Revision change and not-yet-known values in the same apply.
+				Config: unknownConfig,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(res, "template_group_id", revision2),
+					resource.TestMatchResourceAttr(res, wf+"description", regexp.MustCompile(`^Deploys .+`)),
+					resource.TestCheckResourceAttrPair(res, wf+"environment_variables.0.config.text_value", "terraform_data.dep", "id"),
 				),
 			},
 		},
