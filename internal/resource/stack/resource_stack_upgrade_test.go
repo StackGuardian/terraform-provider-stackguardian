@@ -22,6 +22,7 @@ import (
 // revision1, step 3) — rather than the value getting stuck at whatever UseStateForUnknown last
 // carried forward (see reResolveWorkflowsConfigOnRevisionChange).
 func TestAccStack_WorkflowsConfigRevisionReResolution(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-wfrevre-wfgrp"
 	wfTemplateName := "tf-provider-stack-wfrevre-wftmpl"
 	stackTemplateName := "tf-provider-stack-wfrevre-stmpl"
@@ -89,6 +90,7 @@ func TestAccStack_WorkflowsConfigRevisionReResolution(t *testing.T) {
 // — workflows_config must shrink back to one entry cleanly, not error or leave the removed
 // entry lingering in state.
 func TestAccStack_WorkflowsConfigAddSecondWorkflowOverride(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-wfadd-wfgrp"
 	wfTemplateName := "tf-provider-stack-wfadd-wftmpl"
 	stackTemplateName := "tf-provider-stack-wfadd-stmpl"
@@ -169,6 +171,7 @@ func TestAccStack_WorkflowsConfigAddSecondWorkflowOverride(t *testing.T) {
 // validateWorkflowsConfigMatchesRevision's exact-match check together, rather than each in
 // isolation the way the existing grow/shrink test does.
 func TestAccStack_WorkflowsConfigRemoveAndAddWorkflow(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := "tf-provider-stack-wfremoveadd-wfgrp"
 	wfTemplateName := "tf-provider-stack-wfremoveadd-wftmpl"
 	stackTemplateName := "tf-provider-stack-wfremoveadd-stmpl"
@@ -276,6 +279,7 @@ func TestAccStack_WorkflowsConfigRemoveAndAddWorkflow(t *testing.T) {
 // unknowns (overlayConfigUnknowns in model.go) Terraform rejects the plan with "Provider
 // produced invalid plan". Once applied, both must hold the real terraform_data id.
 func TestAccStack_WorkflowsConfigUnknownValuesOnRevisionChange(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := acctest.ResourceName("stack-wfunknown-wfgrp")
 	wfTemplateName := acctest.ResourceName("stack-wfunknown-wftmpl")
 	stackTemplateName := acctest.ResourceName("stack-wfunknown-stmpl")
