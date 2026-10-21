@@ -90,13 +90,11 @@ func isStackNotFound(err error) bool {
 // model's template_group_id. It returns nil (without an error) when no
 // template group id is set, so merging is a no-op in that case.
 //
-// The Terraform-facing template_group_id is stored bare ("<name>:<revision>",
-// no org prefix) — ToAPIModel/ToUpdateAPIModel add the "/<org>/" prefix the
-// wire format documents (see the schema description) only when building the
-// request, and BuildAPIModelToStackModel strips it back off on read. Unlike
-// workflow_from_template's iac_template_id, stack templates aren't
-// documented as cross-org shareable, so this is always read against the
-// stack's own org rather than an org parsed out of the id.
+// template_group_id is the fully qualified "/<owner-org>/<template-id>:<revision>".
+// A stack template can be owned by another organization (shared with this
+// one, or public), so the revision is read from the org named in the id, not
+// the stack's own org — the same way fetchWorkflowTemplateRevision reads
+// workflow templates.
 func (r *stackResource) fetchTemplateRevision(ctx context.Context, m StackResourceModel) (*stacktemplaterevisions.ReadStackTemplateRevisionModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
@@ -105,7 +103,8 @@ func (r *stackResource) fetchTemplateRevision(ctx context.Context, m StackResour
 		return nil, diags
 	}
 
-	readResp, err := r.client.StackTemplateRevisions.ReadStackTemplateRevision(ctx, r.org_name, templateGroupId)
+	tplOrg, revisionId := splitTemplateOrg(templateGroupId, r.org_name)
+	readResp, err := r.client.StackTemplateRevisions.ReadStackTemplateRevision(ctx, tplOrg, revisionId)
 	if err != nil {
 		diags.AddError("Error reading stack template revision",
 			fmt.Sprintf("Could not read template revision %q to resolve stack defaults: %s", templateGroupId, err.Error()))
@@ -337,7 +336,7 @@ func (r *stackResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	payload, diags := plan.ToAPIModel(ctx, r.org_name, tpl, workflowTemplates)
+	payload, diags := plan.ToAPIModel(ctx, tpl, workflowTemplates)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -361,7 +360,7 @@ func (r *stackResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	stackModel, diags := BuildAPIModelToStackModel(ctx, r.org_name, readResp.Msg, plan.WorkflowGroupId)
+	stackModel, diags := BuildAPIModelToStackModel(ctx, readResp.Msg, plan.WorkflowGroupId)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -397,7 +396,7 @@ func (r *stackResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	stackModel, diags := BuildAPIModelToStackModel(ctx, r.org_name, readResp.Msg, state.WorkflowGroupId)
+	stackModel, diags := BuildAPIModelToStackModel(ctx, readResp.Msg, state.WorkflowGroupId)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -437,7 +436,7 @@ func (r *stackResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	payload, diags := plan.ToUpdateAPIModel(ctx, r.org_name, tpl, workflowTemplates)
+	payload, diags := plan.ToUpdateAPIModel(ctx, tpl, workflowTemplates)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -463,7 +462,7 @@ func (r *stackResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	stackModel, diags := BuildAPIModelToStackModel(ctx, r.org_name, updatedStack.Msg, plan.WorkflowGroupId)
+	stackModel, diags := BuildAPIModelToStackModel(ctx, updatedStack.Msg, plan.WorkflowGroupId)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

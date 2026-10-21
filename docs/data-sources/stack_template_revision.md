@@ -740,7 +740,7 @@ Read-Only:
 
 Read-Only:
 
-- `iac_template_id` (String) Workflow template this stack workflow is created from, as the bare `template_name` of a template in your own organization (e.g. `my-workflow-template`). The provider qualifies it with your organization, so do not give the `/<org>/…` form.
+- `iac_template_id` (String) Workflow template this stack workflow is created from, as the full id of an existing revision, including the owning organization: `/<org>/<template-id>:<revision>` (e.g. `/my-org/my-workflow-template:1`). Give the organization even for a template in your own organization; a template shared by another organization, or StackGuardian's own (`/stackguardian/…`), is referenced the same way.
 
 
 

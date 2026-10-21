@@ -59,7 +59,7 @@ output "stack_workflow_ids" {
 - `description` (String) A brief description of the stack. Must be less than 256 characters.
 - `resource_name` (String) Name of the stack. Must be less than 100 characters. Free-form: when it is not already slug-shaped (letters, digits, `_`, `-`) the platform derives a slug for `id` — see `id`.
 - `tags` (List of String) A list of tags associated with the stack. A maximum of 10 tags are allowed.
-- `template_group_id` (String) Stack template revision this stack is created from, as `<template-name>:<revision>` (e.g. `my-stack-template:1`) — the stack template revision's `id`, not a path. The provider qualifies it with your organization, so do not give the `/<org>/…` form. Change the revision to upgrade the stack.
+- `template_group_id` (String) Stack template revision this stack is created from, as its full id including the owning organization: `/<org>/<template-id>:<revision>` (e.g. `/my-org/my-stack-template:1`) — the stack template revision's `template_id`. Give the organization even for a template in your own organization; a stack template shared by another organization is referenced the same way. Change the revision to upgrade the stack.
 - `workflows_config` (Attributes) Workflows configuration for the stack. Every workflow defined on the stack template revision (`template_group_id`) must be declared in `workflows.*.id`; the provider rejects a plan that omits one. (see [below for nested schema](#nestedatt--workflows_config))
 
 <a id="nestedatt--actions"></a>

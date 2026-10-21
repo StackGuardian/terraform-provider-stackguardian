@@ -67,7 +67,7 @@ func (d *stackDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		return
 	}
 
-	model, diags := stackresource.BuildAPIModelToStackModel(ctx, d.orgName, readResp.Msg, config.WorkflowGroupId)
+	model, diags := stackresource.BuildAPIModelToStackModel(ctx, readResp.Msg, config.WorkflowGroupId)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

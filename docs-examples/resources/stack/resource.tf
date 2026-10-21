@@ -7,7 +7,7 @@
 resource "stackguardian_stack" "basic" {
   id                = "my-stack"
   workflow_group_id = "my-workflow-group"
-  template_group_id = "my-stack-template:1"
+  template_group_id = "/my-org/my-stack-template:1"
 
   workflows_config = {
     workflows = [
@@ -22,7 +22,7 @@ resource "stackguardian_stack" "basic" {
 resource "stackguardian_stack" "with_overrides" {
   id                = "my-stack-custom"
   workflow_group_id = "my-workflow-group"
-  template_group_id = "my-stack-template:1"
+  template_group_id = "/my-org/my-stack-template:1"
 
   tags = ["production"]
 

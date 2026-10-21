@@ -65,7 +65,7 @@ func deprecationNow() *string {
 // declares one workflow (workflowUUID) built from that workflow template. Cleanup is registered
 // before each create, so a failure partway through still tears down what was made; t.Cleanup is
 // LIFO, so the stack goes first and the workflow group last. Returns the stack template revision
-// id in the bare "<name>:1" form a stack's template_group_id takes.
+// id in the full "/<org>/<template-id>:1" form a stack's template_group_id takes.
 func setupStackPrerequisites(t *testing.T, wfGrpName, wfTemplateName, stackTemplateName, stackId string) string {
 	t.Helper()
 	ctx := context.TODO()
@@ -205,7 +205,8 @@ func setupStackPrerequisites(t *testing.T, wfGrpName, wfTemplateName, stackTempl
 		_, _ = client.Stacks.DeleteStack(ctx, org, stackId, wfGrpName, &sgsdkgo.DeleteStackRequest{ForceDelete: sgsdkgo.Bool(true)})
 	})
 
-	return stackRevisionId
+	// template_group_id takes the full "/<org>/<template-id>:<rev>" id.
+	return fmt.Sprintf("/%s/%s", org, stackRevisionId)
 }
 
 // TestAccStackDataSource_Basic is an integration test: it creates a stack with a broad set of

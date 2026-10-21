@@ -37,7 +37,9 @@ func getClient() *sgclient.Client {
 func createWorkflowTemplateFixture(templateName, sourceConfigKind string) error {
 	client := getClient()
 	kind := workflowtemplates.WorkflowTemplateSourceConfigKindEnum(sourceConfigKind)
-	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(context.TODO(), config.Get().OrgName, false, &workflowtemplates.CreateWorkflowTemplateRequest{
+	// createFirstRevision=true: iac_template_id must name an existing revision
+	// (see qualifiedWorkflowTemplateRevisionId), so the template needs ":1".
+	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(context.TODO(), config.Get().OrgName, true, &workflowtemplates.CreateWorkflowTemplateRequest{
 		Id:               &templateName,
 		TemplateName:     templateName,
 		SourceConfigKind: &kind,
@@ -66,7 +68,17 @@ func createStackTemplateFixture(templateName, sourceConfigKind string) error {
 
 func deleteWorkflowTemplateFixture(templateId string) {
 	client := getClient()
+	// The template can't be deleted while its revision :1 (created by
+	// createWorkflowTemplateFixture) still exists, so that goes first.
+	_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, templateId+":1", true)
 	_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), config.Get().OrgName, templateId)
+}
+
+// qualifiedWorkflowTemplateRevisionId returns the full "/<org>/<template-id>:1" id of
+// the revision createWorkflowTemplateFixture creates — the form iac_template_id
+// requires (the org even for your own organization, and an existing revision).
+func qualifiedWorkflowTemplateRevisionId(templateName string) string {
+	return fmt.Sprintf("/%s/%s:1", config.Get().OrgName, templateName)
 }
 
 func deleteStackTemplateFixture(templateId string) {
@@ -133,7 +145,7 @@ resource "stackguardian_stack_template_revision" "test" {
     ]
   }
 }
-`, stackTemplateID, alias, notes, description, wfTemplateID)
+`, stackTemplateID, alias, notes, description, qualifiedWorkflowTemplateRevisionId(wfTemplateID))
 }
 
 func testAccStackTemplateRevisionWithWorkflowsConfig(stackTemplateID, wfTemplateID, alias string) string {
@@ -171,7 +183,7 @@ resource "stackguardian_stack_template_revision" "test" {
     ]
   }
 }
-`, stackTemplateID, alias, wfTemplateID)
+`, stackTemplateID, alias, qualifiedWorkflowTemplateRevisionId(wfTemplateID))
 }
 
 // --- Tests ---
@@ -321,6 +333,42 @@ func TestAccStackTemplateRevision_ActionsRejectsEmpty(t *testing.T) {
 	})
 }
 
+// TestAccStackTemplateRevision_IacTemplateIdRequiresOrg verifies iac_template_id is
+// rejected at plan time unless it is the full "/<org>/<template-id>:<revision>" id of a
+// revision, the org given even for your own organization
+// (validators.QualifiedTemplateRevisionId). The validator fails before any API call,
+// so no fixtures are needed.
+func TestAccStackTemplateRevision_IacTemplateIdRequiresOrg(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
+	bare := testAccStackTemplateRevisionConfig("my-stack-template", "unused", "v1", "notes", "description")
+	bare = strings.Replace(bare, qualifiedWorkflowTemplateRevisionId("unused"), "my-workflow-template:1", 1)
+	noRevision := strings.Replace(bare, "my-workflow-template:1", "/"+config.Get().OrgName+"/my-workflow-template", 1)
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config:      bare,
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`(?s)iac_template_id.*full id`),
+			},
+			{
+				Config:      noRevision,
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`(?s)iac_template_id.*full id`),
+			},
+		},
+	})
+}
+
 func TestAccStackTemplateRevision_Lifecycle(t *testing.T) {
 	acctest.SkipUnlessAcceptance(t)
 	stackTemplateName := acctest.ResourceName("tf-provider-stack-template-lifecycle")
@@ -413,6 +461,13 @@ resource "stackguardian_workflow_template" "wf_parent" {
   tags               = ["test", "lifecycle"]
 }
 
+# iac_template_id must name an existing revision, so the workflow template
+# needs one of its own.
+resource "stackguardian_workflow_template_revision" "wf_rev" {
+  template_id        = stackguardian_workflow_template.wf_parent.id
+  source_config_kind = "TERRAFORM"
+}
+
 resource "stackguardian_stack_template" "parent" {
   template_name      = "%s"
   source_config_kind = "TERRAFORM"
@@ -435,7 +490,7 @@ resource "stackguardian_stack_template_revision" "test" {
 
         vcs_config = {
           iac_vcs_config = {
-            iac_template_id = stackguardian_workflow_template.wf_parent.id
+            iac_template_id = "/%s/${stackguardian_workflow_template_revision.wf_rev.id}"
           }
         }
 
@@ -448,5 +503,5 @@ resource "stackguardian_stack_template_revision" "test" {
   }
 %s
 }
-`, wfTemplateName, stackTemplateName, alias, isPublicLine, deprecationBlock)
+`, wfTemplateName, stackTemplateName, alias, isPublicLine, config.Get().OrgName, deprecationBlock)
 }

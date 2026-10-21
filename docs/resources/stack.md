@@ -68,7 +68,7 @@ To upgrade, change the revision in `template_group_id` (e.g. `:1` → `:2`):
 resource "stackguardian_stack" "basic" {
   id                = "my-stack"
   workflow_group_id = "my-workflow-group"
-  template_group_id = "my-stack-template:1"
+  template_group_id = "/my-org/my-stack-template:1"
 
   workflows_config = {
     workflows = [
@@ -83,7 +83,7 @@ resource "stackguardian_stack" "basic" {
 resource "stackguardian_stack" "with_overrides" {
   id                = "my-stack-custom"
   workflow_group_id = "my-workflow-group"
-  template_group_id = "my-stack-template:1"
+  template_group_id = "/my-org/my-stack-template:1"
 
   tags = ["production"]
 
@@ -157,7 +157,7 @@ resource "stackguardian_stack" "with_overrides" {
 ### Required
 
 - `id` (String) Identifier of the resource: a bare slug such as `production-aws`, never a path. When omitted it is derived from `resource_name` — unchanged if that is already slug-shaped (letters, digits, `_`, `-`), otherwise lowercased, spaces replaced by `-`, with a random suffix appended. Set it explicitly to control it. Use it to reference the resource elsewhere, adding the prefix the attribute expects: `"/integrations/${stackguardian_connector.x.id}"`, `"/wfgrps/${stackguardian_workflow_group.x.id}"`. The `resource_name` attribute is still available for references but its use is discouraged: it is not always equal to `id`.
-- `template_group_id` (String) Stack template revision this stack is created from, as `<template-name>:<revision>` (e.g. `my-stack-template:1`) — the stack template revision's `id`, not a path. The provider qualifies it with your organization, so do not give the `/<org>/…` form. Change the revision to upgrade the stack.
+- `template_group_id` (String) Stack template revision this stack is created from, as its full id including the owning organization: `/<org>/<template-id>:<revision>` (e.g. `/my-org/my-stack-template:1`) — the stack template revision's `template_id`. Give the organization even for a template in your own organization; a stack template shared by another organization is referenced the same way. Change the revision to upgrade the stack.
 - `workflow_group_id` (String) ID of the workflow group this stack belongs to.
 - `workflows_config` (Attributes) Workflows configuration for the stack. Every workflow defined on the stack template revision (`template_group_id`) must be declared in `workflows.*.id`; the provider rejects a plan that omits one. (see [below for nested schema](#nestedatt--workflows_config))
 

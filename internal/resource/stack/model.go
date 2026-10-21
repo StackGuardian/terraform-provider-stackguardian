@@ -2752,16 +2752,16 @@ func contextTagsFromTemplate(ct map[string]string) map[string]*string {
 	return result
 }
 
-// ToAPIModel converts the plan into a Create payload. orgName prefixes
-// template_group_id to the wire format the API expects ("/<org>/<name>:<rev>"
-// — see the template_group_id schema description); the Terraform-facing
-// value stays bare ("<name>:<rev>"), matching what fetchTemplateRevision
-// reads against the stack's own org. tpl is the stack template revision
+// ToAPIModel converts the plan into a Create payload. template_group_id is
+// sent exactly as written: it is required in the API's own fully qualified
+// form ("/<owner-org>/<template-id>:<rev>", see validators.QualifiedTemplateRevisionId
+// for why), so it may name a stack template owned by another organization.
+// tpl is the stack template revision
 // resolved from template_group_id (nil if unset) —
 // description/tags/context_tags/actions fall back to the template's value
 // when the user left the corresponding field unset. workflows_config has no
 // template-based resolution yet.
-func (m *StackResourceModel) ToAPIModel(ctx context.Context, orgName string, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) (*sgsdkgo.Stack, diag.Diagnostics) {
+func (m *StackResourceModel) ToAPIModel(ctx context.Context, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) (*sgsdkgo.Stack, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	apiModel := &sgsdkgo.Stack{
 		// id is Required, always known here.
@@ -2792,8 +2792,7 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context, orgName string, tpl
 	}
 
 	if !m.TemplateGroupId.IsUnknown() && !m.TemplateGroupId.IsNull() {
-		prefixed := fmt.Sprintf("/%s/%s", orgName, m.TemplateGroupId.ValueString())
-		apiModel.TemplateGroupId = &prefixed
+		apiModel.TemplateGroupId = m.TemplateGroupId.ValueStringPointer()
 	}
 
 	// actions falls back to the stack template revision's own value verbatim
@@ -2832,8 +2831,8 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context, orgName string, tpl
 	return apiModel, diags
 }
 
-// ToUpdateAPIModel converts the plan into an Update payload. orgName prefixes
-// template_group_id to the wire format the API expects — see ToAPIModel. tpl
+// ToUpdateAPIModel converts the plan into an Update payload. template_group_id
+// is sent exactly as written — see ToAPIModel. tpl
 // is the stack template revision resolved from template_group_id (nil if
 // unset). For description/tags/actions/context_tags/workflows_config: a
 // known, non-null plan value is always sent as-is; otherwise (unknown, or the
@@ -2848,7 +2847,7 @@ func (m *StackResourceModel) ToAPIModel(ctx context.Context, orgName string, tpl
 // fields). Clearing one of these fields requires sending an explicit empty
 // value ("", [], {}), which is a known non-null plan value and already takes
 // the first branch below.
-func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName string, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) (*sgsdkgo.PatchedStack, diag.Diagnostics) {
+func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) (*sgsdkgo.PatchedStack, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	apiModel := &sgsdkgo.PatchedStack{}
 
@@ -2880,7 +2879,7 @@ func (m *StackResourceModel) ToUpdateAPIModel(ctx context.Context, orgName strin
 	// template_group_id is Required — never null/unknown at apply time, so
 	// there's no fallback case to handle here.
 	if !m.TemplateGroupId.IsUnknown() && !m.TemplateGroupId.IsNull() {
-		apiModel.TemplateGroupId = sgsdkgo.Optional(fmt.Sprintf("/%s/%s", orgName, m.TemplateGroupId.ValueString()))
+		apiModel.TemplateGroupId = sgsdkgo.Optional(m.TemplateGroupId.ValueString())
 	}
 
 	// actions: the user's own declared value always wins; otherwise falls
@@ -3439,28 +3438,19 @@ func runnerConstraintsByWorkflowUUID(ctx context.Context, workflowsConfig types.
 // BuildAPIModelToStackModel converts the API response into a StackResourceModel.
 // workflowGroupId isn't part of the API response — the platform has no concept
 // of "workflow group" on a stack response — so it must be threaded through from
-// the caller's own plan/state rather than derived here. orgName strips the
-// "/<org>/" prefix the API returns on template_group_id back off — see
-// ToAPIModel — so state stays bare, matching what the user types in config.
-func BuildAPIModelToStackModel(ctx context.Context, orgName string, apiResponse *sgsdkgo.StackData, workflowGroupId types.String) (*StackResourceModel, diag.Diagnostics) {
+// the caller's own plan/state rather than derived here. template_group_id is
+// kept exactly as the API returns it ("/<owner-org>/<template-id>:<rev>"): config
+// must use that same form (see ToAPIModel), and stripping the org would lose
+// which organization owns a shared template.
+func BuildAPIModelToStackModel(ctx context.Context, apiResponse *sgsdkgo.StackData, workflowGroupId types.String) (*StackResourceModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
-
-	// Strip the owning-org prefix the API returns ("/<org>/<name>:<rev>") back
-	// to bare ("<name>:<rev>") — mirrors stack_template_revision's own
-	// template_id/iac_template_id stripping. Falls back to the raw value if it
-	// has no "/<org>/" prefix (e.g. server omitted it).
-	strippedTemplateGroupId := apiResponse.TemplateGroupId
-	if strippedTemplateGroupId != nil {
-		_, bare := splitTemplateOrg(*strippedTemplateGroupId, orgName)
-		strippedTemplateGroupId = &bare
-	}
 
 	stackModel := &StackResourceModel{
 		Id:              flatteners.String(apiResponse.Id),
 		WorkflowGroupId: workflowGroupId,
 		ResourceName:    flatteners.StringPtr(apiResponse.ResourceName),
 		Description:     flatteners.StringPtr(apiResponse.Description),
-		TemplateGroupId: flatteners.StringPtr(strippedTemplateGroupId),
+		TemplateGroupId: flatteners.StringPtr(apiResponse.TemplateGroupId),
 	}
 
 	if apiResponse.Tags != nil {

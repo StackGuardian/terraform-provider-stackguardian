@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -425,15 +426,22 @@ func setupStackTemplateChainWithWorkflow(t *testing.T, stackTemplateID, workflow
 		t.Fatalf("setupStackTemplateChainWithFields: publish template %q: %s", stackTemplateID, err)
 	}
 
-	return revisionID
+	return qualifiedRevisionId(revisionID)
+}
+
+// qualifiedRevisionId turns a fixture's bare revision id ("<template-id>:<rev>", the
+// form the SDK's revision endpoints take) into the full "/<org>/<template-id>:<rev>"
+// that template_group_id requires and stores. Fixtures return this form so
+// configs and template_group_id checks can use the value directly.
+func qualifiedRevisionId(revisionID string) string {
+	return fmt.Sprintf("/%s/%s", org, revisionID)
 }
 
 // setupStackTemplateChain creates and publishes a stack template + revision
 // :1 via the SDK, with workflows_config wiring testWorkflowUUID to
 // workflowTemplateID, and none of description/tags/contextTags set. Returns
-// the bare revision id ("<name>:1") for use as a stack's template_group_id,
-// which is stored bare in state and only gets the "/<org>/" wire prefix on
-// send (see ToAPIModel).
+// the full revision id ("/<org>/<template-id>:1") for use as a stack's
+// template_group_id, which takes and stores that form as-is.
 func setupStackTemplateChain(t *testing.T, stackTemplateID, workflowTemplateID string) string {
 	t.Helper()
 	return setupStackTemplateChainWithFields(t, stackTemplateID, workflowTemplateID, nil, nil, nil)
@@ -534,7 +542,7 @@ resource "stackguardian_stack" "test" {
 // own create-time default (the provider no longer synthesizes one itself —
 // see expandActionsMap), and by tests that need a second workflow to
 // exercise workflows_config against a multi-workflow revision.
-// Registers cleanup. Returns the bare revision id ("<name>:1").
+// Registers cleanup. Returns the full revision id ("/<org>/<template-id>:1").
 func setupStackTemplateChainNoActions(t *testing.T, stackTemplateID, workflowTemplateID string) string {
 	t.Helper()
 	client := getClient()
@@ -625,7 +633,7 @@ func setupStackTemplateChainNoActions(t *testing.T, stackTemplateID, workflowTem
 		t.Fatalf("setupStackTemplateChainNoActions: publish template %q: %s", stackTemplateID, err)
 	}
 
-	return revisionID
+	return qualifiedRevisionId(revisionID)
 }
 
 // setupSecondStackTemplateRevisionWithFields is setupSecondStackTemplateRevision's general
@@ -697,7 +705,7 @@ func setupSecondStackTemplateRevisionWithFields(t *testing.T, stackTemplateID, w
 		t.Fatalf("setupSecondStackTemplateRevisionWithFields: publish revision %q: %s", revisionID, err)
 	}
 
-	return revisionID
+	return qualifiedRevisionId(revisionID)
 }
 
 // setupSecondStackTemplateRevision creates and publishes revision :2 of an
@@ -707,7 +715,7 @@ func setupSecondStackTemplateRevisionWithFields(t *testing.T, stackTemplateID, w
 // numberOfApprovalsRequired, if non-nil, is set on that workflow — used
 // to test workflows_config's revision-based re-resolution
 // (reResolveWorkflowsConfigOnRevisionChange), since revision :1 never sets it.
-// Registers cleanup. Returns the bare revision id ("<name>:2").
+// Registers cleanup. Returns the full revision id ("/<org>/<template-id>:2").
 func setupSecondStackTemplateRevision(t *testing.T, stackTemplateID, workflowTemplateID, description string, numberOfApprovalsRequired *int) string {
 	t.Helper()
 	return setupSecondStackTemplateRevisionWithFields(t, stackTemplateID, workflowTemplateID, description, numberOfApprovalsRequired, nil, nil, defaultSecondRevisionActions())
@@ -723,7 +731,7 @@ func setupSecondStackTemplateRevision(t *testing.T, stackTemplateID, workflowTem
 // extra workflow in workflows_config against a STATIC revision is no longer
 // possible (see validateWorkflowsConfigMatchesRevision), so growth can now
 // only come from the referenced revision itself defining more workflows.
-// Registers cleanup. Returns the bare revision id ("<name>:2").
+// Registers cleanup. Returns the full revision id ("/<org>/<template-id>:2").
 func setupSecondStackTemplateRevisionTwoWorkflows(t *testing.T, stackTemplateID, workflowTemplateID string) string {
 	t.Helper()
 	client := getClient()
@@ -789,7 +797,7 @@ func setupSecondStackTemplateRevisionTwoWorkflows(t *testing.T, stackTemplateID,
 		t.Fatalf("setupSecondStackTemplateRevisionTwoWorkflows: publish revision %q: %s", revisionID, err)
 	}
 
-	return revisionID
+	return qualifiedRevisionId(revisionID)
 }
 
 // setupSecondStackTemplateRevisionRemoveAndAddWorkflow creates and publishes revision :2 of
@@ -802,7 +810,7 @@ func setupSecondStackTemplateRevisionTwoWorkflows(t *testing.T, stackTemplateID,
 // previously-declared workflow and introduces a new one in the very same step, exercising
 // both halves of reResolveWorkflowsConfigOnRevisionChange and
 // validateWorkflowsConfigMatchesRevision together.
-// Registers cleanup. Returns the bare revision id ("<name>:2").
+// Registers cleanup. Returns the full revision id ("/<org>/<template-id>:2").
 func setupSecondStackTemplateRevisionRemoveAndAddWorkflow(t *testing.T, stackTemplateID, workflowTemplateID string) string {
 	t.Helper()
 	client := getClient()
@@ -878,7 +886,7 @@ func setupSecondStackTemplateRevisionRemoveAndAddWorkflow(t *testing.T, stackTem
 		t.Fatalf("setupSecondStackTemplateRevisionRemoveAndAddWorkflow: publish revision %q: %s", revisionID, err)
 	}
 
-	return revisionID
+	return qualifiedRevisionId(revisionID)
 }
 
 // defaultSecondRevisionActions returns the fixed apply/plan Actions map used
@@ -1147,3 +1155,33 @@ func TestAccStack_DeleteAlreadyGone(t *testing.T) {
 //     existing "apply" action's shape alongside the injected one to avoid an
 //     unrelated diff — deferred as the highest-effort-for-value item in this
 //     group.
+
+// TestAccStack_TemplateGroupIdRequiresOrg verifies template_group_id is rejected
+// at plan time unless it is the full "/<org>/<template-id>:<revision>" id, the org given
+// even for your own organization (validators.QualifiedTemplateRevisionId). The
+// provider no longer adds or strips the org, so a bare id can't silently resolve
+// against the wrong organization. The validator fails before any API call, so no
+// fixtures are needed.
+func TestAccStack_TemplateGroupIdRequiresOrg(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccStackConfig("my-workflow-group", "my-stack-template:1", "my-stack", ""),
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`(?s)template_group_id.*full id`),
+			},
+			{
+				Config:      testAccStackConfig("my-workflow-group", fmt.Sprintf("/%s/my-stack-template", org), "my-stack", ""),
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`(?s)template_group_id.*full id`),
+			},
+		},
+	})
+}

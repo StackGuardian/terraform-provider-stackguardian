@@ -3,7 +3,6 @@ package stacktemplaterevision
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	"github.com/StackGuardian/sg-sdk-go/stacktemplaterevisions"
@@ -838,7 +837,7 @@ func convertUserSchedulesToAPI(ctx context.Context, list types.List) ([]*sgsdkgo
 	return result, nil
 }
 
-func convertVcsConfigToAPI(ctx context.Context, obj types.Object, orgName string) (*sgsdkgo.VcsConfig, diag.Diagnostics) {
+func convertVcsConfigToAPI(ctx context.Context, obj types.Object) (*sgsdkgo.VcsConfig, diag.Diagnostics) {
 	if obj.IsNull() || obj.IsUnknown() {
 		return nil, nil
 	}
@@ -853,16 +852,15 @@ func convertVcsConfigToAPI(ctx context.Context, obj types.Object, orgName string
 		if diags := m.IacVcsConfig.As(ctx, &iacModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 			return nil, diags
 		}
-		var prefixedIacTemplateId *string
-		if tid := iacModel.IacTemplateId.ValueStringPointer(); tid != nil {
-			v := fmt.Sprintf("/%s/%s", orgName, *tid)
-			prefixedIacTemplateId = &v
-		}
-		// Stack template revision workflows always reference a workflow template, so this is
-		// always true and not user-configurable.
+		// Stack template revision workflows always reference a workflow template, so
+		// use_marketplace_template is always true and not user-configurable.
+		// iac_template_id is sent exactly as written: it is required in the API's own
+		// fully qualified form ("/<owner-org>/<template-id>:<rev>", see
+		// validators.QualifiedTemplateRevisionId for why), so it may name a workflow template
+		// owned by another organization.
 		iacVcs := &sgsdkgo.IacvcsConfig{
 			UseMarketplaceTemplate: sgsdkgo.Bool(true),
-			IacTemplateId:          prefixedIacTemplateId,
+			IacTemplateId:          iacModel.IacTemplateId.ValueStringPointer(),
 		}
 		vcsConfig.IacVcsConfig = iacVcs
 	}
@@ -1239,7 +1237,7 @@ func miniStepsFromAPI(ctx context.Context, miniSteps *sgsdkgo.StackMiniStepsSche
 	return types.ObjectValueFrom(ctx, MinistepsModel{}.AttributeTypes(), msModel)
 }
 
-func convertWorkflowsConfigToAPI(ctx context.Context, obj types.Object, orgName string) (*stacktemplaterevisions.StackTemplateRevisionWorkflowsConfig, diag.Diagnostics) {
+func convertWorkflowsConfigToAPI(ctx context.Context, obj types.Object) (*stacktemplaterevisions.StackTemplateRevisionWorkflowsConfig, diag.Diagnostics) {
 	if obj.IsNull() || obj.IsUnknown() {
 		return nil, nil
 	}
@@ -1293,7 +1291,7 @@ func convertWorkflowsConfigToAPI(ctx context.Context, obj types.Object, orgName 
 			wf.DeploymentPlatformConfig = dpcs
 		}
 		if !wm.VcsConfig.IsNull() && !wm.VcsConfig.IsUnknown() {
-			vcs, diags := convertVcsConfigToAPI(ctx, wm.VcsConfig, orgName)
+			vcs, diags := convertVcsConfigToAPI(ctx, wm.VcsConfig)
 			if diags.HasError() {
 				return nil, diags
 			}
@@ -1741,14 +1739,13 @@ func vcsConfigFromAPI(vc *sgsdkgo.VcsConfig) (types.Object, diag.Diagnostics) {
 
 	iacVcsNull := types.ObjectNull(IacVcsConfigModel{}.AttributeTypes())
 	if vc.IacVcsConfig != nil {
-		var strippedIacTemplateId *string
-		if vc.IacVcsConfig.IacTemplateId != nil {
-			parts := strings.Split(*vc.IacVcsConfig.IacTemplateId, "/")
-			base := parts[len(parts)-1]
-			strippedIacTemplateId = &base
-		}
+		// Kept exactly as the API returns it ("/<owner-org>/<template-id>:<rev>"):
+		// config must use that same form (see convertVcsConfigToAPI), and
+		// stripping the org would lose which organization owns a shared
+		// template, so the next update would point at a same-named template in
+		// the caller's own organization instead.
 		iacM := IacVcsConfigModel{
-			IacTemplateId: flatteners.StringPtr(strippedIacTemplateId),
+			IacTemplateId: flatteners.StringPtr(vc.IacVcsConfig.IacTemplateId),
 		}
 		var diags diag.Diagnostics
 		iacVcsNull, diags = types.ObjectValueFrom(context.Background(), IacVcsConfigModel{}.AttributeTypes(), iacM)
@@ -2014,7 +2011,7 @@ func actionsFromAPI(actions map[string]*sgsdkgo.Actions) (types.Map, diag.Diagno
 // ToAPIModel / ToUpdateAPIModel
 // ---------------------------------------------------------------------------
 
-func (m *StackTemplateRevisionResourceModel) ToAPIModel(ctx context.Context, orgName string) (*stacktemplaterevisions.CreateStackTemplateRevisionRequest, diag.Diagnostics) {
+func (m *StackTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) (*stacktemplaterevisions.CreateStackTemplateRevisionRequest, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
 	apiModel := &stacktemplaterevisions.CreateStackTemplateRevisionRequest{}
 
@@ -2060,7 +2057,7 @@ func (m *StackTemplateRevisionResourceModel) ToAPIModel(ctx context.Context, org
 	}
 
 	if !m.WorkflowsConfig.IsNull() && !m.WorkflowsConfig.IsUnknown() {
-		wc, diagsWC := convertWorkflowsConfigToAPI(ctx, m.WorkflowsConfig, orgName)
+		wc, diagsWC := convertWorkflowsConfigToAPI(ctx, m.WorkflowsConfig)
 		diags.Append(diagsWC...)
 		if !diags.HasError() {
 			apiModel.WorkflowsConfig = wc
@@ -2078,7 +2075,7 @@ func (m *StackTemplateRevisionResourceModel) ToAPIModel(ctx context.Context, org
 	return apiModel, diags
 }
 
-func (m *StackTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Context, orgName string) (*stacktemplaterevisions.UpdateStackTemplateRevisionRequest, diag.Diagnostics) {
+func (m *StackTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Context) (*stacktemplaterevisions.UpdateStackTemplateRevisionRequest, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
 	apiModel := &stacktemplaterevisions.UpdateStackTemplateRevisionRequest{}
 
@@ -2136,7 +2133,7 @@ func (m *StackTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Contex
 	}
 
 	if !m.WorkflowsConfig.IsNull() && !m.WorkflowsConfig.IsUnknown() {
-		wc, diagsWC := convertWorkflowsConfigToAPI(ctx, m.WorkflowsConfig, orgName)
+		wc, diagsWC := convertWorkflowsConfigToAPI(ctx, m.WorkflowsConfig)
 		diags.Append(diagsWC...)
 		if !diags.HasError() && wc != nil {
 			apiModel.WorkflowsConfig = sgsdkgo.Optional(*wc)

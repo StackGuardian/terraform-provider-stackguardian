@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/validators"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -502,8 +503,11 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 			},
 			"template_group_id": schema.StringAttribute{
-				MarkdownDescription: "Stack template revision this stack is created from, as `<template-name>:<revision>` (e.g. `my-stack-template:1`) — the stack template revision's `id`, not a path. The provider qualifies it with your organization, so do not give the `/<org>/…` form. Change the revision to upgrade the stack.",
+				MarkdownDescription: constants.StackTemplateGroupId,
 				Required:            true,
+				Validators: []validator.String{
+					validators.QualifiedTemplateRevisionId(),
+				},
 			},
 			"workflows_config": schema.SingleNestedAttribute{
 				MarkdownDescription: "Workflows configuration for the stack. Every workflow defined on the stack template revision (`template_group_id`) must be declared in `workflows.*.id`; the provider rejects a plan that omits one.",
