@@ -62,6 +62,3 @@ dist
 .env
 
 .idea/
-
-# SkillSpector scan reports (make skills-security-scan)
-.skillspector-reports/

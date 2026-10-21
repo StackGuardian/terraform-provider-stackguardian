@@ -16,20 +16,15 @@ A **Breaking** change can require edits to existing configurations.
 
 - `stackguardian_workflow_template_revision`: optional `user_schedules[*].inputs` on the resource and data source, the run inputs a schedule uses when it triggers a run. It accepts `terraform_action.action` and `vcs_config.iac_input_data`; when `iac_input_data` is set, both `schema_type` (`RAW_JSON` or `FORM_JSONSCHEMA`, validated at plan time) and `data` (a JSON string such as `jsonencode({ test = "value" })`) are required. `enable_chaining` is read-only: it is set by StackGuardian and sent back unchanged on update. Existing schedules without `inputs` keep working
 - `stackguardian_workflow_template_revision`: `terraform_config.run_pre_plan_hooks_on_drift` and `terraform_config.run_post_plan_hooks_on_drift` on the resource and data source
-- AI assistant skills published in the provider repository, with a "Building this with AI" section on every resource, data source and guide page pointing to the relevant skill — works with Claude Code, Cursor, Copilot, Windsurf and any agent that reads `AGENTS.md`
 
 ### Changed
 
 - `stackguardian_workflow_template_revision`: `terraform_config.run_pre_init_hooks_on_drift`, `run_pre_plan_hooks_on_drift` and `run_post_plan_hooks_on_drift` default to `false`. Omitting one, or setting it to `null`, now sends `false`; previously an omitted `run_pre_init_hooks_on_drift` kept its last value
-- `stackguardian_workflow_template` `runtime_source.source_config_dest_kind`: description now lists each VCS provider (`GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG`, `AZURE_DEVOPS`, `AZURE_DEVOPS_SP`, `GIT_OTHER`) with a link to the relevant connector docs
-- All guides rewritten; the Resource IDs guide restructured around path-form IDs
-- Examples rewritten: secrets now use `VAULT_SECRET` with `secret_id` instead of `PLAIN_TEXT` with `${secret::...}`, and Terraform versions are unprefixed
 
 ### Fixed
 
 - `stackguardian_workflow_template_revision`: importing a revision (`<template_id>:<revision>`) now sets `template_id`. It was left null, so the first plan after an import failed with "template_id cannot be changed". A malformed import ID now returns a clear error
 - `stackguardian_workflow_template_revision`: `user_schedules[*].name` and `desc` are now Optional + Computed. Schedules created in the UI store `""` for both, so leaving them out of the configuration after an import planned a change to null on every run, and the update was rejected for published revisions ("Cannot update … UserSchedules … for a published template")
-- Connector documentation: fixed malformed HTML (`</span></a>` → `</a></span>`, `</br>` → `<br>`) that caused broken rendering on the Terraform Registry
 
 ## [1.12.4] - 2026-10-06
 
