@@ -47,9 +47,9 @@ Reference `id`.
 | `/secrets/<name>` | `/secrets/db-password` | referencing a secret |
 | `/wfgrps/<id>` | `/wfgrps/platform` | policy scope |
 | `*` | `*` | policy scope: the whole organization |
-| `<name>:<revision>` | `my-template:1` | a template revision in your own org; also the `id` of a revision resource |
-| `/<org>/<name>:<revision>` | `/stackguardian/aws-s3-demo-website:16` | a template revision owned by another org, including marketplace |
-| `/policies/<name>:<revision>` | `/policies/aws-all:1` | a policy template created in your own org |
+| `<template-id>:<revision>` | `my-template:1` | the `id` and import ID of a revision resource or data source; a template in your own org where an attribute accepts the bare form |
+| `/<org>/<template-id>:<revision>` | `/stackguardian/aws-s3-demo-website:16` | a template revision with its owning org: required by `template_group_id` and stack template revision `iac_template_id` (even for your own org); also how another org's or a marketplace template is referenced |
+| `/policies/<template-id>:<revision>` | `/policies/aws-all:1` | a policy template created in your own org |
 | `/wfgrps/<group>/wfs/<workflow>` | `/wfgrps/platform/wfs/deploy-vpc` | how the API addresses a workflow; not used by any provider attribute |
 
 ## Which attribute takes which
@@ -61,9 +61,11 @@ Reference `id`.
 | `deployment_platform_config.config.integration_id` | `"/integrations/${stackguardian_connector.x.id}"` |
 | `storage_backend_config.auth.integration_id` (runner group) | `"/integrations/${stackguardian_connector.x.id}"` |
 | `custom_source.config.auth` | `"/integrations/${stackguardian_connector.x.id}"` for `GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG`, `AZURE_DEVOPS*`; `/secrets/<secret-name>` for any source, and the **only** form `GIT_OTHER` accepts |
-| `wf_steps_config.wf_step_template_id` | `/<org>/<step-template-name>:<revision>` |
-| `terraform_config.wf_step_template_revision_id` | `/<org>/<name>:<revision>` |
-| `policy_vcs_config.policy_template_id` | `/policies/<name>:<rev>`, or `/<org>/<name>:<rev>` |
+| `wf_steps_config.wf_step_template_id` | `/<org>/<step-template-id>:<revision>` |
+| `terraform_config.wf_step_template_revision_id` | `/<org>/<template-id>:<revision>` |
+| `template_group_id` (stack) | `/<org>/<template-id>:<revision>`, even for your own org |
+| `vcs_config.iac_vcs_config.iac_template_id` (stack template revision) | `/<org>/<template-id>:<revision>`, even for your own org |
+| `policy_vcs_config.policy_template_id` | `/policies/<template-id>:<rev>`, or `/<org>/<template-id>:<rev>` |
 | `policy.enforced_on` | `"/wfgrps/${stackguardian_workflow_group.x.id}"` (no trailing slash), or `*` for the whole org |
 
 ### Bare `id`, no prefix
@@ -72,7 +74,6 @@ Reference `id`.
 | --- | --- |
 | `workflow_group_id` on a workflow | `stackguardian_workflow_group.x.id` — the full path when nested |
 | `template_id` on a revision | the parent template's `template_name`, which is its `id` |
-| `template_id` / `iac_template_id` inside a stack template revision | the bare `template_name` of a template in your own org; the provider adds `/<org>/` |
 | `runner_group_id` on the token data source | the runner group's `id`; the provider adds `/runnergroups/` |
 | `runner_constraints.names` | runner group `resource_name` values |
 | `role_assignment.role` / `.roles` | role `resource_name` values |
@@ -113,8 +114,8 @@ allowed — `only secrets supported for GIT_OTHER`.
 ### The template revision data source is stricter than the resource
 
 `iac_template_id` on `stackguardian_workflow_from_template` accepts the fully qualified
-`/<org>/<name>:<revision>` form. The `id` on the `stackguardian_workflow_template_revision`
-**data source** does not — it takes only the bare `<name>:<revision>` form, and the qualified
+`/<org>/<template-id>:<revision>` form. The `id` on the `stackguardian_workflow_template_revision`
+**data source** does not — it takes only the bare `<template-id>:<revision>` form, and the qualified
 path returns `Unauthorized`.
 
 ```terraform

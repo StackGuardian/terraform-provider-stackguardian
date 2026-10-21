@@ -21,8 +21,8 @@ const (
 
 // Stack Template Revision Resource documentation
 const (
-	StackTemplateRevisionId              = "Identifier of the revision, in the form `<template-name>:<revision>` (e.g. `my-stack-template:1`)."
-	StackTemplateRevisionTemplateId      = "The revision's `id` qualified with its owning organization, in the form `/<org>/<template-name>:<revision>` (e.g. `/my-org/my-stack-template:1`)."
+	StackTemplateRevisionId              = "Identifier of the revision, in the form `<template-id>:<revision>` (e.g. `my-stack-template:1`)."
+	StackTemplateRevisionTemplateId      = "The revision's `id` qualified with its owning organization, in the form `/<org>/<template-id>:<revision>` (e.g. `/my-org/my-stack-template:1`)."
 	StackTemplateRevisionIacTemplateId   = "Workflow template this stack workflow is created from, as the full id of an existing revision, including the owning organization: `/<org>/<template-id>:<revision>` (e.g. `/my-org/my-workflow-template:1`). Give the organization even for a template in your own organization; a template shared by another organization, or StackGuardian's own (`/stackguardian/…`), is referenced the same way."
 	StackTemplateRevisionAlias           = "Human-readable alias for the revision (e.g., `v1.0.0`)."
 	StackTemplateRevisionNotes           = "Release notes or changelog for this revision."

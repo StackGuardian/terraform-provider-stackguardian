@@ -24,8 +24,8 @@ import (
 // description, tags, env_vars, runner_constraints, a POPULATED deployment_platform_config
 // (AZURE_OIDC list — the field whose data source schema was previously a single object and
 // errored at runtime), terraform_config, mini_steps, and top-level wf_steps_config. Returns
-// the revision id in the BARE "<name>:1" form the read endpoint expects (the full
-// "/<org>/<name>:1" path returns a misleading 401). Registers cleanup.
+// the revision id in the BARE "<template-id>:1" form the read endpoint expects (the full
+// "/<org>/<template-id>:1" path returns a misleading 401). Registers cleanup.
 func setupPopulatedRevision(t *testing.T, name, stepTemplateID string) string {
 	t.Helper()
 	client := acctest.SGClient()
@@ -118,7 +118,7 @@ func setupPopulatedRevision(t *testing.T, name, stepTemplateID string) string {
 		t.Fatalf("publish tpl: %s", err)
 	}
 
-	return revisionID // bare "<name>:1"
+	return revisionID // bare "<template-id>:1"
 }
 
 // setupStepTemplate creates a referenceable wf step template ":1" for wf_steps_config.
@@ -205,7 +205,7 @@ data "stackguardian_workflow_template_revision" "test" {
 // populated terraform_config (version + drift + managed state) and a git RuntimeSource — the
 // fields a TERRAFORM template carries but a CUSTOM one does not. Exercises the terraform_config
 // + runtime_source flatten path (the largest nested object) that the CUSTOM test never hits.
-// Returns the bare "<name>:1" revision id. Registers cleanup.
+// Returns the bare "<template-id>:1" revision id. Registers cleanup.
 func setupTerraformRevision(t *testing.T, name string) string {
 	t.Helper()
 	client := acctest.SGClient()

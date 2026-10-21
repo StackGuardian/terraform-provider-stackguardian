@@ -163,7 +163,7 @@ Read-Only:
 - `name` (String) Step name.
 - `timeout` (Number) Workflow step execution timeout in seconds.
 - `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--actions--order--parameters--wf_steps_config--wf_step_input_data))
-- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-id>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 <a id="nestedatt--actions--order--parameters--wf_steps_config--environment_variables"></a>
 ### Nested Schema for `actions.order.parameters.wf_steps_config.environment_variables`
@@ -488,7 +488,7 @@ Read-Only:
 - `name` (String) Step name.
 - `timeout` (Number) Workflow step execution timeout in seconds.
 - `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config--post_apply_wf_steps_config--wf_step_input_data))
-- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-id>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 <a id="nestedatt--workflows_config--workflows--terraform_config--post_apply_wf_steps_config--environment_variables"></a>
 ### Nested Schema for `workflows_config.workflows.terraform_config.post_apply_wf_steps_config.environment_variables`
@@ -541,7 +541,7 @@ Read-Only:
 - `name` (String) Step name.
 - `timeout` (Number) Workflow step execution timeout in seconds.
 - `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config--post_plan_wf_steps_config--wf_step_input_data))
-- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-id>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 <a id="nestedatt--workflows_config--workflows--terraform_config--post_plan_wf_steps_config--environment_variables"></a>
 ### Nested Schema for `workflows_config.workflows.terraform_config.post_plan_wf_steps_config.environment_variables`
@@ -594,7 +594,7 @@ Read-Only:
 - `name` (String) Step name.
 - `timeout` (Number) Workflow step execution timeout in seconds.
 - `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config--pre_apply_wf_steps_config--wf_step_input_data))
-- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-id>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 <a id="nestedatt--workflows_config--workflows--terraform_config--pre_apply_wf_steps_config--environment_variables"></a>
 ### Nested Schema for `workflows_config.workflows.terraform_config.pre_apply_wf_steps_config.environment_variables`
@@ -647,7 +647,7 @@ Read-Only:
 - `name` (String) Step name.
 - `timeout` (Number) Workflow step execution timeout in seconds.
 - `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config--pre_plan_wf_steps_config--wf_step_input_data))
-- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-id>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 <a id="nestedatt--workflows_config--workflows--terraform_config--pre_plan_wf_steps_config--environment_variables"></a>
 ### Nested Schema for `workflows_config.workflows.terraform_config.pre_plan_wf_steps_config.environment_variables`
@@ -733,7 +733,7 @@ Read-Only:
 
 Read-Only:
 
-- `iac_template_id` (String) Workflow template revision this workflow is created from, as `/<org>/<workflow-template-name>:<revision>`. Inherited from the stack template revision.
+- `iac_template_id` (String) Workflow template revision this workflow is created from, as `/<org>/<workflow-template-id>:<revision>`. Inherited from the stack template revision.
 - `use_marketplace_template` (Boolean) Whether to use a marketplace template.
 
 
@@ -750,7 +750,7 @@ Read-Only:
 - `name` (String) Step name.
 - `timeout` (Number) Workflow step execution timeout in seconds.
 - `wf_step_input_data` (Attributes) Workflow step input data (JSON string) (see [below for nested schema](#nestedatt--workflows_config--workflows--wf_steps_config--wf_step_input_data))
-- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-id>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 <a id="nestedatt--workflows_config--workflows--wf_steps_config--environment_variables"></a>
 ### Nested Schema for `workflows_config.workflows.wf_steps_config.environment_variables`

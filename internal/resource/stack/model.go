@@ -2005,23 +2005,23 @@ func mergeWorkflowWithWorkflowTemplateDefaults(wf *sgsdkgo.StackWorkflowsConfigW
 // ---------------------------------------------------------------------------
 
 // computeWorkflowId predicts the workflow resource id the platform assigns for a workflow entry,
-// matching the platform's own generation scheme: "<template-name>-<first octet of the
-// stack workflow UUID>", where <template-name> is the bare name segment of the resolved
-// iac_template_id ("/<org>/<name>:<revision>" -> "<name>"). Computed client-side rather than
+// matching the platform's own generation scheme: "<template-id>-<first octet of the
+// stack workflow UUID>", where <template-id> is the template id segment of the resolved
+// iac_template_id ("/<org>/<template-id>:<revision>" -> "<template-id>"). Computed client-side rather than
 // server-assigned so it's known immediately and can be sent on both create and update.
 func computeWorkflowId(templateId, stackWorkflowUUID string) string {
-	name := templateId
-	if i := strings.LastIndex(name, "/"); i >= 0 {
-		name = name[i+1:]
+	bareTemplateId := templateId
+	if i := strings.LastIndex(bareTemplateId, "/"); i >= 0 {
+		bareTemplateId = bareTemplateId[i+1:]
 	}
-	if i := strings.Index(name, ":"); i >= 0 {
-		name = name[:i]
+	if i := strings.Index(bareTemplateId, ":"); i >= 0 {
+		bareTemplateId = bareTemplateId[:i]
 	}
 	shortId := stackWorkflowUUID
 	if i := strings.Index(shortId, "-"); i >= 0 {
 		shortId = shortId[:i]
 	}
-	return name + "-" + shortId
+	return bareTemplateId + "-" + shortId
 }
 
 func expandWorkflowsConfig(ctx context.Context, wfc types.Object, stackTpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) (*sgsdkgo.StackWorkflowsConfig, diag.Diagnostics) {

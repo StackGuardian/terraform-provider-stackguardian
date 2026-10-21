@@ -247,7 +247,7 @@ func setupStackWorkflowTemplateWithRevision(t *testing.T, templateID string, sou
 // revision :1) running a plain container image, for wf_steps_config entries to
 // reference. Mirrors workflow_from_template's setupWorkflowStepTemplate.
 // Registers cleanup. Returns the step template revision in the path form
-// wf_step_template_id takes ("/<org>/<name>:1").
+// wf_step_template_id takes ("/<org>/<template-id>:1").
 func setupStackWorkflowStepTemplate(t *testing.T, name string) string {
 	t.Helper()
 	client := getClient()

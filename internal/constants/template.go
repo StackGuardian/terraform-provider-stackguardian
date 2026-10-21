@@ -27,7 +27,7 @@ const (
 
 // Workflow Template Revision attributes
 const (
-	WorkflowTemplateRevisionId           = "Identifier of the revision, in the form `<template-name>:<revision>` (e.g. `my-terraform-template:1`)."
+	WorkflowTemplateRevisionId           = "Identifier of the revision, in the form `<template-id>:<revision>` (e.g. `my-terraform-template:1`)."
 	WorkflowTemplateRevisionTemplateId   = "Parent workflow template, as its bare `template_name` (e.g. `my-terraform-template`) — not a path. Reference the `stackguardian_workflow_template` resource rather than typing it. **Cannot be changed** after creation; create a new revision under the other template instead."
 	WorkflowTemplateRevisionInputSchemas = "JSONSchema Form representation of input JSON data"
 	// WorkflowTemplateRevisionWfStepsConfig documents a rule validated at plan time — see
@@ -163,8 +163,8 @@ const (
 	WfStepTimeout                     = "Workflow step execution timeout in seconds."
 	WfStepCmdOverride                 = "Override command for the step."
 	WfStepMountPoints                 = "Mount points for the step."
-	WfStepTemplateId                  = "Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`."
-	TerraformWfStepTemplateRevisionId = "Fully-qualified workflow step template revision pinned for this terraform config, as a path-form ID: `/<org>/<name>:<rev>` (e.g. `/stackguardian/terraform:11`)."
+	WfStepTemplateId                  = "Workflow step template revision, as a path-form ID: `/<org>/<step-template-id>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`."
+	TerraformWfStepTemplateRevisionId = "Fully-qualified workflow step template revision pinned for this terraform config, as a path-form ID: `/<org>/<template-id>:<rev>` (e.g. `/stackguardian/terraform:11`)."
 	WfStepInputData                   = "Workflow step input data (JSON string)"
 	WfStepInputDataSchemaType         = "How the value in `data` is formatted. `FORM_JSONSCHEMA` is a StackGuardian NoCode form; `data` holds the values that form collects."
 	WfStepInputDataData               = "Input data (JSON). " + RuntimeReferenceNote

@@ -374,7 +374,7 @@ func (d *workflowTemplateRevisionDataSource) Schema(_ context.Context, _ datasou
 		MarkdownDescription: "> **Note:** This data source is currently in **BETA**. Features and behavior may change.\n\nReads a workflow template revision — for example to fetch a revision's default values and reference them from a `stackguardian_workflow_from_template` resource.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Revision ID in the bare `<template-name>:<revision>` form (e.g. `my-template:1`). Do not use the full `/<org>/<template-name>:<revision>` path — it returns an `Unauthorized` error.",
+				MarkdownDescription: "Revision ID in the bare `<template-id>:<revision>` form (e.g. `my-template:1`). Do not use the full `/<org>/<template-id>:<revision>` path — it returns an `Unauthorized` error.",
 				Required:            true,
 			},
 			"template_id": schema.StringAttribute{

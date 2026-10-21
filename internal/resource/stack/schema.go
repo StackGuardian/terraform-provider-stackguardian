@@ -633,7 +633,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 													Computed:            true,
 												},
 												"iac_template_id": schema.StringAttribute{
-													MarkdownDescription: "Workflow template revision this workflow is created from, as `/<org>/<workflow-template-name>:<revision>`. Inherited from the stack template revision.",
+													MarkdownDescription: "Workflow template revision this workflow is created from, as `/<org>/<workflow-template-id>:<revision>`. Inherited from the stack template revision.",
 													Computed:            true,
 												},
 											},

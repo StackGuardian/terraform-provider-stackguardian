@@ -62,8 +62,8 @@ resource "stackguardian_workflow_from_template" "example" {
 
 | Form | Use it for |
 | --- | --- |
-| `<template-name>:<revision>` | a template in your own organization |
-| `/<org>/<template-name>:<revision>` | a template owned by another organization — one shared with you directly, or published publicly. Templates published by StackGuardian use the `stackguardian` org (`/stackguardian/aws-s3-demo-website:16`) |
+| `<template-id>:<revision>` | a template in your own organization |
+| `/<org>/<template-id>:<revision>` | a template owned by another organization — one shared with you directly, or published publicly. Templates published by StackGuardian use the `stackguardian` org (`/stackguardian/aws-s3-demo-website:16`) |
 
 A bare id is resolved against your own organization.
 
@@ -79,7 +79,7 @@ Convenient for templates you control; pin an explicit revision when the workflow
 underneath you.
 
 ~> The `stackguardian_workflow_template_revision` **data source** is stricter: its `id` takes only
-the bare `<template-name>:<revision>` form, and the fully qualified path returns Unauthorized. See
+the bare `<template-id>:<revision>` form, and the fully qualified path returns Unauthorized. See
 [Resource IDs](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/ResourceIDs).
 
 ## How inheritance works

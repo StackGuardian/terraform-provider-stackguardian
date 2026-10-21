@@ -175,7 +175,7 @@ func setupWorkflowTemplate(t *testing.T, templateID string) string {
 
 // addSecondRevision creates and publishes revision :2 of an existing template, with a
 // different env var (REV2_VAR) and terraform version so an upgrade is observable. It
-// registers cleanup for the revision. templateID is the bare template name (no org).
+// registers cleanup for the revision. templateID is the bare template id (no org).
 func addSecondRevision(t *testing.T, templateID string) string {
 	t.Helper()
 	client := getClient()
@@ -278,7 +278,7 @@ func testAccWorkflowUsingTemplate(wfGrpName, id, wfType, templateID, additionalC
 
 // setupWorkflowStepTemplate creates and publishes a WORKFLOW_STEP template (with a
 // DOCKER_IMAGE runtime source) and returns its fully-qualified revision id
-// ("/<org>/<name>:1") for use as wf_step_template_id. Registers cleanup.
+// ("/<org>/<template-id>:1") for use as wf_step_template_id. Registers cleanup.
 func setupWorkflowStepTemplate(t *testing.T, name string) string {
 	t.Helper()
 	client := getClient()
@@ -688,7 +688,7 @@ func setupTemplateWithWfStepRevision(t *testing.T, name, stepRev string) string 
 // value round-trips with no diff.
 func TestAccWorkflowUsingTemplate_WfStepRevisionInheritedFromTemplate(t *testing.T) {
 	acctest.SkipUnlessAcceptance(t)
-	stepRev := setupWorkflowStepTemplate(t, acctest.ResourceName("tf-provider-wf-steprev-inh")) // "/<org>/<name>:1"
+	stepRev := setupWorkflowStepTemplate(t, acctest.ResourceName("tf-provider-wf-steprev-inh")) // "/<org>/<template-id>:1"
 	templateID := setupTemplateWithWfStepRevision(t, acctest.ResourceName("tf-provider-wf-tmpl-steprev-inh"), stepRev)
 	wfGrpName := acctest.ResourceName("tf-provider-wf-template-steprev-inh-wfgrp")
 	id := acctest.ResourceName("tf-provider-wf-template-steprev-inh")
@@ -753,7 +753,7 @@ func TestAccWorkflowUsingTemplate_WfStepRevisionInheritedFromTemplate(t *testing
 func TestAccWorkflowUsingTemplate_WithWfStepTemplateRevisionId(t *testing.T) {
 	acctest.SkipUnlessAcceptance(t)
 	templateID := setupWorkflowTemplate(t, acctest.ResourceName("tf-provider-wf-tmpl-wfsteprev")) + ":1"
-	step1 := setupWorkflowStepTemplate(t, acctest.ResourceName("tf-provider-wf-steprev-1")) // "/<org>/<name>:1"
+	step1 := setupWorkflowStepTemplate(t, acctest.ResourceName("tf-provider-wf-steprev-1")) // "/<org>/<template-id>:1"
 	step2 := setupWorkflowStepTemplate(t, acctest.ResourceName("tf-provider-wf-steprev-2"))
 	wfGrpName := acctest.ResourceName("tf-provider-wf-template-wfsteprev-wfgrp")
 	id := acctest.ResourceName("tf-provider-wf-template-wfsteprev")
