@@ -5,6 +5,9 @@ import (
 	"regexp"
 	"testing"
 
+	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
+	"github.com/StackGuardian/sg-sdk-go/stacktemplaterevisions"
+	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -786,6 +789,134 @@ func TestAccStack_WorkflowsConfigCustomWfStepsConfig(t *testing.T) {
 			{
 				// Round trips with no diff.
 				Config:   testAccStackConfig(wfGrpName, revision, id, config),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// templateEnvVars is a single PLAIN_TEXT environment variable for template
+// fixtures that need a non-empty environment_variables value to inherit.
+func templateEnvVars(name, value string) []sgsdkgo.EnvVars {
+	return []sgsdkgo.EnvVars{
+		{
+			Kind:   sgsdkgo.EnvVarsKindEnumPlainText,
+			Config: &sgsdkgo.EnvVarConfig{VarName: name, TextValue: sgsdkgo.String(value)},
+		},
+	}
+}
+
+// TestAccStack_WorkflowsConfigExplicitEmptyListOverridesTemplate verifies an
+// explicit [] in the stack's own workflow entry is kept as a real value rather
+// than treated as unset: the stack template revision's workflow supplies
+// non-empty approvers, environment_variables and terraform_config
+// pre_init_hooks/post_apply_hooks, and the stack config sets each to [].
+// The resolved values must stay empty, while terraform_config fields the
+// stack left unset (terraform_version) are still inherited from the template.
+func TestAccStack_WorkflowsConfigExplicitEmptyListOverridesTemplate(t *testing.T) {
+	wfGrpName := acctest.ResourceName("stack-wfempty-wfgrp")
+	wfTemplateName := acctest.ResourceName("stack-wfempty-wftmpl")
+	stackTemplateName := acctest.ResourceName("stack-wfempty-stmpl")
+	id := acctest.ResourceName("stack-wfempty")
+
+	revision := setupStackDependencyChainWith(t, wfGrpName, wfTemplateName, stackTemplateName, id, nil,
+		func(wf *stacktemplaterevisions.StackTemplateRevisionWorkflow) {
+			wf.Approvers = []string{"alice@example.com"}
+			envVars := templateEnvVars("STACK_TPL_VAR", "stack-tpl-value")
+			wf.EnvironmentVariables = []*sgsdkgo.EnvVars{&envVars[0]}
+			wf.TerraformConfig.PreInitHooks = []string{"echo stack-tpl-pre-init"}
+			wf.TerraformConfig.PostApplyHooks = []string{"echo stack-tpl-post-apply"}
+		})
+
+	config := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id                    = %q
+        approvers             = []
+        environment_variables = []
+        terraform_config = {
+          pre_init_hooks   = []
+          post_apply_hooks = []
+        }
+      }
+    ]
+  }
+`, testWorkflowUUID)
+
+	res := "stackguardian_stack.test"
+	wf := "workflows_config.workflows.0."
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(res, wf+"approvers.#", "0"),
+					resource.TestCheckResourceAttr(res, wf+"environment_variables.#", "0"),
+					resource.TestCheckResourceAttr(res, wf+"terraform_config.pre_init_hooks.#", "0"),
+					resource.TestCheckResourceAttr(res, wf+"terraform_config.post_apply_hooks.#", "0"),
+					resource.TestCheckResourceAttr(res, wf+"terraform_config.terraform_version", "1.5.7"),
+				),
+			},
+			{
+				// Re-planning the same config must be a no-op: [] in config
+				// matches [] in state, with nothing pulled in from the template.
+				Config:   testAccStackConfig(wfGrpName, revision, id, config),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccStack_WorkflowsConfigInheritsExplicitEmptyFromStackTemplate verifies
+// an explicit [] on the stack template revision's workflow is inherited as a
+// real value rather than treated as unset: the workflow template revision
+// (lowest layer) supplies non-empty environment_variables and
+// terraform_config pre_init_hooks, the stack template revision (middle layer)
+// sets both to [], and the stack leaves them unset. The middle layer's empty
+// value must win over the lowest layer's non-empty one.
+func TestAccStack_WorkflowsConfigInheritsExplicitEmptyFromStackTemplate(t *testing.T) {
+	wfGrpName := acctest.ResourceName("stack-wftplempty-wfgrp")
+	wfTemplateName := acctest.ResourceName("stack-wftplempty-wftmpl")
+	stackTemplateName := acctest.ResourceName("stack-wftplempty-stmpl")
+	id := acctest.ResourceName("stack-wftplempty")
+
+	revision := setupStackDependencyChainWith(t, wfGrpName, wfTemplateName, stackTemplateName, id,
+		func(req *workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest) {
+			req.EnvironmentVariables = templateEnvVars("WF_TPL_VAR", "wf-tpl-value")
+			req.TerraformConfig.PreInitHooks = []string{"echo wf-tpl-pre-init"}
+		},
+		func(wf *stacktemplaterevisions.StackTemplateRevisionWorkflow) {
+			wf.EnvironmentVariables = []*sgsdkgo.EnvVars{}
+			wf.TerraformConfig.PreInitHooks = []string{}
+		})
+
+	res := "stackguardian_stack.test"
+	wf := "workflows_config.workflows.0."
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(res, wf+"environment_variables.#", "0"),
+					resource.TestCheckResourceAttr(res, wf+"terraform_config.pre_init_hooks.#", "0"),
+					resource.TestCheckResourceAttr(res, wf+"terraform_config.terraform_version", "1.5.7"),
+				),
+			},
+			{
+				Config:   testAccStackConfig(wfGrpName, revision, id, ""),
 				PlanOnly: true,
 			},
 		},

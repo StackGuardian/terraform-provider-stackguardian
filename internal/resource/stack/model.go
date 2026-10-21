@@ -1727,34 +1727,34 @@ func mergeTerraformConfig(user, tpl *sgsdkgo.TerraformConfig) *sgsdkgo.Terraform
 	if user.RunPostPlanHooksOnDrift == nil {
 		user.RunPostPlanHooksOnDrift = tpl.RunPostPlanHooksOnDrift
 	}
-	if len(user.TerraformBinPath) == 0 {
+	if user.TerraformBinPath == nil {
 		user.TerraformBinPath = tpl.TerraformBinPath
 	}
-	if len(user.PostApplyWfStepsConfig) == 0 {
+	if user.PostApplyWfStepsConfig == nil {
 		user.PostApplyWfStepsConfig = tpl.PostApplyWfStepsConfig
 	}
-	if len(user.PreApplyWfStepsConfig) == 0 {
+	if user.PreApplyWfStepsConfig == nil {
 		user.PreApplyWfStepsConfig = tpl.PreApplyWfStepsConfig
 	}
-	if len(user.PrePlanWfStepsConfig) == 0 {
+	if user.PrePlanWfStepsConfig == nil {
 		user.PrePlanWfStepsConfig = tpl.PrePlanWfStepsConfig
 	}
-	if len(user.PostPlanWfStepsConfig) == 0 {
+	if user.PostPlanWfStepsConfig == nil {
 		user.PostPlanWfStepsConfig = tpl.PostPlanWfStepsConfig
 	}
-	if len(user.PreInitHooks) == 0 {
+	if user.PreInitHooks == nil {
 		user.PreInitHooks = tpl.PreInitHooks
 	}
-	if len(user.PrePlanHooks) == 0 {
+	if user.PrePlanHooks == nil {
 		user.PrePlanHooks = tpl.PrePlanHooks
 	}
-	if len(user.PostPlanHooks) == 0 {
+	if user.PostPlanHooks == nil {
 		user.PostPlanHooks = tpl.PostPlanHooks
 	}
-	if len(user.PreApplyHooks) == 0 {
+	if user.PreApplyHooks == nil {
 		user.PreApplyHooks = tpl.PreApplyHooks
 	}
-	if len(user.PostApplyHooks) == 0 {
+	if user.PostApplyHooks == nil {
 		user.PostApplyHooks = tpl.PostApplyHooks
 	}
 
@@ -1778,7 +1778,7 @@ func coupleDriftFields(cfg *sgsdkgo.TerraformConfig) *sgsdkgo.TerraformConfig {
 // template revisions and workflow template revisions) to the pointer slice
 // StackWorkflowsConfigWorkflow expects.
 func wfStepsConfigPtrSlice(vals []sgsdkgo.WfStepsConfig) []*sgsdkgo.WfStepsConfig {
-	if len(vals) == 0 {
+	if vals == nil {
 		return nil
 	}
 	result := make([]*sgsdkgo.WfStepsConfig, len(vals))
@@ -1791,7 +1791,7 @@ func wfStepsConfigPtrSlice(vals []sgsdkgo.WfStepsConfig) []*sgsdkgo.WfStepsConfi
 // envVarsPtrSliceFromValues converts a value slice to the pointer slice
 // StackWorkflowsConfigWorkflow expects.
 func envVarsPtrSliceFromValues(vals []sgsdkgo.EnvVars) []*sgsdkgo.EnvVars {
-	if len(vals) == 0 {
+	if vals == nil {
 		return nil
 	}
 	result := make([]*sgsdkgo.EnvVars, len(vals))
@@ -1806,7 +1806,7 @@ func envVarsPtrSliceFromValues(vals []sgsdkgo.EnvVars) []*sgsdkgo.EnvVars {
 // package) to the root SDK type StackWorkflowsConfigWorkflow expects — these
 // are distinct Go types with the same shape, not aliases of each other.
 func deploymentPlatformConfigFromWorkflowTemplate(items []*workflowtemplaterevisions.DeploymentPlatformConfig) []*sgsdkgo.StackDeploymentPlatformConfig {
-	if len(items) == 0 {
+	if items == nil {
 		return nil
 	}
 	result := make([]*sgsdkgo.StackDeploymentPlatformConfig, 0, len(items))
@@ -1835,7 +1835,7 @@ func deploymentPlatformConfigFromWorkflowTemplate(items []*workflowtemplaterevis
 // per-schedule Inputs payload with no counterpart at this level) to the generic
 // sgsdkgo.UserSchedules shape StackWorkflowsConfigWorkflow expects.
 func userSchedulesFromWorkflowTemplate(items []workflowtemplaterevisions.UserSchedules) []*sgsdkgo.UserSchedules {
-	if len(items) == 0 {
+	if items == nil {
 		return nil
 	}
 	result := make([]*sgsdkgo.UserSchedules, len(items))
@@ -1854,17 +1854,15 @@ func userSchedulesFromWorkflowTemplate(items []workflowtemplaterevisions.UserSch
 }
 
 // mergeWorkflowWithStackTemplateOverride fills wf's still-nil fields from
-// stackTplWf, the matching workflow slot on the stack template revision — the
-// middle precedence layer. Slice/map fields on wf are guarded with == nil
-// rather than len() == 0: expandWorkflowsConfig only ever sets one to non-nil
-// when the user explicitly declared it (even []/{} — see
+// stackTplWf, the matching workflow entry on the stack template revision — the
+// middle precedence layer. Slice/map fields are guarded with == nil rather
+// than len() == 0 on both sides: expandWorkflowsConfig only ever sets one to
+// non-nil when the user explicitly declared it (even []/{} — see
 // StackWorkflowsConfigWorkflow's own doc comment on why omitzero preserves
 // that distinction through marshaling), so == nil correctly means "user left
 // this unset" — a len() == 0 guard couldn't tell that apart from an explicit
-// empty value and would overwrite it. Filling from the template only happens
-// when the template's own value is non-empty — an empty template value is
-// left as "unset" too, rather than forcing an explicit-empty value with
-// nothing behind it.
+// empty value and would overwrite it. Likewise an explicit empty value on the
+// template is inherited as-is, since [] and {} are valid values in Terraform.
 // vcs_config.iac_vcs_config is a special case: it is unconditionally
 // overwritten (never merely filled), because it is Computed-only on the stack
 // resource and the stack template is its ONLY source of truth, never
@@ -1883,23 +1881,23 @@ func mergeWorkflowWithStackTemplateOverride(wf *sgsdkgo.StackWorkflowsConfigWork
 	if wf.ParallelExecution == nil {
 		wf.ParallelExecution = stackTplWf.ParallelExecution
 	}
-	if wf.WfStepsConfig == nil && len(stackTplWf.WfStepsConfig) > 0 {
+	if wf.WfStepsConfig == nil {
 		wf.WfStepsConfig = stackTplWf.WfStepsConfig
 	}
 	wf.TerraformConfig = mergeTerraformConfig(wf.TerraformConfig, stackTplWf.TerraformConfig)
-	if wf.EnvironmentVariables == nil && len(stackTplWf.EnvironmentVariables) > 0 {
+	if wf.EnvironmentVariables == nil {
 		wf.EnvironmentVariables = stackTplWf.EnvironmentVariables
 	}
-	if wf.DeploymentPlatformConfig == nil && len(stackTplWf.DeploymentPlatformConfig) > 0 {
+	if wf.DeploymentPlatformConfig == nil {
 		wf.DeploymentPlatformConfig = stackTplWf.DeploymentPlatformConfig
 	}
-	if wf.UserSchedules == nil && len(stackTplWf.UserSchedules) > 0 {
+	if wf.UserSchedules == nil {
 		wf.UserSchedules = stackTplWf.UserSchedules
 	}
 	if wf.MiniSteps == nil {
 		wf.MiniSteps = stackTplWf.MiniSteps
 	}
-	if wf.Approvers == nil && len(stackTplWf.Approvers) > 0 {
+	if wf.Approvers == nil {
 		wf.Approvers = stackTplWf.Approvers
 	}
 	if wf.NumberOfApprovalsRequired == nil {
@@ -1930,7 +1928,8 @@ func mergeWorkflowWithStackTemplateOverride(wf *sgsdkgo.StackWorkflowsConfigWork
 
 // mergeWorkflowWithWorkflowTemplateDefaults fills wf's still-nil fields from
 // workflowTpl — the lowest precedence layer. Slice/map fields follow the same
-// == nil / non-empty-template-only rule as mergeWorkflowWithStackTemplateOverride.
+// == nil rule as mergeWorkflowWithStackTemplateOverride on both sides: only a
+// nil template value is skipped, an explicit empty one is inherited.
 // mini_steps has no fallback here: the workflow template revision's Ministeps
 // type is structurally distinct from sgsdkgo.StackMiniStepsSchema (separate type
 // trees for notifications/webhooks/wf_chaining), so it is intentionally not
@@ -1963,34 +1962,34 @@ func mergeWorkflowWithWorkflowTemplateDefaults(wf *sgsdkgo.StackWorkflowsConfigW
 	if wf.RunnerConstraints == nil {
 		wf.RunnerConstraints = workflowTpl.RunnerConstraints
 	}
-	if wf.Tags == nil && len(workflowTpl.Tags) > 0 {
+	if wf.Tags == nil && workflowTpl.Tags != nil {
 		wf.Tags = workflowTpl.Tags
 	}
-	if wf.Approvers == nil && len(workflowTpl.Approvers) > 0 {
+	if wf.Approvers == nil && workflowTpl.Approvers != nil {
 		wf.Approvers = workflowTpl.Approvers
 	}
 	if wf.ContextTags == nil {
-		if ct := contextTagsFromTemplate(workflowTpl.ContextTags); len(ct) > 0 {
+		if ct := contextTagsFromTemplate(workflowTpl.ContextTags); ct != nil {
 			wf.ContextTags = ct
 		}
 	}
 	if wf.WfStepsConfig == nil {
-		if steps := wfStepsConfigPtrSlice(workflowTpl.WfStepsConfig); len(steps) > 0 {
+		if steps := wfStepsConfigPtrSlice(workflowTpl.WfStepsConfig); steps != nil {
 			wf.WfStepsConfig = steps
 		}
 	}
 	if wf.EnvironmentVariables == nil {
-		if envVars := envVarsPtrSliceFromValues(workflowTpl.EnvironmentVariables); len(envVars) > 0 {
+		if envVars := envVarsPtrSliceFromValues(workflowTpl.EnvironmentVariables); envVars != nil {
 			wf.EnvironmentVariables = envVars
 		}
 	}
 	if wf.DeploymentPlatformConfig == nil {
-		if dpc := deploymentPlatformConfigFromWorkflowTemplate(workflowTpl.DeploymentPlatformConfig); len(dpc) > 0 {
+		if dpc := deploymentPlatformConfigFromWorkflowTemplate(workflowTpl.DeploymentPlatformConfig); dpc != nil {
 			wf.DeploymentPlatformConfig = dpc
 		}
 	}
 	if wf.UserSchedules == nil {
-		if us := userSchedulesFromWorkflowTemplate(workflowTpl.UserSchedules); len(us) > 0 {
+		if us := userSchedulesFromWorkflowTemplate(workflowTpl.UserSchedules); us != nil {
 			wf.UserSchedules = us
 		}
 	}
@@ -2455,7 +2454,9 @@ func expandSingleActionsMap(ctx context.Context, actions types.Map, isDefault bo
 
 // expandActionsMap resolves actions: the user's own declared value always
 // wins (Default=false stamped on every entry — user-authored); otherwise the
-// template's own Actions are used verbatim if it has any; otherwise nil
+// template's own Actions are used verbatim if it defines them (even {} — a
+// template with empty actions is a template bug, surfaced rather than hidden;
+// stack_template_revision rejects it via SizeAtLeast(1)); otherwise nil
 // (omit) — the API applies its own default when actions is absent from the
 // request, on both Create and Update, so there is nothing for the provider
 // to synthesize here. See TestAccStack_ActionsGeneratedFromTemplate for the
@@ -2464,7 +2465,7 @@ func expandActionsMap(ctx context.Context, actions types.Map, tpl *stacktemplate
 	if !actions.IsNull() && !actions.IsUnknown() {
 		return expandSingleActionsMap(ctx, actions, false)
 	}
-	if tpl != nil && len(tpl.Actions) > 0 {
+	if tpl != nil && tpl.Actions != nil {
 		return tpl.Actions, nil
 	}
 	return nil, nil
@@ -3147,11 +3148,11 @@ func reResolveOnRevisionChange(ctx context.Context, plan *StackResourceModel, co
 
 	// Only re-resolve when the new revision defines its own actions verbatim
 	// — mirrors ToUpdateAPIModel, which never synthesizes a fresh action set
-	// on Update (see expandActionsMap). When tpl.Actions is empty,
+	// on Update (see expandActionsMap). When tpl.Actions is nil,
 	// plan.Actions is left untouched (the carried-forward prior value),
 	// matching what apply will actually do (send nothing, and the API leaves
 	// the existing value as-is).
-	if config.Actions.IsNull() && len(tpl.Actions) > 0 {
+	if config.Actions.IsNull() && tpl.Actions != nil {
 		actions, d := flattenActionsMap(ctx, tpl.Actions)
 		diags.Append(d...)
 		if diags.HasError() {

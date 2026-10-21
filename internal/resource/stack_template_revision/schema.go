@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
+	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -652,9 +654,12 @@ func (r *stackTemplateRevisionResource) Schema(_ context.Context, _ resource.Sch
 				},
 			},
 			"actions": schema.MapNestedAttribute{
-				MarkdownDescription: constants.StackTemplateRevisionActions,
+				MarkdownDescription: constants.StackTemplateRevisionActions + " Must have at least one entry if set.",
 				PlanModifiers: []planmodifier.Map{
 					mapplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.Map{
+					mapvalidator.SizeAtLeast(1),
 				},
 				Optional: true,
 				Computed: true,

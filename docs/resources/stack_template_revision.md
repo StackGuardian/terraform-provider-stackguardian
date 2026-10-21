@@ -116,7 +116,7 @@ resource "stackguardian_stack_template_revision" "with_vcs" {
 
 ### Optional
 
-- `actions` (Attributes Map) JSON-encoded map of actions for the stack template revision. (see [below for nested schema](#nestedatt--actions))
+- `actions` (Attributes Map) JSON-encoded map of actions for the stack template revision. Must have at least one entry if set. (see [below for nested schema](#nestedatt--actions))
 - `alias` (String) Human-readable alias for the revision (e.g., `v1.0.0`).
 - `context_tags` (Map of String) Context tags for stack template revision
 - `deprecation` (Attributes) Deprecation information for this resource. Revision can only be deprecated once it is published. (see [below for nested schema](#nestedatt--deprecation))

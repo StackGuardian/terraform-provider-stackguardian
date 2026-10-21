@@ -166,6 +166,14 @@ func setupStackWorkflowTemplate(t *testing.T, templateID string) string {
 // kind. Only a TERRAFORM revision gets a terraform_config (terraform_version 1.5.0).
 func setupStackWorkflowTemplateOfKind(t *testing.T, templateID string, sourceConfigKind workflowtemplates.WorkflowTemplateSourceConfigKindEnum) string {
 	t.Helper()
+	return setupStackWorkflowTemplateWithRevision(t, templateID, sourceConfigKind, nil)
+}
+
+// setupStackWorkflowTemplateWithRevision is setupStackWorkflowTemplateOfKind
+// with a hook to adjust the revision request before it is sent, for tests that
+// need the workflow template layer to supply a specific value. mutate may be nil.
+func setupStackWorkflowTemplateWithRevision(t *testing.T, templateID string, sourceConfigKind workflowtemplates.WorkflowTemplateSourceConfigKindEnum, mutate func(*workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest)) string {
+	t.Helper()
 	client := getClient()
 	revisionID := fmt.Sprintf("%s:1", templateID)
 
@@ -202,6 +210,9 @@ func setupStackWorkflowTemplateOfKind(t *testing.T, templateID string, sourceCon
 	}
 	if sourceConfigKind == workflowtemplates.WorkflowTemplateSourceConfigKindTerraform {
 		revisionRequest.TerraformConfig = &sgsdkgo.TerraformConfig{TerraformVersion: sgsdkgo.String("1.5.0")}
+	}
+	if mutate != nil {
+		mutate(revisionRequest)
 	}
 	_, err = client.WorkflowTemplatesRevisions.CreateWorkflowTemplateRevision(context.TODO(), org, templateID, revisionRequest)
 	if err != nil && !is409(err) {
@@ -284,6 +295,15 @@ func setupStackWorkflowStepTemplate(t *testing.T, name string) string {
 // publishing itself has no such restriction.
 func setupStackTemplateChainWithFields(t *testing.T, stackTemplateID, workflowTemplateID string, description *string, tags []string, contextTags map[string]string) string {
 	t.Helper()
+	return setupStackTemplateChainWithWorkflow(t, stackTemplateID, workflowTemplateID, description, tags, contextTags, nil)
+}
+
+// setupStackTemplateChainWithWorkflow is setupStackTemplateChainWithFields
+// with a hook to adjust the revision's testWorkflowUUID workflow entry before
+// the revision is created, for tests that need the stack template layer to
+// supply a specific per-workflow value. mutateWf may be nil.
+func setupStackTemplateChainWithWorkflow(t *testing.T, stackTemplateID, workflowTemplateID string, description *string, tags []string, contextTags map[string]string, mutateWf func(*stacktemplaterevisions.StackTemplateRevisionWorkflow)) string {
+	t.Helper()
 	client := getClient()
 	revisionID := fmt.Sprintf("%s:1", stackTemplateID)
 	sourceConfigKind := stacktemplates.StackTemplateSourceConfigKindTerraform
@@ -325,6 +345,25 @@ func setupStackTemplateChainWithFields(t *testing.T, stackTemplateID, workflowTe
 	applyAction := sgsdkgo.ActionEnumApply
 	planAction := sgsdkgo.ActionEnumPlan
 
+	workflow := &stacktemplaterevisions.StackTemplateRevisionWorkflow{
+		Id:           sgsdkgo.String(testWorkflowUUID),
+		TemplateId:   &prefixedWorkflowTemplateID,
+		ResourceName: sgsdkgo.String("wf-1"),
+		VcsConfig: &sgsdkgo.VcsConfig{
+			IacVcsConfig: &sgsdkgo.IacvcsConfig{
+				UseMarketplaceTemplate: &useMarketplace,
+				IacTemplateId:          &prefixedWorkflowRevisionID,
+			},
+		},
+		TerraformConfig: &sgsdkgo.TerraformConfig{
+			ManagedTerraformState: &managedState,
+			TerraformVersion:      &tfVersion,
+		},
+	}
+	if mutateWf != nil {
+		mutateWf(workflow)
+	}
+
 	_, err = client.StackTemplateRevisions.CreateStackTemplateRevision(
 		context.TODO(), org, stackTemplateID,
 		&stacktemplaterevisions.CreateStackTemplateRevisionRequest{
@@ -336,23 +375,7 @@ func setupStackTemplateChainWithFields(t *testing.T, stackTemplateID, workflowTe
 			Tags:             tags,
 			ContextTags:      contextTags,
 			WorkflowsConfig: &stacktemplaterevisions.StackTemplateRevisionWorkflowsConfig{
-				Workflows: []*stacktemplaterevisions.StackTemplateRevisionWorkflow{
-					{
-						Id:           sgsdkgo.String(testWorkflowUUID),
-						TemplateId:   &prefixedWorkflowTemplateID,
-						ResourceName: sgsdkgo.String("wf-1"),
-						VcsConfig: &sgsdkgo.VcsConfig{
-							IacVcsConfig: &sgsdkgo.IacvcsConfig{
-								UseMarketplaceTemplate: &useMarketplace,
-								IacTemplateId:          &prefixedWorkflowRevisionID,
-							},
-						},
-						TerraformConfig: &sgsdkgo.TerraformConfig{
-							ManagedTerraformState: &managedState,
-							TerraformVersion:      &tfVersion,
-						},
-					},
-				},
+				Workflows: []*stacktemplaterevisions.StackTemplateRevisionWorkflow{workflow},
 			},
 			Actions: map[string]*sgsdkgo.Actions{
 				"apply": {
@@ -425,6 +448,15 @@ func setupStackTemplateChain(t *testing.T, stackTemplateID, workflowTemplateID s
 // template_group_id.
 func setupStackDependencyChain(t *testing.T, wfGrpName, wfTemplateName, stackTemplateName, stackId string) string {
 	t.Helper()
+	return setupStackDependencyChainWith(t, wfGrpName, wfTemplateName, stackTemplateName, stackId, nil, nil)
+}
+
+// setupStackDependencyChainWith is setupStackDependencyChain with hooks to
+// adjust the workflow template revision (mutateWfTpl) and the stack template
+// revision's workflow entry (mutateStackWf) before they are created, for tests
+// of how values from each layer are inherited. Either hook may be nil.
+func setupStackDependencyChainWith(t *testing.T, wfGrpName, wfTemplateName, stackTemplateName, stackId string, mutateWfTpl func(*workflowtemplaterevisions.CreateWorkflowTemplateRevisionsRequest), mutateStackWf func(*stacktemplaterevisions.StackTemplateRevisionWorkflow)) string {
+	t.Helper()
 
 	// Registered before the create call — see setupStackWorkflowTemplate.
 	t.Cleanup(func() {
@@ -437,8 +469,8 @@ func setupStackDependencyChain(t *testing.T, wfGrpName, wfTemplateName, stackTem
 		t.Fatalf("setupStackDependencyChain: create workflow group %q: %s", wfGrpName, err)
 	}
 
-	workflowTemplateID := setupStackWorkflowTemplate(t, wfTemplateName)
-	stackTemplateRevisionID := setupStackTemplateChain(t, stackTemplateName, workflowTemplateID)
+	workflowTemplateID := setupStackWorkflowTemplateWithRevision(t, wfTemplateName, workflowtemplates.WorkflowTemplateSourceConfigKindTerraform, mutateWfTpl)
+	stackTemplateRevisionID := setupStackTemplateChainWithWorkflow(t, stackTemplateName, workflowTemplateID, nil, nil, nil, mutateStackWf)
 
 	// Registered last (after the chain, so t.Cleanup's LIFO order runs this
 	// FIRST — deleting the stack before the template it references, and

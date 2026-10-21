@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -279,6 +281,41 @@ func TestAccStackTemplateRevision_WithWorkflowsConfig(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackguardian_stack_template_revision.test", "template_id"),
 					resource.TestCheckResourceAttrSet("stackguardian_stack_template_revision.test", "workflows_config.%"),
 				),
+			},
+		},
+	})
+}
+
+// TestAccStackTemplateRevision_ActionsRejectsEmpty verifies actions = {} (a known,
+// explicitly empty map — not the same as leaving the attribute unset) is rejected at
+// plan time by mapvalidator.SizeAtLeast(1) on "actions" (schema.go). The API generates
+// default actions on create when given none, and rejects an empty map on update, so {}
+// could never round-trip. The validator fails before any API call, so no fixtures are
+// needed.
+func TestAccStackTemplateRevision_ActionsRejectsEmpty(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+	stackTemplateID := acctest.ResourceName("provider-test-stack-template-actempty")
+	wfTemplateID := acctest.ResourceName("provider-test-wft-for-stack-actempty")
+
+	config := strings.TrimSuffix(strings.TrimSpace(testAccStackTemplateRevisionConfig(stackTemplateID, wfTemplateID, "v1", "notes", "description")), "}") + `
+  actions = {}
+}
+`
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config:      config,
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`(?s)actions.*at least 1`),
 			},
 		},
 	})
