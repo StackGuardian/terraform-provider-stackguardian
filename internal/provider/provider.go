@@ -141,7 +141,7 @@ func (p *stackguardianProvider) Configure(ctx context.Context, req provider.Conf
 			path.Root("api_key"),
 			"Unknown StackGuardian API Key",
 			"The provider cannot create the StackGuardian API client as there is an unknown configuration value for the StackGuardian API Key. "+
-				"Either set the value statically in the configuration, or use the STACKGUARDIAN_API_KEY environment variable.",
+				"Either set the value statically in the configuration, or use the STACKGUARDIAN_API_URI environment variable.",
 		)
 	}
 

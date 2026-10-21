@@ -3,7 +3,7 @@
 #
 # For a nested group, give the full path -- for example "platform/networking".
 data "stackguardian_workflow_group" "platform" {
-  id = "platform"
+  resource_name = "platform"
 }
 
 resource "stackguardian_workflow_git" "example" {

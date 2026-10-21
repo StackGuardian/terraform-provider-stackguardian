@@ -1,5 +1,5 @@
 ---
-name: create-resource
+name: Create Resource
 description: Use this skill when asked to create a new resource for the `terraform-provider-stackguardian` provider using the Terraform Plugin Framework v1.
 ---
 
@@ -79,7 +79,7 @@ func (r *<name>Resource) Configure(_ context.Context, req resource.ConfigureRequ
         return
     }
     r.client = provider.Client
-    r.org_name = provider.OrgName
+    r.org_name = provider.Org_name
 }
 
 func (r *<name>Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
@@ -105,7 +105,7 @@ func (r *<name>Resource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 Implement `Schema()` as a method on the resource struct. Use the type mapping and model struct rules in CLAUDE.md as the reference for mapping SDK types to schema attributes and `AttributeTypes()` values.
 
-- `id` is usually `Optional` + `Computed` with `stringplanmodifier.UseStateForUnknown()` (see `internal/resource/workflow_group/schema.go`). Make it `Required` only when the user must supply it (as in `workflow_git`). Match `ImportState` to whichever attribute identifies the resource — most resources import by `resource_name`.
+- `id` is always `Required: true`.
 - Required inputs from the user → `Required: true`.
 - Add `MarkdownDescription` from `internal/constants` or an inline string if no constant matches.
 - After writing the schema, ask the user to confirm that all SDK fields are represented, types match, and docs are accurate (a string that contains JSON needs marshal/unmarshal in the converters).
@@ -202,6 +202,7 @@ import (
 
     "github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
     "github.com/hashicorp/terraform-plugin-testing/helper/resource"
+    "github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 // testAccResource returns a Terraform config for the resource.
@@ -217,14 +218,14 @@ resource "stackguardian_<terraform_name>" %q {
 }
 
 func TestAcc<Name>(t *testing.T) {
-    // acctest.ResourceName adds the test prefix and a random suffix so parallel runs don't
-    // collide and the sweeper can find leftovers.
-    resourceName := acctest.ResourceName("<name>-example")
+    resourceName := "<name>-example"
     requiredField := "<value>"
 
     resource.ParallelTest(t, resource.TestCase{
         PreCheck: func() { acctest.TestAccPreCheck(t) },
-        TerraformVersionChecks: acctest.VersionChecks(),
+        TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+            tfversion.SkipBelow(tfversion.Version1_1_0),
+        },
         ProtoV6ProviderFactories: acctest.ProviderFactories(http.Header{}),
         Steps: []resource.TestStep{
             {Config: testAccResource(resourceName, requiredField, "")},
@@ -254,10 +255,10 @@ import <name> "github.com/StackGuardian/terraform-provider-stackguardian/interna
 
 - [ ] SDK struct names, client group, and CRUD method names confirmed with user
 - [ ] `resource.go` — struct, `NewResource`, `Metadata`, `Configure`, `ImportState`, empty CRUD placeholders
-- [ ] `schema.go` — `Schema()` with all attributes; `id` is `Optional`+`Computed` with `UseStateForUnknown` (unless user-supplied); user has confirmed all SDK fields are represented and docs are accurate
+- [ ] `schema.go` — `Schema()` with all attributes; `id` is `Required: true`; user has confirmed all SDK fields are represented and docs are accurate
 - [ ] `model.go` — `<Name>ResourceModel`, `ToAPIModel`, `ToUpdateAPIModel`, `convert<Name>FromAPI`; nested structs have `AttributeTypes()` and `ToAPIModel()`
 - [ ] `resource.go` CRUD methods — filled in after schema + model are confirmed
-- [ ] `resource_test.go` — `testAccResource` function with `resourceName` (from `acctest.ResourceName`), required field params, and `additional_config`; `acctest.VersionChecks()`; at least one create step
+- [ ] `resource_test.go` — `testAccResource` function with `resourceName`, required field params, and `additional_config`; at least one create step
 - [ ] Provider registered in `internal/provider/provider.go`
 - [ ] `go build ./...` passes with no errors
 
