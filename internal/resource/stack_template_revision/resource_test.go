@@ -465,6 +465,7 @@ resource "stackguardian_workflow_template" "wf_parent" {
 # needs one of its own.
 resource "stackguardian_workflow_template_revision" "wf_rev" {
   template_id        = stackguardian_workflow_template.wf_parent.id
+  alias              = "v1"
   source_config_kind = "TERRAFORM"
   user_job_cpu       = 500
   user_job_memory    = 1024
