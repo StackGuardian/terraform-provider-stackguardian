@@ -1708,7 +1708,8 @@ func flattenMiniSteps(ctx context.Context, miniSteps *sgsdkgo.StackMiniStepsSche
 
 // mergeTerraformConfig deep-merges a TerraformConfig field-by-field: the higher-
 // precedence value (user) is kept when set, otherwise the lower-precedence
-// value (tpl) fills it. Returns the user config unchanged if tpl has none, and
+// value (tpl) fills it. A list is set when non-nil, so a declared [] clears the
+// template's list, as the API keeps it. Returns the user config unchanged if tpl has none, and
 // tpl's config if user has none. Chain two calls to fold in a third layer:
 // mergeTerraformConfig(mergeTerraformConfig(ownCfg, stackTplCfg), workflowTplCfg).
 // drift_cron is cleared whenever the resolved drift_check is false.
@@ -1756,34 +1757,34 @@ func mergeTerraformConfig(user, tpl *sgsdkgo.TerraformConfig) *sgsdkgo.Terraform
 	if user.RunPostPlanHooksOnDrift == nil {
 		user.RunPostPlanHooksOnDrift = tpl.RunPostPlanHooksOnDrift
 	}
-	if len(user.TerraformBinPath) == 0 {
+	if user.TerraformBinPath == nil {
 		user.TerraformBinPath = tpl.TerraformBinPath
 	}
-	if len(user.PostApplyWfStepsConfig) == 0 {
+	if user.PostApplyWfStepsConfig == nil {
 		user.PostApplyWfStepsConfig = tpl.PostApplyWfStepsConfig
 	}
-	if len(user.PreApplyWfStepsConfig) == 0 {
+	if user.PreApplyWfStepsConfig == nil {
 		user.PreApplyWfStepsConfig = tpl.PreApplyWfStepsConfig
 	}
-	if len(user.PrePlanWfStepsConfig) == 0 {
+	if user.PrePlanWfStepsConfig == nil {
 		user.PrePlanWfStepsConfig = tpl.PrePlanWfStepsConfig
 	}
-	if len(user.PostPlanWfStepsConfig) == 0 {
+	if user.PostPlanWfStepsConfig == nil {
 		user.PostPlanWfStepsConfig = tpl.PostPlanWfStepsConfig
 	}
-	if len(user.PreInitHooks) == 0 {
+	if user.PreInitHooks == nil {
 		user.PreInitHooks = tpl.PreInitHooks
 	}
-	if len(user.PrePlanHooks) == 0 {
+	if user.PrePlanHooks == nil {
 		user.PrePlanHooks = tpl.PrePlanHooks
 	}
-	if len(user.PostPlanHooks) == 0 {
+	if user.PostPlanHooks == nil {
 		user.PostPlanHooks = tpl.PostPlanHooks
 	}
-	if len(user.PreApplyHooks) == 0 {
+	if user.PreApplyHooks == nil {
 		user.PreApplyHooks = tpl.PreApplyHooks
 	}
-	if len(user.PostApplyHooks) == 0 {
+	if user.PostApplyHooks == nil {
 		user.PostApplyHooks = tpl.PostApplyHooks
 	}
 
@@ -3293,9 +3294,104 @@ func reResolveWorkflowsConfigOnRevisionChange(ctx context.Context, plan *StackRe
 		return diags
 	}
 
+	wfcObj, d = keepUnknownConfigValues(ctx, wfcObj, config.WorkflowsConfig)
+	diags.Append(d...)
+	if diags.HasError() {
+		return diags
+	}
+
 	plan.WorkflowsConfig = wfcObj
 
 	return diags
+}
+
+// keepUnknownConfigValues puts back, in each workflow of wfc, every value that is unknown in
+// config's workflow with the same id. expandWorkflowsConfig skips unknown values as if they were
+// unset, so the re-resolved workflows hold a template or prior value where the configuration
+// has one that is only known at apply, such as another resource's attribute. Terraform rejects
+// such a plan; once the value is known, apply re-resolves to the configured value.
+func keepUnknownConfigValues(ctx context.Context, wfc, config types.Object) (types.Object, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if wfc.IsNull() || wfc.IsUnknown() {
+		return wfc, diags
+	}
+	workflows, ok := wfc.Attributes()["workflows"].(types.List)
+	if !ok || workflows.IsNull() || workflows.IsUnknown() {
+		return wfc, diags
+	}
+
+	configById := workflowObjectsById(config)
+	elements := make([]attr.Value, 0, len(workflows.Elements()))
+	for _, elem := range workflows.Elements() {
+		obj, ok := elem.(types.Object)
+		if !ok || obj.IsNull() || obj.IsUnknown() {
+			elements = append(elements, elem)
+			continue
+		}
+		id, _ := obj.Attributes()["id"].(types.String)
+		cfg, declared := configById[id.ValueString()]
+		if !declared {
+			elements = append(elements, elem)
+			continue
+		}
+		merged, d := withUnknownsFrom(ctx, obj, cfg)
+		diags.Append(d...)
+		if diags.HasError() {
+			return wfc, diags
+		}
+		elements = append(elements, merged)
+	}
+
+	list, d := types.ListValue(workflows.ElementType(ctx), elements)
+	diags.Append(d...)
+	if diags.HasError() {
+		return wfc, diags
+	}
+	attrs := make(map[string]attr.Value, len(wfc.Attributes()))
+	for k, v := range wfc.Attributes() {
+		attrs[k] = v
+	}
+	attrs["workflows"] = list
+	result, d := types.ObjectValue(wfc.AttributeTypes(ctx), attrs)
+	diags.Append(d...)
+	return result, diags
+}
+
+// withUnknownsFrom returns planned with every value that is unknown in config put back. Objects
+// are walked attribute by attribute; a list, set or map that holds an unknown is replaced by the
+// configured collection as a whole, since a declared collection replaces the template's.
+func withUnknownsFrom(ctx context.Context, planned, config attr.Value) (attr.Value, diag.Diagnostics) {
+	if config == nil || config.IsNull() {
+		return planned, nil
+	}
+	if config.IsUnknown() {
+		return config, nil
+	}
+	if tfv, err := config.ToTerraformValue(ctx); err == nil && tfv.IsFullyKnown() {
+		return planned, nil
+	}
+	cfgObj, ok := config.(types.Object)
+	if !ok {
+		return config, nil
+	}
+	plannedObj, ok := planned.(types.Object)
+	if !ok || plannedObj.IsNull() || plannedObj.IsUnknown() {
+		return config, nil
+	}
+
+	var diags diag.Diagnostics
+	attrs := make(map[string]attr.Value, len(plannedObj.Attributes()))
+	for name, v := range plannedObj.Attributes() {
+		merged, d := withUnknownsFrom(ctx, v, cfgObj.Attributes()[name])
+		diags.Append(d...)
+		attrs[name] = merged
+	}
+	if diags.HasError() {
+		return planned, diags
+	}
+	result, d := types.ObjectValue(plannedObj.AttributeTypes(ctx), attrs)
+	diags.Append(d...)
+	return result, diags
 }
 
 // unsentWhenNullWorkflowFields are the per-workflow attributes that flatten to
