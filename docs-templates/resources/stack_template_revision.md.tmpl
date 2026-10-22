@@ -27,6 +27,15 @@ deploys, rather than editing an existing one.
 dependencies between them — this is what distinguishes a stack from a workflow group, where
 workflows are independent.
 
+## Workflow inputs
+
+`workflows_config.workflows[*].vcs_config.iac_input_data` sets the inputs a workflow starts with:
+
+- **Unset**: stacks get the defaults of the workflow template's input schema.
+- **`iac_input_data = {}`**: no inputs. Those defaults are not applied.
+- **Both `schema_type` and `data` set**: those values. Setting only one of them is rejected at
+  plan time.
+
 ## Example Usage
 
 {{tffile "docs-examples/resources/stack_template_revision/resource.tf"}}

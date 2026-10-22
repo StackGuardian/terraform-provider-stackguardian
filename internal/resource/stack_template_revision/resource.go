@@ -85,12 +85,22 @@ func (r *stackTemplateRevisionResource) Create(ctx context.Context, req resource
 		return
 	}
 
+	// The platform assigns the revision number, so without it in the response there
+	// is no id to read the revision back by.
+	if createResp == nil || createResp.Data.Revision.Id == "" {
+		resp.Diagnostics.AddError("Error creating stack template revision", "The StackGuardian API did not return the id of the created revision.")
+		return
+	}
 	revisionID := createResp.Data.Revision.Id
 
 	// Call read to get the full state since create response doesn't return all values
 	readResp, err := r.client.StackTemplateRevisions.ReadStackTemplateRevision(ctx, r.org_name, revisionID)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading created stack template revision", "Could not read the created stack template revision: "+err.Error())
+		return
+	}
+	if readResp == nil {
+		resp.Diagnostics.AddError("Error reading created stack template revision", "API response is empty")
 		return
 	}
 
@@ -183,6 +193,10 @@ func (r *stackTemplateRevisionResource) Update(ctx context.Context, req resource
 	readResp, err := r.client.StackTemplateRevisions.ReadStackTemplateRevision(ctx, r.org_name, revisionID)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading updated stack template revision", "Could not read the updated stack template revision: "+err.Error())
+		return
+	}
+	if readResp == nil {
+		resp.Diagnostics.AddError("Error reading updated stack template revision", "API response is empty")
 		return
 	}
 

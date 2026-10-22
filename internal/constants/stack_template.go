@@ -22,8 +22,8 @@ const (
 // Stack Template Revision Resource documentation
 const (
 	StackTemplateRevisionId              = "Identifier of the revision, in the form `<template-name>:<revision>` (e.g. `my-stack-template:1`)."
-	StackTemplateRevisionTemplateId      = "Parent stack template, as its bare `template_name` (which is also its `id`) — not a path."
-	StackTemplateRevisionIacTemplateId   = "Workflow template this stack workflow is created from, as the bare `template_name` of a template in your own organization (e.g. `my-workflow-template`). The provider qualifies it with your organization, so do not give the `/<org>/…` form."
+	StackTemplateRevisionTemplateId      = "The revision's `id` qualified with its owning organization, in the form `/<org>/<template-name>:<revision>` (e.g. `/my-org/my-stack-template:1`)."
+	StackTemplateRevisionIacTemplateId   = "Workflow template revision this stack workflow is created from, as `<template-name>:<revision>` of a template in your own organization (e.g. `my-workflow-template:1`, or `my-workflow-template:latest` for the newest revision). The provider qualifies it with your organization, so do not give the `/<org>/…` form. A template name without a revision is accepted with a warning, but StackGuardian then uses the template itself, which holds none of a revision's content: stacks created from this revision get no inputs, Terraform settings or other defaults from it."
 	StackTemplateRevisionAlias           = "Human-readable alias for the revision (e.g., `v1.0.0`)."
 	StackTemplateRevisionNotes           = "Release notes or changelog for this revision."
 	StackTemplateRevisionDescription     = "Long description for the stack template revision."

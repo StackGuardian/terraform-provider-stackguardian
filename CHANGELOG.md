@@ -10,19 +10,38 @@ Entries describe changes that affect provider users: resources, data sources, at
 behavior, documentation and security. Internal refactors, tests and CI changes are left out.
 A **Breaking** change can require edits to existing configurations.
 
-## [Unreleased]
+## [1.13.0] - 2026-10-14
 
 ### Added
 
+- New resource `stackguardian_stack` (beta): creates a stack from a stack template revision set in `template_group_id`. `workflows_config.workflows` must list the `id` of every workflow the revision defines, in the same order; any per-workflow attribute left unset is inherited from the stack template revision, then from that workflow's workflow template revision. Removing an attribute from the configuration returns it to the inherited value on the next apply. A stack StackGuardian stored during a create that then failed is kept in the state as tainted, so the next apply replaces it; an existing stack with the same id is reported and never taken over. Destroying or replacing a stack deletes its workflows but does not destroy what they deployed; the plan warns about it `${reference::template-group.<index>.outputs.<key>}` values in `iac_input_data` and `PLAIN_TEXT` environment variables are resolved to the workflow they point to on create and update, and JSON attributes (`iac_input_data.data`, `wf_step_input_data.data`, the `wf_chaining` payloads) are checked at plan time Changing `template_group_id` upgrades the stack to another revision: attributes you set are kept and unset ones take the new revision's values. `actions` is inherited from the revision unless you declare it, and is checked against the new revision on an upgrade. `actions[*].default` tells a template action from a custom one, and actions you don't declare are left to StackGuardian on an update. Each workflow's computed `workflow_id` gives the ID of the workflow the stack creates. `vcs_config.iac_input_data = {}` gives a workflow no inputs instead of inheriting the revision's
+- New data source `stackguardian_stack` (beta): reads an existing stack by `id` and `workflow_group_id`, including its workflows and actions
 - `stackguardian_workflow_template_revision`: optional `user_schedules[*].inputs` on the resource and data source, the run inputs a schedule uses when it triggers a run. It accepts `terraform_action.action` and `vcs_config.iac_input_data`; when `iac_input_data` is set, both `schema_type` (`RAW_JSON` or `FORM_JSONSCHEMA`, validated at plan time) and `data` (a JSON string such as `jsonencode({ test = "value" })`) are required. `enable_chaining` is read-only: it is set by StackGuardian and sent back unchanged on update. Existing schedules without `inputs` keep working
 - `stackguardian_workflow_template_revision`: `terraform_config.run_pre_plan_hooks_on_drift` and `terraform_config.run_post_plan_hooks_on_drift` on the resource and data source
 
 ### Changed
 
+- **Breaking:** `stackguardian_stack_template_revision` resource, in `workflows_config.workflows`:
+  - `vcs_config`, `vcs_config.iac_vcs_config` and `vcs_config.iac_vcs_config.iac_template_id` are now required, so every workflow must name its workflow template
+  - `vcs_config.iac_vcs_config.use_marketplace_template` is removed; it is always sent as `true`
+  - `vcs_config.iac_vcs_config.custom_source` is removed
+  - `template_id` is removed; set the workflow template in `vcs_config.iac_vcs_config.iac_template_id` instead
+  - The workflow-level `iac_input_data` is removed; use `vcs_config.iac_input_data` instead
+  - `deployment_platform_config[*].config` is now an object with `integration_id` (required) and `profile_name`, instead of a JSON string. This also applies to `actions[*].order[*].parameters.deployment_platform_config`. Existing state is migrated automatically; update the configuration from `config = jsonencode({ integrationId = "..." })` to `config = { integration_id = "..." }`
+  - `input_schemas[*].id`, `description` and `is_committed` are removed; the StackGuardian API doesn't have these fields
+- **Breaking:** `stackguardian_stack_template_revision` data source, which returns the same attributes as the resource: `workflows_config.workflows[*].vcs_config.iac_vcs_config.use_marketplace_template` and `custom_source` (with its `config`) are removed, and `deployment_platform_config[*].config` is now an object with `integration_id` and `profile_name` instead of a JSON string. Configurations that read these attributes must be updated, for example `jsondecode(...config).integrationId` becomes `...config.integration_id`
+- `stackguardian_stack_template_revision` resource and data source: the `template_id` description now matches the value it has always held, the revision's ID qualified with its organization (`/<org>/<template-name>:<revision>`). It previously said `template_id` was the bare parent template name. Configurations that used it as the parent template name were getting the qualified revision ID
+- `stackguardian_stack_template_revision`: `workflows_config.workflows[*].vcs_config.iac_input_data` accepts `{}`, StackGuardian's "No Inputs": stacks then get no inputs instead of the defaults of the workflow template's input schema. `schema_type` is now optional, and setting only one of `schema_type` and `data` is rejected at plan time instead of by StackGuardian at apply
+- `vcs_config.iac_input_data.schema_type`: `NONE` is described as legacy; StackGuardian now records no inputs as an empty input data object
+- `stackguardian_stack_template_revision`: `workflows_config.workflows[*].vcs_config.iac_vcs_config.iac_template_id` should name a revision (`my-workflow-template:1`, or `:latest`). A template name without one is still accepted, now with a plan-time warning: StackGuardian then uses the template itself, so stacks created from the revision get none of the workflow template's inputs or settings
 - `stackguardian_workflow_template_revision`: `terraform_config.run_pre_init_hooks_on_drift`, `run_pre_plan_hooks_on_drift` and `run_post_plan_hooks_on_drift` default to `false`. Omitting one, or setting it to `null`, now sends `false`; previously an omitted `run_pre_init_hooks_on_drift` kept its last value
 
 ### Fixed
 
+- `stackguardian_workflow_git` resource and data source: reading a workflow whose input data StackGuardian stores as an empty `iacInputData: {}` ("no inputs") crashed the provider. It now reads as no `vcs_config.iac_input_data`
+- `stackguardian_stack_template_revision`: `vcs_config.iac_input_data.schema_type = "NO_CODE_JSON"`, a value StackGuardian uses, was rejected with "Invalid schema type" on create and update, so a revision imported with it could not be changed. It is now sent unchanged, as the workflow resources already do
+- `stackguardian_stack_template_revision` data source: `parent_template_id` is now set to the parent stack template name, the part of `id` before the `:`. It was always null
+- `stackguardian_stack_template_revision`: `notes` and `description`, when not set in the configuration, keep their current value in the plan instead of showing as "(known after apply)" whenever another attribute changes
 - `stackguardian_workflow_template_revision`: importing a revision (`<template_id>:<revision>`) now sets `template_id`. It was left null, so the first plan after an import failed with "template_id cannot be changed". A malformed import ID now returns a clear error
 - `stackguardian_workflow_template_revision`: `user_schedules[*].name` and `desc` are now Optional + Computed. Schedules created in the UI store `""` for both, so leaving them out of the configuration after an import planned a change to null on every run, and the update was rejected for published revisions ("Cannot update … UserSchedules … for a published template")
 
@@ -162,7 +181,7 @@ for their notes.
 - TF Resource and Data-Source for StackGuardian Policy
 - TF Resource and Data-Source for StackGuardian Integration
 
-[Unreleased]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.4...HEAD
+[1.13.0]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.4...v1.13.0
 [1.12.4]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.3...v1.12.4
 [1.12.3]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.2...v1.12.3
 [1.12.2]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.1...v1.12.2
