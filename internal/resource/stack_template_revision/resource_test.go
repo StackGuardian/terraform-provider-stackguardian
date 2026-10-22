@@ -466,6 +466,8 @@ resource "stackguardian_workflow_template" "wf_parent" {
 resource "stackguardian_workflow_template_revision" "wf_rev" {
   template_id        = stackguardian_workflow_template.wf_parent.id
   source_config_kind = "TERRAFORM"
+  user_job_cpu       = 500
+  user_job_memory    = 1024
 }
 
 resource "stackguardian_stack_template" "parent" {
