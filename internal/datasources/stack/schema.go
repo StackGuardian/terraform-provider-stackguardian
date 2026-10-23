@@ -44,6 +44,8 @@ func (d *stackDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest
 	}
 }
 
+// computedAttributes converts each resource schema attribute to its data source
+// equivalent with computedAttribute, naming the attribute in any error.
 func computedAttributes(in map[string]rschema.Attribute) (map[string]dsschema.Attribute, error) {
 	out := make(map[string]dsschema.Attribute, len(in))
 	for name, a := range in {
@@ -56,6 +58,12 @@ func computedAttributes(in map[string]rschema.Attribute) (map[string]dsschema.At
 	return out, nil
 }
 
+// computedAttribute converts one resource schema attribute to a Computed data source
+// attribute of the same type, keeping its description and sensitivity and
+// recursing into nested attributes. Validators and plan modifiers are dropped:
+// they only apply to configured resource values. An attribute type not handled
+// here is an error, so a new kind of attribute in the resource schema fails
+// loudly (TestStackDataSourceSchemaMatchesResource) rather than being skipped.
 func computedAttribute(a rschema.Attribute) (dsschema.Attribute, error) {
 	switch v := a.(type) {
 	case rschema.StringAttribute:

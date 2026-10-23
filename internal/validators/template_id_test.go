@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+// TestQualifiedTemplateRevisionId checks only /<org>/<template-id>:<revision> is
+// accepted: the org and the revision are both required.
 func TestQualifiedTemplateRevisionId(t *testing.T) {
 	cases := []struct {
 		value string

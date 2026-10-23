@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+// TestJSONObject checks the validator accepts JSON objects, "", null and unknown
+// values, and rejects invalid JSON and JSON that isn't an object.
 func TestJSONObject(t *testing.T) {
 	cases := []struct {
 		value types.String

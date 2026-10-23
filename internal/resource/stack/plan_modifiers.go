@@ -31,14 +31,20 @@ import (
 // (e.g. "apply"), while a declared action must be sent as false.
 type actionDefaultModifier struct{}
 
+// Description implements planmodifier.Describer; shown in plan-modifier errors.
 func (actionDefaultModifier) Description(_ context.Context) string {
 	return "false when actions is declared in config, otherwise the prior state value."
 }
 
+// MarkdownDescription implements planmodifier.Describer; same text as Description.
 func (m actionDefaultModifier) MarkdownDescription(ctx context.Context) string {
 	return m.Description(ctx)
 }
 
+// PlanModifyBool plans one action's default flag. It reads actions from the whole
+// config (not just this attribute, which is never set in config because it is
+// Computed) to tell whether the user declared actions. An unknown actions map in
+// config leaves the plan as the framework proposed it.
 func (actionDefaultModifier) PlanModifyBool(ctx context.Context, req planmodifier.BoolRequest, resp *planmodifier.BoolResponse) {
 	var actions types.Map
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("actions"), &actions)...)

@@ -18,16 +18,21 @@ func JSONObject() validator.String {
 	return jsonObjectValidator{}
 }
 
+// jsonObjectValidator implements JSONObject.
 type jsonObjectValidator struct{}
 
+// Description implements validator.Describer; shown in validation errors.
 func (jsonObjectValidator) Description(_ context.Context) string {
 	return "value must be a JSON object"
 }
 
+// MarkdownDescription implements validator.Describer; same text as Description.
 func (v jsonObjectValidator) MarkdownDescription(ctx context.Context) string {
 	return v.Description(ctx)
 }
 
+// ValidateString implements validator.String. It reuses expanders.JSONStringToObject,
+// so plan-time validation and request building accept exactly the same values.
 func (jsonObjectValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
 		return

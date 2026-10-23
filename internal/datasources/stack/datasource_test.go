@@ -28,12 +28,14 @@ var org = os.Getenv("STACKGUARDIAN_ORG_NAME")
 // workflowUUID is the id of the single workflow the stack template revision fixture declares.
 const workflowUUID = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
 
+// customHeader is the internal-auth header the acceptance test org requires on every request.
 func customHeader() http.Header {
 	h := http.Header{}
 	h.Set("x-sg-internal-auth-orgid", "sg-provider-test")
 	return h
 }
 
+// getClient returns an SDK client for creating and cleaning up fixtures directly.
 func getClient() *sgclient.Client {
 	return sgclient.NewClient(
 		sgoption.WithApiKey(fmt.Sprintf("apikey %s", os.Getenv("STACKGUARDIAN_API_KEY"))),
@@ -42,11 +44,15 @@ func getClient() *sgclient.Client {
 	)
 }
 
+// is409 reports whether err is a 409 Conflict, i.e. the fixture already exists
+// (e.g. left over from an interrupted run), so setup can reuse it.
 func is409(err error) bool {
 	var apiErr *core.APIError
 	return errors.As(err, &apiErr) && apiErr.StatusCode == 409
 }
 
+// logCleanupErr logs a failed cleanup step instead of failing the test, so one
+// failure doesn't stop the remaining cleanup.
 func logCleanupErr(t *testing.T, action string, err error) {
 	if err != nil {
 		t.Logf("cleanup: %s: %s", action, err)

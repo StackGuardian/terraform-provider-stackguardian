@@ -6,6 +6,8 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/expanders"
 )
 
+// TestJSONStringToObject checks "" means no data, a JSON object is returned, and
+// invalid JSON or JSON that isn't an object is an error rather than an empty map.
 func TestJSONStringToObject(t *testing.T) {
 	cases := []struct {
 		in      string
