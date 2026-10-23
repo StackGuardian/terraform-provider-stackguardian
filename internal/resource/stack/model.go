@@ -539,13 +539,21 @@ func (ActionOrderModel) AttributeTypes() map[string]attr.Type {
 type ActionsModel struct {
 	Name        types.String `tfsdk:"name"`
 	Description types.String `tfsdk:"description"`
-	Order       types.Map    `tfsdk:"order"`
+	// Default is the platform's template-vs-custom flag (true: comes from the
+	// stack template; false: the user's own). It is kept in state so every
+	// update can re-send it as stored: the provider re-sends the full actions
+	// map on each update, and stamping every action false made core treat
+	// template actions as custom on later upgrades done outside Terraform
+	// (kept instead of synced). Planned by actionDefaultModifier.
+	Default types.Bool `tfsdk:"default"`
+	Order   types.Map  `tfsdk:"order"`
 }
 
 func (ActionsModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"name":        types.StringType,
 		"description": types.StringType,
+		"default":     types.BoolType,
 		"order":       types.MapType{ElemType: types.ObjectType{AttrTypes: ActionOrderModel{}.AttributeTypes()}},
 	}
 }
@@ -2338,9 +2346,11 @@ func flattenWorkflowsConfig(ctx context.Context, wfc *sgsdkgo.StackWorkflowsConf
 // Actions converters
 // ---------------------------------------------------------------------------
 
-// expandSingleActionsMap converts a Terraform actions map to API format,
-// stamping isDefault onto every action's Default field.
-func expandSingleActionsMap(ctx context.Context, actions types.Map, isDefault bool) (map[string]*sgsdkgo.Actions, diag.Diagnostics) {
+// expandSingleActionsMap converts a Terraform actions map to API format. Each
+// action's Default is sent as planned (see actionDefaultModifier): false for
+// actions declared in config, the platform's own flag for actions carried from
+// state. An unknown or null value is omitted rather than guessed.
+func expandSingleActionsMap(ctx context.Context, actions types.Map) (map[string]*sgsdkgo.Actions, diag.Diagnostics) {
 	if actions.IsNull() || actions.IsUnknown() {
 		return nil, nil
 	}
@@ -2352,11 +2362,15 @@ func expandSingleActionsMap(ctx context.Context, actions types.Map, isDefault bo
 
 	result := make(map[string]*sgsdkgo.Actions, len(models))
 	for k, am := range models {
-		def := isDefault
 		action := &sgsdkgo.Actions{
 			Name:        am.Name.ValueString(),
 			Description: am.Description.ValueStringPointer(),
-			Default:     &def,
+		}
+		// Sent only when known. Unknown happens when state predates the
+		// attribute and wasn't refreshed; guessing false there would turn a
+		// template action into a custom one, which is the bug this field fixes.
+		if !am.Default.IsNull() && !am.Default.IsUnknown() {
+			action.Default = am.Default.ValueBoolPointer()
 		}
 
 		if !am.Order.IsNull() && !am.Order.IsUnknown() {
@@ -2462,8 +2476,9 @@ func expandSingleActionsMap(ctx context.Context, actions types.Map, isDefault bo
 	return result, nil
 }
 
-// expandActionsMap resolves actions: the user's own declared value always
-// wins (Default=false stamped on every entry — user-authored); otherwise the
+// expandActionsMap resolves actions: the planned value is sent when known
+// (each action's default flag as planned by actionDefaultModifier: false for
+// actions declared in config, otherwise carried from state); otherwise the
 // template's own Actions are used verbatim if it defines them (even {} — a
 // template with empty actions is a template bug, surfaced rather than hidden;
 // stack_template_revision rejects it via SizeAtLeast(1)); otherwise nil
@@ -2473,7 +2488,7 @@ func expandSingleActionsMap(ctx context.Context, actions types.Map, isDefault bo
 // Create-time default.
 func expandActionsMap(ctx context.Context, actions types.Map, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel) (map[string]*sgsdkgo.Actions, diag.Diagnostics) {
 	if !actions.IsNull() && !actions.IsUnknown() {
-		return expandSingleActionsMap(ctx, actions, false)
+		return expandSingleActionsMap(ctx, actions)
 	}
 	if tpl != nil && tpl.Actions != nil {
 		return tpl.Actions, nil
@@ -2651,7 +2666,11 @@ func flattenActionsMap(ctx context.Context, actions map[string]*sgsdkgo.Actions)
 		am := ActionsModel{
 			Name:        flatteners.String(a.Name),
 			Description: flatteners.StringPtr(a.Description),
-			Order:       orderObj,
+			// Read back as stored so actionDefaultModifier can carry it to
+			// the next plan. An absent flag means a custom action: core reads
+			// a missing default as false.
+			Default: types.BoolValue(a.Default != nil && *a.Default),
+			Order:   orderObj,
 		}
 		obj, d := types.ObjectValueFrom(ctx, ActionsModel{}.AttributeTypes(), am)
 		if d.HasError() {
@@ -2977,7 +2996,9 @@ func validateActionsAgainstRevision(ctx context.Context, actions types.Map, work
 		}
 	}
 
-	declared, d := expandSingleActionsMap(ctx, actions, false)
+	// Only order keys and dependency ids are checked here, so the default
+	// flag (unset in config, as it's Computed) doesn't matter.
+	declared, d := expandSingleActionsMap(ctx, actions)
 	diags.Append(d...)
 	if diags.HasError() {
 		return diags
@@ -3155,6 +3176,10 @@ func reResolveOnRevisionChange(ctx context.Context, plan *StackResourceModel, co
 		plan.ContextTags = knownEmptyMapIfNull(ctMap, types.StringType)
 	}
 
+	// The new revision's actions are flattened with their own default flags,
+	// so an upgrade with actions not declared sends the template's flags
+	// as-is (true for template actions) rather than marking them custom.
+	//
 	// Only re-resolve when the new revision defines its own actions verbatim
 	// — mirrors ToUpdateAPIModel, which never synthesizes a fresh action set
 	// on Update (see expandActionsMap). When tpl.Actions is nil,

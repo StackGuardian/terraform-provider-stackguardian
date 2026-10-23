@@ -1,12 +1,14 @@
 package stack_test
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
@@ -200,6 +202,142 @@ func TestAccStack_ActionsGeneratedFromTemplate(t *testing.T) {
 				// And the post-update state round trips with no diff.
 				Config:   testAccStackConfig(wfGrpName, revision, id, withActionsOverride),
 				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// checkStackActionDefaults checks each named action's "default" flag both in
+// Terraform state (actions.<name>.default) and on the platform, read through the
+// SDK, so a state value that merely agrees with the plan can't hide what was
+// actually stored. want maps action name -> expected flag; a nil Default from the
+// API counts as false.
+func checkStackActionDefaults(wfGrpName, id string, want map[string]bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		for name, wantDefault := range want {
+			if err := resource.TestCheckResourceAttr("stackguardian_stack.test",
+				fmt.Sprintf("actions.%s.default", name), fmt.Sprintf("%t", wantDefault))(s); err != nil {
+				return err
+			}
+		}
+		readResp, err := getClient().Stacks.ReadStack(context.TODO(), org, id, wfGrpName, nil)
+		if err != nil {
+			return fmt.Errorf("read stack %q: %w", id, err)
+		}
+		if readResp == nil || readResp.Msg == nil {
+			return fmt.Errorf("read stack %q: empty response", id)
+		}
+		for name, wantDefault := range want {
+			action, ok := readResp.Msg.Actions[name]
+			if !ok || action == nil {
+				return fmt.Errorf("action %q not found on stack %q", name, id)
+			}
+			got := action.Default != nil && *action.Default
+			if got != wantDefault {
+				return fmt.Errorf("action %q: default = %v, want %v", name, got, wantDefault)
+			}
+		}
+		return nil
+	}
+}
+
+// TestAccStack_ActionsKeepDefaultFlag verifies each action's "default" flag
+// survives updates. In core, default=true marks an action that comes from the
+// stack template (replaced or dropped when a stack is upgraded without sending
+// Actions, e.g. from the UI), and default=false marks a custom action (kept
+// across upgrades); see merge_actions_for_upgrade in core. The provider
+// re-sends the stored actions on every update, so it must keep the platform's
+// flag instead of stamping every action as custom.
+//
+// The flag is exposed as the Computed actions[*].default, planned by
+// actionDefaultModifier; checkStackActionDefaults checks state and the API.
+//
+//  1. Create with actions unset: the revision has no actions of its own
+//     (setupStackTemplateChainNoActions), so the platform generates
+//     apply/plan/destroy with default=true. This step checks that assumption.
+//  2. An unrelated update (description) must leave all three default=true.
+//  3. Declaring actions makes them the user's own: default=false.
+//  4. No longer declaring actions keeps them as the user's (default=false),
+//     carried forward from state.
+func TestAccStack_ActionsKeepDefaultFlag(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+	wfGrpName := acctest.ResourceName("stack-actdef-wfgrp")
+	wfTemplateName := acctest.ResourceName("stack-actdef-wftmpl")
+	stackTemplateName := acctest.ResourceName("stack-actdef-stmpl")
+	id := acctest.ResourceName("stack-actdef")
+
+	t.Cleanup(func() {
+		logCleanupErr(t, fmt.Sprintf("delete workflow group %q", wfGrpName), deleteWorkflowGroupFixture(wfGrpName))
+	})
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil && !is409(err) {
+		t.Fatalf("TestAccStack_ActionsKeepDefaultFlag: create workflow group %q: %s", wfGrpName, err)
+	}
+	workflowTemplateID := setupStackWorkflowTemplate(t, wfTemplateName)
+	revision := setupStackTemplateChainNoActions(t, stackTemplateName, workflowTemplateID)
+	t.Cleanup(func() { deleteStackFixture(wfGrpName, id) })
+
+	// setupStackTemplateChainNoActions declares two workflows, in this order.
+	twoWorkflowsConfig := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      { id = %q },
+      { id = %q }
+    ]
+  }
+`, testWorkflowUUID, secondWorkflowUUID)
+
+	withDeclaredApply := twoWorkflowsConfig + fmt.Sprintf(`
+  actions = {
+    apply = {
+      name = "apply"
+      order = {
+        %[1]q = {
+          parameters = {
+            terraform_action = {
+              action = "apply"
+            }
+          }
+        }
+      }
+    }
+  }
+`, testWorkflowUUID)
+
+	allTemplateDefaults := map[string]bool{"apply": true, "plan": true, "destroy": true}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, twoWorkflowsConfig),
+				Check:  checkStackActionDefaults(wfGrpName, id, allTemplateDefaults),
+			},
+			{
+				// Unrelated update, actions still unset.
+				Config: testAccStackConfig(wfGrpName, revision, id, twoWorkflowsConfig+`description = "updated after create"`),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack.test", "description", "updated after create"),
+					checkStackActionDefaults(wfGrpName, id, allTemplateDefaults),
+				),
+			},
+			{
+				// Round trips with no diff.
+				Config:   testAccStackConfig(wfGrpName, revision, id, twoWorkflowsConfig+`description = "updated after create"`),
+				PlanOnly: true,
+			},
+			{
+				// Declared actions are the user's own.
+				Config: testAccStackConfig(wfGrpName, revision, id, withDeclaredApply+`description = "updated after create"`),
+				Check:  checkStackActionDefaults(wfGrpName, id, map[string]bool{"apply": false}),
+			},
+			{
+				// No longer declared: still the user's own, carried from state.
+				Config: testAccStackConfig(wfGrpName, revision, id, twoWorkflowsConfig+`description = "declared actions removed"`),
+				Check:  checkStackActionDefaults(wfGrpName, id, map[string]bool{"apply": false}),
 			},
 		},
 	})

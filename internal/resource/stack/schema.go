@@ -379,6 +379,17 @@ var actionsAttrs = map[string]schema.Attribute{
 		MarkdownDescription: "Description of the action.",
 		Optional:            true,
 	},
+	// Computed only: users don't set it. Whether an action is the user's own is
+	// decided by whether actions is declared in config, which only a plan
+	// modifier can see; a static schema Default can't express that. See
+	// actionDefaultModifier.
+	"default": schema.BoolAttribute{
+		MarkdownDescription: constants.StackActionDefault,
+		Computed:            true,
+		PlanModifiers: []planmodifier.Bool{
+			actionDefaultModifier{},
+		},
+	},
 	"order": schema.MapNestedAttribute{
 		MarkdownDescription: "Execution order for workflows in this action, keyed by each workflow's `id` (its UUID) as defined in the stack template revision's `workflows_config.workflows` — the same `id` declared in this stack's `workflows_config.workflows`.",
 		Optional:            true,
