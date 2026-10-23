@@ -878,9 +878,15 @@ func convertVcsConfigToAPI(ctx context.Context, obj types.Object) (*sgsdkgo.VcsC
 			SchemaId:   idModel.SchemaId.ValueStringPointer(),
 			SchemaType: &schemaType,
 		}
-		// Data is *map: nil map (empty/invalid string) leaves the pointer nil -> key
-		// omitted, matching prior omitempty behavior; a non-nil map (incl. {}) is sent.
-		if dataMap := expanders.JSONStringToMap(idModel.Data.ValueString()); dataMap != nil {
+		// Data is *map: an empty string leaves the pointer nil -> key omitted; a
+		// non-nil map (incl. {}) is sent. Invalid JSON is an error, not a silent {}:
+		// JSONObject rejects it at plan time, and this catches a value that was
+		// only known at apply.
+		dataMap, err := expanders.JSONStringToObject(idModel.Data.ValueString())
+		if err != nil {
+			return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid vcs_config.iac_input_data.data", "The value "+err.Error()+".")}
+		}
+		if dataMap != nil {
 			vcsConfig.IacInputData.Data = &dataMap
 		}
 	}

@@ -356,6 +356,9 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 					"data": schema.StringAttribute{
 						MarkdownDescription: constants.WorkflowIacInputDataData,
 						Optional:            true,
+						Validators: []validator.String{
+							validators.JSONObject(),
+						},
 					},
 				},
 			},

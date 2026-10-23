@@ -664,6 +664,9 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 												"data": schema.StringAttribute{
 													MarkdownDescription: constants.WorkflowIacInputDataData,
 													Optional:            true,
+													Validators: []validator.String{
+														validators.JSONObject(),
+													},
 												},
 											},
 										},

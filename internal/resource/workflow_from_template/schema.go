@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/validators"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -267,6 +268,9 @@ func (r *workflowUsingTemplateResource) Schema(_ context.Context, _ resource.Sch
 								MarkdownDescription: constants.WorkflowIacInputDataData,
 								Optional:            true,
 								Computed:            true,
+								Validators: []validator.String{
+									validators.JSONObject(),
+								},
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.UseStateForUnknown(),
 								},

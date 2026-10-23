@@ -1168,7 +1168,13 @@ func expandVcsConfig(ctx context.Context, obj types.Object) (*sgsdkgo.VcsConfig,
 			SchemaId:   idModel.SchemaId.ValueStringPointer(),
 			SchemaType: &schemaType,
 		}
-		if dataMap := expanders.JSONStringToMap(idModel.Data.ValueString()); dataMap != nil {
+		// JSONObject rejects invalid data at plan time; this catches a value that
+		// was only known at apply, instead of silently sending {}.
+		dataMap, err := expanders.JSONStringToObject(idModel.Data.ValueString())
+		if err != nil {
+			return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid vcs_config.iac_input_data.data", "The value "+err.Error()+".")}
+		}
+		if dataMap != nil {
 			vcsConfig.IacInputData.Data = &dataMap
 		}
 	}

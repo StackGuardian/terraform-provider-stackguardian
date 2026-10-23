@@ -1051,3 +1051,50 @@ func TestAccStack_WorkflowsConfigInheritsExplicitEmptyFromStackTemplate(t *testi
 		},
 	})
 }
+
+// TestAccStack_IacInputDataInvalidJSONRejected verifies vcs_config.iac_input_data.data
+// must be a JSON object, checked at plan time (validators.JSONObject). Invalid JSON used
+// to be replaced by {} when building the request, so the inputs were silently dropped
+// and the apply failed with "inconsistent result after apply". The validator fails
+// before any API call, so no fixtures are needed.
+func TestAccStack_IacInputDataInvalidJSONRejected(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
+	withData := func(data string) string {
+		return testAccStackConfig("my-workflow-group", fmt.Sprintf("/%s/my-stack-template:1", org), "my-stack", fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id = %q
+        vcs_config = {
+          iac_input_data = {
+            schema_type = "RAW_JSON"
+            data        = %q
+          }
+        }
+      }
+    ]
+  }
+`, testWorkflowUUID, data))
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config:      withData(`{"bucket_region":`),
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`(?s)Invalid JSON object.*not valid JSON`),
+			},
+			{
+				Config:      withData(`["eu-central-1"]`),
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`(?s)Invalid JSON object.*must be a JSON object`),
+			},
+		},
+	})
+}

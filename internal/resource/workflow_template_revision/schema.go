@@ -7,6 +7,7 @@ import (
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	workflowtemplate "github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/workflow_template"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/validators"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -603,6 +604,9 @@ func (r *workflowTemplateRevisionResource) Schema(_ context.Context, _ resource.
 												"data": schema.StringAttribute{
 													MarkdownDescription: constants.WorkflowIacInputDataData,
 													Required:            true,
+													Validators: []validator.String{
+														validators.JSONObject(),
+													},
 												},
 											},
 										},
