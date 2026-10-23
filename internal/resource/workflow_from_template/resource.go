@@ -169,8 +169,8 @@ func (r *workflowUsingTemplateResource) fetchTemplateRevision(ctx context.Contex
 		return nil, diags
 	}
 
-	// iac_template_id is stored fully-qualified ("/<org>/<name>:<rev>"), but
-	// ReadWorkflowTemplateRevision builds its URL as /templatetypes/IAC/<org>/<name>:<rev>/
+	// iac_template_id is stored fully-qualified ("/<org>/<template-id>:<rev>"), but
+	// ReadWorkflowTemplateRevision builds its URL as /templatetypes/IAC/<org>/<template-id>:<rev>/
 	// (org also goes in the x-sg-orgid header). Parse the OWNING org out of the id prefix
 	// rather than assuming the caller's org — a shared template belongs to another org, so
 	// stripping only the caller's org would leave the foreign "/<owner>/" in the revisionId
@@ -191,8 +191,8 @@ func (r *workflowUsingTemplateResource) fetchTemplateRevision(ctx context.Contex
 	return &readResp.Msg, diags
 }
 
-// splitTemplateOrg parses a fully-qualified template id "/<org>/<name>:<rev>" into the
-// owning org and the bare "<name>:<rev>" revision id. The owning org may differ from the
+// splitTemplateOrg parses a fully-qualified template id "/<org>/<template-id>:<rev>" into the
+// owning org and the bare "<template-id>:<rev>" revision id. The owning org may differ from the
 // caller's org when the template is shared from another org, so it must drive the read.
 // If id has no leading "/<org>/" prefix (already bare), the caller's org is used.
 func splitTemplateOrg(id, callerOrg string) (org, revisionId string) {

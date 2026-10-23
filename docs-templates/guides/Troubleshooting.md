@@ -23,9 +23,12 @@ Also confirm `org_name` matches the organization the key belongs to.
 
 ### Unauthorized when referencing a template revision
 
-Use the bare `<template-name>:<revision>` form for `iac_template_id` and for the
-`stackguardian_workflow_template_revision` data source. The fully qualified
-`/<org>/<template-name>:<revision>` path returns Unauthorized.
+The `id` of the `stackguardian_workflow_template_revision` data source takes only the bare
+`<template-id>:<revision>` form; the fully qualified `/<org>/<template-id>:<revision>` path returns
+Unauthorized. `iac_template_id` on `stackguardian_workflow_from_template` accepts either form.
+`template_group_id` on `stackguardian_stack` and `iac_template_id` on
+`stackguardian_stack_template_revision` are the opposite: they require the fully qualified form,
+even for a template in your own organization.
 
 ## Plan and apply
 

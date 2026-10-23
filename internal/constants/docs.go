@@ -156,7 +156,7 @@ const (
 
 	PolicyVCSConfig                    = "Configuration to import policy from version control"
 	PolicyVCSConfigMarketplaceTemplate = "Name of the template from marketplace"
-	PolicyVCSConfigTemplateId          = "Policy template to use, as a path-form ID: `/policies/<name>:<revision>` for a policy created in your own organization, or `/<org>/<name>:<revision>` when qualifying it explicitly. Templates published by StackGuardian use the `stackguardian` org (e.g. `/stackguardian/checkov-best-practices:2`). At most 100 characters. Required when `use_marketplace_template` is `true`."
+	PolicyVCSConfigTemplateId          = "Policy template to use, as a path-form ID: `/policies/<template-id>:<revision>` for a policy created in your own organization, or `/<org>/<template-id>:<revision>` when qualifying it explicitly. Templates published by StackGuardian use the `stackguardian` org (e.g. `/stackguardian/checkov-best-practices:2`). At most 100 characters. Required when `use_marketplace_template` is `true`."
 
 	PolicyVCSConfigCustomSource                     = DiscoverySettingsBenchmarksRuntimeSource
 	PolicyVCSConfigCustomSourceSourceConfigDestKind = DiscoverySettingsBenchmarksRuntimeSourceSourceConfigDestKind

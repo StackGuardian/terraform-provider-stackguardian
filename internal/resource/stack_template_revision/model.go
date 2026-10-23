@@ -2,9 +2,7 @@ package stacktemplaterevision
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"strings"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	"github.com/StackGuardian/sg-sdk-go/stacktemplaterevisions"
@@ -122,24 +120,18 @@ func (WfStepInputDataModel) AttributeTypes() map[string]attr.Type {
 // ---------------------------------------------------------------------------
 
 type StackInputSchemaModel struct {
-	Id           types.String `tfsdk:"id"`
 	Name         types.String `tfsdk:"name"`
-	Description  types.String `tfsdk:"description"`
 	Type         types.String `tfsdk:"type"`
 	EncodedData  types.String `tfsdk:"encoded_data"`
 	UiSchemaData types.String `tfsdk:"ui_schema_data"`
-	IsCommitted  types.Bool   `tfsdk:"is_committed"`
 }
 
 func (StackInputSchemaModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
-		"id":             types.StringType,
 		"name":           types.StringType,
-		"description":    types.StringType,
 		"type":           types.StringType,
 		"encoded_data":   types.StringType,
 		"ui_schema_data": types.StringType,
-		"is_committed":   types.BoolType,
 	}
 }
 
@@ -344,15 +336,27 @@ func (TerraformConfigModel) AttributeTypes() map[string]attr.Type {
 // Deployment platform config
 // ---------------------------------------------------------------------------
 
+type DeploymentPlatformConfigConfigModel struct {
+	IntegrationId types.String `tfsdk:"integration_id"`
+	ProfileName   types.String `tfsdk:"profile_name"`
+}
+
+func (DeploymentPlatformConfigConfigModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"integration_id": types.StringType,
+		"profile_name":   types.StringType,
+	}
+}
+
 type DeploymentPlatformConfigModel struct {
 	Kind   types.String `tfsdk:"kind"`
-	Config types.String `tfsdk:"config"` // JSON string (map[string]interface{})
+	Config types.Object `tfsdk:"config"`
 }
 
 func (DeploymentPlatformConfigModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"kind":   types.StringType,
-		"config": types.StringType,
+		"config": types.ObjectType{AttrTypes: DeploymentPlatformConfigConfigModel{}.AttributeTypes()},
 	}
 }
 
@@ -396,53 +400,13 @@ func (UserSchedulesModel) AttributeTypes() map[string]attr.Type {
 // VCS config (for WorkflowsConfigWorkflow)
 // ---------------------------------------------------------------------------
 
-type CustomSourceConfigModel struct {
-	IsPrivate               types.Bool   `tfsdk:"is_private"`
-	Auth                    types.String `tfsdk:"auth"`
-	WorkingDir              types.String `tfsdk:"working_dir"`
-	GitSparseCheckoutConfig types.String `tfsdk:"git_sparse_checkout_config"`
-	GitCoreAutoCrlf         types.Bool   `tfsdk:"git_core_auto_crlf"`
-	Ref                     types.String `tfsdk:"ref"`
-	Repo                    types.String `tfsdk:"repo"`
-	IncludeSubModule        types.Bool   `tfsdk:"include_sub_module"`
-}
-
-func (CustomSourceConfigModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"is_private":                 types.BoolType,
-		"auth":                       types.StringType,
-		"working_dir":                types.StringType,
-		"git_sparse_checkout_config": types.StringType,
-		"git_core_auto_crlf":         types.BoolType,
-		"ref":                        types.StringType,
-		"repo":                       types.StringType,
-		"include_sub_module":         types.BoolType,
-	}
-}
-
-type CustomSourceModel struct {
-	SourceConfigDestKind types.String `tfsdk:"source_config_dest_kind"`
-	Config               types.Object `tfsdk:"config"`
-}
-
-func (CustomSourceModel) AttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"source_config_dest_kind": types.StringType,
-		"config":                  types.ObjectType{AttrTypes: CustomSourceConfigModel{}.AttributeTypes()},
-	}
-}
-
 type IacVcsConfigModel struct {
-	UseMarketplaceTemplate types.Bool   `tfsdk:"use_marketplace_template"`
-	IacTemplateId          types.String `tfsdk:"iac_template_id"`
-	CustomSource           types.Object `tfsdk:"custom_source"`
+	IacTemplateId types.String `tfsdk:"iac_template_id"`
 }
 
 func (IacVcsConfigModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
-		"use_marketplace_template": types.BoolType,
-		"iac_template_id":          types.StringType,
-		"custom_source":            types.ObjectType{AttrTypes: CustomSourceModel{}.AttributeTypes()},
+		"iac_template_id": types.StringType,
 	}
 }
 
@@ -478,14 +442,12 @@ func (VcsConfigModel) AttributeTypes() map[string]attr.Type {
 
 type WorkflowInStackModel struct {
 	Id                        types.String `tfsdk:"id"`
-	TemplateId                types.String `tfsdk:"template_id"`
 	ResourceName              types.String `tfsdk:"resource_name"`
 	WfStepsConfig             types.List   `tfsdk:"wf_steps_config"`
 	TerraformConfig           types.Object `tfsdk:"terraform_config"`
 	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
 	DeploymentPlatformConfig  types.List   `tfsdk:"deployment_platform_config"`
 	VcsConfig                 types.Object `tfsdk:"vcs_config"`
-	IacInputData              types.Object `tfsdk:"iac_input_data"`
 	UserSchedules             types.List   `tfsdk:"user_schedules"`
 	Approvers                 types.List   `tfsdk:"approvers"`
 	NumberOfApprovalsRequired types.Int64  `tfsdk:"number_of_approvals_required"`
@@ -499,14 +461,12 @@ type WorkflowInStackModel struct {
 func (WorkflowInStackModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"id":                           types.StringType,
-		"template_id":                  types.StringType,
 		"resource_name":                types.StringType,
 		"wf_steps_config":              types.ListType{ElemType: types.ObjectType{AttrTypes: WfStepsConfigModel{}.AttributeTypes()}},
 		"terraform_config":             types.ObjectType{AttrTypes: TerraformConfigModel{}.AttributeTypes()},
 		"environment_variables":        types.ListType{ElemType: types.ObjectType{AttrTypes: EnvVarModel{}.AttributeTypes()}},
 		"deployment_platform_config":   types.ListType{ElemType: types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()}},
 		"vcs_config":                   types.ObjectType{AttrTypes: VcsConfigModel{}.AttributeTypes()},
-		"iac_input_data":               types.ObjectType{AttrTypes: WfStepInputDataModel{}.AttributeTypes()},
 		"user_schedules":               types.ListType{ElemType: types.ObjectType{AttrTypes: UserSchedulesModel{}.AttributeTypes()}},
 		"approvers":                    types.ListType{ElemType: types.StringType},
 		"number_of_approvals_required": types.Int64Type,
@@ -607,32 +567,6 @@ func (ActionsModel) AttributeTypes() map[string]attr.Type {
 		"default":     types.BoolType,
 		"order":       types.MapType{ElemType: types.ObjectType{AttrTypes: ActionOrderModel{}.AttributeTypes()}},
 	}
-}
-
-// ---------------------------------------------------------------------------
-// Helper: parse JSON string to map[string]interface{}
-// ---------------------------------------------------------------------------
-
-func parseJSONToMap(s string) map[string]interface{} {
-	if s == "" {
-		return nil
-	}
-	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(s), &result); err != nil {
-		return nil
-	}
-	return result
-}
-
-func marshalToJSONString(v interface{}) types.String {
-	if v == nil {
-		return types.StringNull()
-	}
-	b, err := json.Marshal(v)
-	if err != nil {
-		return types.StringNull()
-	}
-	return flatteners.String(string(b))
 }
 
 // ---------------------------------------------------------------------------
@@ -739,9 +673,13 @@ func convertWfStepsConfigToAPI(ctx context.Context, list types.List) ([]sgsdkgo.
 			if err != nil {
 				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid schema type", fmt.Sprintf("Value '%s' is not a valid schema type", idm.SchemaType.ValueString()))}
 			}
+			data, err := expanders.JSONStringToObject(idm.Data.ValueString())
+			if err != nil {
+				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid wf_step_input_data.data", "The value "+err.Error()+".")}
+			}
 			step.WfStepInputData = &sgsdkgo.WfStepInputData{
 				SchemaType: &schemaType,
-				Data:       parseJSONToMap(idm.Data.ValueString()),
+				Data:       data,
 			}
 		}
 		result[i] = step
@@ -773,15 +711,20 @@ func convertTerraformConfigToAPI(ctx context.Context, obj types.Object) (*sgsdkg
 		return nil, diags
 	}
 	tc := &sgsdkgo.TerraformConfig{
-		TerraformVersion:       m.TerraformVersion.ValueStringPointer(),
-		DriftCheck:             m.DriftCheck.ValueBoolPointer(),
-		DriftCron:              m.DriftCron.ValueStringPointer(),
-		ManagedTerraformState:  m.ManagedTerraformState.ValueBoolPointer(),
-		ApprovalPreApply:       m.ApprovalPreApply.ValueBoolPointer(),
-		TerraformPlanOptions:   m.TerraformPlanOptions.ValueStringPointer(),
-		TerraformInitOptions:   m.TerraformInitOptions.ValueStringPointer(),
-		Timeout:                expanders.IntPtr(m.Timeout.ValueInt64Pointer()),
-		RunPreInitHooksOnDrift: m.RunPreInitHooksOnDrift.ValueBoolPointer(),
+		TerraformVersion:      m.TerraformVersion.ValueStringPointer(),
+		DriftCheck:            m.DriftCheck.ValueBoolPointer(),
+		DriftCron:             m.DriftCron.ValueStringPointer(),
+		ManagedTerraformState: m.ManagedTerraformState.ValueBoolPointer(),
+		ApprovalPreApply:      m.ApprovalPreApply.ValueBoolPointer(),
+		TerraformPlanOptions:  m.TerraformPlanOptions.ValueStringPointer(),
+		TerraformInitOptions:  m.TerraformInitOptions.ValueStringPointer(),
+		Timeout:               expanders.IntPtr(m.Timeout.ValueInt64Pointer()),
+	}
+	// run_pre_init_hooks_on_drift is Optional+Computed: ValueBoolPointer() returns &false
+	// for unknown, which would force the field false on create/update whenever the user
+	// hasn't set it. Only set it when it has a known value.
+	if !m.RunPreInitHooksOnDrift.IsNull() && !m.RunPreInitHooksOnDrift.IsUnknown() {
+		tc.RunPreInitHooksOnDrift = m.RunPreInitHooksOnDrift.ValueBoolPointer()
 	}
 	if !m.TerraformBinPath.IsNull() && !m.TerraformBinPath.IsUnknown() {
 		mps, diags := convertMountPointsToAPI(ctx, m.TerraformBinPath)
@@ -828,7 +771,7 @@ func convertTerraformConfigToAPI(ctx context.Context, obj types.Object) (*sgsdkg
 	return tc, nil
 }
 
-func convertDeploymentPlatformConfigToAPI(ctx context.Context, list types.List) ([]*sgsdkgo.DeploymentPlatformConfig, diag.Diagnostics) {
+func convertDeploymentPlatformConfigToAPI(ctx context.Context, list types.List) ([]*sgsdkgo.StackDeploymentPlatformConfig, diag.Diagnostics) {
 	if list.IsNull() || list.IsUnknown() {
 		return nil, nil
 	}
@@ -836,11 +779,22 @@ func convertDeploymentPlatformConfigToAPI(ctx context.Context, list types.List) 
 	if diags := list.ElementsAs(ctx, &models, false); diags.HasError() {
 		return nil, diags
 	}
-	result := make([]*sgsdkgo.DeploymentPlatformConfig, len(models))
+	result := make([]*sgsdkgo.StackDeploymentPlatformConfig, len(models))
 	for i, m := range models {
-		dpc := &sgsdkgo.DeploymentPlatformConfig{
-			Kind:   sgsdkgo.DeploymentPlatformConfigKindEnum(m.Kind.ValueString()),
-			Config: parseJSONToMap(m.Config.ValueString()),
+		kind, err := sgsdkgo.NewDeploymentPlatformConfigKindEnumFromString(m.Kind.ValueString())
+		if err != nil {
+			return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid deployment platform config kind", fmt.Sprintf("Value '%s' is not a valid kind", m.Kind.ValueString()))}
+		}
+		dpc := &sgsdkgo.StackDeploymentPlatformConfig{Kind: &kind}
+		if !m.Config.IsNull() && !m.Config.IsUnknown() {
+			var cfgModel DeploymentPlatformConfigConfigModel
+			if diags := m.Config.As(ctx, &cfgModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
+				return nil, diags
+			}
+			dpc.Config = &sgsdkgo.DeploymentPlatformConfigConfig{
+				IntegrationId: cfgModel.IntegrationId.ValueStringPointer(),
+				ProfileName:   cfgModel.ProfileName.ValueStringPointer(),
+			}
 		}
 		result[i] = dpc
 	}
@@ -887,7 +841,7 @@ func convertUserSchedulesToAPI(ctx context.Context, list types.List) ([]*sgsdkgo
 	return result, nil
 }
 
-func convertVcsConfigToAPI(ctx context.Context, obj types.Object, orgName string) (*sgsdkgo.VcsConfig, diag.Diagnostics) {
+func convertVcsConfigToAPI(ctx context.Context, obj types.Object) (*sgsdkgo.VcsConfig, diag.Diagnostics) {
 	if obj.IsNull() || obj.IsUnknown() {
 		return nil, nil
 	}
@@ -902,44 +856,15 @@ func convertVcsConfigToAPI(ctx context.Context, obj types.Object, orgName string
 		if diags := m.IacVcsConfig.As(ctx, &iacModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 			return nil, diags
 		}
-		var prefixedIacTemplateId *string
-		if tid := iacModel.IacTemplateId.ValueStringPointer(); tid != nil {
-			v := fmt.Sprintf("/%s/%s", orgName, *tid)
-			prefixedIacTemplateId = &v
-		}
+		// Stack template revision workflows always reference a workflow template, so
+		// use_marketplace_template is always true and not user-configurable.
+		// iac_template_id is sent exactly as written: it is required in the API's own
+		// fully qualified form ("/<owner-org>/<template-id>:<rev>", see
+		// validators.QualifiedTemplateRevisionId for why), so it may name a workflow template
+		// owned by another organization.
 		iacVcs := &sgsdkgo.IacvcsConfig{
-			UseMarketplaceTemplate: iacModel.UseMarketplaceTemplate.ValueBoolPointer(),
-			IacTemplateId:          prefixedIacTemplateId,
-		}
-		if !iacModel.CustomSource.IsNull() && !iacModel.CustomSource.IsUnknown() {
-			var csModel CustomSourceModel
-			if diags := iacModel.CustomSource.As(ctx, &csModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
-				return nil, diags
-			}
-			sourceConfigDestKind, err := sgsdkgo.NewCustomSourceSourceConfigDestKindEnumFromString(csModel.SourceConfigDestKind.ValueString())
-			if err != nil {
-				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid source_config_dest_kind", err.Error())}
-			}
-			cs := &sgsdkgo.CustomSource{
-				SourceConfigDestKind: &sourceConfigDestKind,
-			}
-			if !csModel.Config.IsNull() && !csModel.Config.IsUnknown() {
-				var csCfgModel CustomSourceConfigModel
-				if diags := csModel.Config.As(ctx, &csCfgModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
-					return nil, diags
-				}
-				cs.Config = &sgsdkgo.CustomSourceConfig{
-					IsPrivate:               csCfgModel.IsPrivate.ValueBoolPointer(),
-					Auth:                    csCfgModel.Auth.ValueStringPointer(),
-					WorkingDir:              csCfgModel.WorkingDir.ValueStringPointer(),
-					GitSparseCheckoutConfig: csCfgModel.GitSparseCheckoutConfig.ValueStringPointer(),
-					GitCoreAutoCrlf:         csCfgModel.GitCoreAutoCrlf.ValueBoolPointer(),
-					Ref:                     csCfgModel.Ref.ValueStringPointer(),
-					Repo:                    csCfgModel.Repo.ValueStringPointer(),
-					IncludeSubModule:        csCfgModel.IncludeSubModule.ValueBoolPointer(),
-				}
-			}
-			iacVcs.CustomSource = cs
+			UseMarketplaceTemplate: sgsdkgo.Bool(true),
+			IacTemplateId:          iacModel.IacTemplateId.ValueStringPointer(),
 		}
 		vcsConfig.IacVcsConfig = iacVcs
 	}
@@ -957,9 +882,15 @@ func convertVcsConfigToAPI(ctx context.Context, obj types.Object, orgName string
 			SchemaId:   idModel.SchemaId.ValueStringPointer(),
 			SchemaType: &schemaType,
 		}
-		// Data is *map: nil map (empty/invalid string) leaves the pointer nil -> key
-		// omitted, matching prior omitempty behavior; a non-nil map (incl. {}) is sent.
-		if dataMap := parseJSONToMap(idModel.Data.ValueString()); dataMap != nil {
+		// Data is *map: an empty string leaves the pointer nil -> key omitted; a
+		// non-nil map (incl. {}) is sent. Invalid JSON is an error, not a silent {}:
+		// JSONObject rejects it at plan time, and this catches a value that was
+		// only known at apply.
+		dataMap, err := expanders.JSONStringToObject(idModel.Data.ValueString())
+		if err != nil {
+			return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid vcs_config.iac_input_data.data", "The value "+err.Error()+".")}
+		}
+		if dataMap != nil {
 			vcsConfig.IacInputData.Data = &dataMap
 		}
 	}
@@ -990,7 +921,7 @@ func convertNotificationRecipientsToAPI(ctx context.Context, list types.List) ([
 	return result, nil
 }
 
-func convertWebhooksToAPI(ctx context.Context, list types.List) ([]map[string]interface{}, diag.Diagnostics) {
+func convertWebhooksToAPI(ctx context.Context, list types.List) ([]*sgsdkgo.Webhook, diag.Diagnostics) {
 	if list.IsNull() || list.IsUnknown() {
 		return nil, nil
 	}
@@ -998,14 +929,14 @@ func convertWebhooksToAPI(ctx context.Context, list types.List) ([]map[string]in
 	if diags := list.ElementsAs(ctx, &models, false); diags.HasError() {
 		return nil, diags
 	}
-	result := make([]map[string]interface{}, len(models))
+	result := make([]*sgsdkgo.Webhook, len(models))
 	for i, m := range models {
-		wh := map[string]interface{}{
-			"webhookName": m.WebhookName.ValueString(),
-			"webhookUrl":  m.WebhookUrl.ValueString(),
+		wh := &sgsdkgo.Webhook{
+			WebhookName: m.WebhookName.ValueString(),
+			WebhookUrl:  m.WebhookUrl.ValueString(),
 		}
 		if !m.WebhookSecret.IsNull() && !m.WebhookSecret.IsUnknown() {
-			wh["webhookSecret"] = m.WebhookSecret.ValueString()
+			wh.WebhookSecret = m.WebhookSecret.ValueStringPointer()
 		}
 		result[i] = wh
 	}
@@ -1028,17 +959,25 @@ func convertWfChainingToAPI(ctx context.Context, list types.List) ([]*sgsdkgo.Mi
 			StackId:         m.StackId.ValueStringPointer(),
 		}
 		if !m.WorkflowRunPayload.IsNull() && !m.WorkflowRunPayload.IsUnknown() {
-			ms.WorkflowRunPayload = parseJSONToMap(m.WorkflowRunPayload.ValueString())
+			payload, err := expanders.JSONStringToObject(m.WorkflowRunPayload.ValueString())
+			if err != nil {
+				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid workflow_run_payload", "The value "+err.Error()+".")}
+			}
+			ms.WorkflowRunPayload = payload
 		}
 		if !m.StackRunPayload.IsNull() && !m.StackRunPayload.IsUnknown() {
-			ms.StackRunPayload = parseJSONToMap(m.StackRunPayload.ValueString())
+			payload, err := expanders.JSONStringToObject(m.StackRunPayload.ValueString())
+			if err != nil {
+				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid stack_run_payload", "The value "+err.Error()+".")}
+			}
+			ms.StackRunPayload = payload
 		}
 		result[i] = ms
 	}
 	return result, nil
 }
 
-func convertMiniStepsToAPI(ctx context.Context, obj types.Object) (*sgsdkgo.MiniStepsSchema, diag.Diagnostics) {
+func convertMiniStepsToAPI(ctx context.Context, obj types.Object) (*sgsdkgo.StackMiniStepsSchema, diag.Diagnostics) {
 	if obj.IsNull() || obj.IsUnknown() {
 		return nil, nil
 	}
@@ -1046,7 +985,7 @@ func convertMiniStepsToAPI(ctx context.Context, obj types.Object) (*sgsdkgo.Mini
 	if diags := obj.As(ctx, &m, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 		return nil, diags
 	}
-	result := &sgsdkgo.MiniStepsSchema{}
+	result := &sgsdkgo.StackMiniStepsSchema{}
 
 	if !m.Notifications.IsNull() && !m.Notifications.IsUnknown() {
 		var notifModel MinistepsNotificationsModel
@@ -1088,10 +1027,10 @@ func convertMiniStepsToAPI(ctx context.Context, obj types.Object) (*sgsdkgo.Mini
 		if diags := m.Webhooks.As(ctx, &whModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 			return nil, diags
 		}
-		wh := &sgsdkgo.WebhookTypes{}
+		wh := &sgsdkgo.StackWebhookTypes{}
 		for _, pair := range []struct {
 			list *types.List
-			dest *[]map[string]interface{}
+			dest *[]*sgsdkgo.Webhook
 		}{
 			{&whModel.ApprovalRequired, &wh.ApprovalRequired},
 			{&whModel.Cancelled, &wh.Cancelled},
@@ -1160,20 +1099,20 @@ func convertNotificationRecipientsFromAPI(ctx context.Context, recipients []*sgs
 	return obj, nil
 }
 
-func convertWebhooksFromAPI(ctx context.Context, webhooks []map[string]interface{}) (types.List, diag.Diagnostics) {
+func convertWebhooksFromAPI(ctx context.Context, webhooks []*sgsdkgo.Webhook) (types.List, diag.Diagnostics) {
 	nullObj := types.ListNull(types.ObjectType{AttrTypes: MinistepsWebhooksModel{}.AttributeTypes()})
 	if webhooks == nil {
 		return nullObj, nil
 	}
 	elems := make([]MinistepsWebhooksModel, 0, len(webhooks))
 	for _, wh := range webhooks {
-		name, _ := wh["webhookName"].(string)
-		url, _ := wh["webhookUrl"].(string)
-		secret, _ := wh["webhookSecret"].(string)
+		if wh == nil {
+			continue
+		}
 		m := MinistepsWebhooksModel{
-			WebhookName:   flatteners.String(name),
-			WebhookUrl:    flatteners.String(url),
-			WebhookSecret: flatteners.String(secret),
+			WebhookName:   flatteners.String(wh.WebhookName),
+			WebhookUrl:    flatteners.String(wh.WebhookUrl),
+			WebhookSecret: flatteners.StringPtr(wh.WebhookSecret),
 		}
 		elems = append(elems, m)
 	}
@@ -1197,9 +1136,9 @@ func convertWfChainingFromAPI(ctx context.Context, items []*sgsdkgo.MiniSteps) (
 		m := MinistepsWorkflowChainingModel{
 			WorkflowGroupId:    flatteners.String(item.WorkflowGroupId),
 			StackId:            flatteners.StringPtr(item.StackId),
-			StackRunPayload:    marshalToJSONString(item.StackRunPayload),
+			StackRunPayload:    flatteners.JSONInterfaceToString(item.StackRunPayload),
 			WorkflowId:         flatteners.StringPtr(item.WorkflowId),
-			WorkflowRunPayload: marshalToJSONString(item.WorkflowRunPayload),
+			WorkflowRunPayload: flatteners.JSONInterfaceToString(item.WorkflowRunPayload),
 		}
 		elems = append(elems, m)
 	}
@@ -1210,7 +1149,7 @@ func convertWfChainingFromAPI(ctx context.Context, items []*sgsdkgo.MiniSteps) (
 	return obj, nil
 }
 
-func miniStepsFromAPI(ctx context.Context, miniSteps *sgsdkgo.MiniStepsSchema) (types.Object, diag.Diagnostics) {
+func miniStepsFromAPI(ctx context.Context, miniSteps *sgsdkgo.StackMiniStepsSchema) (types.Object, diag.Diagnostics) {
 	nullObj := types.ObjectNull(MinistepsModel{}.AttributeTypes())
 	if miniSteps == nil {
 		return nullObj, nil
@@ -1316,7 +1255,7 @@ func miniStepsFromAPI(ctx context.Context, miniSteps *sgsdkgo.MiniStepsSchema) (
 	return types.ObjectValueFrom(ctx, MinistepsModel{}.AttributeTypes(), msModel)
 }
 
-func convertWorkflowsConfigToAPI(ctx context.Context, obj types.Object, orgName string) (*stacktemplaterevisions.StackTemplateRevisionWorkflowsConfig, diag.Diagnostics) {
+func convertWorkflowsConfigToAPI(ctx context.Context, obj types.Object) (*stacktemplaterevisions.StackTemplateRevisionWorkflowsConfig, diag.Diagnostics) {
 	if obj.IsNull() || obj.IsUnknown() {
 		return nil, nil
 	}
@@ -1334,16 +1273,8 @@ func convertWorkflowsConfigToAPI(ctx context.Context, obj types.Object, orgName 
 
 	workflows := make([]*stacktemplaterevisions.StackTemplateRevisionWorkflow, len(wfModels))
 	for i, wm := range wfModels {
-		// Prefix template_id with /<orgName>/
-		var prefixedTemplateId *string
-		if tid := wm.TemplateId.ValueStringPointer(); tid != nil {
-			v := fmt.Sprintf("/%s/%s", orgName, *tid)
-			prefixedTemplateId = &v
-		}
-
 		wf := &stacktemplaterevisions.StackTemplateRevisionWorkflow{
 			Id:                        wm.Id.ValueStringPointer(),
-			TemplateId:                prefixedTemplateId,
 			ResourceName:              wm.ResourceName.ValueStringPointer(),
 			NumberOfApprovalsRequired: expanders.IntPtr(wm.NumberOfApprovalsRequired.ValueInt64Pointer()),
 			UserJobCpu:                expanders.IntPtr(wm.UserJobCpu.ValueInt64Pointer()),
@@ -1378,21 +1309,11 @@ func convertWorkflowsConfigToAPI(ctx context.Context, obj types.Object, orgName 
 			wf.DeploymentPlatformConfig = dpcs
 		}
 		if !wm.VcsConfig.IsNull() && !wm.VcsConfig.IsUnknown() {
-			vcs, diags := convertVcsConfigToAPI(ctx, wm.VcsConfig, orgName)
+			vcs, diags := convertVcsConfigToAPI(ctx, wm.VcsConfig)
 			if diags.HasError() {
 				return nil, diags
 			}
 			wf.VcsConfig = vcs
-		}
-		if !wm.IacInputData.IsNull() && !wm.IacInputData.IsUnknown() {
-			var idm WfStepInputDataModel
-			if diags := wm.IacInputData.As(ctx, &idm, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
-				return nil, diags
-			}
-			wf.IacInputData = &sgsdkgo.TemplatesIacInputData{
-				SchemaType: idm.SchemaType.ValueStringPointer(),
-				Data:       parseJSONToMap(idm.Data.ValueString()),
-			}
 		}
 		if !wm.UserSchedules.IsNull() && !wm.UserSchedules.IsUnknown() {
 			us, diags := convertUserSchedulesToAPI(ctx, wm.UserSchedules)
@@ -1423,13 +1344,10 @@ func convertWorkflowsConfigToAPI(ctx context.Context, obj types.Object, orgName 
 			schemas := make([]*sgsdkgo.InputSchemas, len(isModels))
 			for j, ism := range isModels {
 				schemas[j] = &sgsdkgo.InputSchemas{
-					Id:           ism.Id.ValueStringPointer(),
 					Name:         ism.Name.ValueStringPointer(),
-					Description:  ism.Description.ValueStringPointer(),
 					Type:         sgsdkgo.InputSchemasTypeEnum(ism.Type.ValueString()),
 					EncodedData:  ism.EncodedData.ValueStringPointer(),
 					UiSchemaData: ism.UiSchemaData.ValueStringPointer(),
-					IsCommitted:  ism.IsCommitted.ValueBoolPointer(),
 				}
 			}
 			wf.InputSchemas = schemas
@@ -1457,9 +1375,16 @@ func convertActionsToAPI(ctx context.Context, actionsMap types.Map) (map[string]
 	result := make(map[string]*sgsdkgo.Actions, len(models))
 	for k, am := range models {
 		action := &sgsdkgo.Actions{
-			Name:        am.Name.ValueString(),
-			Description: am.Description.ValueStringPointer(),
-			Default:     am.Default.ValueBoolPointer(),
+			Name: am.Name.ValueString(),
+		}
+		// description/default are Optional+Computed: ValueStringPointer()/ValueBoolPointer()
+		// return &""/&false for unknown, which would clear the description or force
+		// default=false on create when the user hasn't set them. Only set when known.
+		if !am.Description.IsNull() && !am.Description.IsUnknown() {
+			action.Description = am.Description.ValueStringPointer()
+		}
+		if !am.Default.IsNull() && !am.Default.IsUnknown() {
+			action.Default = am.Default.ValueBoolPointer()
 		}
 		if !am.Order.IsNull() && !am.Order.IsUnknown() {
 			var orderModels map[string]ActionOrderModel
@@ -1480,8 +1405,13 @@ func convertActionsToAPI(ctx context.Context, actionsMap types.Map) (map[string]
 						if diags := pm.TerraformAction.As(ctx, &tam, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 							return nil, diags
 						}
-						actionEnum := sgsdkgo.ActionEnum(tam.Action.ValueString())
-						params.TerraformAction = &sgsdkgo.TerraformAction{Action: &actionEnum}
+						// action is Computed-only (never user-set): only forward it when the
+						// plan actually resolved a value, otherwise ValueString() on unknown
+						// would send action="" and clobber the API-assigned action.
+						if !tam.Action.IsNull() && !tam.Action.IsUnknown() {
+							actionEnum := sgsdkgo.ActionEnum(tam.Action.ValueString())
+							params.TerraformAction = &sgsdkgo.TerraformAction{Action: &actionEnum}
+						}
 					}
 					if !pm.DeploymentPlatformConfig.IsNull() && !pm.DeploymentPlatformConfig.IsUnknown() {
 						dpcs, diags := convertDeploymentPlatformConfigToAPI(ctx, pm.DeploymentPlatformConfig)
@@ -1614,7 +1544,7 @@ func wfStepsConfigFromAPI(steps []sgsdkgo.WfStepsConfig) (types.List, diag.Diagn
 		}
 		inputDataObj := types.ObjectNull(WfStepInputDataModel{}.AttributeTypes())
 		if s.WfStepInputData != nil {
-			dataStr := marshalToJSONString(s.WfStepInputData.Data)
+			dataStr := flatteners.JSONInterfaceToString(s.WfStepInputData.Data)
 			idm := WfStepInputDataModel{
 				SchemaType: flatteners.String(string(*s.WfStepInputData.SchemaType)),
 				Data:       dataStr,
@@ -1743,7 +1673,7 @@ func terraformConfigFromAPI(tc *sgsdkgo.TerraformConfig) (types.Object, diag.Dia
 	return types.ObjectValueFrom(context.Background(), TerraformConfigModel{}.AttributeTypes(), m)
 }
 
-func deploymentPlatformConfigFromAPI(dpcs []*sgsdkgo.DeploymentPlatformConfig) (types.List, diag.Diagnostics) {
+func deploymentPlatformConfigFromAPI(dpcs []*sgsdkgo.StackDeploymentPlatformConfig) (types.List, diag.Diagnostics) {
 	listNull := types.ListNull(types.ObjectType{AttrTypes: DeploymentPlatformConfigModel{}.AttributeTypes()})
 	if dpcs == nil {
 		return listNull, nil
@@ -1754,8 +1684,19 @@ func deploymentPlatformConfigFromAPI(dpcs []*sgsdkgo.DeploymentPlatformConfig) (
 			continue
 		}
 		m := DeploymentPlatformConfigModel{
-			Kind:   flatteners.String(string(dpc.Kind)),
-			Config: marshalToJSONString(dpc.Config),
+			Kind:   flatteners.StringPtr((*string)(dpc.Kind)),
+			Config: types.ObjectNull(DeploymentPlatformConfigConfigModel{}.AttributeTypes()),
+		}
+		if dpc.Config != nil {
+			cfgModel := DeploymentPlatformConfigConfigModel{
+				IntegrationId: flatteners.StringPtr(dpc.Config.IntegrationId),
+				ProfileName:   flatteners.StringPtr(dpc.Config.ProfileName),
+			}
+			cfgObj, diags := types.ObjectValueFrom(context.Background(), DeploymentPlatformConfigConfigModel{}.AttributeTypes(), cfgModel)
+			if diags.HasError() {
+				return listNull, diags
+			}
+			m.Config = cfgObj
 		}
 		obj, diags := types.ObjectValueFrom(context.Background(), DeploymentPlatformConfigModel{}.AttributeTypes(), m)
 		if diags.HasError() {
@@ -1816,45 +1757,13 @@ func vcsConfigFromAPI(vc *sgsdkgo.VcsConfig) (types.Object, diag.Diagnostics) {
 
 	iacVcsNull := types.ObjectNull(IacVcsConfigModel{}.AttributeTypes())
 	if vc.IacVcsConfig != nil {
-		var strippedIacTemplateId *string
-		if vc.IacVcsConfig.IacTemplateId != nil {
-			parts := strings.Split(*vc.IacVcsConfig.IacTemplateId, "/")
-			base := parts[len(parts)-1]
-			strippedIacTemplateId = &base
-		}
+		// Kept exactly as the API returns it ("/<owner-org>/<template-id>:<rev>"):
+		// config must use that same form (see convertVcsConfigToAPI), and
+		// stripping the org would lose which organization owns a shared
+		// template, so the next update would point at a same-named template in
+		// the caller's own organization instead.
 		iacM := IacVcsConfigModel{
-			UseMarketplaceTemplate: flatteners.BoolPtr(vc.IacVcsConfig.UseMarketplaceTemplate),
-			IacTemplateId:          flatteners.StringPtr(strippedIacTemplateId),
-			CustomSource:           types.ObjectNull(CustomSourceModel{}.AttributeTypes()),
-		}
-		if vc.IacVcsConfig.CustomSource != nil {
-			cs := vc.IacVcsConfig.CustomSource
-			csM := CustomSourceModel{
-				SourceConfigDestKind: flatteners.String(string(*cs.SourceConfigDestKind)),
-				Config:               types.ObjectNull(CustomSourceConfigModel{}.AttributeTypes()),
-			}
-			if cs.Config != nil {
-				csCfgM := CustomSourceConfigModel{
-					IsPrivate:               flatteners.BoolPtr(cs.Config.IsPrivate),
-					Auth:                    flatteners.StringPtr(cs.Config.Auth),
-					WorkingDir:              flatteners.StringPtr(cs.Config.WorkingDir),
-					GitSparseCheckoutConfig: flatteners.StringPtr(cs.Config.GitSparseCheckoutConfig),
-					GitCoreAutoCrlf:         flatteners.BoolPtr(cs.Config.GitCoreAutoCrlf),
-					Ref:                     flatteners.StringPtr(cs.Config.Ref),
-					Repo:                    flatteners.StringPtr(cs.Config.Repo),
-					IncludeSubModule:        flatteners.BoolPtr(cs.Config.IncludeSubModule),
-				}
-				cfgObj, diags := types.ObjectValueFrom(context.Background(), CustomSourceConfigModel{}.AttributeTypes(), csCfgM)
-				if diags.HasError() {
-					return nullObj, diags
-				}
-				csM.Config = cfgObj
-			}
-			csObj, diags := types.ObjectValueFrom(context.Background(), CustomSourceModel{}.AttributeTypes(), csM)
-			if diags.HasError() {
-				return nullObj, diags
-			}
-			iacM.CustomSource = csObj
+			IacTemplateId: flatteners.StringPtr(vc.IacVcsConfig.IacTemplateId),
 		}
 		var diags diag.Diagnostics
 		iacVcsNull, diags = types.ObjectValueFrom(context.Background(), IacVcsConfigModel{}.AttributeTypes(), iacM)
@@ -1867,10 +1776,10 @@ func vcsConfigFromAPI(vc *sgsdkgo.VcsConfig) (types.Object, diag.Diagnostics) {
 	iacInputNull := types.ObjectNull(IacInputDataModel{}.AttributeTypes())
 	if vc.IacInputData != nil {
 		// Data is *map: guard the nil pointer — a typed nil inside interface{} would slip
-		// past marshalToJSONString's nil check and marshal to the string "null".
+		// past JSONInterfaceToString's nil check and marshal to the string "null".
 		dataStr := types.StringNull()
 		if vc.IacInputData.Data != nil {
-			dataStr = marshalToJSONString(*vc.IacInputData.Data)
+			dataStr = flatteners.JSONInterfaceToString(*vc.IacInputData.Data)
 		}
 		idM := IacInputDataModel{
 			SchemaId:   flatteners.StringPtr(vc.IacInputData.SchemaId),
@@ -1924,20 +1833,6 @@ func workflowsConfigFromAPI(wc *stacktemplaterevisions.StackTemplateRevisionWork
 		if diags.HasError() {
 			return nullObj, diags
 		}
-		// IacInputData (TemplatesIacInputData)
-		iacInputDataObj := types.ObjectNull(WfStepInputDataModel{}.AttributeTypes())
-		if wf.IacInputData != nil {
-			// wf.IacInputData is TemplatesIacInputData (Data is a plain map, not the
-			// pointer-typed sgsdkgo.IacInputData) — no deref needed.
-			idm := WfStepInputDataModel{
-				SchemaType: flatteners.String(string(*wf.IacInputData.SchemaType)),
-				Data:       marshalToJSONString(wf.IacInputData.Data),
-			}
-			iacInputDataObj, diags = types.ObjectValueFrom(context.Background(), WfStepInputDataModel{}.AttributeTypes(), idm)
-			if diags.HasError() {
-				return nullObj, diags
-			}
-		}
 		us, diags := userSchedulesFromAPI(wf.UserSchedules)
 		if diags.HasError() {
 			return nullObj, diags
@@ -1965,13 +1860,10 @@ func workflowsConfigFromAPI(wc *stacktemplaterevisions.StackTemplateRevisionWork
 					continue
 				}
 				ism := StackInputSchemaModel{
-					Id:           flatteners.StringPtr(is.Id),
 					Name:         flatteners.StringPtr(is.Name),
-					Description:  flatteners.StringPtr(is.Description),
 					Type:         flatteners.String(string(is.Type)),
 					EncodedData:  flatteners.StringPtr(is.EncodedData),
 					UiSchemaData: flatteners.StringPtr(is.UiSchemaData),
-					IsCommitted:  flatteners.BoolPtr(is.IsCommitted),
 				}
 				isObj, diags2 := types.ObjectValueFrom(context.Background(), StackInputSchemaModel{}.AttributeTypes(), ism)
 				if diags2.HasError() {
@@ -1985,24 +1877,14 @@ func workflowsConfigFromAPI(wc *stacktemplaterevisions.StackTemplateRevisionWork
 			}
 		}
 
-		// Strip /<ownerOrg>/ prefix from template_id returned by the API
-		var strippedTemplateId *string
-		if wf.TemplateId != nil {
-			parts := strings.Split(*wf.TemplateId, "/")
-			base := parts[len(parts)-1]
-			strippedTemplateId = &base
-		}
-
 		wm := WorkflowInStackModel{
 			Id:                        flatteners.StringPtr(wf.Id),
-			TemplateId:                flatteners.StringPtr(strippedTemplateId),
 			ResourceName:              flatteners.StringPtr(wf.ResourceName),
 			WfStepsConfig:             wfSteps,
 			TerraformConfig:           tcObj,
 			EnvironmentVariables:      envVars,
 			DeploymentPlatformConfig:  dpcs,
 			VcsConfig:                 vcs,
-			IacInputData:              iacInputDataObj,
 			UserSchedules:             us,
 			Approvers:                 approvers,
 			NumberOfApprovalsRequired: flatteners.Int64Ptr(wf.NumberOfApprovalsRequired),
@@ -2147,7 +2029,7 @@ func actionsFromAPI(actions map[string]*sgsdkgo.Actions) (types.Map, diag.Diagno
 // ToAPIModel / ToUpdateAPIModel
 // ---------------------------------------------------------------------------
 
-func (m *StackTemplateRevisionResourceModel) ToAPIModel(ctx context.Context, orgName string) (*stacktemplaterevisions.CreateStackTemplateRevisionRequest, diag.Diagnostics) {
+func (m *StackTemplateRevisionResourceModel) ToAPIModel(ctx context.Context) (*stacktemplaterevisions.CreateStackTemplateRevisionRequest, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
 	apiModel := &stacktemplaterevisions.CreateStackTemplateRevisionRequest{}
 
@@ -2193,7 +2075,7 @@ func (m *StackTemplateRevisionResourceModel) ToAPIModel(ctx context.Context, org
 	}
 
 	if !m.WorkflowsConfig.IsNull() && !m.WorkflowsConfig.IsUnknown() {
-		wc, diagsWC := convertWorkflowsConfigToAPI(ctx, m.WorkflowsConfig, orgName)
+		wc, diagsWC := convertWorkflowsConfigToAPI(ctx, m.WorkflowsConfig)
 		diags.Append(diagsWC...)
 		if !diags.HasError() {
 			apiModel.WorkflowsConfig = wc
@@ -2211,7 +2093,7 @@ func (m *StackTemplateRevisionResourceModel) ToAPIModel(ctx context.Context, org
 	return apiModel, diags
 }
 
-func (m *StackTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Context, orgName string) (*stacktemplaterevisions.UpdateStackTemplateRevisionRequest, diag.Diagnostics) {
+func (m *StackTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Context) (*stacktemplaterevisions.UpdateStackTemplateRevisionRequest, diag.Diagnostics) {
 	diags := diag.Diagnostics{}
 	apiModel := &stacktemplaterevisions.UpdateStackTemplateRevisionRequest{}
 
@@ -2269,7 +2151,7 @@ func (m *StackTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Contex
 	}
 
 	if !m.WorkflowsConfig.IsNull() && !m.WorkflowsConfig.IsUnknown() {
-		wc, diagsWC := convertWorkflowsConfigToAPI(ctx, m.WorkflowsConfig, orgName)
+		wc, diagsWC := convertWorkflowsConfigToAPI(ctx, m.WorkflowsConfig)
 		diags.Append(diagsWC...)
 		if !diags.HasError() && wc != nil {
 			apiModel.WorkflowsConfig = sgsdkgo.Optional(*wc)

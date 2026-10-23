@@ -70,7 +70,7 @@ func (r *stackTemplateRevisionResource) Create(ctx context.Context, req resource
 
 	ownerOrg := fmt.Sprintf("/orgs/%s", r.org_name)
 
-	payload, diags := plan.ToAPIModel(ctx, r.org_name)
+	payload, diags := plan.ToAPIModel(ctx)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -165,7 +165,7 @@ func (r *stackTemplateRevisionResource) Update(ctx context.Context, req resource
 	revisionID := state.Id.ValueString()
 	ownerOrg := fmt.Sprintf("/orgs/%s", r.org_name)
 
-	payload, diags := plan.ToUpdateAPIModel(ctx, r.org_name)
+	payload, diags := plan.ToUpdateAPIModel(ctx)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return

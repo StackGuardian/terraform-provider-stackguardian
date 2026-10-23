@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/validators"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -283,7 +284,10 @@ func (r *workflowGitResource) Schema(_ context.Context, _ resource.SchemaRequest
 							"data": schema.StringAttribute{
 								MarkdownDescription: constants.WorkflowIacInputDataData,
 								Required:            true,
-								Validators:          nonEmptyString,
+								Validators: []validator.String{
+									stringvalidator.LengthAtLeast(1),
+									validators.JSONObject(),
+								},
 							},
 						},
 					},
@@ -496,7 +500,10 @@ func wfStepsConfig() schema.NestedAttributeObject {
 					"data": schema.StringAttribute{
 						MarkdownDescription: constants.WfStepInputDataData,
 						Optional:            true,
-						Validators:          nonEmptyString,
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+							validators.JSONObject(),
+						},
 					},
 				},
 			},
@@ -610,7 +617,10 @@ func miniStepsWfChaining() schema.NestedAttributeObject {
 			"stack_run_payload": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingStackPayload,
 				Optional:            true,
-				Validators:          nonEmptyString,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+					validators.JSONObject(),
+				},
 			},
 			"workflow_id": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingWorkflowId,
@@ -620,7 +630,10 @@ func miniStepsWfChaining() schema.NestedAttributeObject {
 			"workflow_run_payload": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingWorkflowPayload,
 				Optional:            true,
-				Validators:          nonEmptyString,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+					validators.JSONObject(),
+				},
 			},
 		},
 	}

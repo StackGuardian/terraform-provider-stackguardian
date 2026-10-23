@@ -23,7 +23,7 @@ resource "stackguardian_workflow_from_template" "example" {
 
   vcs_config = {
     iac_vcs_config = {
-      # `<template-name>:<revision>`. Anything this workflow does not declare below is
+      # `<template-id>:<revision>`. Anything this workflow does not declare below is
       # inherited from this revision.
       iac_template_id = "${stackguardian_workflow_template.example.template_name}:1"
     }

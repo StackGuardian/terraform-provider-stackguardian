@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -35,7 +37,9 @@ func getClient() *sgclient.Client {
 func createWorkflowTemplateFixture(templateName, sourceConfigKind string) error {
 	client := getClient()
 	kind := workflowtemplates.WorkflowTemplateSourceConfigKindEnum(sourceConfigKind)
-	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(context.TODO(), config.Get().OrgName, false, &workflowtemplates.CreateWorkflowTemplateRequest{
+	// createFirstRevision=true: iac_template_id must name an existing revision
+	// (see qualifiedWorkflowTemplateRevisionId), so the template needs ":1".
+	_, err := client.WorkflowTemplates.CreateWorkflowTemplate(context.TODO(), config.Get().OrgName, true, &workflowtemplates.CreateWorkflowTemplateRequest{
 		Id:               &templateName,
 		TemplateName:     templateName,
 		SourceConfigKind: &kind,
@@ -64,7 +68,17 @@ func createStackTemplateFixture(templateName, sourceConfigKind string) error {
 
 func deleteWorkflowTemplateFixture(templateId string) {
 	client := getClient()
+	// The template can't be deleted while its revision :1 (created by
+	// createWorkflowTemplateFixture) still exists, so that goes first.
+	_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(context.TODO(), config.Get().OrgName, templateId+":1", true)
 	_ = client.WorkflowTemplates.DeleteWorkflowTemplate(context.TODO(), config.Get().OrgName, templateId)
+}
+
+// qualifiedWorkflowTemplateRevisionId returns the full "/<org>/<template-id>:1" id of
+// the revision createWorkflowTemplateFixture creates — the form iac_template_id
+// requires (the org even for your own organization, and an existing revision).
+func qualifiedWorkflowTemplateRevisionId(templateName string) string {
+	return fmt.Sprintf("/%s/%s:1", config.Get().OrgName, templateName)
 }
 
 func deleteStackTemplateFixture(templateId string) {
@@ -83,7 +97,12 @@ func deleteStackTemplateRevisionFixture(revisionId string) {
 // that's fine, since deletion doesn't need it in that case either.
 func deprecateStackTemplateRevisionFixture(revisionId string) {
 	client := getClient()
-	effectiveDate := fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
+	// effectiveDate must already be in the past for the deprecation to take
+	// effect immediately — a future date only schedules it, and the revision
+	// still counts as actively published (blocking delete) until then. This
+	// fixture always runs well after the revision was created, so a second
+	// back is enough margin without risking landing before creation.
+	effectiveDate := fmt.Sprintf("%d", time.Now().Add(-1*time.Second).Unix())
 	message := "This revision is deprecated"
 	_, _ = client.StackTemplateRevisions.UpdateStackTemplateRevision(context.TODO(), config.Get().OrgName, revisionId, &stacktemplaterevisions.UpdateStackTemplateRevisionRequest{
 		Deprecation: sgsdkgo.Optional(stacktemplaterevisions.Deprecation{
@@ -110,8 +129,13 @@ resource "stackguardian_stack_template_revision" "test" {
     workflows = [
       {
         id            = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
-        template_id   = "%s"
         resource_name = "wf-1"
+
+        vcs_config = {
+          iac_vcs_config = {
+            iac_template_id = "%s"
+          }
+        }
 
         terraform_config = {
           managed_terraform_state = true
@@ -121,7 +145,7 @@ resource "stackguardian_stack_template_revision" "test" {
     ]
   }
 }
-`, stackTemplateID, alias, notes, description, wfTemplateID)
+`, stackTemplateID, alias, notes, description, qualifiedWorkflowTemplateRevisionId(wfTemplateID))
 }
 
 func testAccStackTemplateRevisionWithWorkflowsConfig(stackTemplateID, wfTemplateID, alias string) string {
@@ -137,13 +161,11 @@ resource "stackguardian_stack_template_revision" "test" {
     workflows = [
       {
         id            = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
-        template_id   = "%s"
         resource_name = "wf-1"
 
         vcs_config = {
           iac_vcs_config = {
-            use_marketplace_template = true
-            iac_template_id          = "%s"
+            iac_template_id = "%s"
           }
           iac_input_data = {
             schema_type = "RAW_JSON"
@@ -161,7 +183,7 @@ resource "stackguardian_stack_template_revision" "test" {
     ]
   }
 }
-`, stackTemplateID, alias, wfTemplateID, wfTemplateID)
+`, stackTemplateID, alias, qualifiedWorkflowTemplateRevisionId(wfTemplateID))
 }
 
 // --- Tests ---
@@ -276,11 +298,89 @@ func TestAccStackTemplateRevision_WithWorkflowsConfig(t *testing.T) {
 	})
 }
 
+// TestAccStackTemplateRevision_ActionsRejectsEmpty verifies actions = {} (a known,
+// explicitly empty map — not the same as leaving the attribute unset) is rejected at
+// plan time by mapvalidator.SizeAtLeast(1) on "actions" (schema.go). The API generates
+// default actions on create when given none, and rejects an empty map on update, so {}
+// could never round-trip. The validator fails before any API call, so no fixtures are
+// needed.
+func TestAccStackTemplateRevision_ActionsRejectsEmpty(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+	stackTemplateID := acctest.ResourceName("provider-test-stack-template-actempty")
+	wfTemplateID := acctest.ResourceName("provider-test-wft-for-stack-actempty")
+
+	config := strings.TrimSuffix(strings.TrimSpace(testAccStackTemplateRevisionConfig(stackTemplateID, wfTemplateID, "v1", "notes", "description")), "}") + `
+  actions = {}
+}
+`
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config:      config,
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`(?s)actions.*at least 1`),
+			},
+		},
+	})
+}
+
+// TestAccStackTemplateRevision_IacTemplateIdRequiresOrg verifies iac_template_id is
+// rejected at plan time unless it is the full "/<org>/<template-id>:<revision>" id of a
+// revision, the org given even for your own organization
+// (validators.QualifiedTemplateRevisionId). The validator fails before any API call,
+// so no fixtures are needed.
+func TestAccStackTemplateRevision_IacTemplateIdRequiresOrg(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
+	bare := testAccStackTemplateRevisionConfig("my-stack-template", "unused", "v1", "notes", "description")
+	bare = strings.Replace(bare, qualifiedWorkflowTemplateRevisionId("unused"), "my-workflow-template:1", 1)
+	noRevision := strings.Replace(bare, "my-workflow-template:1", "/"+config.Get().OrgName+"/my-workflow-template", 1)
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config:      bare,
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`(?s)iac_template_id.*full id`),
+			},
+			{
+				Config:      noRevision,
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`(?s)iac_template_id.*full id`),
+			},
+		},
+	})
+}
+
 func TestAccStackTemplateRevision_Lifecycle(t *testing.T) {
 	acctest.SkipUnlessAcceptance(t)
 	stackTemplateName := acctest.ResourceName("tf-provider-stack-template-lifecycle")
 	wfTemplateName := acctest.ResourceName("tf-provider-wft-lifecycle-for-stack")
 	alias := "v1"
+	// Must land after the revision is created (Step 1) but before Step 3
+	// actually applies the deprecation — see Step 3 below. This is computed
+	// now, before Step 1 has even run, so a negative offset would put it
+	// before creation; a few seconds into the future instead reliably lands
+	// after creation and has already elapsed into the past by the time Step 3
+	// runs, since Steps 1 and 2 each involve a real API round trip.
+	deprecationEffectiveDate := fmt.Sprintf("%d", time.Now().Add(3*time.Second).Unix())
 
 	// Safety-net cleanup. Defers run LIFO, so registration order here is the
 	// reverse of execution order:
@@ -302,7 +402,7 @@ func TestAccStackTemplateRevision_Lifecycle(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Step 1: Create parent stack template, parent workflow template, and revision
 			{
-				Config: testAccStackTemplateRevisionLifecycleConfig(stackTemplateName, wfTemplateName, alias, "", false),
+				Config: testAccStackTemplateRevisionLifecycleConfig(stackTemplateName, wfTemplateName, alias, "", false, ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_stack_template.parent", "template_name", stackTemplateName),
 					resource.TestCheckResourceAttrSet("stackguardian_stack_template.parent", "id"),
@@ -316,17 +416,20 @@ func TestAccStackTemplateRevision_Lifecycle(t *testing.T) {
 			},
 			// Step 2: Publish the revision
 			{
-				Config: testAccStackTemplateRevisionLifecycleConfig(stackTemplateName, wfTemplateName, alias, "1", false),
+				Config: testAccStackTemplateRevisionLifecycleConfig(stackTemplateName, wfTemplateName, alias, "1", false, ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "is_public", "1"),
 				),
 			},
-			// Step 3: Deprecate the revision
+			// Step 3: Deprecate the revision. effectiveDate must already be in
+			// the past, or the revision still counts as actively published
+			// and the implicit destroy below 400s with "Published template
+			// cannot be deleted. Please deprecate the template first."
 			{
-				Config: testAccStackTemplateRevisionLifecycleConfig(stackTemplateName, wfTemplateName, alias, "1", true),
+				Config: testAccStackTemplateRevisionLifecycleConfig(stackTemplateName, wfTemplateName, alias, "1", true, deprecationEffectiveDate),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "deprecation.message", "This revision is deprecated"),
-					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "deprecation.effective_date", fmt.Sprintf("%d", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())),
+					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "deprecation.effective_date", deprecationEffectiveDate),
 				),
 			},
 			// Terraform destroy automatically deletes the revision, stack template, and workflow template
@@ -336,8 +439,8 @@ func TestAccStackTemplateRevision_Lifecycle(t *testing.T) {
 
 // testAccStackTemplateRevisionLifecycleConfig generates the lifecycle Terraform config.
 // isPublic controls the revision's is_public value (pass "" to omit).
-// deprecated=true adds a deprecation block to the revision.
-func testAccStackTemplateRevisionLifecycleConfig(stackTemplateName, wfTemplateName, alias, isPublic string, deprecated bool) string {
+// deprecated=true adds a deprecation block to the revision using effectiveDate.
+func testAccStackTemplateRevisionLifecycleConfig(stackTemplateName, wfTemplateName, alias, isPublic string, deprecated bool, effectiveDate string) string {
 	isPublicLine := ""
 	if isPublic != "" {
 		isPublicLine = fmt.Sprintf("  is_public          = %q\n", isPublic)
@@ -346,9 +449,9 @@ func testAccStackTemplateRevisionLifecycleConfig(stackTemplateName, wfTemplateNa
 	if deprecated {
 		deprecationBlock = fmt.Sprintf(`
   deprecation = {
-    effective_date = "%d"
+    effective_date = %q
     message        = "This revision is deprecated"
-  }`, time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC).Unix())
+  }`, effectiveDate)
 	}
 	return fmt.Sprintf(`
 resource "stackguardian_workflow_template" "wf_parent" {
@@ -356,6 +459,16 @@ resource "stackguardian_workflow_template" "wf_parent" {
   source_config_kind = "TERRAFORM"
   is_public          = "0"
   tags               = ["test", "lifecycle"]
+}
+
+# iac_template_id must name an existing revision, so the workflow template
+# needs one of its own.
+resource "stackguardian_workflow_template_revision" "wf_rev" {
+  template_id        = stackguardian_workflow_template.wf_parent.id
+  alias              = "v1"
+  source_config_kind = "TERRAFORM"
+  user_job_cpu       = 500
+  user_job_memory    = 1024
 }
 
 resource "stackguardian_stack_template" "parent" {
@@ -376,8 +489,13 @@ resource "stackguardian_stack_template_revision" "test" {
     workflows = [
       {
         id            = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
-        template_id   = stackguardian_workflow_template.wf_parent.id
         resource_name = "wf-1"
+
+        vcs_config = {
+          iac_vcs_config = {
+            iac_template_id = "/%s/${stackguardian_workflow_template_revision.wf_rev.id}"
+          }
+        }
 
         terraform_config = {
           managed_terraform_state = true
@@ -388,5 +506,5 @@ resource "stackguardian_stack_template_revision" "test" {
   }
 %s
 }
-`, wfTemplateName, stackTemplateName, alias, isPublicLine, deprecationBlock)
+`, wfTemplateName, stackTemplateName, alias, isPublicLine, config.Get().OrgName, deprecationBlock)
 }
