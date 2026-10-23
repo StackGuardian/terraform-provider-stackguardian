@@ -500,7 +500,10 @@ func wfStepsConfig() schema.NestedAttributeObject {
 					"data": schema.StringAttribute{
 						MarkdownDescription: constants.WfStepInputDataData,
 						Optional:            true,
-						Validators:          nonEmptyString,
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+							validators.JSONObject(),
+						},
 					},
 				},
 			},
@@ -614,7 +617,10 @@ func miniStepsWfChaining() schema.NestedAttributeObject {
 			"stack_run_payload": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingStackPayload,
 				Optional:            true,
-				Validators:          nonEmptyString,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+					validators.JSONObject(),
+				},
 			},
 			"workflow_id": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingWorkflowId,
@@ -624,7 +630,10 @@ func miniStepsWfChaining() schema.NestedAttributeObject {
 			"workflow_run_payload": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingWorkflowPayload,
 				Optional:            true,
-				Validators:          nonEmptyString,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+					validators.JSONObject(),
+				},
 			},
 		},
 	}

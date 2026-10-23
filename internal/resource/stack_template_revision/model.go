@@ -673,9 +673,13 @@ func convertWfStepsConfigToAPI(ctx context.Context, list types.List) ([]sgsdkgo.
 			if err != nil {
 				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid schema type", fmt.Sprintf("Value '%s' is not a valid schema type", idm.SchemaType.ValueString()))}
 			}
+			data, err := expanders.JSONStringToObject(idm.Data.ValueString())
+			if err != nil {
+				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid wf_step_input_data.data", "The value "+err.Error()+".")}
+			}
 			step.WfStepInputData = &sgsdkgo.WfStepInputData{
 				SchemaType: &schemaType,
-				Data:       expanders.JSONStringToMap(idm.Data.ValueString()),
+				Data:       data,
 			}
 		}
 		result[i] = step
@@ -955,10 +959,18 @@ func convertWfChainingToAPI(ctx context.Context, list types.List) ([]*sgsdkgo.Mi
 			StackId:         m.StackId.ValueStringPointer(),
 		}
 		if !m.WorkflowRunPayload.IsNull() && !m.WorkflowRunPayload.IsUnknown() {
-			ms.WorkflowRunPayload = expanders.JSONStringToMap(m.WorkflowRunPayload.ValueString())
+			payload, err := expanders.JSONStringToObject(m.WorkflowRunPayload.ValueString())
+			if err != nil {
+				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid workflow_run_payload", "The value "+err.Error()+".")}
+			}
+			ms.WorkflowRunPayload = payload
 		}
 		if !m.StackRunPayload.IsNull() && !m.StackRunPayload.IsUnknown() {
-			ms.StackRunPayload = expanders.JSONStringToMap(m.StackRunPayload.ValueString())
+			payload, err := expanders.JSONStringToObject(m.StackRunPayload.ValueString())
+			if err != nil {
+				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid stack_run_payload", "The value "+err.Error()+".")}
+			}
+			ms.StackRunPayload = payload
 		}
 		result[i] = ms
 	}

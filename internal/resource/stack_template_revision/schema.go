@@ -70,6 +70,9 @@ var ministepsWorkflowChaining = schema.ListNestedAttribute{
 			"stack_run_payload": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingStackPayload,
 				Optional:            true,
+				Validators: []validator.String{
+					validators.JSONObject(),
+				},
 			},
 			"workflow_id": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingWorkflowId,
@@ -78,6 +81,9 @@ var ministepsWorkflowChaining = schema.ListNestedAttribute{
 			"workflow_run_payload": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingWorkflowPayload,
 				Optional:            true,
+				Validators: []validator.String{
+					validators.JSONObject(),
+				},
 			},
 		},
 	},
@@ -167,6 +173,9 @@ var wfStepsConfigNestedObj = schema.NestedAttributeObject{
 				"data": schema.StringAttribute{
 					MarkdownDescription: constants.WfStepInputDataData,
 					Optional:            true,
+					Validators: []validator.String{
+						validators.JSONObject(),
+					},
 				},
 			},
 		},

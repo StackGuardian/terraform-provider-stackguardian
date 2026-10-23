@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -1906,6 +1907,67 @@ func TestAccWorkflowUsingTemplate_RevisionUpgrade(t *testing.T) {
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.drift_cron", "0 */6 * * ? *"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_version", "1.5.0"),
 				),
+			},
+		},
+	})
+}
+
+// TestAccWorkflowUsingTemplate_InvalidJSONRejected verifies vcs_config.iac_input_data.data
+// and mini_steps.wf_chaining.*[*].workflow_run_payload must be JSON objects, checked at
+// plan time (validators.JSONObject). Invalid JSON used to be sent as {} (data) or nil
+// (payload), so the inputs were silently dropped. The validator fails before any API
+// call, so no fixtures are needed.
+func TestAccWorkflowUsingTemplate_InvalidJSONRejected(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
+	config := func(iacInputData, payload string) string {
+		return fmt.Sprintf(`
+resource "stackguardian_workflow_from_template" "test" {
+  workflow_group_id = "my-workflow-group"
+  id                = "my-workflow"
+  wf_type           = "TERRAFORM"
+
+  vcs_config = {
+    iac_vcs_config = {
+      iac_template_id = "my-template:1"
+    }
+    iac_input_data = {
+      schema_type = "RAW_JSON"
+      data        = %q
+    }
+  }
+
+  mini_steps = {
+    wf_chaining = {
+      completed = [
+        {
+          workflow_group_id    = "my-workflow-group"
+          workflow_id          = "my-other-workflow"
+          workflow_run_payload = %q
+        }
+      ]
+    }
+  }
+}
+`, iacInputData, payload)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config:      config(`{"bucket_region":`, `{"key":"value"}`),
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`(?s)Invalid JSON object.*not valid JSON`),
+			},
+			{
+				Config:      config(`{"bucket_region":"eu-central-1"}`, `["apply"]`),
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`(?s)Invalid JSON object.*must be a JSON object`),
 			},
 		},
 	})

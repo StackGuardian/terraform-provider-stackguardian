@@ -1341,9 +1341,13 @@ func ConvertWfStepsConfigListToAPI(ctx context.Context, wfStepsConfigList types.
 			if err != nil {
 				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid workflow step input data", "The provided workflow step input data is invalid: "+err.Error())}
 			}
+			data, err := expanders.JSONStringToObject(inputDataModel.Data.ValueString())
+			if err != nil {
+				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid wf_step_input_data.data", "The value "+err.Error()+".")}
+			}
 			wfStepsConfigs[i].WfStepInputData = &sgsdkgo.WfStepInputData{
 				SchemaType: schemaType.Ptr(),
-				Data:       expanders.JSONStringToMap(inputDataModel.Data.ValueString()),
+				Data:       data,
 			}
 		}
 	}
@@ -1406,9 +1410,13 @@ func ConvertWfStepInputDataToAPI(ctx context.Context, inputDataObj types.Object)
 	if err != nil {
 		return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid workflow step input data", "The provided workflow step input data is invalid: "+err.Error())}
 	}
+	data, err := expanders.JSONStringToObject(inputDataModel.Data.ValueString())
+	if err != nil {
+		return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid wf_step_input_data.data", "The value "+err.Error()+".")}
+	}
 	return &sgsdkgo.WfStepInputData{
 		SchemaType: schemaType.Ptr(),
-		Data:       expanders.JSONStringToMap(inputDataModel.Data.ValueString()),
+		Data:       data,
 	}, nil
 }
 
@@ -2429,11 +2437,21 @@ func ConvertWorkflowChainingToAPI(ctx context.Context, chainingObj types.List) (
 			StackId:         chainingModel.StackId.ValueStringPointer(),
 			WorkflowId:      chainingModel.WorkflowId.ValueStringPointer(),
 		}
+		// Run payloads must be JSON objects (validators.JSONObject checks this at
+		// plan time); an invalid value only known at apply is an error, not nil.
 		if s := chainingModel.WorkflowRunPayload.ValueString(); s != "" {
-			entry.WorkflowRunPayload = expanders.JSONStringToInterface(s)
+			payload, err := expanders.JSONStringToObject(s)
+			if err != nil {
+				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid workflow_run_payload", "The value "+err.Error()+".")}
+			}
+			entry.WorkflowRunPayload = payload
 		}
 		if s := chainingModel.StackRunPayload.ValueString(); s != "" {
-			entry.StackRunPayload = expanders.JSONStringToInterface(s)
+			payload, err := expanders.JSONStringToObject(s)
+			if err != nil {
+				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid stack_run_payload", "The value "+err.Error()+".")}
+			}
+			entry.StackRunPayload = payload
 		}
 		wfChainingAPIModel = append(wfChainingAPIModel, entry)
 	}
