@@ -8,3 +8,7 @@ var ComputeWorkflowId = computeWorkflowId
 // shapes (nested objects, lists, maps, length mismatch) can be unit tested
 // directly; the acceptance test needs a live API and only covers one path.
 var OverlayConfigUnknowns = overlayConfigUnknowns
+
+// WorkflowsMismatchDetail exposes workflowsMismatchDetail to stack_test so each
+// wording of the workflows_config mismatch error can be unit tested.
+var WorkflowsMismatchDetail = workflowsMismatchDetail

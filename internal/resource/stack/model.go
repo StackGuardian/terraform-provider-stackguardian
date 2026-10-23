@@ -13,6 +13,7 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/flatteners"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
@@ -3074,13 +3075,25 @@ func validateWorkflowsConfigMatchesRevision(ctx context.Context, workflowsConfig
 	}
 
 	var required []string
+	// Resource names make the UUIDs in the error readable (e.g. "(wf-1)").
+	resourceNames := make(map[string]string)
 	for _, w := range tpl.WorkflowsConfig.Workflows {
 		if w != nil && w.Id != nil {
 			required = append(required, *w.Id)
+			if w.ResourceName != nil {
+				resourceNames[*w.Id] = *w.ResourceName
+			}
 		}
 	}
 	if len(required) == 0 {
 		return diags
+	}
+
+	// Name the revision in the error: on an upgrade the mismatch is against the
+	// NEW revision, which isn't obvious from the config alone.
+	revisionId := tpl.TemplateId
+	if revisionId == "" && tpl.Id != nil {
+		revisionId = *tpl.Id
 	}
 
 	if workflowsConfig.IsNull() || workflowsConfig.IsUnknown() {
@@ -3091,42 +3104,121 @@ func validateWorkflowsConfigMatchesRevision(ctx context.Context, workflowsConfig
 		diags.Append(d...)
 		return diags
 	}
-	if wfc.Workflows.IsNull() || wfc.Workflows.IsUnknown() {
-		diags.AddError(
-			"workflows_config.workflows does not match the stack template revision",
-			fmt.Sprintf("The stack template revision defines %d workflow(s) in workflows_config.workflows (%s), but this stack's workflows_config.workflows is empty.",
-				len(required), strings.Join(required, ", ")),
-		)
-		return diags
-	}
-	var wfModels []WorkflowInStackModel
-	if d := wfc.Workflows.ElementsAs(ctx, &wfModels, false); d.HasError() {
-		diags.Append(d...)
-		return diags
-	}
 
-	declared := make([]string, 0, len(wfModels))
-	for _, wm := range wfModels {
-		if wm.Id.IsNull() || wm.Id.IsUnknown() {
-			// id is Required on each entry; an unresolved value means the plan
-			// isn't final yet — nothing to compare against until it is.
+	var declared []string
+	if !wfc.Workflows.IsNull() && !wfc.Workflows.IsUnknown() {
+		var wfModels []WorkflowInStackModel
+		if d := wfc.Workflows.ElementsAs(ctx, &wfModels, false); d.HasError() {
+			diags.Append(d...)
 			return diags
 		}
-		declared = append(declared, wm.Id.ValueString())
+		for _, wm := range wfModels {
+			if wm.Id.IsNull() || wm.Id.IsUnknown() {
+				// id is Required on each entry; an unresolved value means the plan
+				// isn't final yet — nothing to compare against until it is.
+				return diags
+			}
+			declared = append(declared, wm.Id.ValueString())
+		}
 	}
 
-	if slices.Equal(declared, required) {
-		return diags
+	if detail, mismatch := workflowsMismatchDetail(required, declared, resourceNames, revisionId); mismatch {
+		// An attribute error, so Terraform points at workflows_config.workflows
+		// in the user's configuration.
+		diags.AddAttributeError(
+			path.Root("workflows_config").AtName("workflows"),
+			"workflows_config.workflows does not match the stack template revision",
+			detail,
+		)
 	}
-
-	diags.AddError(
-		"workflows_config.workflows does not match the stack template revision",
-		fmt.Sprintf(
-			"workflows_config.workflows must declare exactly the workflows defined in the stack template revision's workflows_config.workflows, by id and in the same order.\n\nExpected: %s\nGot:      %s",
-			strings.Join(required, ", "), strings.Join(declared, ", "),
-		),
-	)
 	return diags
+}
+
+// workflowsMismatchDetail compares the workflow ids a stack declares with the
+// ones its stack template revision defines (both in order) and, when they
+// differ, returns an error detail that says what is wrong rather than only
+// listing both sides: which workflows are missing, which aren't in the
+// revision, which are declared more than once, or that only the order is off.
+// A bare UUID is hard to recognise, so each id is shown with the workflow's
+// resource_name from the revision when it has one. Kept separate from
+// validateWorkflowsConfigMatchesRevision so the wording can be unit tested
+// without building Terraform objects.
+func workflowsMismatchDetail(required, declared []string, resourceNames map[string]string, revisionId string) (string, bool) {
+	if slices.Equal(declared, required) {
+		return "", false
+	}
+
+	label := func(id string) string {
+		if name := resourceNames[id]; name != "" {
+			return fmt.Sprintf("%s (%s)", id, name)
+		}
+		return id
+	}
+	labels := func(ids []string) string {
+		out := make([]string, len(ids))
+		for i, id := range ids {
+			out[i] = label(id)
+		}
+		return strings.Join(out, ", ")
+	}
+
+	inRevision := make(map[string]bool, len(required))
+	for _, id := range required {
+		inRevision[id] = true
+	}
+	declaredCount := make(map[string]int, len(declared))
+	for _, id := range declared {
+		declaredCount[id]++
+	}
+
+	var missing, unknown, duplicated []string
+	for _, id := range required {
+		if declaredCount[id] == 0 {
+			missing = append(missing, id)
+		}
+	}
+	seen := make(map[string]bool, len(declared))
+	for _, id := range declared {
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		if !inRevision[id] {
+			unknown = append(unknown, id)
+		} else if declaredCount[id] > 1 {
+			duplicated = append(duplicated, id)
+		}
+	}
+
+	revision := "the stack template revision"
+	if revisionId != "" {
+		revision += " " + revisionId
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "workflows_config.workflows must list exactly the workflows %s defines, by id and in the same order.\n", revision)
+	switch {
+	case len(declared) == 0:
+		b.WriteString("\nNo workflows are declared.\n")
+	case len(missing) == 0 && len(unknown) == 0 && len(duplicated) == 0:
+		b.WriteString("\nThe workflows are all declared, but not in the revision's order.\n")
+	default:
+		b.WriteString("\n")
+		if len(missing) > 0 {
+			fmt.Fprintf(&b, "%-25s%s\n", "Missing:", labels(missing))
+		}
+		if len(unknown) > 0 {
+			fmt.Fprintf(&b, "%-25s%s\n", "Not in the revision:", labels(unknown))
+		}
+		if len(duplicated) > 0 {
+			fmt.Fprintf(&b, "%-25s%s\n", "Declared more than once:", labels(duplicated))
+		}
+	}
+	b.WriteString("\nExpected order:\n")
+	for i, id := range required {
+		fmt.Fprintf(&b, "  %d. %s\n", i+1, label(id))
+	}
+	return strings.TrimRight(b.String(), "\n"), true
 }
 
 // reResolveOnRevisionChange re-resolves the template-derived fields the user

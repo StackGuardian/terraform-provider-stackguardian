@@ -2,6 +2,7 @@ package stack_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/resource/stack"
@@ -100,6 +101,60 @@ func TestOverlayConfigUnknowns(t *testing.T) {
 		}
 		if got.IsNull() {
 			t.Errorf("got null, want planned value")
+		}
+	})
+}
+
+// TestWorkflowsMismatchDetail checks the workflows_config mismatch error says
+// what is wrong (missing, not in the revision, duplicated, or only the order),
+// names the revision, and labels ids with their resource_name.
+func TestWorkflowsMismatchDetail(t *testing.T) {
+	const (
+		a = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
+		b = "3f7c9e2a-5b1d-4e6f-8a2c-9d4b6e1f0a3c"
+		x = "11111111-2222-3333-4444-555555555555"
+	)
+	required := []string{a, b}
+	names := map[string]string{a: "wf-1", b: "wf-2"}
+	revision := "/my-org/my-stack-template:2"
+	expectedOrder := "Expected order:\n  1. " + a + " (wf-1)\n  2. " + b + " (wf-2)"
+
+	cases := []struct {
+		name     string
+		declared []string
+		want     []string // substrings the detail must contain
+	}{
+		{"missing", []string{a}, []string{"Missing:", b + " (wf-2)"}},
+		{"wrong order", []string{b, a}, []string{"The workflows are all declared, but not in the revision's order."}},
+		{"not in revision", []string{a, b, x}, []string{"Not in the revision:", x}},
+		{"duplicated", []string{a, a, b}, []string{"Declared more than once:", a + " (wf-1)"}},
+		{"none declared", nil, []string{"No workflows are declared."}},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			detail, mismatch := stack.WorkflowsMismatchDetail(required, c.declared, names, revision)
+			if !mismatch {
+				t.Fatalf("mismatch = false, want true")
+			}
+			for _, want := range append(c.want, revision, expectedOrder) {
+				if !strings.Contains(detail, want) {
+					t.Errorf("detail missing %q:\n%s", want, detail)
+				}
+			}
+		})
+	}
+
+	t.Run("match", func(t *testing.T) {
+		if detail, mismatch := stack.WorkflowsMismatchDetail(required, []string{a, b}, names, revision); mismatch {
+			t.Errorf("mismatch = true for an exact match, detail:\n%s", detail)
+		}
+	})
+
+	t.Run("no resource name", func(t *testing.T) {
+		detail, _ := stack.WorkflowsMismatchDetail(required, []string{a}, map[string]string{}, "")
+		if strings.Contains(detail, "()") || !strings.Contains(detail, "the stack template revision defines") {
+			t.Errorf("unexpected detail without names or revision id:\n%s", detail)
 		}
 	})
 }
