@@ -374,6 +374,13 @@ func (r *stackResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
+	// Creating the workflows rewrites ${reference::} values to ${workflow::}; keep
+	// the planned form where that is the only difference (see references.go).
+	resp.Diagnostics.Append(preserveReferenceForms(ctx, stackModel, plan.WorkflowsConfig)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Set state to fully populated data
 	resp.Diagnostics.Append(resp.State.Set(ctx, &stackModel)...)
 }
@@ -406,6 +413,14 @@ func (r *stackResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	stackModel, diags := BuildAPIModelToStackModel(ctx, readResp.Msg, state.WorkflowGroupId)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Keep the stored ${reference::} form where the platform holds core's
+	// ${workflow::} rewrite of it, so a refresh doesn't report it as drift (see
+	// references.go).
+	resp.Diagnostics.Append(preserveReferenceForms(ctx, stackModel, state.WorkflowsConfig)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -471,6 +486,14 @@ func (r *stackResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	stackModel, diags := BuildAPIModelToStackModel(ctx, updatedStack.Msg, plan.WorkflowGroupId)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Updates store ${reference::} values as sent, so this normally changes nothing;
+	// it runs so the state never depends on whether the platform rewrote a value
+	// (see references.go).
+	resp.Diagnostics.Append(preserveReferenceForms(ctx, stackModel, plan.WorkflowsConfig)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

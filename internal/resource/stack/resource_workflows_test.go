@@ -1,8 +1,10 @@
 package stack_test
 
 import (
+	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
@@ -11,6 +13,7 @@ import (
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
@@ -1125,6 +1128,127 @@ func TestAccStack_InvalidJSONRejected(t *testing.T) {
 			{Config: iacInputData(`["eu-central-1"]`), PlanOnly: true, ExpectError: notObject},
 			{Config: stepInputData(`{"key":`), PlanOnly: true, ExpectError: invalid},
 			{Config: runPayload(`["apply"]`), PlanOnly: true, ExpectError: notObject},
+		},
+	})
+}
+
+// TestAccStack_ReferenceValuesRoundTrip verifies ${reference::template-group.<index>...}
+// values, which point a stack workflow at a sibling workflow's outputs, round trip.
+// When core creates a stack's workflows it rewrites them to
+// ${workflow::<group>.<stack>.<workflow id>...} in vcs_config.iac_input_data.data and
+// PLAIN_TEXT environment variables, so the read after create returned a different value
+// from the one planned, and the apply failed with "Provider produced inconsistent result
+// after apply"; a refresh would also show it as a diff.
+//
+// The second workflow of the two-workflow revision (setupStackTemplateChainNoActions)
+// references the first one's output (index 0). Step 1 checks state keeps the
+// ${reference::} form while the platform holds the rewritten ${workflow::} form (which
+// shows the rewrite really happened); step 2 checks a refresh and re-plan show no diff.
+func TestAccStack_ReferenceValuesRoundTrip(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+	wfGrpName := acctest.ResourceName("stack-wfref-wfgrp")
+	wfTemplateName := acctest.ResourceName("stack-wfref-wftmpl")
+	stackTemplateName := acctest.ResourceName("stack-wfref-stmpl")
+	id := acctest.ResourceName("stack-wfref")
+
+	t.Cleanup(func() {
+		logCleanupErr(t, fmt.Sprintf("delete workflow group %q", wfGrpName), deleteWorkflowGroupFixture(wfGrpName))
+	})
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil && !is409(err) {
+		t.Fatalf("TestAccStack_ReferenceValuesRoundTrip: create workflow group %q: %s", wfGrpName, err)
+	}
+	workflowTemplateID := setupStackWorkflowTemplate(t, wfTemplateName)
+	revision := setupStackTemplateChainNoActions(t, stackTemplateName, workflowTemplateID)
+	t.Cleanup(func() { deleteStackFixture(wfGrpName, id) })
+
+	const reference = "${reference::template-group.0.outputs.bucket_region}"
+
+	// $${ escapes HCL interpolation, so Terraform sees a literal ${reference::...}.
+	config := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      { id = %[1]q },
+      {
+        id = %[2]q
+        vcs_config = {
+          iac_input_data = {
+            schema_type = "RAW_JSON"
+            data        = jsonencode({ bucket_region = "$${reference::template-group.0.outputs.bucket_region}" })
+          }
+        }
+        environment_variables = [
+          {
+            kind = "PLAIN_TEXT"
+            config = {
+              var_name   = "BUCKET_REGION"
+              text_value = "$${reference::template-group.0.outputs.bucket_region}"
+            }
+          }
+        ]
+      }
+    ]
+  }
+`, testWorkflowUUID, secondWorkflowUUID)
+
+	const res = "stackguardian_stack.test"
+	wf := "workflows_config.workflows.1."
+
+	// checkPlatformRewrote reads the stack's live workflows through the SDK and checks
+	// the second workflow holds core's ${workflow::} rewrite of the reference.
+	checkPlatformRewrote := func(*terraform.State) error {
+		readResp, err := getClient().Stacks.ReadStack(context.TODO(), org, id, wfGrpName,
+			&sgsdkgo.ReadStackQueryParams{RefreshWorkflowsConfig: sgsdkgo.Bool(true)})
+		if err != nil {
+			return fmt.Errorf("read stack %q: %w", id, err)
+		}
+		if readResp == nil || readResp.Msg == nil || readResp.Msg.WorkflowsConfig == nil {
+			return fmt.Errorf("read stack %q: no workflows_config in response", id)
+		}
+		for _, w := range readResp.Msg.WorkflowsConfig.Workflows {
+			if w == nil || w.Id == nil || *w.Id != secondWorkflowUUID {
+				continue
+			}
+			if w.VcsConfig == nil || w.VcsConfig.IacInputData == nil || w.VcsConfig.IacInputData.Data == nil {
+				return fmt.Errorf("workflow %s: no iac_input_data.data on the platform", secondWorkflowUUID)
+			}
+			data, _ := (*w.VcsConfig.IacInputData.Data)["bucket_region"].(string)
+			if !strings.HasPrefix(data, "${workflow::") {
+				return fmt.Errorf("workflow %s: iac_input_data.data bucket_region = %q, want core's ${workflow::} rewrite", secondWorkflowUUID, data)
+			}
+			for _, env := range w.EnvironmentVariables {
+				if env != nil && env.Config != nil && env.Config.VarName == "BUCKET_REGION" {
+					if env.Config.TextValue == nil || !strings.HasPrefix(*env.Config.TextValue, "${workflow::") {
+						return fmt.Errorf("workflow %s: BUCKET_REGION text_value = %v, want core's ${workflow::} rewrite", secondWorkflowUUID, env.Config.TextValue)
+					}
+					return nil
+				}
+			}
+			return fmt.Errorf("workflow %s: BUCKET_REGION environment variable not found on the platform", secondWorkflowUUID)
+		}
+		return fmt.Errorf("workflow %s not found on stack %q", secondWorkflowUUID, id)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(res, wf+"vcs_config.iac_input_data.data",
+						fmt.Sprintf(`{"bucket_region":%q}`, reference)),
+					resource.TestCheckResourceAttr(res, wf+"environment_variables.0.config.text_value", reference),
+					checkPlatformRewrote,
+				),
+			},
+			{
+				// A refresh reads the rewritten form back; re-planning must show no diff.
+				Config:   testAccStackConfig(wfGrpName, revision, id, config),
+				PlanOnly: true,
+			},
 		},
 	})
 }

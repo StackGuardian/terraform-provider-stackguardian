@@ -12,3 +12,11 @@ var OverlayConfigUnknowns = overlayConfigUnknowns
 // WorkflowsMismatchDetail exposes workflowsMismatchDetail to stack_test so each
 // wording of the workflows_config mismatch error can be unit tested.
 var WorkflowsMismatchDetail = workflowsMismatchDetail
+
+// ReferenceRewrittenAs and JSONEquivalentModuloReferences expose the ${reference::}
+// matching to stack_test, so every shape core's rewrite can take is unit tested
+// without a live API.
+var (
+	ReferenceRewrittenAs           = referenceRewrittenAs
+	JSONEquivalentModuloReferences = jsonEquivalentModuloReferences
+)

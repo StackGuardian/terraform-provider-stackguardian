@@ -158,3 +158,77 @@ func TestWorkflowsMismatchDetail(t *testing.T) {
 		}
 	})
 }
+
+// TestReferenceRewrittenAs checks the prediction of core's ${reference::} rewrite:
+// "${reference::template-group.<i>.<rest>" becomes
+// "${workflow::<group>.<stack>.<workflow id of entry i>.<rest>".
+func TestReferenceRewrittenAs(t *testing.T) {
+	ids := []string{"tpl-a-d8dfaf15", "tpl-b-3f7c9e2a"}
+	const ref0 = "${reference::template-group.0.outputs.bucket_region}"
+
+	cases := []struct {
+		name   string
+		prior  string
+		actual string
+		want   bool
+	}{
+		{"rewritten", ref0, "${workflow::my-group.my-stack.tpl-a-d8dfaf15.outputs.bucket_region}", true},
+		{"second index", "${reference::template-group.1.outputs.vpc_id}", "${workflow::g.s.tpl-b-3f7c9e2a.outputs.vpc_id}", true},
+		{"wrong workflow", ref0, "${workflow::g.s.tpl-b-3f7c9e2a.outputs.bucket_region}", false},
+		{"different output", ref0, "${workflow::g.s.tpl-a-d8dfaf15.outputs.other}", false},
+		{"index out of range", "${reference::template-group.2.outputs.x}", "${workflow::g.s.tpl-a-d8dfaf15.outputs.x}", false},
+		{"missing group/stack", ref0, "${workflow::tpl-a-d8dfaf15.outputs.bucket_region}", false},
+		{"not a reference", "plain", "${workflow::g.s.tpl-a-d8dfaf15.outputs.bucket_region}", false},
+		{"reference not at start", "x " + ref0, "x ${workflow::g.s.tpl-a-d8dfaf15.outputs.bucket_region}", false},
+		{"unchanged", ref0, ref0, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := stack.ReferenceRewrittenAs(c.prior, c.actual, ids); got != c.want {
+				t.Errorf("ReferenceRewrittenAs(%q, %q) = %v, want %v", c.prior, c.actual, got, c.want)
+			}
+		})
+	}
+}
+
+// TestJSONEquivalentModuloReferences checks decoded JSON comparison that treats a
+// reference and its rewrite as equal, at any depth, and anything else exactly.
+func TestJSONEquivalentModuloReferences(t *testing.T) {
+	ids := []string{"tpl-a-d8dfaf15"}
+	ref := "${reference::template-group.0.outputs.bucket_region}"
+	rewritten := "${workflow::g.s.tpl-a-d8dfaf15.outputs.bucket_region}"
+
+	cases := []struct {
+		name          string
+		prior, actual interface{}
+		want          bool
+	}{
+		{"nested map and list",
+			map[string]interface{}{"a": ref, "b": []interface{}{ref, float64(1)}, "c": map[string]interface{}{"d": ref}},
+			map[string]interface{}{"a": rewritten, "b": []interface{}{rewritten, float64(1)}, "c": map[string]interface{}{"d": rewritten}},
+			true},
+		{"other value changed",
+			map[string]interface{}{"a": ref, "b": "x"},
+			map[string]interface{}{"a": rewritten, "b": "y"},
+			false},
+		{"extra key",
+			map[string]interface{}{"a": ref},
+			map[string]interface{}{"a": rewritten, "b": "y"},
+			false},
+		{"list length differs",
+			[]interface{}{ref},
+			[]interface{}{rewritten, rewritten},
+			false},
+		{"type differs",
+			map[string]interface{}{"a": float64(1)},
+			map[string]interface{}{"a": "1"},
+			false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := stack.JSONEquivalentModuloReferences(c.prior, c.actual, ids); got != c.want {
+				t.Errorf("JSONEquivalentModuloReferences = %v, want %v", got, c.want)
+			}
+		})
+	}
+}
