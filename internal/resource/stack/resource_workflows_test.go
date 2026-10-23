@@ -190,31 +190,142 @@ func TestAccStack_WorkflowsConfigMismatchRejected(t *testing.T) {
 	})
 }
 
-// TODO: TestAccStack_WorkflowsConfigMismatchRejected only exercises the CREATE-time call to
-// validateWorkflowsConfigMatchesRevision — both its steps fail before anything is ever
-// created, so a fresh resource.go's Create() is the only call site actually proven to reject
-// a mismatch. The check now also runs from two other call sites (see the "ModifyPlan only
-// re-validates..." comments in resource.go's Update()/ModifyPlan, added when the
-// double-fetch-per-apply was eliminated), and neither is covered by a live test yet:
-//   - Update() with NO revision change: create a stack successfully with a valid
-//     workflows_config, then apply an update that changes workflows_config into a mismatch
-//     (a workflow removed, or reordered) while template_group_id stays the same — must still be
-//     rejected, not silently accepted just because the resource already exists.
-//   - ModifyPlan's revision-change branch: create successfully against revision1, then switch
-//     template_group_id to a revision2 whose own workflow list, if carried over verbatim from
-//     revision1's declared workflows_config, would now be a missing-workflow or wrong-order
-//     mismatch against revision2 — must be rejected at plan time, mirroring
-//     TestAccStack_ActionsRevisionRemovedWorkflow's pattern in resource_stack_upgrade_test.go.
+// TestAccStack_WorkflowsConfigMismatchRejectedAtPlan verifies a workflows_config
+// that doesn't match the stack template revision (a missing workflow, or the
+// right workflows in the wrong order) is rejected by `terraform plan`, not only
+// when applying, both when creating a stack and when updating one without
+// changing template_group_id. Rejecting it at plan time matters for pipelines
+// that review a plan before applying it: a plan that succeeds would promise a
+// change the apply then refuses. Every rejected step is PlanOnly, so if the
+// check only ran at apply these steps would fail with "the plan was not empty"
+// instead of the expected error.
 //
-// Why order specifically has to match (not just membership): the platform's own default
-// action generation (an unset "actions" attribute — see TestAccStack_ActionsGeneratedFromTemplate)
-// chains apply/plan/destroy dependencies ACROSS workflows in the stack template revision's own
-// declaration order — first workflow has no dependency, second depends on the first, and so
-// on (reversed for destroy). If workflows_config.workflows[] could list the same workflows in a
-// different order than the revision declares them, the stack's own visible listing would
-// silently disagree with the order those generated dependencies are actually chained in, with
-// nothing in the diff ever explaining why. Pinning the declared order to the revision's own
-// order is what keeps the two from ever drifting apart.
+// The two-workflow revision (setupStackTemplateChainNoActions) declares
+// testWorkflowUUID then secondWorkflowUUID, so both kinds of mismatch can be
+// exercised against one fixture.
+func TestAccStack_WorkflowsConfigMismatchRejectedAtPlan(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+	wfGrpName := acctest.ResourceName("stack-wfmismatchplan-wfgrp")
+	wfTemplateName := acctest.ResourceName("stack-wfmismatchplan-wftmpl")
+	stackTemplateName := acctest.ResourceName("stack-wfmismatchplan-stmpl")
+	id := acctest.ResourceName("stack-wfmismatchplan")
+
+	t.Cleanup(func() {
+		logCleanupErr(t, fmt.Sprintf("delete workflow group %q", wfGrpName), deleteWorkflowGroupFixture(wfGrpName))
+	})
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil && !is409(err) {
+		t.Fatalf("TestAccStack_WorkflowsConfigMismatchRejectedAtPlan: create workflow group %q: %s", wfGrpName, err)
+	}
+	workflowTemplateID := setupStackWorkflowTemplate(t, wfTemplateName)
+	revision := setupStackTemplateChainNoActions(t, stackTemplateName, workflowTemplateID)
+	t.Cleanup(func() { deleteStackFixture(wfGrpName, id) })
+
+	workflows := func(ids ...string) string {
+		entries := ""
+		for _, wfId := range ids {
+			entries += fmt.Sprintf("      { id = %q },\n", wfId)
+		}
+		return fmt.Sprintf("\n  workflows_config = {\n    workflows = [\n%s    ]\n  }\n", entries)
+	}
+	valid := workflows(testWorkflowUUID, secondWorkflowUUID)
+	missingWorkflow := workflows(testWorkflowUUID)
+	wrongOrder := workflows(secondWorkflowUUID, testWorkflowUUID)
+	mismatch := regexp.MustCompile("does not match the stack template revision")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			// Create.
+			{
+				Config:      testAccStackConfig(wfGrpName, revision, id, missingWorkflow),
+				PlanOnly:    true,
+				ExpectError: mismatch,
+			},
+			{
+				Config:      testAccStackConfig(wfGrpName, revision, id, wrongOrder),
+				PlanOnly:    true,
+				ExpectError: mismatch,
+			},
+			// Update with the same revision.
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, valid),
+			},
+			{
+				Config:      testAccStackConfig(wfGrpName, revision, id, missingWorkflow),
+				PlanOnly:    true,
+				ExpectError: mismatch,
+			},
+			{
+				Config:      testAccStackConfig(wfGrpName, revision, id, wrongOrder),
+				PlanOnly:    true,
+				ExpectError: mismatch,
+			},
+		},
+	})
+}
+
+// TestAccStack_WorkflowsConfigMismatchRejectedOnRevisionChange verifies the same
+// check when template_group_id moves to another revision: revision :1 declares
+// only testWorkflowUUID, revision :2 declares testWorkflowUUID then
+// secondWorkflowUUID. Keeping :1's workflows_config, or listing :2's workflows in
+// the wrong order, must be rejected by `terraform plan` (ModifyPlan) before the
+// upgrade is attempted.
+func TestAccStack_WorkflowsConfigMismatchRejectedOnRevisionChange(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+	wfGrpName := acctest.ResourceName("stack-wfmismatchrev-wfgrp")
+	wfTemplateName := acctest.ResourceName("stack-wfmismatchrev-wftmpl")
+	stackTemplateName := acctest.ResourceName("stack-wfmismatchrev-stmpl")
+	id := acctest.ResourceName("stack-wfmismatchrev")
+
+	revision1 := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+	revision2 := setupSecondStackTemplateRevisionTwoWorkflows(t, stackTemplateName, wfTemplateName)
+
+	oneWorkflow := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      { id = %q }
+    ]
+  }
+`, testWorkflowUUID)
+	wrongOrder := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      { id = %q },
+      { id = %q }
+    ]
+  }
+`, secondWorkflowUUID, testWorkflowUUID)
+	mismatch := regexp.MustCompile("does not match the stack template revision")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision1, id, oneWorkflow),
+			},
+			{
+				// Upgrading to :2 without declaring its second workflow.
+				Config:      testAccStackConfig(wfGrpName, revision2, id, oneWorkflow),
+				PlanOnly:    true,
+				ExpectError: mismatch,
+			},
+			{
+				// Upgrading to :2 with its workflows out of order.
+				Config:      testAccStackConfig(wfGrpName, revision2, id, wrongOrder),
+				PlanOnly:    true,
+				ExpectError: mismatch,
+			},
+		},
+	})
+}
 
 // TestAccStack_WorkflowsConfigPrecedenceMerge exercises the three-way
 // precedence merge for a workflow's terraform_config: workflow template

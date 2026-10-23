@@ -521,7 +521,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 			},
 			"workflows_config": schema.SingleNestedAttribute{
-				MarkdownDescription: "Workflows configuration for the stack. Every workflow defined on the stack template revision (`template_group_id`) must be declared in `workflows.*.id`; the provider rejects a plan that omits one.",
+				MarkdownDescription: "Workflows configuration for the stack. Every workflow defined on the stack template revision (`template_group_id`) must be declared in `workflows.*.id`, in the order the revision defines them. `terraform plan` fails if one is missing or out of order (or `terraform apply`, when `template_group_id` is only known at apply time).",
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"workflows": schema.ListNestedAttribute{

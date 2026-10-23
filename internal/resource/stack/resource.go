@@ -228,46 +228,50 @@ func (r *stackResource) resolveWorkflowTemplates(ctx context.Context, plan Stack
 	return result, diags
 }
 
-// ModifyPlan handles a template_group_id change: when it changes, the
-// Optional+Computed fields the user did NOT declare must be re-resolved
-// against the new revision. Without that re-resolution, UseStateForUnknown
-// carries the OLD revision's values forward (they were never unknown), so
-// the merge never runs for them. Setting those fields to concrete resolved
-// values here lets plan == apply. Fields the user declared in config are
-// left untouched. Mirrors workflow_from_template's ModifyPlan: this function
-// is never reached at all on create or destroy, so it never needs its own
-// create-time validation path — Create() validates workflows_config itself
-// (validateWorkflowsConfigMatchesRevision), reusing the fetchTemplateRevision
-// call it already makes to build the request, instead of this function
-// fetching the revision a second time just to validate it.
+// ModifyPlan does two things.
 //
-// It covers description/tags/context_tags/actions (stack-level) and
-// workflows_config's per-workflow template-derived fields. actions the user
-// declared in config has no re-resolution to do, but is validated here: a
-// reference to a workflow the new revision dropped is an error, not a silent
-// carry-forward. workflows_config's completeness/order against the revision
-// is validated here too (validateWorkflowsConfigMatchesRevision) — Update()
-// runs that same check itself for an update with no revision change, again
-// reusing its own fetchTemplateRevision call.
+// First, on every create and update whose template_group_id is known, it
+// checks workflows_config against the stack template revision
+// (validateWorkflowsConfigMatchesRevision), so a missing or reordered workflow
+// fails `terraform plan` instead of only `terraform apply`. A plan that
+// succeeds would otherwise promise a change the apply then refuses, which
+// matters for pipelines that review a plan before applying it. This costs one
+// read of the revision per plan (Create()/Update() read it again to build the
+// request); the check is the most likely mistake when writing a stack, so the
+// earlier feedback is worth the extra read. Create() and Update() still run
+// the same check, which is what catches it when template_group_id is unknown
+// at plan time.
+//
+// Second, on a template_group_id change, the Optional+Computed fields the
+// user did NOT declare must be re-resolved against the new revision. Without
+// that re-resolution, UseStateForUnknown carries the OLD revision's values
+// forward (they were never unknown), so the merge never runs for them.
+// Setting those fields to concrete resolved values here lets plan == apply.
+// Fields the user declared in config are left untouched. It covers
+// description/tags/context_tags/actions (stack-level) and workflows_config's
+// per-workflow template-derived fields. actions the user declared in config
+// has no re-resolution to do, but is validated: a reference to a workflow the
+// new revision dropped is an error, not a silent carry-forward.
 func (r *stackResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
-		return // create or destroy — no revision transition to handle
+	if req.Plan.Raw.IsNull() {
+		return // destroy — nothing to validate or re-resolve
 	}
+	isCreate := req.State.Raw.IsNull()
 
 	var plan, state, config StackResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if !isCreate {
+		resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	}
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	if plan.TemplateGroupId.IsUnknown() {
-		return // template not resolved yet — nothing to validate against
-	}
-
-	if plan.TemplateGroupId.ValueString() == state.TemplateGroupId.ValueString() {
-		return // no revision change
+		// The revision isn't known until apply; Create()/Update() run the
+		// workflows_config check then, against the revision they fetch.
+		return
 	}
 
 	tpl, d := r.fetchTemplateRevision(ctx, plan)
@@ -279,6 +283,10 @@ func (r *stackResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	resp.Diagnostics.Append(validateWorkflowsConfigMatchesRevision(ctx, plan.WorkflowsConfig, tpl)...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	if isCreate || plan.TemplateGroupId.ValueString() == state.TemplateGroupId.ValueString() {
+		return // no revision change: nothing to re-resolve
 	}
 
 	resp.Diagnostics.Append(validateActionsAgainstRevision(ctx, config.Actions, plan.WorkflowsConfig, tpl)...)
@@ -321,10 +329,10 @@ func (r *stackResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// ModifyPlan only re-validates workflows_config against the revision on an
-	// actual revision change (it has no reason to fetch tpl otherwise); a
-	// plain create needs the same check, done here against the tpl this
-	// function already fetched to build the request.
+	// ModifyPlan already ran this check at plan time whenever template_group_id
+	// was known. It runs again here for when it wasn't (e.g. it references a
+	// revision created in the same apply), using the tpl this function already
+	// fetched to build the request.
 	resp.Diagnostics.Append(validateWorkflowsConfigMatchesRevision(ctx, plan.WorkflowsConfig, tpl)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -420,11 +428,10 @@ func (r *stackResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	// ModifyPlan only re-validates workflows_config against the revision on an
-	// actual revision change; an update with no revision change needs the
-	// same check, done here against the tpl this function already fetched to
-	// build the request. Redundant (but free — tpl is already in hand) on a
-	// revision-change update, where ModifyPlan already validated it.
+	// ModifyPlan already ran this check at plan time whenever template_group_id
+	// was known. It runs again here for when it wasn't (e.g. it references a
+	// revision created in the same apply), using the tpl this function already
+	// fetched to build the request.
 	resp.Diagnostics.Append(validateWorkflowsConfigMatchesRevision(ctx, plan.WorkflowsConfig, tpl)...)
 	if resp.Diagnostics.HasError() {
 		return

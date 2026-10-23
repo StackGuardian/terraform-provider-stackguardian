@@ -3032,9 +3032,12 @@ func validateActionsAgainstRevision(ctx context.Context, actions types.Map, work
 
 // validateWorkflowsConfigMatchesRevision errors unless workflows_config.workflows
 // declares exactly the workflows the referenced stack template revision
-// defines in its workflows_config.workflows, by id and in the same order. Called from ModifyPlan on every Create/Update,
-// not just a revision change, so no apply can ever leave workflows_config out
-// of sync with the revision it's pinned to.
+// defines in its workflows_config.workflows, by id and in the same order.
+// Called from ModifyPlan on every create and update whose template_group_id is
+// known, not just a revision change, so the mistake fails `terraform plan`;
+// Create() and Update() call it again for when template_group_id was unknown
+// at plan time, so no apply can ever leave workflows_config out of sync with
+// the revision it's pinned to.
 //
 // Why this needs to be enforced at all, rather than left to the old
 // Optional+Computed "inherit whatever the template has" behavior:
