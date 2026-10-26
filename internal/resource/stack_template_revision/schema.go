@@ -7,6 +7,8 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/validators"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -350,23 +352,38 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 					},
 				},
 			},
+			// iac_input_data = {} (no fields) is valid: the API stores an explicitly
+			// empty iacInputData and treats it as "No Inputs", which differs from
+			// leaving iac_input_data out. Once any field is set, schema_type and data
+			// are both required (AlsoRequires on each field), so a partial object
+			// can't be sent. schema_type is Optional only to allow the empty object.
 			"iac_input_data": schema.SingleNestedAttribute{
-				MarkdownDescription: "IaC input data for the workflow.",
+				MarkdownDescription: "IaC input data for the workflow. Set to `{}` for no inputs. When any field is set, `schema_type` and `data` are both required.",
 				Optional:            true,
 				Attributes: map[string]schema.Attribute{
 					"schema_id": schema.StringAttribute{
 						MarkdownDescription: constants.WorkflowIacInputDataSchemaId,
 						Optional:            true,
+						Validators: []validator.String{
+							stringvalidator.AlsoRequires(
+								path.MatchRelative().AtParent().AtName("schema_type"),
+								path.MatchRelative().AtParent().AtName("data"),
+							),
+						},
 					},
 					"schema_type": schema.StringAttribute{
 						MarkdownDescription: constants.WorkflowIacInputDataSchemaType,
-						Required:            true,
+						Optional:            true,
+						Validators: []validator.String{
+							stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("data")),
+						},
 					},
 					"data": schema.StringAttribute{
 						MarkdownDescription: constants.WorkflowIacInputDataData,
 						Optional:            true,
 						Validators: []validator.String{
 							validators.JSONObject(),
+							stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("schema_type")),
 						},
 					},
 				},

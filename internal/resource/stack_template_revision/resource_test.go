@@ -18,6 +18,7 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
@@ -293,6 +294,186 @@ func TestAccStackTemplateRevision_WithWorkflowsConfig(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackguardian_stack_template_revision.test", "template_id"),
 					resource.TestCheckResourceAttrSet("stackguardian_stack_template_revision.test", "workflows_config.%"),
 				),
+			},
+		},
+	})
+}
+
+// TestAccStackTemplateRevision_EmptyIacInputData verifies a workflow can set
+// vcs_config.iac_input_data = {} with no fields. The API accepts an explicitly empty
+// iacInputData and treats it as "No Inputs" (core's is_explicit_no_inputs), which is
+// different from leaving iac_input_data out. Step 1 checks the apply succeeds, the
+// platform stores an explicit empty iacInputData (read through the SDK) and state holds
+// iac_input_data with no fields set; step 2 checks a re-plan shows no diff.
+func TestAccStackTemplateRevision_EmptyIacInputData(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+	stackTemplateID := acctest.ResourceName("provider-test-stack-template-emptyinput")
+	wfTemplateID := acctest.ResourceName("provider-test-wft-for-stack-emptyinput")
+	revisionID := fmt.Sprintf("%s:1", stackTemplateID)
+
+	// Cleanup runs in reverse: deprecate and delete the revision, then the stack template,
+	// then the workflow template.
+	defer deleteWorkflowTemplateFixture(wfTemplateID)
+	defer deleteStackTemplateFixture(stackTemplateID)
+	defer deleteStackTemplateRevisionFixture(revisionID)
+	defer deprecateStackTemplateRevisionFixture(revisionID)
+
+	if err := createWorkflowTemplateFixture(wfTemplateID, "TERRAFORM"); err != nil {
+		t.Fatalf("failed to create workflow template fixture: %s", err)
+	}
+	if err := createStackTemplateFixture(stackTemplateID, "TERRAFORM"); err != nil {
+		t.Fatalf("failed to create stack template fixture: %s", err)
+	}
+
+	hcl := fmt.Sprintf(`
+resource "stackguardian_stack_template_revision" "test" {
+  parent_template_id = %q
+  alias              = "v1"
+  notes              = "Revision with empty iac_input_data"
+  source_config_kind = "TERRAFORM"
+
+  workflows_config = {
+    workflows = [
+      {
+        id            = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
+        resource_name = "wf-1"
+
+        vcs_config = {
+          iac_vcs_config = {
+            iac_template_id = %q
+          }
+          iac_input_data = {}
+        }
+
+        terraform_config = {
+          managed_terraform_state = true
+          terraform_version       = "1.5.7"
+        }
+      }
+    ]
+  }
+}
+`, stackTemplateID, qualifiedWorkflowTemplateRevisionId(wfTemplateID))
+
+	const res = "stackguardian_stack_template_revision.test"
+	iacInput := "workflows_config.workflows.0.vcs_config.iac_input_data."
+
+	// checkPlatformStoredEmptyInput reads the revision through the SDK and checks the
+	// workflow's iacInputData is present but empty, i.e. "No Inputs" rather than absent.
+	checkPlatformStoredEmptyInput := func(*terraform.State) error {
+		readResp, err := getClient().StackTemplateRevisions.ReadStackTemplateRevision(context.TODO(), config.Get().OrgName, revisionID)
+		if err != nil {
+			return fmt.Errorf("read stack template revision %q: %w", revisionID, err)
+		}
+		wfc := readResp.Msg.WorkflowsConfig
+		if wfc == nil || len(wfc.Workflows) == 0 || wfc.Workflows[0] == nil {
+			return fmt.Errorf("revision %q: no workflows in the response", revisionID)
+		}
+		vcs := wfc.Workflows[0].VcsConfig
+		if vcs == nil || vcs.IacInputData == nil {
+			return fmt.Errorf("revision %q: iacInputData was not stored; want an explicit empty object", revisionID)
+		}
+		in := vcs.IacInputData
+		if in.SchemaType != nil || in.SchemaId != nil || (in.Data != nil && len(*in.Data) > 0) {
+			return fmt.Errorf("revision %q: iacInputData = %+v, want an empty object", revisionID, in)
+		}
+		return nil
+	}
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: hcl,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr(res, iacInput+"schema_type"),
+					resource.TestCheckNoResourceAttr(res, iacInput+"schema_id"),
+					resource.TestCheckNoResourceAttr(res, iacInput+"data"),
+					checkPlatformStoredEmptyInput,
+				),
+			},
+			{
+				// Round trips with no diff.
+				Config:   hcl,
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccStackTemplateRevision_IacInputDataPartialRejected verifies that once any
+// iac_input_data field is set, schema_type and data are both required (AlsoRequires
+// validators), even though schema_type is Optional to allow iac_input_data = {}. The
+// validators fail before any API call, so no fixtures are needed.
+func TestAccStackTemplateRevision_IacInputDataPartialRejected(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
+	withIacInputData := func(body string) string {
+		return fmt.Sprintf(`
+resource "stackguardian_stack_template_revision" "test" {
+  parent_template_id = "my-stack-template"
+  alias              = "v1"
+  source_config_kind = "TERRAFORM"
+
+  workflows_config = {
+    workflows = [
+      {
+        id = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
+        vcs_config = {
+          iac_vcs_config = {
+            iac_template_id = "/%s/my-workflow-template:1"
+          }
+          iac_input_data = %s
+        }
+      }
+    ]
+  }
+}
+`, config.Get().OrgName, body)
+	}
+
+	// AlsoRequires reports one "Invalid Attribute Combination" error per missing
+	// attribute, naming it by its full path.
+	missing := func(attr string) *regexp.Regexp {
+		return regexp.MustCompile(`(?s)Invalid Attribute Combination.*iac_input_data\.` + attr)
+	}
+	// Both schema_type and data missing: two errors, in either order.
+	missingBoth := regexp.MustCompile(`(?s)Invalid Attribute Combination.*(iac_input_data\.schema_type.*iac_input_data\.data|iac_input_data\.data.*iac_input_data\.schema_type)`)
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				// schema_type without data.
+				Config:      withIacInputData(`{ schema_type = "RAW_JSON" }`),
+				PlanOnly:    true,
+				ExpectError: missing("data"),
+			},
+			{
+				// data without schema_type.
+				Config:      withIacInputData(`{ data = jsonencode({ key = "value" }) }`),
+				PlanOnly:    true,
+				ExpectError: missing("schema_type"),
+			},
+			{
+				// schema_id alone: both schema_type and data are missing.
+				Config:      withIacInputData(`{ schema_id = "my-schema" }`),
+				PlanOnly:    true,
+				ExpectError: missingBoth,
 			},
 		},
 	})

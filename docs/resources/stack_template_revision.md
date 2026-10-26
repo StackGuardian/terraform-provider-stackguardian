@@ -343,7 +343,7 @@ Required:
 
 Optional:
 
-- `iac_input_data` (Attributes) IaC input data for the workflow. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_input_data))
+- `iac_input_data` (Attributes) IaC input data for the workflow. Set to `{}` for no inputs. When any field is set, `schema_type` and `data` are both required. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_input_data))
 
 <a id="nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config"></a>
 ### Nested Schema for `workflows_config.workflows.vcs_config.iac_vcs_config`
@@ -356,14 +356,11 @@ Required:
 <a id="nestedatt--workflows_config--workflows--vcs_config--iac_input_data"></a>
 ### Nested Schema for `workflows_config.workflows.vcs_config.iac_input_data`
 
-Required:
-
-- `schema_type` (String) How the value in `data` is formatted. <ul><li>`FORM_JSONSCHEMA` — a StackGuardian NoCode form; `data` holds the values that form collects.</li><li>`RAW_HCL` — HCL-formatted input, as you would write in a `.tfvars` file.</li><li>`RAW_JSON` — the same input expressed as JSON.</li><li>`NONE` — the workflow takes no inputs.</li></ul>The platform also returns `NO_CODE_JSON` on some existing workflows. The provider passes that value through unchanged, but it is outside the set above and should not be written by hand.
-
 Optional:
 
 - `data` (String) Input data as a JSON string. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
 - `schema_id` (String) Schema ID for the input data.
+- `schema_type` (String) How the value in `data` is formatted. <ul><li>`FORM_JSONSCHEMA` — a StackGuardian NoCode form; `data` holds the values that form collects.</li><li>`RAW_HCL` — HCL-formatted input, as you would write in a `.tfvars` file.</li><li>`RAW_JSON` — the same input expressed as JSON.</li><li>`NONE` — the workflow takes no inputs.</li></ul>The platform also returns `NO_CODE_JSON` on some existing workflows. The provider passes that value through unchanged, but it is outside the set above and should not be written by hand.
 
 
 
