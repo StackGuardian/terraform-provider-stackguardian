@@ -1252,3 +1252,167 @@ func TestAccStack_ReferenceValuesRoundTrip(t *testing.T) {
 		},
 	})
 }
+
+// TestAccStack_InheritsEmptyIacInputData verifies a stack can inherit an explicitly empty
+// vcs_config.iac_input_data ("No Inputs") from its stack template revision. The API
+// stores and returns it as an iacInputData with no schemaType, which the stack's reader
+// (flattenVcsConfig) dereferenced, so reading the stack panicked. The same reader also
+// builds the plan for an upgrade to such a revision (reResolveWorkflowsConfigOnRevisionChange).
+//
+// Step 1 creates a stack that declares only the workflow id, so iac_input_data is
+// inherited, and checks state has no iac_input_data fields set while the platform holds
+// the explicit empty iacInputData; step 2 checks a re-plan shows no diff.
+func TestAccStack_InheritsEmptyIacInputData(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+	wfGrpName := acctest.ResourceName("stack-emptyinput-wfgrp")
+	wfTemplateName := acctest.ResourceName("stack-emptyinput-wftmpl")
+	stackTemplateName := acctest.ResourceName("stack-emptyinput-stmpl")
+	id := acctest.ResourceName("stack-emptyinput")
+
+	revision := setupStackDependencyChainWith(t, wfGrpName, wfTemplateName, stackTemplateName, id, nil,
+		func(wf *stacktemplaterevisions.StackTemplateRevisionWorkflow) {
+			// The fixture's VcsConfig is non-nil (it carries IacVcsConfig).
+			wf.VcsConfig.IacInputData = &sgsdkgo.IacInputData{}
+		})
+
+	const res = "stackguardian_stack.test"
+	iacInput := "workflows_config.workflows.0.vcs_config.iac_input_data."
+
+	// checkPlatformStoredEmptyInput reads the stack's live workflow through the SDK and
+	// checks its iacInputData is present but empty: "No Inputs" was inherited and stored.
+	checkPlatformStoredEmptyInput := func(*terraform.State) error {
+		readResp, err := getClient().Stacks.ReadStack(context.TODO(), org, id, wfGrpName,
+			&sgsdkgo.ReadStackQueryParams{RefreshWorkflowsConfig: sgsdkgo.Bool(true)})
+		if err != nil {
+			return fmt.Errorf("read stack %q: %w", id, err)
+		}
+		if readResp == nil || readResp.Msg == nil || readResp.Msg.WorkflowsConfig == nil ||
+			len(readResp.Msg.WorkflowsConfig.Workflows) == 0 || readResp.Msg.WorkflowsConfig.Workflows[0] == nil {
+			return fmt.Errorf("read stack %q: no workflows in the response", id)
+		}
+		vcs := readResp.Msg.WorkflowsConfig.Workflows[0].VcsConfig
+		if vcs == nil || vcs.IacInputData == nil {
+			return fmt.Errorf("stack %q: iacInputData was not stored; want the inherited empty object", id)
+		}
+		in := vcs.IacInputData
+		if in.SchemaType != nil || in.SchemaId != nil || (in.Data != nil && len(*in.Data) > 0) {
+			return fmt.Errorf("stack %q: iacInputData = %+v, want an empty object", id, in)
+		}
+		return nil
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				// workflows_config declares only the workflow id (testAccStackConfig's
+				// default), so vcs_config.iac_input_data is inherited from the revision.
+				Config: testAccStackConfig(wfGrpName, revision, id, ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr(res, iacInput+"schema_type"),
+					resource.TestCheckNoResourceAttr(res, iacInput+"schema_id"),
+					resource.TestCheckNoResourceAttr(res, iacInput+"data"),
+					checkPlatformStoredEmptyInput,
+				),
+			},
+			{
+				// Round trips with no diff.
+				Config:   testAccStackConfig(wfGrpName, revision, id, ""),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccStack_OverridesIacInputDataWithEmpty verifies a stack can set
+// vcs_config.iac_input_data = {} to override inputs it would otherwise inherit from its
+// stack template revision with "No Inputs". schema_type is Optional for this (once any
+// field is set, schema_type and data are both required), the provider sends an
+// explicitly empty iacInputData, and the API keeps it rather than filling in the
+// template's (it only fills iacInputData when the workflow has none).
+//
+// The revision's workflow sets RAW_JSON inputs; the stack declares iac_input_data = {}.
+// Step 1 checks state has no iac_input_data fields and the platform stored an empty
+// iacInputData (not the template's); step 2 checks a re-plan shows no diff.
+func TestAccStack_OverridesIacInputDataWithEmpty(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+	wfGrpName := acctest.ResourceName("stack-overrideinput-wfgrp")
+	wfTemplateName := acctest.ResourceName("stack-overrideinput-wftmpl")
+	stackTemplateName := acctest.ResourceName("stack-overrideinput-stmpl")
+	id := acctest.ResourceName("stack-overrideinput")
+
+	revision := setupStackDependencyChainWith(t, wfGrpName, wfTemplateName, stackTemplateName, id, nil,
+		func(wf *stacktemplaterevisions.StackTemplateRevisionWorkflow) {
+			data := map[string]interface{}{"bucket_region": "eu-central-1"}
+			wf.VcsConfig.IacInputData = &sgsdkgo.IacInputData{
+				SchemaType: sgsdkgo.IacInputDataSchemaTypeEnumRawJson.Ptr(),
+				Data:       &data,
+			}
+		})
+
+	config := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id = %q
+        vcs_config = {
+          iac_input_data = {}
+        }
+      }
+    ]
+  }
+`, testWorkflowUUID)
+
+	const res = "stackguardian_stack.test"
+	iacInput := "workflows_config.workflows.0.vcs_config.iac_input_data."
+
+	// checkPlatformStoredEmptyInput reads the stack's live workflow through the SDK and
+	// checks its iacInputData is the empty override, not the template's RAW_JSON inputs.
+	checkPlatformStoredEmptyInput := func(*terraform.State) error {
+		readResp, err := getClient().Stacks.ReadStack(context.TODO(), org, id, wfGrpName,
+			&sgsdkgo.ReadStackQueryParams{RefreshWorkflowsConfig: sgsdkgo.Bool(true)})
+		if err != nil {
+			return fmt.Errorf("read stack %q: %w", id, err)
+		}
+		if readResp == nil || readResp.Msg == nil || readResp.Msg.WorkflowsConfig == nil ||
+			len(readResp.Msg.WorkflowsConfig.Workflows) == 0 || readResp.Msg.WorkflowsConfig.Workflows[0] == nil {
+			return fmt.Errorf("read stack %q: no workflows in the response", id)
+		}
+		vcs := readResp.Msg.WorkflowsConfig.Workflows[0].VcsConfig
+		if vcs == nil || vcs.IacInputData == nil {
+			return fmt.Errorf("stack %q: iacInputData was not stored; want the empty override", id)
+		}
+		in := vcs.IacInputData
+		if in.SchemaType != nil || in.SchemaId != nil || (in.Data != nil && len(*in.Data) > 0) {
+			return fmt.Errorf("stack %q: iacInputData = %+v, want the empty override, not the template's inputs", id, in)
+		}
+		return nil
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr(res, iacInput+"schema_type"),
+					resource.TestCheckNoResourceAttr(res, iacInput+"data"),
+					checkPlatformStoredEmptyInput,
+				),
+			},
+			{
+				// Round trips with no diff.
+				Config:   testAccStackConfig(wfGrpName, revision, id, config),
+				PlanOnly: true,
+			},
+		},
+	})
+}

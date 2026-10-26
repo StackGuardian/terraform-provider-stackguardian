@@ -1164,23 +1164,35 @@ func expandVcsConfig(ctx context.Context, obj types.Object) (*sgsdkgo.VcsConfig,
 		if diags := m.IacInputData.As(ctx, &idModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); diags.HasError() {
 			return nil, diags
 		}
-		schemaType, err := sgsdkgo.NewIacInputDataSchemaTypeEnumFromString(idModel.SchemaType.ValueString())
-		if err != nil {
-			return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid schema type", "Value '"+idModel.SchemaType.ValueString()+"' is not a valid schema type")}
+		// Start from an empty iacInputData whenever iac_input_data is set and fill
+		// in only the fields that have a value. iac_input_data = {} in config then
+		// sends an explicitly empty iacInputData ("No Inputs"), which the API keeps
+		// instead of filling in the template's; leaving iac_input_data out sends
+		// nothing, so the template's is inherited. The schema's AlsoRequires
+		// validators ensure schema_type and data are both set whenever any field is.
+		iacInputData := &sgsdkgo.IacInputData{}
+		if !idModel.SchemaId.IsNull() && !idModel.SchemaId.IsUnknown() {
+			iacInputData.SchemaId = idModel.SchemaId.ValueStringPointer()
 		}
-		vcsConfig.IacInputData = &sgsdkgo.IacInputData{
-			SchemaId:   idModel.SchemaId.ValueStringPointer(),
-			SchemaType: &schemaType,
+		if !idModel.SchemaType.IsNull() && !idModel.SchemaType.IsUnknown() {
+			schemaType, err := sgsdkgo.NewIacInputDataSchemaTypeEnumFromString(idModel.SchemaType.ValueString())
+			if err != nil {
+				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid schema type", "Value '"+idModel.SchemaType.ValueString()+"' is not a valid schema type")}
+			}
+			iacInputData.SchemaType = &schemaType
 		}
 		// JSONObject rejects invalid data at plan time; this catches a value that
 		// was only known at apply, instead of silently sending {}.
-		dataMap, err := expanders.JSONStringToObject(idModel.Data.ValueString())
-		if err != nil {
-			return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid vcs_config.iac_input_data.data", "The value "+err.Error()+".")}
+		if !idModel.Data.IsNull() && !idModel.Data.IsUnknown() {
+			dataMap, err := expanders.JSONStringToObject(idModel.Data.ValueString())
+			if err != nil {
+				return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid vcs_config.iac_input_data.data", "The value "+err.Error()+".")}
+			}
+			if dataMap != nil {
+				iacInputData.Data = &dataMap
+			}
 		}
-		if dataMap != nil {
-			vcsConfig.IacInputData.Data = &dataMap
-		}
+		vcsConfig.IacInputData = iacInputData
 	}
 
 	return vcsConfig, nil
@@ -1213,9 +1225,16 @@ func flattenVcsConfig(ctx context.Context, vc *sgsdkgo.VcsConfig) (types.Object,
 		if vc.IacInputData.Data != nil {
 			dataStr = flatteners.JSONInterfaceToString(*vc.IacInputData.Data)
 		}
+		// An explicitly empty iacInputData ("No Inputs": iac_input_data = {} on the
+		// stack, or inherited from a stack template revision that sets it) has no
+		// schemaType: read it back as null rather than dereferencing a nil pointer.
+		schemaType := types.StringNull()
+		if vc.IacInputData.SchemaType != nil {
+			schemaType = types.StringValue(string(*vc.IacInputData.SchemaType))
+		}
 		idM := VcsIacInputDataModel{
 			SchemaId:   flatteners.StringPtr(vc.IacInputData.SchemaId),
-			SchemaType: flatteners.String(string(*vc.IacInputData.SchemaType)),
+			SchemaType: schemaType,
 			Data:       dataStr,
 		}
 		obj, diags := types.ObjectValueFrom(ctx, VcsIacInputDataModel{}.AttributeTypes(), idM)
