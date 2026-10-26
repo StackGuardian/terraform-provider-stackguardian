@@ -301,7 +301,7 @@ func TestAccStackTemplateRevision_WithWorkflowsConfig(t *testing.T) {
 
 // TestAccStackTemplateRevision_EmptyIacInputData verifies a workflow can set
 // vcs_config.iac_input_data = {} with no fields. The API accepts an explicitly empty
-// iacInputData and treats it as "No Inputs" (core's is_explicit_no_inputs), which is
+// iacInputData and treats it as "No Inputs", which is
 // different from leaving iac_input_data out. Step 1 checks the apply succeeds, the
 // platform stores an explicit empty iacInputData (read through the SDK) and state holds
 // iac_input_data with no fields set; step 2 checks a re-plan shows no diff.
