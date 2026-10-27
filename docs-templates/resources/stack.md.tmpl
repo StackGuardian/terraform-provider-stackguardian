@@ -45,6 +45,11 @@ To upgrade, change the revision in `template_group_id` (e.g. `:1` → `:2`):
 
 ## Limitations
 
+- **`null` is not a valid value for a root-level attribute.** Terraform's `null` is
+  indistinguishable from "omitted", which the provider treats as *keep the current value* (or,
+  for `actions`, *inherit from template*). To **clear** a value, or **exclude** one the template
+  sets, declare an **empty value** of the right type: `""` for a string, `[]` for a list, `{}`
+  for a map/object. Setting the attribute to `null` does not clear it.
 - **Removing an attribute from config does not clear it.** Terraform cannot distinguish "this
   attribute was deleted from config" from "this attribute was never set" — both look identical
   at plan time. If an Optional+Computed attribute already has a value in state (set explicitly,
