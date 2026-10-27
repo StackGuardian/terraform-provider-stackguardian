@@ -545,6 +545,15 @@ resource "stackguardian_stack" "test" {
 // Registers cleanup. Returns the full revision id ("/<org>/<template-id>:1").
 func setupStackTemplateChainNoActions(t *testing.T, stackTemplateID, workflowTemplateID string) string {
 	t.Helper()
+	return setupStackTemplateChainNoActionsWith(t, stackTemplateID, workflowTemplateID, nil)
+}
+
+// setupStackTemplateChainNoActionsWith is setupStackTemplateChainNoActions with a hook
+// to adjust the second workflow (secondWorkflowUUID) before the revision is created,
+// e.g. to give it values that reference the first workflow's outputs. mutateSecond may
+// be nil.
+func setupStackTemplateChainNoActionsWith(t *testing.T, stackTemplateID, workflowTemplateID string, mutateSecond func(*stacktemplaterevisions.StackTemplateRevisionWorkflow)) string {
+	t.Helper()
 	client := getClient()
 	revisionID := fmt.Sprintf("%s:1", stackTemplateID)
 	sourceConfigKind := stacktemplates.StackTemplateSourceConfigKindTerraform
@@ -592,6 +601,11 @@ func setupStackTemplateChainNoActions(t *testing.T, stackTemplateID, workflowTem
 		}
 	}
 
+	second := makeWorkflow(secondWorkflowUUID, "wf-2")
+	if mutateSecond != nil {
+		mutateSecond(second)
+	}
+
 	_, err = client.StackTemplateRevisions.CreateStackTemplateRevision(
 		context.TODO(), org, stackTemplateID,
 		&stacktemplaterevisions.CreateStackTemplateRevisionRequest{
@@ -602,7 +616,7 @@ func setupStackTemplateChainNoActions(t *testing.T, stackTemplateID, workflowTem
 			WorkflowsConfig: &stacktemplaterevisions.StackTemplateRevisionWorkflowsConfig{
 				Workflows: []*stacktemplaterevisions.StackTemplateRevisionWorkflow{
 					makeWorkflow(testWorkflowUUID, "wf-1"),
-					makeWorkflow(secondWorkflowUUID, "wf-2"),
+					second,
 				},
 			},
 			// Deliberately no Actions — the template supplies none of its own, so

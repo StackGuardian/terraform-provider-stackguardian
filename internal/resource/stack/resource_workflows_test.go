@@ -1193,41 +1193,6 @@ func TestAccStack_ReferenceValuesRoundTrip(t *testing.T) {
 	const res = "stackguardian_stack.test"
 	wf := "workflows_config.workflows.1."
 
-	// checkPlatformRewrote reads the stack's live workflows through the SDK and checks
-	// the second workflow holds core's ${workflow::} rewrite of the reference.
-	checkPlatformRewrote := func(*terraform.State) error {
-		readResp, err := getClient().Stacks.ReadStack(context.TODO(), org, id, wfGrpName,
-			&sgsdkgo.ReadStackQueryParams{RefreshWorkflowsConfig: sgsdkgo.Bool(true)})
-		if err != nil {
-			return fmt.Errorf("read stack %q: %w", id, err)
-		}
-		if readResp == nil || readResp.Msg == nil || readResp.Msg.WorkflowsConfig == nil {
-			return fmt.Errorf("read stack %q: no workflows_config in response", id)
-		}
-		for _, w := range readResp.Msg.WorkflowsConfig.Workflows {
-			if w == nil || w.Id == nil || *w.Id != secondWorkflowUUID {
-				continue
-			}
-			if w.VcsConfig == nil || w.VcsConfig.IacInputData == nil || w.VcsConfig.IacInputData.Data == nil {
-				return fmt.Errorf("workflow %s: no iac_input_data.data on the platform", secondWorkflowUUID)
-			}
-			data, _ := (*w.VcsConfig.IacInputData.Data)["bucket_region"].(string)
-			if !strings.HasPrefix(data, "${workflow::") {
-				return fmt.Errorf("workflow %s: iac_input_data.data bucket_region = %q, want core's ${workflow::} rewrite", secondWorkflowUUID, data)
-			}
-			for _, env := range w.EnvironmentVariables {
-				if env != nil && env.Config != nil && env.Config.VarName == "BUCKET_REGION" {
-					if env.Config.TextValue == nil || !strings.HasPrefix(*env.Config.TextValue, "${workflow::") {
-						return fmt.Errorf("workflow %s: BUCKET_REGION text_value = %v, want core's ${workflow::} rewrite", secondWorkflowUUID, env.Config.TextValue)
-					}
-					return nil
-				}
-			}
-			return fmt.Errorf("workflow %s: BUCKET_REGION environment variable not found on the platform", secondWorkflowUUID)
-		}
-		return fmt.Errorf("workflow %s not found on stack %q", secondWorkflowUUID, id)
-	}
-
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { acctest.TestAccPreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -1241,7 +1206,7 @@ func TestAccStack_ReferenceValuesRoundTrip(t *testing.T) {
 					resource.TestCheckResourceAttr(res, wf+"vcs_config.iac_input_data.data",
 						fmt.Sprintf(`{"bucket_region":%q}`, reference)),
 					resource.TestCheckResourceAttr(res, wf+"environment_variables.0.config.text_value", reference),
-					checkPlatformRewrote,
+					checkReferencesResolved(wfGrpName, id),
 				),
 			},
 			{
@@ -1411,6 +1376,236 @@ func TestAccStack_OverridesIacInputDataWithEmpty(t *testing.T) {
 			{
 				// Round trips with no diff.
 				Config:   testAccStackConfig(wfGrpName, revision, id, config),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// testReference is the ${reference::} value the reference tests use: the second
+// workflow pointing at an output of the first (index 0).
+const testReference = "${reference::template-group.0.outputs.bucket_region}"
+
+// checkReferencesResolved reads the stack's live workflows through the SDK and checks
+// the second workflow (secondWorkflowUUID) holds references in their resolved
+// ${workflow::<group>.<stack>.<workflow id>...} form, in iac_input_data.data
+// "bucket_region" and the PLAIN_TEXT BUCKET_REGION environment variable. The platform
+// is expected to resolve ${reference::} values whenever it writes a workflow, on create
+// and on update: storing the raw reference on an update would change a value that was
+// previously resolved.
+func checkReferencesResolved(wfGrpName, id string) resource.TestCheckFunc {
+	return func(*terraform.State) error {
+		readResp, err := getClient().Stacks.ReadStack(context.TODO(), org, id, wfGrpName,
+			&sgsdkgo.ReadStackQueryParams{RefreshWorkflowsConfig: sgsdkgo.Bool(true)})
+		if err != nil {
+			return fmt.Errorf("read stack %q: %w", id, err)
+		}
+		if readResp == nil || readResp.Msg == nil || readResp.Msg.WorkflowsConfig == nil {
+			return fmt.Errorf("read stack %q: no workflows_config in response", id)
+		}
+		for _, w := range readResp.Msg.WorkflowsConfig.Workflows {
+			if w == nil || w.Id == nil || *w.Id != secondWorkflowUUID {
+				continue
+			}
+			if w.VcsConfig == nil || w.VcsConfig.IacInputData == nil || w.VcsConfig.IacInputData.Data == nil {
+				return fmt.Errorf("workflow %s: no iac_input_data.data on the platform", secondWorkflowUUID)
+			}
+			data, _ := (*w.VcsConfig.IacInputData.Data)["bucket_region"].(string)
+			if !strings.HasPrefix(data, "${workflow::") {
+				return fmt.Errorf("workflow %s: iac_input_data.data bucket_region = %q, want the resolved ${workflow::} form", secondWorkflowUUID, data)
+			}
+			for _, env := range w.EnvironmentVariables {
+				if env != nil && env.Config != nil && env.Config.VarName == "BUCKET_REGION" {
+					if env.Config.TextValue == nil || !strings.HasPrefix(*env.Config.TextValue, "${workflow::") {
+						return fmt.Errorf("workflow %s: BUCKET_REGION text_value = %v, want the resolved ${workflow::} form", secondWorkflowUUID, env.Config.TextValue)
+					}
+					return nil
+				}
+			}
+			return fmt.Errorf("workflow %s: BUCKET_REGION environment variable not found on the platform", secondWorkflowUUID)
+		}
+		return fmt.Errorf("workflow %s not found on stack %q", secondWorkflowUUID, id)
+	}
+}
+
+// referenceWorkflowsConfig returns a workflows_config whose second workflow declares
+// iac_input_data.data and a PLAIN_TEXT BUCKET_REGION environment variable both set to
+// value (an HCL expression or literal, written into the config as is).
+func referenceWorkflowsConfig(value string) string {
+	return fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      { id = %[1]q },
+      {
+        id = %[2]q
+        vcs_config = {
+          iac_input_data = {
+            schema_type = "RAW_JSON"
+            data        = jsonencode({ bucket_region = %[3]s })
+          }
+        }
+        environment_variables = [
+          {
+            kind = "PLAIN_TEXT"
+            config = {
+              var_name   = "BUCKET_REGION"
+              text_value = %[3]s
+            }
+          }
+        ]
+      }
+    ]
+  }
+`, testWorkflowUUID, secondWorkflowUUID, value)
+}
+
+// TestAccStack_ReferenceValuesResolvedOnUpdate verifies ${reference::} values declared
+// on a stack workflow are resolved by the platform on update as well as on create, and
+// still round trip in state. The provider plans and sends the ${reference::} form (it
+// keeps that form in state, see preserveReferenceForms), so every update re-sends it; if
+// the platform stored it unresolved on update, a value that was resolved at create would
+// change in the platform's records.
+//
+// Step 1 creates with references (resolved on create). Step 2 is an unrelated update
+// (description), which re-sends them. Step 3 switches them to a literal, step 4 back to
+// references, which must be resolved by the update. Each apply also checks state keeps
+// the declared form, and the last step checks a re-plan shows no diff.
+func TestAccStack_ReferenceValuesResolvedOnUpdate(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+	wfGrpName := acctest.ResourceName("stack-refupd-wfgrp")
+	wfTemplateName := acctest.ResourceName("stack-refupd-wftmpl")
+	stackTemplateName := acctest.ResourceName("stack-refupd-stmpl")
+	id := acctest.ResourceName("stack-refupd")
+
+	t.Cleanup(func() {
+		logCleanupErr(t, fmt.Sprintf("delete workflow group %q", wfGrpName), deleteWorkflowGroupFixture(wfGrpName))
+	})
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil && !is409(err) {
+		t.Fatalf("TestAccStack_ReferenceValuesResolvedOnUpdate: create workflow group %q: %s", wfGrpName, err)
+	}
+	workflowTemplateID := setupStackWorkflowTemplate(t, wfTemplateName)
+	revision := setupStackTemplateChainNoActions(t, stackTemplateName, workflowTemplateID)
+	t.Cleanup(func() { deleteStackFixture(wfGrpName, id) })
+
+	// $${ escapes HCL interpolation, so Terraform sees a literal ${reference::...}.
+	withReferences := referenceWorkflowsConfig(`"$${reference::template-group.0.outputs.bucket_region}"`)
+	withLiteral := referenceWorkflowsConfig(`"eu-central-1"`)
+
+	const res = "stackguardian_stack.test"
+	wf := "workflows_config.workflows.1."
+	stateKeepsReferences := resource.ComposeAggregateTestCheckFunc(
+		resource.TestCheckResourceAttr(res, wf+"vcs_config.iac_input_data.data", fmt.Sprintf(`{"bucket_region":%q}`, testReference)),
+		resource.TestCheckResourceAttr(res, wf+"environment_variables.0.config.text_value", testReference),
+	)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				// Create: resolved on create.
+				Config: testAccStackConfig(wfGrpName, revision, id, withReferences),
+				Check:  resource.ComposeAggregateTestCheckFunc(stateKeepsReferences, checkReferencesResolved(wfGrpName, id)),
+			},
+			{
+				// Unrelated update: the references are re-sent and must stay resolved.
+				Config: testAccStackConfig(wfGrpName, revision, id, withReferences+`description = "unrelated update"`),
+				Check:  resource.ComposeAggregateTestCheckFunc(stateKeepsReferences, checkReferencesResolved(wfGrpName, id)),
+			},
+			{
+				// Switch to a literal value.
+				Config: testAccStackConfig(wfGrpName, revision, id, withLiteral+`description = "unrelated update"`),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(res, wf+"vcs_config.iac_input_data.data", `{"bucket_region":"eu-central-1"}`),
+					resource.TestCheckResourceAttr(res, wf+"environment_variables.0.config.text_value", "eu-central-1"),
+				),
+			},
+			{
+				// Back to references, set by an update this time: must be resolved.
+				Config: testAccStackConfig(wfGrpName, revision, id, withReferences+`description = "unrelated update"`),
+				Check:  resource.ComposeAggregateTestCheckFunc(stateKeepsReferences, checkReferencesResolved(wfGrpName, id)),
+			},
+			{
+				// Round trips with no diff.
+				Config:   testAccStackConfig(wfGrpName, revision, id, withReferences+`description = "unrelated update"`),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccStack_InheritedReferenceValues verifies ${reference::} values a stack workflow
+// inherits from its stack template revision (not declared on the stack) are resolved by
+// the platform, on create and when an unrelated update re-sends them, and round trip
+// with no diff. The revision's second workflow sets iac_input_data.data and a PLAIN_TEXT
+// BUCKET_REGION environment variable to a reference to the first workflow's output; the
+// stack declares only the workflow ids. Inherited values are unknown at plan time on
+// create, so state takes whatever the platform returns.
+func TestAccStack_InheritedReferenceValues(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+	wfGrpName := acctest.ResourceName("stack-refinh-wfgrp")
+	wfTemplateName := acctest.ResourceName("stack-refinh-wftmpl")
+	stackTemplateName := acctest.ResourceName("stack-refinh-stmpl")
+	id := acctest.ResourceName("stack-refinh")
+
+	t.Cleanup(func() {
+		logCleanupErr(t, fmt.Sprintf("delete workflow group %q", wfGrpName), deleteWorkflowGroupFixture(wfGrpName))
+	})
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil && !is409(err) {
+		t.Fatalf("TestAccStack_InheritedReferenceValues: create workflow group %q: %s", wfGrpName, err)
+	}
+	workflowTemplateID := setupStackWorkflowTemplate(t, wfTemplateName)
+	revision := setupStackTemplateChainNoActionsWith(t, stackTemplateName, workflowTemplateID,
+		func(wf *stacktemplaterevisions.StackTemplateRevisionWorkflow) {
+			data := map[string]interface{}{"bucket_region": testReference}
+			wf.VcsConfig.IacInputData = &sgsdkgo.IacInputData{
+				SchemaType: sgsdkgo.IacInputDataSchemaTypeEnumRawJson.Ptr(),
+				Data:       &data,
+			}
+			wf.EnvironmentVariables = []*sgsdkgo.EnvVars{{
+				Kind:   sgsdkgo.EnvVarsKindEnumPlainText,
+				Config: &sgsdkgo.EnvVarConfig{VarName: "BUCKET_REGION", TextValue: sgsdkgo.String(testReference)},
+			}}
+		})
+	t.Cleanup(func() { deleteStackFixture(wfGrpName, id) })
+
+	idsOnly := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      { id = %q },
+      { id = %q }
+    ]
+  }
+`, testWorkflowUUID, secondWorkflowUUID)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				// Create: the inherited references are resolved.
+				Config: testAccStackConfig(wfGrpName, revision, id, idsOnly),
+				Check:  checkReferencesResolved(wfGrpName, id),
+			},
+			{
+				// Round trips with no diff.
+				Config:   testAccStackConfig(wfGrpName, revision, id, idsOnly),
+				PlanOnly: true,
+			},
+			{
+				// Unrelated update: the inherited values are re-sent and must stay resolved.
+				Config: testAccStackConfig(wfGrpName, revision, id, idsOnly+`description = "unrelated update"`),
+				Check:  checkReferencesResolved(wfGrpName, id),
+			},
+			{
+				// Round trips with no diff.
+				Config:   testAccStackConfig(wfGrpName, revision, id, idsOnly+`description = "unrelated update"`),
 				PlanOnly: true,
 			},
 		},
