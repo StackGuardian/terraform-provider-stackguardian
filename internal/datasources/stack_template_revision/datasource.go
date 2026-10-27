@@ -3,6 +3,7 @@ package stacktemplaterevisiondatasource
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
@@ -697,6 +698,13 @@ func (d *stackTemplateRevisionDataSource) Read(ctx context.Context, req datasour
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	// The API response has no parent template id, so derive it from the revision id
+	// ("<template-id>:<revision>"): the same value the resource's parent_template_id holds.
+	model.ParentTemplateId = types.StringNull()
+	if i := strings.LastIndex(revisionID, ":"); i > 0 {
+		model.ParentTemplateId = types.StringValue(revisionID[:i])
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
