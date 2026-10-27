@@ -567,6 +567,98 @@ func TestAccStackTemplateRevision_ActionsRejectsEmpty(t *testing.T) {
 	})
 }
 
+// checkActionsDefaultTrue checks that every action stored on the revision has
+// default=true on the platform, not just in state.
+func checkActionsDefaultTrue(revisionID string) resource.TestCheckFunc {
+	return func(_ *terraform.State) error {
+		readResp, err := getClient().StackTemplateRevisions.ReadStackTemplateRevision(context.TODO(), config.Get().OrgName, revisionID)
+		if err != nil {
+			return fmt.Errorf("reading revision %s: %w", revisionID, err)
+		}
+		if len(readResp.Msg.Actions) == 0 {
+			return fmt.Errorf("revision %s has no actions", revisionID)
+		}
+		for name, action := range readResp.Msg.Actions {
+			if action == nil || action.Default == nil || !*action.Default {
+				return fmt.Errorf("action %q: default is not true on the platform", name)
+			}
+		}
+		return nil
+	}
+}
+
+// TestAccStackTemplateRevision_ActionsDefaultAlwaysTrue checks actions[*].default is
+// always true: for the actions the API generates when none are declared, and for
+// declared actions, where the provider sends true since default isn't user-settable.
+func TestAccStackTemplateRevision_ActionsDefaultAlwaysTrue(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+	stackTemplateID := acctest.ResourceName("provider-test-stack-template-actdef")
+	wfTemplateID := acctest.ResourceName("provider-test-wft-for-stack-actdef")
+	revisionID := stackTemplateID + ":1"
+
+	defer deleteWorkflowTemplateFixture(wfTemplateID)
+	defer deleteStackTemplateFixture(stackTemplateID)
+	defer deleteStackTemplateRevisionFixture(revisionID)
+	defer deprecateStackTemplateRevisionFixture(revisionID)
+
+	if err := createWorkflowTemplateFixture(wfTemplateID, "TERRAFORM"); err != nil {
+		t.Fatalf("failed to create workflow template fixture: %s", err)
+	}
+	if err := createStackTemplateFixture(stackTemplateID, "TERRAFORM"); err != nil {
+		t.Fatalf("failed to create stack template fixture: %s", err)
+	}
+
+	withoutActions := testAccStackTemplateRevisionConfig(stackTemplateID, wfTemplateID, "v1", "notes", "description")
+	withActions := strings.TrimSuffix(strings.TrimSpace(withoutActions), "}") + `
+  actions = {
+    custom = {
+      name        = "Custom"
+      description = "a declared action"
+      order = {
+        "d8dfaf15-2ad9-da29-8af0-c6b288b12089" = {}
+      }
+    }
+  }
+}
+`
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			// No actions declared: the API generates apply/plan/destroy, all default=true.
+			{
+				Config: withoutActions,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "actions.apply.default", "true"),
+					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "actions.plan.default", "true"),
+					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "actions.destroy.default", "true"),
+					checkActionsDefaultTrue(revisionID),
+				),
+			},
+			// Declared actions, without default: the provider sends default=true.
+			{
+				Config: withActions,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "actions.%", "1"),
+					resource.TestCheckResourceAttr("stackguardian_stack_template_revision.test", "actions.custom.default", "true"),
+					checkActionsDefaultTrue(revisionID),
+				),
+			},
+			{
+				Config:   withActions,
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
 // TestAccStackTemplateRevision_IacTemplateIdRequiresOrg verifies iac_template_id is
 // rejected at plan time unless it is the full "/<org>/<template-id>:<revision>" id of a
 // revision, the org given even for your own organization

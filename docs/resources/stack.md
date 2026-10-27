@@ -874,7 +874,7 @@ Read-Only:
 
 Optional:
 
-- `dependencies` (Attributes List) Workflow dependencies defining execution order. (see [below for nested schema](#nestedatt--actions--order--dependencies))
+- `dependencies` (Attributes List) Workflow dependencies defining execution order. Defaults to `[]`. (see [below for nested schema](#nestedatt--actions--order--dependencies))
 - `parameters` (Attributes) Run configuration for the workflow. (see [below for nested schema](#nestedatt--actions--order--parameters))
 
 <a id="nestedatt--actions--order--dependencies"></a>

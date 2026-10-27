@@ -1390,15 +1390,13 @@ func convertActionsToAPI(ctx context.Context, actionsMap types.Map) (map[string]
 		action := &sgsdkgo.Actions{
 			Name: am.Name.ValueString(),
 		}
-		// description/default are Optional+Computed: ValueStringPointer()/ValueBoolPointer()
-		// return &""/&false for unknown, which would clear the description or force
-		// default=false on create when the user hasn't set them. Only set when known.
+		// description is Optional+Computed: ValueStringPointer() returns &"" for unknown,
+		// which would clear the description when the user hasn't set it. Only set when known.
 		if !am.Description.IsNull() && !am.Description.IsUnknown() {
 			action.Description = am.Description.ValueStringPointer()
 		}
-		if !am.Default.IsNull() && !am.Default.IsUnknown() {
-			action.Default = am.Default.ValueBoolPointer()
-		}
+		// A template's actions are always default actions; default isn't user-settable.
+		action.Default = sgsdkgo.Bool(true)
 		if !am.Order.IsNull() && !am.Order.IsUnknown() {
 			var orderModels map[string]ActionOrderModel
 			if diags := am.Order.ElementsAs(ctx, &orderModels, false); diags.HasError() {

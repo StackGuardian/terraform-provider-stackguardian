@@ -2656,11 +2656,11 @@ func flattenActionsMap(ctx context.Context, actions map[string]*sgsdkgo.Actions)
 					paramsObj = obj
 				}
 
-				// len == 0, not != nil: config had no dependencies (null), but the API
-				// echoes an explicit [] instead of omitting the field — flattening that
-				// as a non-null empty list caused "inconsistent result after apply".
+				// != nil, not len > 0: the API stores [] when no dependencies are sent, and
+				// the schema defaults to [] to match, so an empty list must stay [] (an
+				// explicit dependencies = [] must round-trip too).
 				depListObj := types.ListNull(types.ObjectType{AttrTypes: ActionDependencyModel{}.AttributeTypes()})
-				if len(ao.Dependencies) > 0 {
+				if ao.Dependencies != nil {
 					depElems := make([]attr.Value, 0, len(ao.Dependencies))
 					for _, dep := range ao.Dependencies {
 						if dep == nil {

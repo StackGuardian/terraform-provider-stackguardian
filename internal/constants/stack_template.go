@@ -31,6 +31,7 @@ const (
 	StackTemplateRevisionContextTags     = "Contextual key-value tags for the revision."
 	StackTemplateRevisionWorkflowsConfig = "JSON-encoded workflows configuration for the stack template revision."
 	StackTemplateRevisionActions         = "JSON-encoded map of actions for the stack template revision."
+	StackTemplateRevisionActionDefault   = "Always `true`: the actions a stack template revision defines are default actions. A stack inherits them only when `actions` is not defined while creating the stack."
 )
 
 // Stack Resource documentation

@@ -650,7 +650,7 @@ func (d *stackTemplateRevisionDataSource) Schema(_ context.Context, _ datasource
 							Computed:            true,
 						},
 						"default": schema.BoolAttribute{
-							MarkdownDescription: "Whether this is the default action.",
+							MarkdownDescription: constants.StackTemplateRevisionActionDefault,
 							Computed:            true,
 						},
 						"order": schema.MapNestedAttribute{

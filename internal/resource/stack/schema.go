@@ -9,11 +9,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
@@ -437,8 +439,14 @@ var actionsAttrs = map[string]schema.Attribute{
 					},
 				},
 				"dependencies": schema.ListNestedAttribute{
-					MarkdownDescription: "Workflow dependencies defining execution order.",
+					MarkdownDescription: "Workflow dependencies defining execution order. Defaults to `[]`.",
 					Optional:            true,
+					// Computed with a [] default, mirroring the API, which stores [] when no
+					// dependencies are sent; without it an omitted value plans null but reads back [].
+					Computed: true,
+					Default: listdefault.StaticValue(types.ListValueMust(
+						types.ObjectType{AttrTypes: ActionDependencyModel{}.AttributeTypes()}, []attr.Value{},
+					)),
 					NestedObject: schema.NestedAttributeObject{
 						Attributes: map[string]schema.Attribute{
 							"id": schema.StringAttribute{

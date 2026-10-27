@@ -179,13 +179,15 @@ func convertXxxFromAPI(ctx context.Context, input *SomeType) (types.Object, diag
 
 `flatteners.IsEmptyObject` marshals the struct to JSON and returns `true` if the result is `{}`. This requires every JSON-tagged field on the SDK struct to use `omitempty` on a pointer, slice, or map type — bare value fields (e.g. `Type string \`json:"type"\``) will not be omitted and must be changed to pointers in the SDK repo.
 
-**List-returning converters** — check `len == 0` at the top (covers both nil and empty slice):
+**List-returning converters** — check `items == nil` at the top. Return null only for nil (the
+API didn't return the field); an empty slice becomes an empty list, so an explicit `[]` in config
+round-trips (see gotcha 9):
 
 ```go
 func convertXxxListFromAPI(ctx context.Context, items []SdkType) (types.List, diag.Diagnostics) {
     nullList := types.ListNull(types.ObjectType{AttrTypes: XxxModel{}.AttributeTypes()})
 
-    if len(items) == 0 {
+    if items == nil {
         return nullList, nil
     }
 
@@ -196,10 +198,6 @@ func convertXxxListFromAPI(ctx context.Context, items []SdkType) (types.List, di
         }
         models = append(models, XxxModel{ /* ... */ })
     }
-    if len(models) == 0 {
-        return nullList, nil
-    }
-
     list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: XxxModel{}.AttributeTypes()}, models)
     if diags.HasError() {
         return nullList, diags
@@ -243,6 +241,8 @@ schemas of those attributes and re-use them.
 7. **`Computed` need `UseStateForUnknown()`.** For top-level `Computed` attributes Terraform carries the state value forward automatically. But for nested attributes, Terraform plans the entire list element object fresh each time — any `Computed` field with no config value is marked `(known after apply)` even when state already has a value. This produces a perpetual diff after the first apply. Fix: add `stringplanmodifier.UseStateForUnknown()` (or the equivalent for other types) to every `Computed` field inside a nested list object.
 
 8. **Attributes that are `Computed`**: In `converXxxFromAPI` method they need to set to some value if they are nil. If it is `types.Object` then all attributes inside that attribute need to have a nil value.
+
+9. **Never collapse an empty API value to null with a length check.** When an omitted Optional attribute reads back as `[]` / `{}` / `""` ("was null, but now cty.ListValEmpty…"), don't fix it in the reader with `if len(x) == 0 { return null }`: that breaks the opposite case, where the user sets the empty value explicitly and it reads back as null. Find out where the API fills it in: the request serializers in the `api` repo (`platform_api/api/serializers/`, e.g. `ListField(default=[])`) or `core`. Then mirror that default in the schema: `Optional` + `Computed` + `Default` (`listdefault.StaticValue(...)`, `booldefault.StaticBool(...)`, etc.). Also check whether the default applies on update: DRF skips `default` when the serializer runs with `partial=True`.
 
 ---
 

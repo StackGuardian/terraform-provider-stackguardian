@@ -138,17 +138,20 @@ resource "stackguardian_stack_template_revision" "with_vcs" {
 
 Optional:
 
-- `default` (Boolean) Whether this is the default action.
 - `description` (String) Description of the action.
 - `name` (String) Name of the action.
 - `order` (Attributes Map) Ordered map of workflow IDs to their action configurations. (see [below for nested schema](#nestedatt--actions--order))
+
+Read-Only:
+
+- `default` (Boolean) Always `true`: the actions a stack template revision defines are default actions. A stack inherits them only when `actions` is not defined while creating the stack.
 
 <a id="nestedatt--actions--order"></a>
 ### Nested Schema for `actions.order`
 
 Optional:
 
-- `dependencies` (Attributes List) List of workflow dependencies that must complete before this step runs. (see [below for nested schema](#nestedatt--actions--order--dependencies))
+- `dependencies` (Attributes List) List of workflow dependencies that must complete before this step runs. Defaults to `[]`. (see [below for nested schema](#nestedatt--actions--order--dependencies))
 - `parameters` (Attributes) Run configuration parameters for the action step. (see [below for nested schema](#nestedatt--actions--order--parameters))
 
 <a id="nestedatt--actions--order--dependencies"></a>

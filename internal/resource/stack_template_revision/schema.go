@@ -8,10 +8,13 @@ import (
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/validators"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
@@ -552,8 +555,14 @@ var actionOrderAttrs = map[string]schema.Attribute{
 		},
 	},
 	"dependencies": schema.ListNestedAttribute{
-		MarkdownDescription: "List of workflow dependencies that must complete before this step runs.",
+		MarkdownDescription: "List of workflow dependencies that must complete before this step runs. Defaults to `[]`.",
 		Optional:            true,
+		// Computed with a [] default, mirroring the API, which stores [] when no
+		// dependencies are sent; without it an omitted value plans null but reads back [].
+		Computed: true,
+		Default: listdefault.StaticValue(types.ListValueMust(
+			types.ObjectType{AttrTypes: ActionDependencyModel{}.AttributeTypes()}, []attr.Value{},
+		)),
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
 				"id": schema.StringAttribute{
@@ -709,9 +718,9 @@ func (r *stackTemplateRevisionResource) Schema(_ context.Context, _ resource.Sch
 							Computed:            true,
 						},
 						"default": schema.BoolAttribute{
-							MarkdownDescription: "Whether this is the default action.",
-							Optional:            true,
+							MarkdownDescription: constants.StackTemplateRevisionActionDefault,
 							Computed:            true,
+							Default:             booldefault.StaticBool(true),
 						},
 						"order": schema.MapNestedAttribute{
 							MarkdownDescription: "Ordered map of workflow IDs to their action configurations.",

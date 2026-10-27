@@ -58,7 +58,7 @@ output "revision_notes" {
 
 Read-Only:
 
-- `default` (Boolean) Whether this is the default action.
+- `default` (Boolean) Always `true`: the actions a stack template revision defines are default actions. A stack inherits them only when `actions` is not defined while creating the stack.
 - `description` (String) Description of the action.
 - `name` (String) Name of the action.
 - `order` (Attributes Map) Ordered map of workflow IDs to their action configurations. (see [below for nested schema](#nestedatt--actions--order))
