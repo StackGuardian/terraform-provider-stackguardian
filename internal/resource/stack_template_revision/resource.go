@@ -56,6 +56,9 @@ func (r *stackTemplateRevisionResource) Configure(_ context.Context, req resourc
 // ImportState imports a stack template revision using its ID.
 func (r *stackTemplateRevisionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	// Read keeps parent_template_id from state, so set it here from the id; left null,
+	// it would differ from the config and, with RequiresReplace, force a replacement.
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("parent_template_id"), ParentTemplateIdFromRevisionId(req.ID))...)
 }
 
 // Create creates the resource and sets the initial Terraform state.

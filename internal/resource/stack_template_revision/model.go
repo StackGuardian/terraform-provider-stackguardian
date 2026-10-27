@@ -3,6 +3,7 @@ package stacktemplaterevision
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	"github.com/StackGuardian/sg-sdk-go/stacktemplaterevisions"
@@ -2189,6 +2190,17 @@ func (m *StackTemplateRevisionResourceModel) ToUpdateAPIModel(ctx context.Contex
 	}
 
 	return apiModel, diags
+}
+
+// ParentTemplateIdFromRevisionId derives parent_template_id from a revision id
+// ("<template-id>:<revision>") by removing the ":<revision>" suffix. The API response
+// doesn't include the parent template, so this is how the data source and the
+// resource's ImportState fill it in. Returns null if the id has no revision suffix.
+func ParentTemplateIdFromRevisionId(revisionId string) types.String {
+	if i := strings.LastIndex(revisionId, ":"); i > 0 {
+		return types.StringValue(revisionId[:i])
+	}
+	return types.StringNull()
 }
 
 // ---------------------------------------------------------------------------

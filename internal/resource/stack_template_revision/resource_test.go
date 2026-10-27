@@ -250,6 +250,59 @@ func TestAccStackTemplateRevision_Basic(t *testing.T) {
 	})
 }
 
+// TestAccStackTemplateRevision_Import checks an imported revision gets parent_template_id
+// from its id, so the next plan is empty instead of replacing the revision
+// (parent_template_id is RequiresReplace).
+func TestAccStackTemplateRevision_Import(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+	stackTemplateID := acctest.ResourceName("provider-test-stack-template-revimp")
+	wfTemplateID := acctest.ResourceName("provider-test-wft-for-stack-revimp")
+
+	defer deleteWorkflowTemplateFixture(wfTemplateID)
+	defer deleteStackTemplateFixture(stackTemplateID)
+	defer deleteStackTemplateRevisionFixture(fmt.Sprintf("%s:1", stackTemplateID))
+	defer deprecateStackTemplateRevisionFixture(fmt.Sprintf("%s:1", stackTemplateID))
+
+	if err := createWorkflowTemplateFixture(wfTemplateID, "TERRAFORM"); err != nil {
+		t.Fatalf("failed to create workflow template fixture: %s", err)
+	}
+	if err := createStackTemplateFixture(stackTemplateID, "TERRAFORM"); err != nil {
+		t.Fatalf("failed to create stack template fixture: %s", err)
+	}
+
+	customHeader := http.Header{}
+	customHeader.Set("x-sg-internal-auth-orgid", "sg-provider-test")
+
+	hcl := testAccStackTemplateRevisionConfig(stackTemplateID, wfTemplateID, "v1", "notes", "description")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader),
+		Steps: []resource.TestStep{
+			{
+				Config: hcl,
+			},
+			// Import into a fresh state and compare with the state the create produced.
+			{
+				Config:            hcl,
+				ResourceName:      "stackguardian_stack_template_revision.test",
+				ImportState:       true,
+				ImportStateId:     stackTemplateID + ":1",
+				ImportStateVerify: true,
+				ImportStateCheck: func(states []*terraform.InstanceState) error {
+					if got := states[0].Attributes["parent_template_id"]; got != stackTemplateID {
+						return fmt.Errorf("imported parent_template_id = %q, want %q", got, stackTemplateID)
+					}
+					return nil
+				},
+			},
+		},
+	})
+}
+
 func TestAccStackTemplateRevision_WithWorkflowsConfig(t *testing.T) {
 	acctest.SkipUnlessAcceptance(t)
 	stackTemplateID := acctest.ResourceName("provider-test-stack-template-rev2")
