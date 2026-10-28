@@ -770,7 +770,7 @@ Read-Only:
 
 Optional:
 
-- `iac_input_data` (Attributes) IaC input data for the workflow. Set to `{}` for no inputs. When any field is set, `schema_type` and `data` are both required. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_input_data))
+- `iac_input_data` (Attributes) IaC input data for the workflow: the inputs passed to its IaC template. Leave it unset to inherit the inputs from the stack template revision, then from the workflow template revision. Once any field is set, `schema_type` and `data` are both required. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_input_data))
 
 Read-Only:
 

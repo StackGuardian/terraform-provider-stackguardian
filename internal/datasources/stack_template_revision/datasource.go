@@ -360,7 +360,7 @@ var dsWorkflowInStackAttrs = map[string]schema.Attribute{
 				},
 			},
 			"iac_input_data": schema.SingleNestedAttribute{
-				MarkdownDescription: "IaC input data for the workflow.",
+				MarkdownDescription: constants.StackTemplateRevisionIacInputData,
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"schema_id": schema.StringAttribute{

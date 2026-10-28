@@ -676,7 +676,7 @@ func (r *stackResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 										// Once any field is set, schema_type and data are both required
 										// (AlsoRequires on each field); schema_type is Optional only to allow {}.
 										"iac_input_data": schema.SingleNestedAttribute{
-											MarkdownDescription: constants.WorkflowIacInputData + " Set to `{}` for no inputs. When any field is set, `schema_type` and `data` are both required.",
+											MarkdownDescription: constants.StackIacInputData,
 											Optional:            true,
 											Attributes: map[string]schema.Attribute{
 												"schema_id": schema.StringAttribute{

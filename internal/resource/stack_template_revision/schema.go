@@ -361,7 +361,7 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 			// are both required (AlsoRequires on each field), so a partial object
 			// can't be sent. schema_type is Optional only to allow the empty object.
 			"iac_input_data": schema.SingleNestedAttribute{
-				MarkdownDescription: "IaC input data for the workflow. Set to `{}` for no inputs. When any field is set, `schema_type` and `data` are both required.",
+				MarkdownDescription: constants.StackTemplateRevisionIacInputData,
 				Optional:            true,
 				Attributes: map[string]schema.Attribute{
 					"schema_id": schema.StringAttribute{
