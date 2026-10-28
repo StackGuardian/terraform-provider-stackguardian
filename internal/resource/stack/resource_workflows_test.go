@@ -17,16 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-// TODO: ModifyPlan's revision-change branch (resource.go) only re-resolves
-// actions when it's left unset in config AND the new revision defines its
-// own actions (reResolveOnRevisionChange's doc comment in model.go). When
-// actions is unset but the new revision has none of its own, plan.Actions is
-// currently left untouched — carried forward from the old revision's already-
-// resolved value — instead of being re-resolved (e.g. back to whatever the
-// API would generate). It should be re-resolved whenever actions isn't
-// provided in the resource config, regardless of what the new revision does.
-// No test currently covers this gap.
-
 // TestAccStack_WorkflowsConfigMinimalEntry verifies a minimal workflow entry
 // (only the Required id) creates successfully, and doubles as a regression
 // test for the Optional+Computed guard fix: omitted fields must resolve to

@@ -18,6 +18,7 @@ import (
 	"github.com/StackGuardian/sg-sdk-go/stacktemplaterevisions"
 	"github.com/StackGuardian/sg-sdk-go/stacktemplates"
 	"github.com/StackGuardian/sg-sdk-go/workflowsteptemplate"
+	"github.com/StackGuardian/sg-sdk-go/workflowsteptemplaterevision"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
 	"github.com/StackGuardian/sg-sdk-go/workflowtemplates"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/acctest"
@@ -127,6 +128,25 @@ func deprecateStackTemplateRevisionFixture(revisionId string) error {
 		context.TODO(), org, revisionId,
 		&stacktemplaterevisions.UpdateStackTemplateRevisionRequest{
 			Deprecation: sgsdkgo.Optional(stacktemplaterevisions.Deprecation{
+				EffectiveDate: &effectiveDate,
+				Message:       &message,
+			}),
+		},
+	)
+	return err
+}
+
+// deprecateWorkflowStepTemplateRevisionFixture deprecates a published workflow step
+// template revision so cleanup can delete it.
+func deprecateWorkflowStepTemplateRevisionFixture(revisionId string) error {
+	client := getClient()
+	// Must already be in the past — see deprecateWorkflowTemplateRevisionFixture.
+	effectiveDate := fmt.Sprintf("%d", time.Now().Add(-1*time.Second).Unix())
+	message := "Test cleanup"
+	_, err := client.WorkflowStepTemplateRevision.UpdateWorkflowStepTemplateRevision(
+		context.TODO(), org, revisionId,
+		&workflowsteptemplaterevision.UpdateWorkflowStepTemplateRevisionModel{
+			Deprecation: sgsdkgo.Optional(workflowsteptemplaterevision.Deprecation{
 				EffectiveDate: &effectiveDate,
 				Message:       &message,
 			}),
@@ -254,8 +274,12 @@ func setupStackWorkflowStepTemplate(t *testing.T, name string) string {
 	isPublic := workflowsteptemplate.IsPublicEnumOne
 
 	// The template can't be deleted while it still has a revision, so :1 goes first.
+	// :1 is published, and the API refuses to delete a published revision until it
+	// is deprecated.
 	revisionID := name + ":1"
 	t.Cleanup(func() {
+		logCleanupErr(t, fmt.Sprintf("deprecate workflow step template revision %q", revisionID),
+			deprecateWorkflowStepTemplateRevisionFixture(revisionID))
 		logCleanupErr(t, fmt.Sprintf("delete workflow step template revision %q", revisionID),
 			client.WorkflowStepTemplateRevision.DeleteWorkflowStepTemplateRevision(context.TODO(), org, revisionID, true))
 		logCleanupErr(t, fmt.Sprintf("delete workflow step template %q", name),
