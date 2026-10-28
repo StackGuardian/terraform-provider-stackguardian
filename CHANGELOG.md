@@ -10,12 +10,13 @@ Entries describe changes that affect provider users: resources, data sources, at
 behavior, documentation and security. Internal refactors, tests and CI changes are left out.
 A **Breaking** change can require edits to existing configurations.
 
-## [1.13.0] - 2026-10-14
+## [1.13.0] - 2026-10-28
 
 ### Added
 
-- New resource `stackguardian_stack` (beta): creates a stack from a stack template revision set in `template_group_id`, given as its full id including the owning organization (`/<org>/<template-id>:<revision>`), so a stack template shared by another organization can be used. `workflows_config.workflows` must list the `id` of every workflow the revision defines, in the same order; any per-workflow attribute left unset is inherited from the stack template revision, then from that workflow's workflow template revision. Changing `template_group_id` upgrades the stack to another revision: attributes you set are kept and unset ones take the new revision's values. `actions` is inherited from the revision unless you declare it, and is checked against the new revision on an upgrade. Each workflow's computed `workflow_id` gives the ID of the workflow the stack creates
-- New data source `stackguardian_stack` (beta): reads an existing stack by `id` and `workflow_group_id`, including its workflows and actions
+- **Beta:** `stackguardian_stack` resource and data source. Their schema and behaviour may change in future releases, including in ways that aren't backwards compatible
+- New resource `stackguardian_stack` (**Beta**): creates a stack from a stack template revision set in `template_group_id`, given as its full id including the owning organization (`/<org>/<template-id>:<revision>`), so a stack template shared by another organization can be used. `workflows_config.workflows` must list the `id` of every workflow the revision defines, in the same order; any per-workflow attribute left unset is inherited from the stack template revision, then from that workflow's workflow template revision. Changing `template_group_id` upgrades the stack to another revision: attributes you set are kept and unset ones take the new revision's values. `actions` is inherited from the revision unless you declare it, and is checked against the new revision on an upgrade. Each workflow's computed `workflow_id` gives the ID of the workflow the stack creates
+- New data source `stackguardian_stack` (**Beta**): reads an existing stack by `id` and `workflow_group_id`, including its workflows and actions
 - `stackguardian_workflow_template_revision`: optional `user_schedules[*].inputs` on the resource and data source, the run inputs a schedule uses when it triggers a run. It accepts `terraform_action.action` and `vcs_config.iac_input_data`; when `iac_input_data` is set, both `schema_type` (`RAW_JSON` or `FORM_JSONSCHEMA`, validated at plan time) and `data` (a JSON string such as `jsonencode({ test = "value" })`) are required. `enable_chaining` is read-only: it is set by StackGuardian and sent back unchanged on update. Existing schedules without `inputs` keep working
 - `stackguardian_workflow_template_revision`: `terraform_config.run_pre_plan_hooks_on_drift` and `terraform_config.run_post_plan_hooks_on_drift` on the resource and data source
 
@@ -188,7 +189,6 @@ for their notes.
 [0.1.0-rc1]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v0.1.0-beta1...v0.1.0-rc1
 [0.1.0-beta1]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v0.1.0-alpha1...v0.1.0-beta1
 [0.1.0-alpha1]: https://github.com/StackGuardian/terraform-provider-stackguardian/releases/tag/v0.1.0-alpha1
-
 [#117]: https://github.com/StackGuardian/terraform-provider-stackguardian/pull/117
 [#132]: https://github.com/StackGuardian/terraform-provider-stackguardian/pull/132
 [#134]: https://github.com/StackGuardian/terraform-provider-stackguardian/pull/134
