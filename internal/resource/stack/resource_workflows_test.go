@@ -839,6 +839,158 @@ func TestAccStack_WorkflowsConfigRoundTripRemainingFields(t *testing.T) {
 	})
 }
 
+// TestAccStack_WorkflowsConfigRoundTripHooksAndMiniSteps covers the per-workflow attributes
+// TestAccStack_WorkflowsConfigRoundTripRemainingFields doesn't set: the remaining
+// terraform_config hooks and workflow steps (pre_apply, post_plan, post_apply),
+// run_pre_init_hooks_on_drift, terraform_bin_path (on a private runner), a step's mount_points, a mini_steps
+// webhook with a webhook_secret, and a wf_chaining entry that chains a stack (stack_id and
+// stack_run_payload). Each value must come back from the API exactly as sent, and the
+// second step re-plans with no diff.
+func TestAccStack_WorkflowsConfigRoundTripHooksAndMiniSteps(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+	wfGrpName := acctest.ResourceName("stack-wfhooks-wfgrp")
+	wfTemplateName := acctest.ResourceName("stack-wfhooks-wftmpl")
+	stackTemplateName := acctest.ResourceName("stack-wfhooks-stmpl")
+	id := acctest.ResourceName("stack-wfhooks")
+
+	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+	stepTemplateID := setupStackWorkflowStepTemplate(t, acctest.ResourceName("stack-wfhooks-step"))
+
+	config := fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id = %[1]q
+
+        # terraform_bin_path only applies on a private runner: on any other the
+        # platform drops it.
+        runner_constraints = {
+          type  = "private"
+          names = ["runner-1"]
+        }
+
+        terraform_config = {
+          run_pre_init_hooks_on_drift = true
+          pre_apply_hooks             = ["echo pre-apply"]
+          post_plan_hooks             = ["echo post-plan"]
+
+          terraform_bin_path = [
+            {
+              source    = "/opt/terraform/bin"
+              target    = "/usr/local/bin"
+              read_only = true
+            }
+          ]
+
+          pre_apply_wf_steps_config = [
+            {
+              name                = "pre-apply-step"
+              wf_step_template_id = %[2]q
+              mount_points = [
+                {
+                  source    = "/data/cache"
+                  target    = "/cache"
+                  read_only = false
+                }
+              ]
+            }
+          ]
+          post_plan_wf_steps_config = [
+            {
+              name                = "post-plan-step"
+              wf_step_template_id = %[2]q
+            }
+          ]
+          post_apply_wf_steps_config = [
+            {
+              name                = "post-apply-step"
+              wf_step_template_id = %[2]q
+            }
+          ]
+        }
+
+        mini_steps = {
+          webhooks = {
+            errored = [
+              {
+                webhook_name   = "on-errored"
+                webhook_url    = "https://example.com/errored"
+                webhook_secret = "hook-secret"
+              }
+            ]
+          }
+          wf_chaining = {
+            completed = [
+              {
+                workflow_group_id = "chained-group"
+                stack_id          = "chained-stack"
+                stack_run_payload = jsonencode({ ActionName = "apply" })
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+`, testWorkflowUUID, stepTemplateID)
+
+	const res = "stackguardian_stack.test"
+	wf := "workflows_config.workflows.0."
+	tc := wf + "terraform_config."
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStackConfig(wfGrpName, revision, id, config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(res, tc+"run_pre_init_hooks_on_drift", "true"),
+					resource.TestCheckResourceAttr(res, tc+"pre_apply_hooks.#", "1"),
+					resource.TestCheckResourceAttr(res, tc+"pre_apply_hooks.0", "echo pre-apply"),
+					resource.TestCheckResourceAttr(res, tc+"post_plan_hooks.#", "1"),
+					resource.TestCheckResourceAttr(res, tc+"post_plan_hooks.0", "echo post-plan"),
+
+					resource.TestCheckResourceAttr(res, tc+"terraform_bin_path.#", "1"),
+					resource.TestCheckResourceAttr(res, tc+"terraform_bin_path.0.source", "/opt/terraform/bin"),
+					resource.TestCheckResourceAttr(res, tc+"terraform_bin_path.0.target", "/usr/local/bin"),
+					resource.TestCheckResourceAttr(res, tc+"terraform_bin_path.0.read_only", "true"),
+
+					resource.TestCheckResourceAttr(res, tc+"pre_apply_wf_steps_config.#", "1"),
+					resource.TestCheckResourceAttr(res, tc+"pre_apply_wf_steps_config.0.name", "pre-apply-step"),
+					resource.TestCheckResourceAttr(res, tc+"pre_apply_wf_steps_config.0.wf_step_template_id", stepTemplateID),
+					resource.TestCheckResourceAttr(res, tc+"pre_apply_wf_steps_config.0.mount_points.#", "1"),
+					resource.TestCheckResourceAttr(res, tc+"pre_apply_wf_steps_config.0.mount_points.0.source", "/data/cache"),
+					resource.TestCheckResourceAttr(res, tc+"pre_apply_wf_steps_config.0.mount_points.0.target", "/cache"),
+					resource.TestCheckResourceAttr(res, tc+"pre_apply_wf_steps_config.0.mount_points.0.read_only", "false"),
+					resource.TestCheckResourceAttr(res, tc+"post_plan_wf_steps_config.#", "1"),
+					resource.TestCheckResourceAttr(res, tc+"post_plan_wf_steps_config.0.name", "post-plan-step"),
+					resource.TestCheckResourceAttr(res, tc+"post_apply_wf_steps_config.#", "1"),
+					resource.TestCheckResourceAttr(res, tc+"post_apply_wf_steps_config.0.name", "post-apply-step"),
+
+					resource.TestCheckResourceAttr(res, wf+"mini_steps.webhooks.errored.#", "1"),
+					resource.TestCheckResourceAttr(res, wf+"mini_steps.webhooks.errored.0.webhook_name", "on-errored"),
+					resource.TestCheckResourceAttr(res, wf+"mini_steps.webhooks.errored.0.webhook_url", "https://example.com/errored"),
+					resource.TestCheckResourceAttr(res, wf+"mini_steps.webhooks.errored.0.webhook_secret", "hook-secret"),
+
+					resource.TestCheckResourceAttr(res, wf+"mini_steps.wf_chaining.completed.#", "1"),
+					resource.TestCheckResourceAttr(res, wf+"mini_steps.wf_chaining.completed.0.workflow_group_id", "chained-group"),
+					resource.TestCheckResourceAttr(res, wf+"mini_steps.wf_chaining.completed.0.stack_id", "chained-stack"),
+					resource.TestCheckResourceAttr(res, wf+"mini_steps.wf_chaining.completed.0.stack_run_payload", `{"ActionName":"apply"}`),
+				),
+			},
+			{
+				// Round trips with no diff.
+				Config:   testAccStackConfig(wfGrpName, revision, id, config),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
 // TestAccStack_WorkflowsConfigCustomWfStepsConfig covers a workflow's top-level
 // wf_steps_config, which only applies to CUSTOM workflows — so this stack's template revision
 // is built on a CUSTOM workflow template rather than the TERRAFORM one the other tests use. The
