@@ -233,13 +233,15 @@ func (r *stackResource) resolveWorkflowTemplates(ctx context.Context, plan Stack
 // First, on every create and update whose template_group_id is known, it
 // checks workflows_config against the stack template revision
 // (validateWorkflowsConfigMatchesRevision), so a missing or reordered workflow
-// fails `terraform plan` instead of only `terraform apply`. A plan that
-// succeeds would otherwise promise a change the apply then refuses, which
-// matters for pipelines that review a plan before applying it. This costs one
-// read of the revision per plan (Create()/Update() read it again to build the
-// request); the check is the most likely mistake when writing a stack, so the
-// earlier feedback is worth the extra read. Create() and Update() still run
-// the same check, which is what catches it when template_group_id is unknown
+// fails `terraform plan` instead of only `terraform apply`, and checks that a
+// workflow with terraform_bin_path runs on a private runner
+// (validateTerraformBinPathRunner). A plan that succeeds would otherwise
+// promise a change the apply then refuses, which matters for pipelines that
+// review a plan before applying it. This costs a read of the revision and of
+// each workflow's workflow template revision per plan (Create()/Update() read
+// them again to build the request); the earlier feedback is worth the extra
+// reads. Create() and Update() still run the same checks, which is what
+// catches them when template_group_id, or a value they depend on, is unknown
 // at plan time.
 //
 // Second, on a template_group_id change, the Optional+Computed fields the
@@ -269,18 +271,53 @@ func (r *stackResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	}
 
 	if plan.TemplateGroupId.IsUnknown() {
-		// The revision isn't known until apply; Create()/Update() run the
-		// workflows_config check then, against the revision they fetch.
+		// The revision isn't known until apply, e.g. it is created in the same
+		// apply, so nothing here can be checked or re-resolved against it.
+		// Create()/Update() run the workflows_config and terraform_bin_path checks
+		// then, against the revision they fetch. A revision change with an unknown
+		// template_group_id is not re-resolved (Update re-sends the old values).
 		return
 	}
 
+	// Every check below compares the config with what the revision defines or
+	// passes down, so the revision is read on every plan, not only on a change.
 	tpl, d := r.fetchTemplateRevision(ctx, plan)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() || tpl == nil {
 		return
 	}
 
+	// A missing, extra or reordered workflow is the most likely mistake when
+	// writing a stack; the API rejects it, so fail the plan instead of the apply.
+	// Create()/Update() run it again for an unknown template_group_id.
 	resp.Diagnostics.Append(validateWorkflowsConfigMatchesRevision(ctx, plan.WorkflowsConfig, tpl)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// The workflow template revision of each workflow is the lowest layer the
+	// request inherits from (stack config, then the stack template revision, then
+	// the workflow template revision). The terraform_bin_path check needs it on
+	// every plan, since a bin path or runner can come from that layer, and a
+	// revision change needs it to re-resolve the new values. One read per workflow.
+	workflowTemplates, d := r.resolveWorkflowTemplates(ctx, plan, tpl)
+	resp.Diagnostics.Append(d...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// The platform drops terraform_bin_path from a workflow that isn't on a
+	// private runner, so the apply would fail with an "inconsistent result after
+	// apply" that doesn't name the attribute. Checked on the values the request
+	// will carry, merged with both template layers. A workflow whose runner or bin
+	// path is unknown in config can't be judged yet, so it is skipped here and
+	// checked by Create()/Update() once known.
+	unknownBinPathOrRunner, d := workflowsWithUnknownBinPathOrRunner(ctx, config.WorkflowsConfig)
+	resp.Diagnostics.Append(d...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(validateTerraformBinPathRunner(ctx, plan.WorkflowsConfig, unknownBinPathOrRunner, tpl, workflowTemplates)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -289,22 +326,28 @@ func (r *stackResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 		return // no revision change: nothing to re-resolve
 	}
 
+	// On an upgrade, actions the user declared may point at a workflow the new
+	// revision dropped. Unset actions are rebuilt from the new revision below, but
+	// declared ones can't be rewritten, so a dangling reference fails the plan
+	// here instead of surfacing as an opaque API error. Only checked on a revision
+	// change, the case it exists for: a declared action that was valid against the
+	// old revision.
 	resp.Diagnostics.Append(validateActionsAgainstRevision(ctx, config.Actions, plan.WorkflowsConfig, tpl)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	workflowTemplates, d := r.resolveWorkflowTemplates(ctx, plan, tpl)
-	resp.Diagnostics.Append(d...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
+	// UseStateForUnknown carries the OLD revision's values forward for the
+	// stack-level fields the user didn't declare (description, tags,
+	// context_tags, actions), so plan them from the new revision instead;
+	// otherwise the plan would differ from what the apply stores.
 	resp.Diagnostics.Append(reResolveOnRevisionChange(ctx, &plan, config, tpl)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	// Same for the per-workflow fields inherited from the templates, which also
+	// need the new workflow template revisions.
 	resp.Diagnostics.Append(reResolveWorkflowsConfigOnRevisionChange(ctx, &plan, config, tpl, workflowTemplates)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -323,6 +366,11 @@ func (r *stackResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
+	// The request is built by merging the plan with the revision's values
+	// (attributes the user left unset are inherited from it), and the checks below
+	// run against it. Read again rather than reused from ModifyPlan: the framework
+	// keeps nothing between plan and apply, and template_group_id may only be
+	// known now.
 	tpl, diags := r.fetchTemplateRevision(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -330,16 +378,34 @@ func (r *stackResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// ModifyPlan already ran this check at plan time whenever template_group_id
-	// was known. It runs again here for when it wasn't (e.g. it references a
-	// revision created in the same apply), using the tpl this function already
-	// fetched to build the request.
+	// was known, so the plan fails instead of only the apply. It runs again here
+	// for when it wasn't (e.g. it references a revision created in the same
+	// apply), so the mismatch is reported by name instead of as an API error. It
+	// costs no API call: it uses the tpl this function already fetched to build
+	// the request.
 	resp.Diagnostics.Append(validateWorkflowsConfigMatchesRevision(ctx, plan.WorkflowsConfig, tpl)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	// Each workflow's workflow template revision is the lowest layer the request
+	// inherits from, below the stack template revision.
 	workflowTemplates, diags := r.resolveWorkflowTemplates(ctx, plan, tpl)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// ModifyPlan runs this check too, so the plan fails instead of only the
+	// apply. It runs again here for the cases ModifyPlan skips: a
+	// template_group_id unknown at plan time (ModifyPlan returns before any
+	// check, since it can't fetch the revision to see inherited values), and a
+	// workflow whose runner_constraints or terraform_bin_path is unknown at plan
+	// time. Both are known by now; without this check they would reach the API,
+	// which drops terraform_bin_path, and fail with an "inconsistent result after
+	// apply" that doesn't name the attribute. It costs no API call: tpl and
+	// workflowTemplates were already fetched to build the request.
+	resp.Diagnostics.Append(validateTerraformBinPathRunner(ctx, plan.WorkflowsConfig, nil, tpl, workflowTemplates)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -437,6 +503,11 @@ func (r *stackResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
+	// The request is built by merging the plan with the revision's values
+	// (attributes the user left unset are inherited from it), and the checks below
+	// run against it. Read again rather than reused from ModifyPlan: the framework
+	// keeps nothing between plan and apply, and template_group_id may only be
+	// known now.
 	tpl, diags := r.fetchTemplateRevision(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -444,16 +515,34 @@ func (r *stackResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	// ModifyPlan already ran this check at plan time whenever template_group_id
-	// was known. It runs again here for when it wasn't (e.g. it references a
-	// revision created in the same apply), using the tpl this function already
-	// fetched to build the request.
+	// was known, so the plan fails instead of only the apply. It runs again here
+	// for when it wasn't (e.g. it references a revision created in the same
+	// apply), so the mismatch is reported by name instead of as an API error. It
+	// costs no API call: it uses the tpl this function already fetched to build
+	// the request.
 	resp.Diagnostics.Append(validateWorkflowsConfigMatchesRevision(ctx, plan.WorkflowsConfig, tpl)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	// Each workflow's workflow template revision is the lowest layer the request
+	// inherits from, below the stack template revision.
 	workflowTemplates, diags := r.resolveWorkflowTemplates(ctx, plan, tpl)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// ModifyPlan runs this check too, so the plan fails instead of only the
+	// apply. It runs again here for the cases ModifyPlan skips: a
+	// template_group_id unknown at plan time (ModifyPlan returns before any
+	// check, since it can't fetch the revision to see inherited values), and a
+	// workflow whose runner_constraints or terraform_bin_path is unknown at plan
+	// time. Both are known by now; without this check they would reach the API,
+	// which drops terraform_bin_path, and fail with an "inconsistent result after
+	// apply" that doesn't name the attribute. It costs no API call: tpl and
+	// workflowTemplates were already fetched to build the request.
+	resp.Diagnostics.Append(validateTerraformBinPathRunner(ctx, plan.WorkflowsConfig, nil, tpl, workflowTemplates)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

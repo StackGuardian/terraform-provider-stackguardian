@@ -3258,6 +3258,96 @@ func workflowsMismatchDetail(required, declared []string, resourceNames map[stri
 	return strings.TrimRight(b.String(), "\n"), true
 }
 
+// validateTerraformBinPathRunner rejects terraform_bin_path on a workflow that
+// won't run on a private runner. The platform uses a runner-provided binary
+// only on a private runner and drops terraform_bin_path from any other
+// workflow, so the apply would fail with "inconsistent result after apply".
+//
+// It checks the values the request will carry: workflowsConfig merged with the
+// stack template revision tpl and workflowTemplates, so a bin path or runner
+// inherited from either template counts. A workflow with no runner_constraints
+// anywhere gets the organization's default runner, which the provider can't
+// see, so it must declare a private runner to use terraform_bin_path.
+//
+// Workflows whose id is in skip are not checked: ModifyPlan passes the ones
+// whose runner_constraints or terraform_bin_path is unknown in config, and
+// Create/Update check them again once they are known.
+func validateTerraformBinPathRunner(ctx context.Context, workflowsConfig types.Object, skip map[string]bool, tpl *stacktemplaterevisions.ReadStackTemplateRevisionModel, workflowTemplates map[string]*workflowtemplaterevisions.ReadWorkflowTemplateRevisionModel) diag.Diagnostics {
+	wfc, diags := expandWorkflowsConfig(ctx, workflowsConfig, tpl, workflowTemplates)
+	if diags.HasError() || wfc == nil {
+		return diags
+	}
+	for i, wf := range wfc.Workflows {
+		if wf == nil || wf.Id == nil || skip[*wf.Id] || wf.TerraformConfig == nil || len(wf.TerraformConfig.TerraformBinPath) == 0 {
+			continue
+		}
+		rc := wf.RunnerConstraints
+		if rc != nil && rc.Type != nil && *rc.Type == sgsdkgo.RunnerConstraintsTypeEnumPrivate {
+			continue
+		}
+		diags.AddAttributeError(
+			path.Root("workflows_config").AtName("workflows").AtListIndex(i).AtName("terraform_config").AtName("terraform_bin_path"),
+			"terraform_bin_path requires a private runner",
+			fmt.Sprintf("Workflow %s has terraform_bin_path set, in this configuration or inherited from its templates, "+
+				"but doesn't run on a private runner. StackGuardian only uses terraform_bin_path on a private runner "+
+				"and drops it otherwise. Set runner_constraints = { type = \"private\", names = [...] } on the workflow, "+
+				"or remove terraform_bin_path.", *wf.Id),
+		)
+	}
+	return diags
+}
+
+// workflowsWithUnknownBinPathOrRunner returns the ids of the workflows whose
+// runner_constraints, terraform_config or terraform_config.terraform_bin_path
+// is unknown in workflowsConfig (the config value), for
+// validateTerraformBinPathRunner to skip at plan time.
+func workflowsWithUnknownBinPathOrRunner(ctx context.Context, workflowsConfig types.Object) (map[string]bool, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	result := make(map[string]bool)
+	if workflowsConfig.IsNull() || workflowsConfig.IsUnknown() {
+		return result, diags
+	}
+	var wfc WorkflowsConfigModel
+	if d := workflowsConfig.As(ctx, &wfc, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); d.HasError() {
+		diags.Append(d...)
+		return result, diags
+	}
+	if wfc.Workflows.IsNull() || wfc.Workflows.IsUnknown() {
+		return result, diags
+	}
+	var wfModels []WorkflowInStackModel
+	if d := wfc.Workflows.ElementsAs(ctx, &wfModels, false); d.HasError() {
+		diags.Append(d...)
+		return result, diags
+	}
+	for _, wm := range wfModels {
+		if wm.Id.IsNull() || wm.Id.IsUnknown() {
+			continue
+		}
+		unknown := wm.RunnerConstraints.IsUnknown() || wm.TerraformConfig.IsUnknown()
+		if !unknown && !wm.RunnerConstraints.IsNull() {
+			var rc RunnerConstraintsModel
+			if d := wm.RunnerConstraints.As(ctx, &rc, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); d.HasError() {
+				diags.Append(d...)
+				return result, diags
+			}
+			unknown = rc.Type.IsUnknown()
+		}
+		if !unknown && !wm.TerraformConfig.IsNull() {
+			var tc TerraformConfigModel
+			if d := wm.TerraformConfig.As(ctx, &tc, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true}); d.HasError() {
+				diags.Append(d...)
+				return result, diags
+			}
+			unknown = tc.TerraformBinPath.IsUnknown()
+		}
+		if unknown {
+			result[wm.Id.ValueString()] = true
+		}
+	}
+	return result, diags
+}
+
 // reResolveOnRevisionChange re-resolves the template-derived fields the user
 // left unset against the NEW stack template revision tpl, used by ModifyPlan
 // on a template_group_id change. Values are computed via the same flatteners

@@ -471,7 +471,7 @@ Read-Only:
 - `pre_plan_hooks` (List of String) Hooks to run before plan.
 - `pre_plan_wf_steps_config` (Attributes List) Workflow steps configuration to run before plan. (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config--pre_plan_wf_steps_config))
 - `run_pre_init_hooks_on_drift` (Boolean) Run pre-init hooks on drift detection.
-- `terraform_bin_path` (Attributes List) Mount points for terraform binary. (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config--terraform_bin_path))
+- `terraform_bin_path` (Attributes List) Mount points for a Terraform binary provided by the runner. Only works on a private runner: the workflow must have `runner_constraints.type = "private"`, declared here or inherited from its templates, or the plan fails. (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config--terraform_bin_path))
 - `terraform_init_options` (String) Additional options for terraform init.
 - `terraform_plan_options` (String) Additional options for terraform plan.
 - `terraform_version` (String) Version of the engine to run, written bare (e.g. `1.5.7`). <ul><li>OpenTofu — any version.</li><li>Terraform — the open-source releases, `1.5.7` and earlier. A later release is BUSL-licensed and is only available on a workflow step template built on your own runtime image.</li></ul>The workflow step's container ships a set of versions preinstalled and downloads anything else when the workflow runs, provided it exists upstream. Which engine runs is decided by `wf_type`, not by this value.

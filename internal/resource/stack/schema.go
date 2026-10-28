@@ -276,7 +276,7 @@ var terraformConfigAttrs = map[string]schema.Attribute{
 		},
 	},
 	"terraform_bin_path": schema.ListNestedAttribute{
-		MarkdownDescription: constants.TerraformBinPath,
+		MarkdownDescription: constants.StackTerraformBinPath,
 		Optional:            true,
 		Computed:            true,
 		PlanModifiers: []planmodifier.List{

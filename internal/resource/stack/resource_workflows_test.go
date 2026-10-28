@@ -991,6 +991,68 @@ func TestAccStack_WorkflowsConfigRoundTripHooksAndMiniSteps(t *testing.T) {
 	})
 }
 
+// TestAccStack_TerraformBinPathRequiresPrivateRunner verifies terraform_bin_path is
+// rejected at plan time on a workflow that doesn't run on a private runner. The
+// platform drops it from such a workflow, so the apply used to fail with an
+// "inconsistent result after apply" that didn't name the attribute. Step 1 declares a
+// shared runner; step 2 declares no runner at all, so the organization's default would
+// apply, which the provider can't see.
+func TestAccStack_TerraformBinPathRequiresPrivateRunner(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+	wfGrpName := acctest.ResourceName("stack-binpath-wfgrp")
+	wfTemplateName := acctest.ResourceName("stack-binpath-wftmpl")
+	stackTemplateName := acctest.ResourceName("stack-binpath-stmpl")
+	id := acctest.ResourceName("stack-binpath")
+
+	revision := setupStackDependencyChain(t, wfGrpName, wfTemplateName, stackTemplateName, id)
+
+	config := func(runnerConstraints string) string {
+		return testAccStackConfig(wfGrpName, revision, id, fmt.Sprintf(`
+  workflows_config = {
+    workflows = [
+      {
+        id = %q
+%s
+        terraform_config = {
+          terraform_bin_path = [
+            {
+              source = "/opt/terraform/bin"
+              target = "/usr/local/bin"
+            }
+          ]
+        }
+      }
+    ]
+  }
+`, testWorkflowUUID, runnerConstraints))
+	}
+
+	requiresPrivate := regexp.MustCompile(`terraform_bin_path requires a private runner`)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: config(`
+        runner_constraints = {
+          type = "shared"
+        }`),
+				PlanOnly:    true,
+				ExpectError: requiresPrivate,
+			},
+			{
+				Config:      config(""),
+				PlanOnly:    true,
+				ExpectError: requiresPrivate,
+			},
+		},
+	})
+}
+
 // TestAccStack_WorkflowsConfigCustomWfStepsConfig covers a workflow's top-level
 // wf_steps_config, which only applies to CUSTOM workflows — so this stack's template revision
 // is built on a CUSTOM workflow template rather than the TERRAFORM one the other tests use. The
