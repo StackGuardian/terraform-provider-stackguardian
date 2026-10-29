@@ -179,13 +179,15 @@ func convertXxxFromAPI(ctx context.Context, input *SomeType) (types.Object, diag
 
 `flatteners.IsEmptyObject` marshals the struct to JSON and returns `true` if the result is `{}`. This requires every JSON-tagged field on the SDK struct to use `omitempty` on a pointer, slice, or map type — bare value fields (e.g. `Type string \`json:"type"\``) will not be omitted and must be changed to pointers in the SDK repo.
 
-**List-returning converters** — check `len == 0` at the top (covers both nil and empty slice):
+**List-returning converters** — check `items == nil` at the top. Return null only for nil (the
+API didn't return the field); an empty slice becomes an empty list, so an explicit `[]` in config
+round-trips (see gotcha 9):
 
 ```go
 func convertXxxListFromAPI(ctx context.Context, items []SdkType) (types.List, diag.Diagnostics) {
     nullList := types.ListNull(types.ObjectType{AttrTypes: XxxModel{}.AttributeTypes()})
 
-    if len(items) == 0 {
+    if items == nil {
         return nullList, nil
     }
 
@@ -196,10 +198,6 @@ func convertXxxListFromAPI(ctx context.Context, items []SdkType) (types.List, di
         }
         models = append(models, XxxModel{ /* ... */ })
     }
-    if len(models) == 0 {
-        return nullList, nil
-    }
-
     list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: XxxModel{}.AttributeTypes()}, models)
     if diags.HasError() {
         return nullList, diags
@@ -244,6 +242,8 @@ schemas of those attributes and re-use them.
 
 8. **Attributes that are `Computed`**: In `converXxxFromAPI` method they need to set to some value if they are nil. If it is `types.Object` then all attributes inside that attribute need to have a nil value.
 
+9. **Never collapse an empty API value to null with a length check.** When an omitted Optional attribute reads back as `[]` / `{}` / `""` ("was null, but now cty.ListValEmpty…"), don't fix it in the reader with `if len(x) == 0 { return null }`: that breaks the opposite case, where the user sets the empty value explicitly and it reads back as null. Find out where the API fills it in: the request serializers in the `api` repo (`platform_api/api/serializers/`, e.g. `ListField(default=[])`) or `core`. Then mirror that default in the schema: `Optional` + `Computed` + `Default` (`listdefault.StaticValue(...)`, `booldefault.StaticBool(...)`, etc.). Also check whether the default applies on update: DRF skips `default` when the serializer runs with `partial=True`.
+
 ---
 
 ## Resources
@@ -272,14 +272,17 @@ Note the directory `role_v4/` produces the Terraform type `stackguardian_rolev4`
 
 ## Data Sources
 
-Authoritative list: `DataSources()` in `internal/provider/provider.go`. Seventeen, under
+Authoritative list: `DataSources()` in `internal/provider/provider.go`. Eighteen, under
 `internal/datasources/<name>/`: `connector`, `policy`, `role`, `role_assignment`, `runner_group`,
-`runner_group_token`, `stack_outputs`, `stack_template`, `stack_template_revision`,
+`runner_group_token`, `stack`, `stack_outputs`, `stack_template`, `stack_template_revision`,
 `stack_workflow_outputs`, `workflow_git`, `workflow_group`, `workflow_outputs`,
 `workflow_step_template`, `workflow_step_template_revision`, `workflow_template`,
 `workflow_template_revision`.
 
 `stack_template` and `stack_template_revision` define their schema inline in `datasource.go`
 rather than a separate `schema.go`.
+
+`stack` derives its schema from the `stackguardian_stack` resource's schema (every attribute
+Computed except `id` and `workflow_group_id`) instead of restating it.
 
 ---

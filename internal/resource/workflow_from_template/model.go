@@ -196,19 +196,31 @@ func (MinistepsWorkflowChainingModel) AttributeTypes() map[string]attr.Type {
 	}
 }
 
-func (m MinistepsWorkflowChainingModel) ToAPIModel() workflowtemplaterevisions.MinistepsWfChainingSchema {
+// Returns diagnostics, unlike the leaf-struct convention (ToAPIModel() SdkType),
+// because parsing the JSON can fail: an invalid value used to be sent silently as
+// {} / nil. validators.JSONObject rejects it at plan time; this catches a value
+// that was only known at apply.
+func (m MinistepsWorkflowChainingModel) ToAPIModel() (workflowtemplaterevisions.MinistepsWfChainingSchema, diag.Diagnostics) {
 	entry := workflowtemplaterevisions.MinistepsWfChainingSchema{
 		WorkflowGroupId: m.WorkflowGroupId.ValueString(),
 		StackId:         m.StackId.ValueStringPointer(),
 		WorkflowId:      m.WorkflowId.ValueStringPointer(),
 	}
 	if s := m.WorkflowRunPayload.ValueString(); s != "" {
-		entry.WorkflowRunPayload = expanders.JSONStringToInterface(s)
+		payload, err := expanders.JSONStringToObject(s)
+		if err != nil {
+			return entry, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid workflow_run_payload", "The value "+err.Error()+".")}
+		}
+		entry.WorkflowRunPayload = payload
 	}
 	if s := m.StackRunPayload.ValueString(); s != "" {
-		entry.StackRunPayload = expanders.JSONStringToInterface(s)
+		payload, err := expanders.JSONStringToObject(s)
+		if err != nil {
+			return entry, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid stack_run_payload", "The value "+err.Error()+".")}
+		}
+		entry.StackRunPayload = payload
 	}
-	return entry
+	return entry, nil
 }
 
 type MinistepsEmailModel struct {
@@ -502,7 +514,11 @@ func (IacInputDataModel) AttributeTypes() map[string]attr.Type {
 	}
 }
 
-func (m IacInputDataModel) ToAPIModel() *sgsdkgo.IacInputData {
+// Returns diagnostics, unlike the leaf-struct convention (ToAPIModel() SdkType),
+// because parsing the JSON can fail: an invalid value used to be sent silently as
+// {} / nil. validators.JSONObject rejects it at plan time; this catches a value
+// that was only known at apply.
+func (m IacInputDataModel) ToAPIModel() (*sgsdkgo.IacInputData, diag.Diagnostics) {
 	out := &sgsdkgo.IacInputData{}
 	if isNonEmpty(m.SchemaId) {
 		out.SchemaId = m.SchemaId.ValueStringPointer()
@@ -515,10 +531,13 @@ func (m IacInputDataModel) ToAPIModel() *sgsdkgo.IacInputData {
 		// parses to an empty (non-nil) map and serializes as "data": {}, which the API
 		// accepts and which suppresses template inheritance (see fillTemplateIacInputData).
 		// A null/"" data leaves the pointer nil -> key omitted -> inherit.
-		dataMap := expanders.JSONStringToMap(m.Data.ValueString())
+		dataMap, err := expanders.JSONStringToObject(m.Data.ValueString())
+		if err != nil {
+			return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid vcs_config.iac_input_data.data", "The value "+err.Error()+".")}
+		}
 		out.Data = &dataMap
 	}
-	return out
+	return out, nil
 }
 
 type IacVcsConfigModel struct {
@@ -572,7 +591,11 @@ func (m VcsConfigModel) ToAPIModel(ctx context.Context) (*sgsdkgo.VcsConfig, dia
 		// fields, stored for plan stability when the template/API supplied none) must not
 		// be sent — the API requires schemaType+data when iacInputData is present.
 		if isNonEmpty(iacInputDataModel.SchemaType) || isNonEmpty(iacInputDataModel.Data) {
-			result.IacInputData = iacInputDataModel.ToAPIModel()
+			iacInputData, d := iacInputDataModel.ToAPIModel()
+			if d.HasError() {
+				return nil, d
+			}
+			result.IacInputData = iacInputData
 		}
 	}
 
@@ -622,9 +645,13 @@ func (m WfStepInputDataModel) ToAPIModel() (*sgsdkgo.WfStepInputData, diag.Diagn
 	if err != nil {
 		return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid schema type", "The provided schema type is invalid: "+err.Error())}
 	}
+	data, err := expanders.JSONStringToObject(m.Data.ValueString())
+	if err != nil {
+		return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Invalid wf_step_input_data.data", "The value "+err.Error()+".")}
+	}
 	return &sgsdkgo.WfStepInputData{
 		SchemaType: schemaType.Ptr(),
-		Data:       expanders.JSONStringToMap(m.Data.ValueString()),
+		Data:       data,
 	}, nil
 }
 
@@ -1453,7 +1480,11 @@ func convertWorkflowChainingToAPI(ctx context.Context, list types.List) ([]workf
 	}
 	result := make([]workflowtemplaterevisions.MinistepsWfChainingSchema, len(models))
 	for i, m := range models {
-		result[i] = m.ToAPIModel()
+		entry, d := m.ToAPIModel()
+		if d.HasError() {
+			return nil, d
+		}
+		result[i] = entry
 	}
 	return result, nil
 }

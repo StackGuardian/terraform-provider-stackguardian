@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -175,7 +176,7 @@ func setupWorkflowTemplate(t *testing.T, templateID string) string {
 
 // addSecondRevision creates and publishes revision :2 of an existing template, with a
 // different env var (REV2_VAR) and terraform version so an upgrade is observable. It
-// registers cleanup for the revision. templateID is the bare template name (no org).
+// registers cleanup for the revision. templateID is the bare template id (no org).
 func addSecondRevision(t *testing.T, templateID string) string {
 	t.Helper()
 	client := getClient()
@@ -278,7 +279,7 @@ func testAccWorkflowUsingTemplate(wfGrpName, id, wfType, templateID, additionalC
 
 // setupWorkflowStepTemplate creates and publishes a WORKFLOW_STEP template (with a
 // DOCKER_IMAGE runtime source) and returns its fully-qualified revision id
-// ("/<org>/<name>:1") for use as wf_step_template_id. Registers cleanup.
+// ("/<org>/<template-id>:1") for use as wf_step_template_id. Registers cleanup.
 func setupWorkflowStepTemplate(t *testing.T, name string) string {
 	t.Helper()
 	client := getClient()
@@ -688,7 +689,7 @@ func setupTemplateWithWfStepRevision(t *testing.T, name, stepRev string) string 
 // value round-trips with no diff.
 func TestAccWorkflowUsingTemplate_WfStepRevisionInheritedFromTemplate(t *testing.T) {
 	acctest.SkipUnlessAcceptance(t)
-	stepRev := setupWorkflowStepTemplate(t, acctest.ResourceName("tf-provider-wf-steprev-inh")) // "/<org>/<name>:1"
+	stepRev := setupWorkflowStepTemplate(t, acctest.ResourceName("tf-provider-wf-steprev-inh")) // "/<org>/<template-id>:1"
 	templateID := setupTemplateWithWfStepRevision(t, acctest.ResourceName("tf-provider-wf-tmpl-steprev-inh"), stepRev)
 	wfGrpName := acctest.ResourceName("tf-provider-wf-template-steprev-inh-wfgrp")
 	id := acctest.ResourceName("tf-provider-wf-template-steprev-inh")
@@ -753,7 +754,7 @@ func TestAccWorkflowUsingTemplate_WfStepRevisionInheritedFromTemplate(t *testing
 func TestAccWorkflowUsingTemplate_WithWfStepTemplateRevisionId(t *testing.T) {
 	acctest.SkipUnlessAcceptance(t)
 	templateID := setupWorkflowTemplate(t, acctest.ResourceName("tf-provider-wf-tmpl-wfsteprev")) + ":1"
-	step1 := setupWorkflowStepTemplate(t, acctest.ResourceName("tf-provider-wf-steprev-1")) // "/<org>/<name>:1"
+	step1 := setupWorkflowStepTemplate(t, acctest.ResourceName("tf-provider-wf-steprev-1")) // "/<org>/<template-id>:1"
 	step2 := setupWorkflowStepTemplate(t, acctest.ResourceName("tf-provider-wf-steprev-2"))
 	wfGrpName := acctest.ResourceName("tf-provider-wf-template-wfsteprev-wfgrp")
 	id := acctest.ResourceName("tf-provider-wf-template-wfsteprev")
@@ -1775,6 +1776,78 @@ func TestAccWorkflowUsingTemplate_DriftDetection(t *testing.T) {
 	})
 }
 
+// TestAccWorkflowUsingTemplate_DriftDetectionOnTemplateDefault verifies drift detection for
+// an attribute the user never declares in config at all: its value on create comes purely
+// from the template default (mirroring TestAccWorkflowUsingTemplate_TemplateDefaultsResolved)
+// and is persisted into state as such. An out-of-band change to that attribute must still be
+// caught as drift on the next plan, exactly as for a user-declared attribute (see
+// TestAccWorkflowUsingTemplate_DriftDetection).
+func TestAccWorkflowUsingTemplate_DriftDetectionOnTemplateDefault(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+	templateID := setupWorkflowTemplate(t, "tf-provider-wf-tmpl-drift-default") + ":1"
+	wfGrpName := "tf-provider-wf-template-drift-default-wfgrp"
+	id := "tf-provider-wf-template-drift-default"
+
+	if err := createWorkflowGroupFixture(wfGrpName); err != nil {
+		t.Errorf("failed to create workflow group fixture: %s", err.Error())
+	}
+	defer deleteWorkflowGroupFixture(wfGrpName)
+	defer deleteWorkflowUsingTemplateFixture(wfGrpName, id)
+
+	// The user declares nothing beyond the template reference. environment_variables is
+	// entirely template-resolved (TMPL_VAR/tmpl-value, from setupWorkflowTemplate).
+	tfconfig := ``
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccWorkflowUsingTemplate(wfGrpName, id, "TERRAFORM", templateID, tfconfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Never declared by the user; resolved from the template on create and
+					// persisted into state as a real (non-null) value.
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "environment_variables.0.config.var_name", "TMPL_VAR"),
+					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "environment_variables.0.config.text_value", "tmpl-value"),
+				),
+			},
+			{
+				// Mutate the template-resolved environment_variables out-of-band, then run a
+				// refresh-only step. Even though the user's own config never mentions this
+				// attribute, state holds a concrete value for it, so the refresh must detect
+				// the drift and the resulting plan must be non-empty. (RefreshState cannot be
+				// combined with Config, so this step intentionally omits Config.)
+				PreConfig: func() {
+					client := getClient()
+					_, err := client.Workflows.UpdateWorkflow(
+						context.TODO(), config.Get().OrgName, id, wfGrpName,
+						sgworkflows.UpgradeModeEnumPreserveSettings.Ptr(),
+						&sgworkflows.PatchedWorkflow{
+							EnvironmentVariables: sgsdkgo.Optional([]*sgsdkgo.EnvVars{
+								{
+									Kind: sgsdkgo.EnvVarsKindEnumPlainText,
+									Config: &sgsdkgo.EnvVarConfig{
+										VarName:   "TMPL_VAR",
+										TextValue: sgsdkgo.String("changed-out-of-band"),
+									},
+								},
+							}),
+						},
+					)
+					if err != nil {
+						t.Fatalf("drift setup: out-of-band update failed: %s", err)
+					}
+				},
+				RefreshState:       true,
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
+
 // TestAccWorkflowUsingTemplate_RevisionUpgrade verifies that changing iac_template_id to a
 // new revision re-resolves the unset (Computed) fields against the NEW revision, while
 // fields the user declared in config are preserved. rev1 has env var TMPL_VAR; rev2 has
@@ -1834,6 +1907,67 @@ func TestAccWorkflowUsingTemplate_RevisionUpgrade(t *testing.T) {
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.drift_cron", "0 */6 * * ? *"),
 					resource.TestCheckResourceAttr("stackguardian_workflow_from_template.test", "terraform_config.terraform_version", "1.5.0"),
 				),
+			},
+		},
+	})
+}
+
+// TestAccWorkflowUsingTemplate_InvalidJSONRejected verifies vcs_config.iac_input_data.data
+// and mini_steps.wf_chaining.*[*].workflow_run_payload must be JSON objects, checked at
+// plan time (validators.JSONObject). Invalid JSON used to be sent as {} (data) or nil
+// (payload), so the inputs were silently dropped. The validator fails before any API
+// call, so no fixtures are needed.
+func TestAccWorkflowUsingTemplate_InvalidJSONRejected(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
+
+	config := func(iacInputData, payload string) string {
+		return fmt.Sprintf(`
+resource "stackguardian_workflow_from_template" "test" {
+  workflow_group_id = "my-workflow-group"
+  id                = "my-workflow"
+  wf_type           = "TERRAFORM"
+
+  vcs_config = {
+    iac_vcs_config = {
+      iac_template_id = "my-template:1"
+    }
+    iac_input_data = {
+      schema_type = "RAW_JSON"
+      data        = %q
+    }
+  }
+
+  mini_steps = {
+    wf_chaining = {
+      completed = [
+        {
+          workflow_group_id    = "my-workflow-group"
+          workflow_id          = "my-other-workflow"
+          workflow_run_payload = %q
+        }
+      ]
+    }
+  }
+}
+`, iacInputData, payload)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctest.TestAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_1_0),
+		},
+		ProtoV6ProviderFactories: acctest.ProviderFactories(customHeader()),
+		Steps: []resource.TestStep{
+			{
+				Config:      config(`{"bucket_region":`, `{"key":"value"}`),
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`(?s)Invalid JSON object.*not valid JSON`),
+			},
+			{
+				Config:      config(`{"bucket_region":"eu-central-1"}`, `["apply"]`),
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`(?s)Invalid JSON object.*must be a JSON object`),
 			},
 		},
 	})

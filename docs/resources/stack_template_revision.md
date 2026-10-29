@@ -53,8 +53,13 @@ resource "stackguardian_stack_template_revision" "basic" {
     workflows = [
       {
         id            = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
-        template_id   = "my-workflow-template"
         resource_name = "wf-1"
+
+        vcs_config = {
+          iac_vcs_config = {
+            iac_template_id = "/my-org/my-workflow-template:1"
+          }
+        }
 
         terraform_config = {
           managed_terraform_state = true
@@ -65,25 +70,23 @@ resource "stackguardian_stack_template_revision" "basic" {
   }
 }
 
-# Example 2: Stack template revision with VCS config
+# Example 2: Stack template revision with IaC input data
 resource "stackguardian_stack_template_revision" "with_vcs" {
   parent_template_id = stackguardian_stack_template.example.id
   alias              = "v2"
-  notes              = "Revision with VCS configuration"
-  description        = "Stack template revision with VCS and input data"
+  notes              = "Revision with IaC input data"
+  description        = "Stack template revision with IaC input data"
   source_config_kind = "TERRAFORM"
 
   workflows_config = {
     workflows = [
       {
         id            = "d8dfaf15-2ad9-da29-8af0-c6b288b12089"
-        template_id   = "my-workflow-template"
         resource_name = "wf-1"
 
         vcs_config = {
           iac_vcs_config = {
-            use_marketplace_template = true
-            iac_template_id          = "my-workflow-template"
+            iac_template_id = "/my-org/my-workflow-template:1"
           }
           iac_input_data = {
             schema_type = "RAW_JSON"
@@ -113,7 +116,7 @@ resource "stackguardian_stack_template_revision" "with_vcs" {
 
 ### Optional
 
-- `actions` (Attributes Map) JSON-encoded map of actions for the stack template revision. (see [below for nested schema](#nestedatt--actions))
+- `actions` (Attributes Map) JSON-encoded map of actions for the stack template revision. Must have at least one entry if set. (see [below for nested schema](#nestedatt--actions))
 - `alias` (String) Human-readable alias for the revision (e.g., `v1.0.0`).
 - `context_tags` (Map of String) Context tags for stack template revision
 - `deprecation` (Attributes) Deprecation information for this resource. Revision can only be deprecated once it is published. (see [below for nested schema](#nestedatt--deprecation))
@@ -127,25 +130,28 @@ resource "stackguardian_stack_template_revision" "with_vcs" {
 
 ### Read-Only
 
-- `id` (String) Identifier of the revision, in the form `<template-name>:<revision>` (e.g. `my-stack-template:1`).
-- `template_id` (String) Parent stack template, as its bare `template_name` (which is also its `id`) — not a path.
+- `id` (String) Identifier of the revision, in the form `<template-id>:<revision>` (e.g. `my-stack-template:1`).
+- `template_id` (String) The revision's `id` qualified with its owning organization, in the form `/<org>/<template-id>:<revision>` (e.g. `/my-org/my-stack-template:1`).
 
 <a id="nestedatt--actions"></a>
 ### Nested Schema for `actions`
 
 Optional:
 
-- `default` (Boolean) Whether this is the default action.
 - `description` (String) Description of the action.
 - `name` (String) Name of the action.
 - `order` (Attributes Map) Ordered map of workflow IDs to their action configurations. (see [below for nested schema](#nestedatt--actions--order))
+
+Read-Only:
+
+- `default` (Boolean) Always `true`: the actions a stack template revision defines are default actions. A stack inherits them only when `actions` is not defined while creating the stack.
 
 <a id="nestedatt--actions--order"></a>
 ### Nested Schema for `actions.order`
 
 Optional:
 
-- `dependencies` (Attributes List) List of workflow dependencies that must complete before this step runs. (see [below for nested schema](#nestedatt--actions--order--dependencies))
+- `dependencies` (Attributes List) List of workflow dependencies that must complete before this step runs. Defaults to `[]`. (see [below for nested schema](#nestedatt--actions--order--dependencies))
 - `parameters` (Attributes) Run configuration parameters for the action step. (see [below for nested schema](#nestedatt--actions--order--parameters))
 
 <a id="nestedatt--actions--order--dependencies"></a>
@@ -183,11 +189,20 @@ Optional:
 
 Required:
 
+- `config` (Attributes) Deployment platform configuration details. (see [below for nested schema](#nestedatt--actions--order--parameters--deployment_platform_config--config))
 - `kind` (String) Which cloud this workflow deploys to and how it authenticates. Must match the `kind` of the connector named in `integration_id`. <ul><li>`AWS_STATIC` — AWS with a static access key pair.</li><li>`AWS_RBAC` — AWS by assuming an IAM role. Preferred over static keys.</li><li>`AWS_OIDC` — AWS through an OIDC identity provider, with no stored credentials.</li><li>`AZURE_STATIC` — Azure with a service principal and client secret.</li><li>`AZURE_OIDC` — Azure through workload identity federation.</li><li>`GCP_STATIC` — GCP with a service account key file.</li><li>`GCP_OIDC` — GCP through workload identity federation.</li></ul>See the [cloud connector docs](https://docs.stackguardian.io/docs/connectors/csp/).
+
+<a id="nestedatt--actions--order--parameters--deployment_platform_config--config"></a>
+### Nested Schema for `actions.order.parameters.deployment_platform_config.config`
+
+Required:
+
+- `integration_id` (String) Connector supplying the credentials this workflow deploys with, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/production-aws`). Reference a `stackguardian_connector` rather than typing the string.
 
 Optional:
 
-- `config` (String) Deployment platform configuration details. (JSON string)
+- `profile_name` (String) Profile name for the deployment platform.
+
 
 
 <a id="nestedatt--actions--order--parameters--environment_variables"></a>
@@ -226,7 +241,7 @@ Read-Only:
 Required:
 
 - `name` (String) Step name.
-- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-id>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 Optional:
 
@@ -304,14 +319,13 @@ Optional:
 Required:
 
 - `id` (String) UUID identifying the workflow within the stack template.
-- `template_id` (String) Workflow template this stack workflow is created from, as the bare `template_name` of a template in your own organization (e.g. `my-workflow-template`). The provider qualifies it with your organization, so do not give the `/<org>/…` form.
+- `vcs_config` (Attributes) VCS (version control) configuration for the workflow. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config))
 
 Optional:
 
 - `approvers` (List of String) Who can approve a workflow run that is waiting for approval. Each entry identifies one approver: <ul><li>Local user — the email address, e.g. `jane@example.com`</li><li>SSO user — `<sso-pool-id>/<sso-provider-name>/<email>`</li><li>SSO group — `<sso-pool-id>/group/<group-id>`, which lets anyone in that group approve</li></ul>Write emails in lowercase. A bare email address also matches an SSO sign-in with the same address; use `<local-pool-id>/local/<email>` to allow the local account only. See the [Approvers guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers) for the user pool ID of each region and worked examples.
 - `deployment_platform_config` (Attributes List) Deployment platform configuration. (see [below for nested schema](#nestedatt--workflows_config--workflows--deployment_platform_config))
 - `environment_variables` (Attributes List) Environment variables for the workflow. (see [below for nested schema](#nestedatt--workflows_config--workflows--environment_variables))
-- `iac_input_data` (Attributes) Top-level IaC input data for this workflow, used when the workflow is instantiated from a workflow template (`template_id`). (see [below for nested schema](#nestedatt--workflows_config--workflows--iac_input_data))
 - `input_schemas` (Attributes List) Input schema definitions for this workflow. (see [below for nested schema](#nestedatt--workflows_config--workflows--input_schemas))
 - `mini_steps` (Attributes) Actions that are required to be performed once workflow execution is complete (see [below for nested schema](#nestedatt--workflows_config--workflows--mini_steps))
 - `number_of_approvals_required` (Number) How many approvals release a workflow run that is waiting for approval. `0` waits for as many distinct approvals as there are entries in `approvers`, which means everyone when the list has only individual users. `1` or more means that many different people must approve — use this when the list contains an SSO group. A single rejection cancels the run whatever the value. Not validated against the list, so a value higher than the number of people who can approve leaves the run waiting. See [how approvals are counted](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/Approvers#how-many-approvals-are-needed).
@@ -321,19 +335,57 @@ Optional:
 - `user_job_cpu` (Number) CPU limit for the user job.
 - `user_job_memory` (Number) Memory limit for the user job.
 - `user_schedules` (Attributes List) Scheduled run configuration. (see [below for nested schema](#nestedatt--workflows_config--workflows--user_schedules))
-- `vcs_config` (Attributes) VCS (version control) configuration for the workflow. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config))
 - `wf_steps_config` (Attributes List) Workflow steps configuration. (see [below for nested schema](#nestedatt--workflows_config--workflows--wf_steps_config))
+
+<a id="nestedatt--workflows_config--workflows--vcs_config"></a>
+### Nested Schema for `workflows_config.workflows.vcs_config`
+
+Required:
+
+- `iac_vcs_config` (Attributes) IaC VCS configuration. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config))
+
+Optional:
+
+- `iac_input_data` (Attributes) IaC input data for the workflow: the inputs passed to its IaC template. Leave it unset to use the inputs of the workflow template revision. Set it to `{}` for "No Inputs": the workflow runs with no inputs, even when its workflow template revision defines some. Once any field is set, `schema_type` and `data` are both required. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_input_data))
+
+<a id="nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config"></a>
+### Nested Schema for `workflows_config.workflows.vcs_config.iac_vcs_config`
+
+Required:
+
+- `iac_template_id` (String) Workflow template this stack workflow is created from, as the full id of an existing revision, including the owning organization: `/<org>/<template-id>:<revision>` (e.g. `/my-org/my-workflow-template:1`). Give the organization even for a template in your own organization; a template shared by another organization, or StackGuardian's own (`/stackguardian/…`), is referenced the same way.
+
+
+<a id="nestedatt--workflows_config--workflows--vcs_config--iac_input_data"></a>
+### Nested Schema for `workflows_config.workflows.vcs_config.iac_input_data`
+
+Optional:
+
+- `data` (String) Input data as a JSON string. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
+- `schema_id` (String) Schema ID for the input data.
+- `schema_type` (String) How the value in `data` is formatted. <ul><li>`FORM_JSONSCHEMA` — a StackGuardian NoCode form; `data` holds the values that form collects.</li><li>`RAW_HCL` — HCL-formatted input, as you would write in a `.tfvars` file.</li><li>`RAW_JSON` — the same input expressed as JSON.</li><li>`NONE` — the workflow takes no inputs.</li></ul>The platform also returns `NO_CODE_JSON` on some existing workflows. The provider passes that value through unchanged, but it is outside the set above and should not be written by hand.
+
+
 
 <a id="nestedatt--workflows_config--workflows--deployment_platform_config"></a>
 ### Nested Schema for `workflows_config.workflows.deployment_platform_config`
 
 Required:
 
+- `config` (Attributes) Deployment platform configuration details. (see [below for nested schema](#nestedatt--workflows_config--workflows--deployment_platform_config--config))
 - `kind` (String) Which cloud this workflow deploys to and how it authenticates. Must match the `kind` of the connector named in `integration_id`. <ul><li>`AWS_STATIC` — AWS with a static access key pair.</li><li>`AWS_RBAC` — AWS by assuming an IAM role. Preferred over static keys.</li><li>`AWS_OIDC` — AWS through an OIDC identity provider, with no stored credentials.</li><li>`AZURE_STATIC` — Azure with a service principal and client secret.</li><li>`AZURE_OIDC` — Azure through workload identity federation.</li><li>`GCP_STATIC` — GCP with a service account key file.</li><li>`GCP_OIDC` — GCP through workload identity federation.</li></ul>See the [cloud connector docs](https://docs.stackguardian.io/docs/connectors/csp/).
+
+<a id="nestedatt--workflows_config--workflows--deployment_platform_config--config"></a>
+### Nested Schema for `workflows_config.workflows.deployment_platform_config.config`
+
+Required:
+
+- `integration_id` (String) Connector supplying the credentials this workflow deploys with, as a path-form ID: `/integrations/<connector-name>` (e.g. `/integrations/production-aws`). Reference a `stackguardian_connector` rather than typing the string.
 
 Optional:
 
-- `config` (String) Deployment platform configuration details. (JSON string)
+- `profile_name` (String) Profile name for the deployment platform.
+
 
 
 <a id="nestedatt--workflows_config--workflows--environment_variables"></a>
@@ -358,18 +410,6 @@ Optional:
 
 
 
-<a id="nestedatt--workflows_config--workflows--iac_input_data"></a>
-### Nested Schema for `workflows_config.workflows.iac_input_data`
-
-Required:
-
-- `schema_type` (String) Schema type for the input data (e.g. RAW_JSON).
-
-Optional:
-
-- `data` (String) Input data as a JSON string. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
-
-
 <a id="nestedatt--workflows_config--workflows--input_schemas"></a>
 ### Nested Schema for `workflows_config.workflows.input_schemas`
 
@@ -379,10 +419,7 @@ Required:
 
 Optional:
 
-- `description` (String) A brief description of the workflow. Must be less than 256 characters.
 - `encoded_data` (String) Base64-encoded schema data.
-- `id` (String) Identifier of the resource: a bare slug such as `production-aws`, never a path. When omitted it is derived from `resource_name` — unchanged if that is already slug-shaped (letters, digits, `_`, `-`), otherwise lowercased, spaces replaced by `-`, with a random suffix appended. Set it explicitly to control it. Use it to reference the resource elsewhere, adding the prefix the attribute expects: `"/integrations/${stackguardian_connector.x.id}"`, `"/wfgrps/${stackguardian_workflow_group.x.id}"`. The `resource_name` attribute is still available for references but its use is discouraged: it is not always equal to `id`.
-- `is_committed` (Boolean)
 - `name` (String) Name of the input schema.
 - `ui_schema_data` (String) Schema for how the JSON schema is to be visualized. The schema needs to be base64 encoded.
 
@@ -616,7 +653,7 @@ Optional:
 Required:
 
 - `name` (String) Step name.
-- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-id>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 Optional:
 
@@ -675,7 +712,7 @@ Optional:
 Required:
 
 - `name` (String) Step name.
-- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-id>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 Optional:
 
@@ -734,7 +771,7 @@ Optional:
 Required:
 
 - `name` (String) Step name.
-- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-id>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 Optional:
 
@@ -793,7 +830,7 @@ Optional:
 Required:
 
 - `name` (String) Step name.
-- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-id>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 Optional:
 
@@ -871,72 +908,13 @@ Optional:
 - `name` (String) Name of the schedule.
 
 
-<a id="nestedatt--workflows_config--workflows--vcs_config"></a>
-### Nested Schema for `workflows_config.workflows.vcs_config`
-
-Optional:
-
-- `iac_input_data` (Attributes) IaC input data for the workflow. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_input_data))
-- `iac_vcs_config` (Attributes) IaC VCS configuration. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config))
-
-<a id="nestedatt--workflows_config--workflows--vcs_config--iac_input_data"></a>
-### Nested Schema for `workflows_config.workflows.vcs_config.iac_input_data`
-
-Required:
-
-- `schema_type` (String) How the value in `data` is formatted. <ul><li>`FORM_JSONSCHEMA` — a StackGuardian NoCode form; `data` holds the values that form collects.</li><li>`RAW_HCL` — HCL-formatted input, as you would write in a `.tfvars` file.</li><li>`RAW_JSON` — the same input expressed as JSON.</li><li>`NONE` — the workflow takes no inputs.</li></ul>The platform also returns `NO_CODE_JSON` on some existing workflows. The provider passes that value through unchanged, but it is outside the set above and should not be written by hand.
-
-Optional:
-
-- `data` (String) Input data as a JSON string. May contain a reference the platform resolves at run time. See the [Runtime References guide](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/guides/RuntimeReferences).
-- `schema_id` (String) Schema ID for the input data.
-
-
-<a id="nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config"></a>
-### Nested Schema for `workflows_config.workflows.vcs_config.iac_vcs_config`
-
-Optional:
-
-- `custom_source` (Attributes) Custom source configuration. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source))
-- `iac_template_id` (String) Workflow template this stack workflow is created from, as the bare `template_name` of a template in your own organization (e.g. `my-workflow-template`). The provider qualifies it with your organization, so do not give the `/<org>/…` form.
-- `use_marketplace_template` (Boolean) Whether to use a marketplace template.
-
-<a id="nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source"></a>
-### Nested Schema for `workflows_config.workflows.vcs_config.iac_vcs_config.custom_source`
-
-Required:
-
-- `source_config_dest_kind` (String) Which VCS provider hosts the repository. This decides how StackGuardian authenticates and, for `vcs_triggers`, which webhook integration is used. <ul><li>`GITHUB_COM` — github.com. See the [GitHub connector docs](https://docs.stackguardian.io/docs/connectors/vcs/githubcom/).</li><li>`GITHUB_APP_CUSTOM` — GitHub Enterprise, or a GitHub App you manage yourself. See the [GitHub Enterprise docs](https://docs.stackguardian.io/docs/connectors/vcs/github_enterprise/).</li><li>`GITLAB_COM` — gitlab.com. See the [GitLab connector docs](https://docs.stackguardian.io/docs/connectors/vcs/gitlabcom/).</li><li>`BITBUCKET_ORG` — Bitbucket Cloud. See the [Bitbucket connector docs](https://docs.stackguardian.io/docs/connectors/vcs/bitbucket/).</li><li>`AZURE_DEVOPS` — Azure DevOps. See the [Azure DevOps connector docs](https://docs.stackguardian.io/docs/connectors/vcs/azuredevops/).</li><li>`AZURE_DEVOPS_SP` — Azure DevOps authenticated with a service principal.</li><li>`GIT_OTHER` — any other Git host, including public repositories that need no authentication.</li></ul>
-
-Optional:
-
-- `config` (Attributes) Source configuration details. (see [below for nested schema](#nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source--config))
-
-<a id="nestedatt--workflows_config--workflows--vcs_config--iac_vcs_config--custom_source--config"></a>
-### Nested Schema for `workflows_config.workflows.vcs_config.iac_vcs_config.custom_source.config`
-
-Optional:
-
-- `auth` (String, Sensitive) Credential for cloning a private repository, as a path-form ID. Either a VCS connector — `/integrations/<connector-name>`, built as `"/integrations/${stackguardian_connector.github.id}"` — for `GITHUB_COM`, `GITHUB_APP_CUSTOM`, `GITLAB_COM`, `BITBUCKET_ORG` and `AZURE_DEVOPS*` sources, or a secret `/secrets/<secret-name>`. `GIT_OTHER` accepts only the secret form. Required when `is_private` is `true`.
-- `git_core_auto_crlf` (Boolean) Whether to automatically handle CRLF line endings.
-- `git_sparse_checkout_config` (String) Git sparse checkout command line git cli options.
-- `include_sub_module` (Boolean) Whether to include git submodules.
-- `is_private` (Boolean) Whether the repository is private. Auth is required if the repository is private
-- `ref` (String) Git reference (branch, tag, or commit hash).
-- `repo` (String) Git repository URL.
-- `working_dir` (String) Working directory within the repository.
-
-
-
-
-
 <a id="nestedatt--workflows_config--workflows--wf_steps_config"></a>
 ### Nested Schema for `workflows_config.workflows.wf_steps_config`
 
 Required:
 
 - `name` (String) Step name.
-- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-id>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 Optional:
 

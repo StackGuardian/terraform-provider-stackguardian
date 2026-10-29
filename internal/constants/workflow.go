@@ -21,7 +21,7 @@ const (
 	WorkflowVcsConfig                   = "VCS configuration for the workflow."
 	WorkflowIacVcsConfig                = "IaC VCS configuration for the workflow."
 	WorkflowUseMarketplaceTemplate      = "Whether to use a marketplace template."
-	WorkflowIacTemplateId               = "Workflow template revision this workflow is created from. <ul><li>`<template-name>:<revision>` — a template in your own organization.</li><li>`/<org>/<template-name>:<revision>` — a template owned by another organization: one shared with you, or published publicly. StackGuardian's own templates use the `stackguardian` org, for example `/stackguardian/aws-s3-demo-website:16`.</li></ul>A bare id is resolved against your own organization. Use `:latest` in place of a revision number to track the most recently published revision; pin an explicit revision when the workflow must not move."
+	WorkflowIacTemplateId               = "Workflow template revision this workflow is created from. <ul><li>`<template-id>:<revision>` — a template in your own organization.</li><li>`/<org>/<template-id>:<revision>` — a template owned by another organization: one shared with you, or published publicly. StackGuardian's own templates use the `stackguardian` org, for example `/stackguardian/aws-s3-demo-website:16`.</li></ul>A bare id is resolved against your own organization. Use `:latest` in place of a revision number to track the most recently published revision; pin an explicit revision when the workflow must not move."
 	WorkflowCustomSource                = "Custom VCS source configuration."
 	WorkflowIacInputData                = "IaC input data for the workflow."
 	WorkflowIacInputDataSchemaId        = "Schema ID for the input data."

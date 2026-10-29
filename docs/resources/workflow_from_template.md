@@ -69,7 +69,7 @@ resource "stackguardian_workflow_from_template" "example" {
 
   vcs_config = {
     iac_vcs_config = {
-      # `<template-name>:<revision>`. Anything this workflow does not declare below is
+      # `<template-id>:<revision>`. Anything this workflow does not declare below is
       # inherited from this revision.
       iac_template_id = "${stackguardian_workflow_template.example.template_name}:1"
     }
@@ -129,7 +129,7 @@ Optional:
 
 Required:
 
-- `iac_template_id` (String) Workflow template revision this workflow is created from. <ul><li>`<template-name>:<revision>` — a template in your own organization.</li><li>`/<org>/<template-name>:<revision>` — a template owned by another organization: one shared with you, or published publicly. StackGuardian's own templates use the `stackguardian` org, for example `/stackguardian/aws-s3-demo-website:16`.</li></ul>A bare id is resolved against your own organization. Use `:latest` in place of a revision number to track the most recently published revision; pin an explicit revision when the workflow must not move.
+- `iac_template_id` (String) Workflow template revision this workflow is created from. <ul><li>`<template-id>:<revision>` — a template in your own organization.</li><li>`/<org>/<template-id>:<revision>` — a template owned by another organization: one shared with you, or published publicly. StackGuardian's own templates use the `stackguardian` org, for example `/stackguardian/aws-s3-demo-website:16`.</li></ul>A bare id is resolved against your own organization. Use `:latest` in place of a revision number to track the most recently published revision; pin an explicit revision when the workflow must not move.
 
 
 <a id="nestedatt--vcs_config--iac_input_data"></a>
@@ -410,7 +410,7 @@ Optional:
 - `terraform_plan_options` (String) Additional options for terraform plan.
 - `terraform_version` (String) Version of the engine to run, written bare (e.g. `1.5.7`). <ul><li>OpenTofu — any version.</li><li>Terraform — the open-source releases, `1.5.7` and earlier. A later release is BUSL-licensed and is only available on a workflow step template built on your own runtime image.</li></ul>The workflow step's container ships a set of versions preinstalled and downloads anything else when the workflow runs, provided it exists upstream. Which engine runs is decided by `wf_type`, not by this value.
 - `timeout` (Number) Timeout for terraform operations in seconds.
-- `wf_step_template_revision_id` (String) Fully-qualified workflow step template revision pinned for this terraform config, as a path-form ID: `/<org>/<name>:<rev>` (e.g. `/stackguardian/terraform:11`).
+- `wf_step_template_revision_id` (String) Fully-qualified workflow step template revision pinned for this terraform config, as a path-form ID: `/<org>/<template-id>:<rev>` (e.g. `/stackguardian/terraform:11`).
 
 <a id="nestedatt--terraform_config--post_apply_wf_steps_config"></a>
 ### Nested Schema for `terraform_config.post_apply_wf_steps_config`
@@ -418,7 +418,7 @@ Optional:
 Required:
 
 - `name` (String) Step name.
-- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-id>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 Optional:
 
@@ -480,7 +480,7 @@ Optional:
 Required:
 
 - `name` (String) Step name.
-- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-id>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 Optional:
 
@@ -542,7 +542,7 @@ Optional:
 Required:
 
 - `name` (String) Step name.
-- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-id>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 Optional:
 
@@ -604,7 +604,7 @@ Optional:
 Required:
 
 - `name` (String) Step name.
-- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-id>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 Optional:
 
@@ -697,7 +697,7 @@ Read-Only:
 Required:
 
 - `name` (String) Step name.
-- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-name>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
+- `wf_step_template_id` (String) Workflow step template revision, as a path-form ID: `/<org>/<step-template-id>:<revision>` (e.g. `/my-org/ansible:6`). Steps published by StackGuardian live under the `stackguardian` org — for example `/stackguardian/terraform:11`.
 
 Optional:
 

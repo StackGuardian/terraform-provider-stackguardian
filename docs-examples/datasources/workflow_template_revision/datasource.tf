@@ -1,7 +1,7 @@
 # Read a published template revision, then create a workflow from it.
 #
-# The revision id is `<template-name>:<revision>`. Use the bare form shown here -- the fully
-# qualified `/<org>/<template-name>:<revision>` path returns an Unauthorized error.
+# The revision id is `<template-id>:<revision>`. Use the bare form shown here -- the fully
+# qualified `/<org>/<template-id>:<revision>` path returns an Unauthorized error.
 data "stackguardian_workflow_template_revision" "example" {
   id = "my-terraform-template:1"
 }

@@ -21,9 +21,9 @@ by an API path or a URL.
 | `stackguardian_runner_group`                    | `resource_name`                        |
 | `stackguardian_workflow_group`                  | `resource_name` (full path if nested)  |
 | `stackguardian_stack_template`                  | `id`                                   |
-| `stackguardian_stack_template_revision`         | `id` — `<template-name>:<revision>`    |
+| `stackguardian_stack_template_revision`         | `id` — `<template-id>:<revision>`    |
 | `stackguardian_workflow_template`               | `id`                                   |
-| `stackguardian_workflow_template_revision`      | `id` — `<template-name>:<revision>`    |
+| `stackguardian_workflow_template_revision`      | `id` — `<template-id>:<revision>`    |
 | `stackguardian_workflow_step_template`          | `id`                                   |
 | `stackguardian_workflow_step_template_revision` | `id` — `<template-id>:<revision>`      |
 | `stackguardian_role_assignment`                 | `user_id`                              |

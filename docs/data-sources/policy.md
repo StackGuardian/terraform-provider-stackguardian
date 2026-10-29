@@ -78,7 +78,7 @@ Read-Only:
 Read-Only:
 
 - `custom_source` (Attributes) Source configuration type and settings definition (see [below for nested schema](#nestedatt--policies_config--policy_vcs_config--custom_source))
-- `policy_template_id` (String) Policy template to use, as a path-form ID: `/policies/<name>:<revision>` for a policy created in your own organization, or `/<org>/<name>:<revision>` when qualifying it explicitly. Templates published by StackGuardian use the `stackguardian` org (e.g. `/stackguardian/checkov-best-practices:2`). At most 100 characters. Required when `use_marketplace_template` is `true`.
+- `policy_template_id` (String) Policy template to use, as a path-form ID: `/policies/<template-id>:<revision>` for a policy created in your own organization, or `/<org>/<template-id>:<revision>` when qualifying it explicitly. Templates published by StackGuardian use the `stackguardian` org (e.g. `/stackguardian/checkov-best-practices:2`). At most 100 characters. Required when `use_marketplace_template` is `true`.
 - `use_marketplace_template` (Boolean) Name of the template from marketplace
 
 <a id="nestedatt--policies_config--policy_vcs_config--custom_source"></a>

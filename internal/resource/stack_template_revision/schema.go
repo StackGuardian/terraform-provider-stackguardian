@@ -5,14 +5,22 @@ import (
 	"fmt"
 
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/constants"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/validators"
+	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -67,6 +75,9 @@ var ministepsWorkflowChaining = schema.ListNestedAttribute{
 			"stack_run_payload": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingStackPayload,
 				Optional:            true,
+				Validators: []validator.String{
+					validators.JSONObject(),
+				},
 			},
 			"workflow_id": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingWorkflowId,
@@ -75,6 +86,9 @@ var ministepsWorkflowChaining = schema.ListNestedAttribute{
 			"workflow_run_payload": schema.StringAttribute{
 				MarkdownDescription: constants.MiniStepsWfChainingWorkflowPayload,
 				Optional:            true,
+				Validators: []validator.String{
+					validators.JSONObject(),
+				},
 			},
 		},
 	},
@@ -164,6 +178,9 @@ var wfStepsConfigNestedObj = schema.NestedAttributeObject{
 				"data": schema.StringAttribute{
 					MarkdownDescription: constants.WfStepInputDataData,
 					Optional:            true,
+					Validators: []validator.String{
+						validators.JSONObject(),
+					},
 				},
 			},
 		},
@@ -175,9 +192,19 @@ var deploymentPlatformConfigAttrs = map[string]schema.Attribute{
 		MarkdownDescription: constants.DeploymentPlatformKind,
 		Required:            true,
 	},
-	"config": schema.StringAttribute{
-		MarkdownDescription: constants.DeploymentPlatformConfigDetails + " (JSON string)",
-		Optional:            true,
+	"config": schema.SingleNestedAttribute{
+		MarkdownDescription: constants.DeploymentPlatformConfigDetails,
+		Required:            true,
+		Attributes: map[string]schema.Attribute{
+			"integration_id": schema.StringAttribute{
+				MarkdownDescription: constants.DeploymentPlatformIntegrationId,
+				Required:            true,
+			},
+			"profile_name": schema.StringAttribute{
+				MarkdownDescription: constants.DeploymentPlatformProfileName,
+				Optional:            true,
+			},
+		},
 	},
 }
 
@@ -186,10 +213,6 @@ var deploymentPlatformConfigAttrs = map[string]schema.Attribute{
 var workflowInStackAttrs = map[string]schema.Attribute{
 	"id": schema.StringAttribute{
 		MarkdownDescription: "UUID identifying the workflow within the stack template.",
-		Required:            true,
-	},
-	"template_id": schema.StringAttribute{
-		MarkdownDescription: constants.StackTemplateRevisionIacTemplateId,
 		Required:            true,
 	},
 	"resource_name": schema.StringAttribute{
@@ -317,104 +340,56 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 	},
 	"vcs_config": schema.SingleNestedAttribute{
 		MarkdownDescription: "VCS (version control) configuration for the workflow.",
-		Optional:            true,
+		Required:            true,
 		Attributes: map[string]schema.Attribute{
 			"iac_vcs_config": schema.SingleNestedAttribute{
 				MarkdownDescription: "IaC VCS configuration.",
-				Optional:            true,
+				Required:            true,
 				Attributes: map[string]schema.Attribute{
-					"use_marketplace_template": schema.BoolAttribute{
-						MarkdownDescription: "Whether to use a marketplace template.",
-						Optional:            true,
-					},
 					"iac_template_id": schema.StringAttribute{
 						MarkdownDescription: constants.StackTemplateRevisionIacTemplateId,
-						Optional:            true,
-					},
-					"custom_source": schema.SingleNestedAttribute{
-						MarkdownDescription: "Custom source configuration.",
-						Optional:            true,
-						Attributes: map[string]schema.Attribute{
-							"source_config_dest_kind": schema.StringAttribute{
-								MarkdownDescription: constants.RuntimeSourceDestKind,
-								Required:            true,
-							},
-							"config": schema.SingleNestedAttribute{
-								MarkdownDescription: "Source configuration details.",
-								Optional:            true,
-								Attributes: map[string]schema.Attribute{
-									"is_private": schema.BoolAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigIsPrivate,
-										Optional:            true,
-									},
-									"auth": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigAuth,
-										Optional:            true,
-										Sensitive:           true,
-									},
-									"working_dir": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigWorkingDir,
-										Optional:            true,
-									},
-									"git_sparse_checkout_config": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigGitSparse,
-										Optional:            true,
-									},
-									"git_core_auto_crlf": schema.BoolAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigGitCoreCRLF,
-										Optional:            true,
-									},
-									"ref": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigRef,
-										Optional:            true,
-									},
-									"repo": schema.StringAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigRepo,
-										Optional:            true,
-									},
-									"include_sub_module": schema.BoolAttribute{
-										MarkdownDescription: constants.RuntimeSourceConfigIncludeSubmodule,
-										Optional:            true,
-									},
-								},
-							},
+						Required:            true,
+						Validators: []validator.String{
+							validators.QualifiedTemplateRevisionId(),
 						},
 					},
 				},
 			},
+			// iac_input_data = {} (no fields) is valid: the API stores an explicitly
+			// empty iacInputData and treats it as "No Inputs", which differs from
+			// leaving iac_input_data out. Once any field is set, schema_type and data
+			// are both required (AlsoRequires on each field), so a partial object
+			// can't be sent. schema_type is Optional only to allow the empty object.
 			"iac_input_data": schema.SingleNestedAttribute{
-				MarkdownDescription: "IaC input data for the workflow.",
+				MarkdownDescription: constants.StackTemplateRevisionIacInputData,
 				Optional:            true,
 				Attributes: map[string]schema.Attribute{
 					"schema_id": schema.StringAttribute{
 						MarkdownDescription: constants.WorkflowIacInputDataSchemaId,
 						Optional:            true,
+						Validators: []validator.String{
+							stringvalidator.AlsoRequires(
+								path.MatchRelative().AtParent().AtName("schema_type"),
+								path.MatchRelative().AtParent().AtName("data"),
+							),
+						},
 					},
 					"schema_type": schema.StringAttribute{
 						MarkdownDescription: constants.WorkflowIacInputDataSchemaType,
-						Required:            true,
+						Optional:            true,
+						Validators: []validator.String{
+							stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("data")),
+						},
 					},
 					"data": schema.StringAttribute{
 						MarkdownDescription: constants.WorkflowIacInputDataData,
 						Optional:            true,
+						Validators: []validator.String{
+							validators.JSONObject(),
+							stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("schema_type")),
+						},
 					},
 				},
-			},
-		},
-	},
-	// iac_input_data at the workflow level corresponds to TemplatesIacInputData in the SDK.
-	// Used when the workflow is instantiated from a workflow template (template_id).
-	"iac_input_data": schema.SingleNestedAttribute{
-		MarkdownDescription: "Top-level IaC input data for this workflow, used when the workflow is instantiated from a workflow template (`template_id`).",
-		Optional:            true,
-		Attributes: map[string]schema.Attribute{
-			"schema_type": schema.StringAttribute{
-				MarkdownDescription: "Schema type for the input data (e.g. RAW_JSON).",
-				Required:            true,
-			},
-			"data": schema.StringAttribute{
-				MarkdownDescription: constants.WorkflowIacInputDataData,
-				Optional:            true,
 			},
 		},
 	},
@@ -479,17 +454,8 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 		Optional:            true,
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
-				"id": schema.StringAttribute{
-					MarkdownDescription: constants.Id,
-					Computed:            true,
-					Optional:            true,
-				},
 				"name": schema.StringAttribute{
 					MarkdownDescription: constants.InputSchemaName,
-					Optional:            true,
-				},
-				"description": schema.StringAttribute{
-					MarkdownDescription: fmt.Sprintf(constants.Description, "workflow"),
 					Optional:            true,
 				},
 				"type": schema.StringAttribute{
@@ -503,10 +469,6 @@ var workflowInStackAttrs = map[string]schema.Attribute{
 				"ui_schema_data": schema.StringAttribute{
 					MarkdownDescription: constants.InputSchemaUISchemaData,
 					Optional:            true,
-				},
-				"is_committed": schema.BoolAttribute{
-					Optional: true,
-					Computed: true,
 				},
 			},
 		},
@@ -593,8 +555,14 @@ var actionOrderAttrs = map[string]schema.Attribute{
 		},
 	},
 	"dependencies": schema.ListNestedAttribute{
-		MarkdownDescription: "List of workflow dependencies that must complete before this step runs.",
+		MarkdownDescription: "List of workflow dependencies that must complete before this step runs. Defaults to `[]`.",
 		Optional:            true,
+		// Computed with a [] default, mirroring the API, which stores [] when no
+		// dependencies are sent; without it an omitted value plans null but reads back [].
+		Computed: true,
+		Default: listdefault.StaticValue(types.ListValueMust(
+			types.ObjectType{AttrTypes: ActionDependencyModel{}.AttributeTypes()}, []attr.Value{},
+		)),
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
 				"id": schema.StringAttribute{
@@ -651,11 +619,17 @@ func (r *stackTemplateRevisionResource) Schema(_ context.Context, _ resource.Sch
 				MarkdownDescription: constants.StackTemplateRevisionNotes,
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: constants.StackTemplateRevisionDescription,
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"source_config_kind": schema.StringAttribute{
 				MarkdownDescription: constants.StackTemplateSourceConfigKindCommon,
@@ -722,9 +696,12 @@ func (r *stackTemplateRevisionResource) Schema(_ context.Context, _ resource.Sch
 				},
 			},
 			"actions": schema.MapNestedAttribute{
-				MarkdownDescription: constants.StackTemplateRevisionActions,
+				MarkdownDescription: constants.StackTemplateRevisionActions + " Must have at least one entry if set.",
 				PlanModifiers: []planmodifier.Map{
 					mapplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.Map{
+					mapvalidator.SizeAtLeast(1),
 				},
 				Optional: true,
 				Computed: true,
@@ -741,9 +718,9 @@ func (r *stackTemplateRevisionResource) Schema(_ context.Context, _ resource.Sch
 							Computed:            true,
 						},
 						"default": schema.BoolAttribute{
-							MarkdownDescription: "Whether this is the default action.",
-							Optional:            true,
+							MarkdownDescription: constants.StackTemplateRevisionActionDefault,
 							Computed:            true,
+							Default:             booldefault.StaticBool(true),
 						},
 						"order": schema.MapNestedAttribute{
 							MarkdownDescription: "Ordered map of workflow IDs to their action configurations.",
