@@ -366,7 +366,8 @@ func setupStackTemplateChainWithWorkflow(t *testing.T, stackTemplateID, workflow
 
 	// apply/plan actions so a plain stack (no actions of its own — that has
 	// its own dedicated test) can inherit them via the template fallback;
-	// CreateStack requires both.
+	// CreateStack requires both. Default is true, as stack_template_revision
+	// sends it: the API stores an omitted default as false.
 	applyAction := sgsdkgo.ActionEnumApply
 	planAction := sgsdkgo.ActionEnumPlan
 
@@ -404,7 +405,8 @@ func setupStackTemplateChainWithWorkflow(t *testing.T, stackTemplateID, workflow
 			},
 			Actions: map[string]*sgsdkgo.Actions{
 				"apply": {
-					Name: "apply",
+					Name:    "apply",
+					Default: sgsdkgo.Bool(true),
 					Order: map[string]*sgsdkgo.ActionOrder{
 						testWorkflowUUID: {
 							Parameters: &sgsdkgo.StackActionParameters{
@@ -414,7 +416,8 @@ func setupStackTemplateChainWithWorkflow(t *testing.T, stackTemplateID, workflow
 					},
 				},
 				"plan": {
-					Name: "plan",
+					Name:    "plan",
+					Default: sgsdkgo.Bool(true),
 					Order: map[string]*sgsdkgo.ActionOrder{
 						testWorkflowUUID: {
 							Parameters: &sgsdkgo.StackActionParameters{
