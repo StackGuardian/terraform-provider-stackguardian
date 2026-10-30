@@ -73,7 +73,7 @@ These are real defects found during the comparison; they are cheap and unblock P
 | `Makefile` | `clean-examples:` — points at a nonexistent `examples/` dir; retarget at `docs-guides-assets/` or delete the target. |
 | `Makefile` | `docs-generate` / new `tools` target — call `go run -modfile=tools/go.mod github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs` instead of a bare `tfplugindocs` from `$PATH`, so CI needs no install step. |
 | `Makefile` | `install:` — derive `OS_ARCH` from `$(shell go env GOOS)_$(shell go env GOARCH)` instead of hardcoding `linux_amd64` (currently broken on the macOS dev machine). |
-| `go.mod` | `go 1.26.7` → `go 1.26` plus `toolchain go1.26.7`. A patch-pinned `go` directive forces every consumer and CI runner onto one exact patch. Add `.go-version` containing `1.26.7`. |
+| `go.mod` | `go 1.26.10` → `go 1.26` plus `toolchain go1.26.10`. A patch-pinned `go` directive forces every consumer and CI runner onto one exact patch. Add `.go-version` containing `1.26.10`. |
 | `.github/workflows/.old/release-old.yml` | Delete — dead file (Go 1.16, goreleaser v2.9.1, `on: {}`) still tracked in git. |
 
 ---
