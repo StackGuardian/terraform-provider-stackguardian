@@ -10,6 +10,14 @@ Entries describe changes that affect provider users: resources, data sources, at
 behavior, documentation and security. Internal refactors, tests and CI changes are left out.
 A **Breaking** change can require edits to existing configurations.
 
+## [1.12.7]
+
+### Security
+
+- Built with Go 1.26.10, which includes the security fixes released since Go 1.26.7
+- `golang.org/x/net` updated to v0.62.0, fixing five HTTP/2 vulnerabilities reachable through the provider's plugin server (`GO-2026-6603`, `GO-2026-6610`, `GO-2026-6611`, `GO-2026-6612` and `GO-2026-6617`)
+- CI now runs `govulncheck` on every pull request on Build and unit tests; `make govulncheck` runs the same scan locally
+
 ## [1.12.6] - 2026-10-29
 
 ### Added
@@ -179,6 +187,7 @@ for their notes.
 - TF Resource and Data-Source for StackGuardian Policy
 - TF Resource and Data-Source for StackGuardian Integration
 
+[1.12.7]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.6...v1.12.7
 [1.12.6]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.4...v1.12.6
 [1.12.4]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.3...v1.12.4
 [1.12.3]: https://github.com/StackGuardian/terraform-provider-stackguardian/compare/v1.12.2...v1.12.3

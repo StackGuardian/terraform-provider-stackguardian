@@ -48,6 +48,12 @@ test-acc:
 tf-compat-check:
 	bash scripts/tf-compat-check.sh
 
+# Scans the provider's dependencies for known vulnerabilities reachable from
+# its code. The version pin keeps local and CI runs identical.
+govulncheck:
+	go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+	govulncheck ./...
+
 test-acc-local:
 	set -a; . ./.env; set +a; TF_ACC=1 go test -parallel=1 $(TEST) -v $(TESTARGS) -timeout=15m
 

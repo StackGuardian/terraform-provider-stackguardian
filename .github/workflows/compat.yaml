@@ -39,6 +39,13 @@ jobs:
       - name: "Vet"
         run: go vet ./...
 
+      # Runs before the docs checks and the acceptance tests on purpose. The
+      # scan needs no credentials and finishes in about a minute; a PR with a
+      # known vulnerability should fail the job before the expensive steps run,
+      # especially the acceptance tests, which create real resources.
+      - name: "Vulnerability scan"
+        run: make govulncheck
+
       # Covers TestCheckTerraformVersion: the provider refuses to configure
       # below constants.MinTerraformVersion, and the documented floor matches
       # the enforced one.

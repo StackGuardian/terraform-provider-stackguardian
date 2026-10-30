@@ -5,7 +5,7 @@
 Terraform provider for the StackGuardian Orchestrator platform. Built with the [Terraform Plugin Framework v1](https://developer.hashicorp.com/terraform/plugin/framework).
 
 **Module:** `github.com/StackGuardian/terraform-provider-stackguardian`
-**Go version:** 1.26.7
+**Go version:** 1.26.10
 **SDK:** `github.com/StackGuardian/sg-sdk-go` look for replace if in go.mod and use that path for the sdk
 
 ---
@@ -20,6 +20,9 @@ make install        # build + install to ~/.terraform.d/plugins
 # Tests
 make test           # unit tests (4 parallel, 30s timeout)
 make test-acc       # acceptance tests (requires env vars, 1 parallel, 15m timeout)
+
+# Security
+make govulncheck    # scan dependencies for known reachable vulnerabilities (installs the pinned govulncheck)
 
 # Documentation
 make docs-generate  # run tfplugindocs generate
