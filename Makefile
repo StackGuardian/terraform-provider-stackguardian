@@ -39,8 +39,12 @@ test:
 # uses acctest.ResourceName for unique identifiers.
 # -parallel=1 keeps t.Parallel() tests sequential within each package (none
 # of the TestAcc functions use t.Parallel() today, but the flag is a guard).
+# No -v here: it streams every plan and apply of every passing test, which is
+# tens to hundreds of MB in CI and makes the step drag on log ingestion long
+# after the tests are done. Failing tests print their full output either way;
+# pass TESTARGS=-v (or use test-acc-local) to see passing-test detail too.
 test-acc:
-	TF_ACC=1 go test -p=8 -parallel=1 $(TEST_ACC) -v $(TESTARGS) -timeout=15m
+	TF_ACC=1 go test -p=8 -parallel=1 $(TEST_ACC) $(TESTARGS) -timeout=15m
 
 # Terraform CLI compatibility gate. Needs no API credentials: it only makes the
 # CLI load the provider and decode its schema, then validates docs-examples/.
