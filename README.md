@@ -73,7 +73,7 @@ alongside eleven guides:
 
 ### Prerequisites
 
-- [Go](https://go.dev/) >= 1.26.7 (see [go.mod](/go.mod))
+- [Go](https://go.dev/) >= 1.26.10 (see [go.mod](/go.mod))
 - [Terraform](https://developer.hashicorp.com/terraform/downloads) — CI tests against 1.14.0; the
   acceptance suite skips versions below 1.1.0, and the `import {}` block examples need 1.5.0 or newer
 - [`tfplugindocs`](https://github.com/hashicorp/terraform-plugin-docs) for documentation work, via `make tools-install`
@@ -211,13 +211,13 @@ feature branch  ──PR──▶  main  ──tag v*──▶  release
 ```
 
 A pull request to `main` runs the hermetic compatibility gate first, then the
-expensive acceptance suite that creates real resources. Both target `main`
-only — no `develop` branch is involved.
+expensive acceptance suite that creates real resources.
+Both target `main` only — no `develop` branch is involved.
 
 | Workflow | Runs on | Needs secrets | What it does |
 | -------- | ------- | ------------- | ------------ |
-| `compat.yaml` | PR and push to `main`; manual | No | Build, `go vet`, unit tests, docs validation, and the Terraform compatibility matrix |
-| `test.yaml` | PR and push to `main`; manual | Yes | Full acceptance suite across the Terraform matrix, plus docs validation |
+| `compat.yaml` | PR and push to `main`; manual | No | Build, `go vet`, unit tests, `govulncheck` vulnerability scan, docs validation, and the Terraform compatibility matrix |
+| `test.yaml` | PR and push to `main`; manual | Yes | acceptance suite across the Terraform matrix |
 | `release.yaml` | Tag `v*`; manual | Yes | Runs both of the above, then builds and signs the release |
 | `test-api-prd.yaml` | Manual only | Yes | API high-load test against production, using `main` |
 | `test-api-stg.yaml` | Manual only | Yes | API high-load test against staging, using `main` |
