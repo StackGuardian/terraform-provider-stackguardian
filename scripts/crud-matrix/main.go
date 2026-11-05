@@ -5,6 +5,13 @@
 // "Step N/M" maps to the operation at position N; the steps before it passed
 // and the ones after it did not run. A "post-test destroy" error marks delete
 // as failed. Exits 1 if any CRUD test failed.
+//
+// Two failure shapes bypass the "Step N/M" machinery and are attributed from
+// their own signature lines instead: the gone step's PreConfig t.Fatalf (the
+// out-of-band delete failed, so the step never ran -- create, update and
+// import passed by then, and the deferred teardown still exercises delete),
+// and a panic or runtime fatal, which kills the test at a step the output
+// does not identify.
 package main
 
 import (
@@ -24,6 +31,17 @@ var stepOps = []string{"create", "update", "import", "gone"}
 
 var stepErrRe = regexp.MustCompile(`Step (\d+)/(\d+) error`)
 var layoutRe = regexp.MustCompile(`crud: resource=(\S+) steps=(\d+)`)
+
+// The gone step's PreConfig t.Fatalf, when the out-of-band delete fails
+// (internal/acctest/crud.go). The step never runs, so no "Step 4/4 error"
+// line exists; this message is the only place "outside Terraform" appears in
+// test output.
+var gonePreConfigRe = regexp.MustCompile(`deleting \S+ outside Terraform:`)
+
+// A panic or runtime fatal (a test timeout reports as "panic: test timed
+// out") also kills the test without a step error line. Matched against
+// trimmed lines, so t.Log output with its "file:line:" prefix cannot match.
+var panicRe = regexp.MustCompile(`^(panic:|fatal error:)`)
 var apiErrRe = regexp.MustCompile(`(\d{3}): (\{.*)`)
 
 // go-cmp, which prints the ImportStateVerify diff, randomly uses U+00A0 in
@@ -110,6 +128,16 @@ func parse(path string) map[string]*testInfo {
 		}
 	}
 	return tests
+}
+
+// matchIndex returns the index of the first line matching, or -1.
+func matchIndex(lines []string, match func(string) bool) int {
+	for i, l := range lines {
+		if match(l) {
+			return i
+		}
+	}
+	return -1
 }
 
 func firstError(lines []string, start int) string {
@@ -211,52 +239,67 @@ func classify(t *testInfo) (string, map[string]string, map[string]string) {
 		for i := failedStep; i < nSteps && i < len(stepOps); i++ {
 			opsMap[stepOps[i]] = notRun
 		}
-		idx := -1
-		for i, l := range lines {
-			if stepErrRe.MatchString(l) {
-				idx = i
-				break
-			}
-		}
-		if idx >= 0 {
+		if idx := matchIndex(lines, stepErrRe.MatchString); idx >= 0 {
 			reasons[stepOps[failedStep-1]] = firstError(lines, idx)
 		}
 	}
 
+	// The gone step's PreConfig deletes the object behind Terraform's back;
+	// when that fails, its t.Fatalf kills the test without a "Step 4/4 error"
+	// line, because the step never runs. Create, update and import passed by
+	// then, and the deferred teardown still exercises delete, which the
+	// post-test destroy branch below reports on.
+	if idx := matchIndex(lines, gonePreConfigRe.MatchString); idx >= 0 {
+		opsMap["gone"] = fail
+		reasons["gone"] = truncate(strings.TrimSpace(lines[idx]), 200)
+	}
+
 	if strings.Contains(out, destroyErr) {
 		opsMap["delete"] = fail
-		idx := -1
-		for i, l := range lines {
-			if strings.Contains(l, destroyErr) {
-				idx = i
-				break
-			}
-		}
-		if idx >= 0 {
+		if idx := matchIndex(lines, func(l string) bool { return strings.Contains(l, destroyErr) }); idx >= 0 {
 			reasons["delete"] = firstError(lines, idx)
 		}
 	}
 
 	if t.action == "fail" && len(reasons) == 0 {
+		// No step, PreConfig or destroy line identified the failure: a panic
+		// or runtime fatal killed the test at a step the output does not
+		// reveal. Where it happened is unknown, so every operation is "not
+		// run" except create, which carries the failure and its reason.
 		for _, op := range ops {
 			opsMap[op] = notRun
 		}
-		msg := "failed"
-		for _, l := range lines {
-			trimmed := strings.TrimSpace(l)
-			if trimmed != "" && !strings.HasPrefix(trimmed, "===") && !strings.HasPrefix(trimmed, "---") {
-				msg = trimmed
-				break
-			}
-		}
-		if len(msg) > 200 {
-			msg = msg[:200]
-		}
-		reasons["create"] = msg
+		reasons["create"] = catchAllReason(lines)
 		opsMap["create"] = fail
 	}
 
 	return resource, opsMap, reasons
+}
+
+// catchAllReason diagnoses a failure that produced no identifiable step,
+// PreConfig or destroy line. The first output line of every test is the
+// "crud: resource=… steps=…" layout log, which says nothing about the
+// failure, so prefer the panic or fatal line; otherwise take the first line
+// that is not test-framework noise.
+func catchAllReason(lines []string) string {
+	if idx := matchIndex(lines, panicRe.MatchString); idx >= 0 {
+		return truncate(strings.TrimSpace(lines[idx]), 200)
+	}
+	for _, l := range lines {
+		t := strings.TrimSpace(l)
+		if t == "" || strings.HasPrefix(t, "===") || strings.HasPrefix(t, "---") || layoutRe.MatchString(t) {
+			continue
+		}
+		return truncate(t, 200)
+	}
+	return "failed"
+}
+
+func truncate(s string, n int) string {
+	if len(s) > n {
+		return s[:n]
+	}
+	return s
 }
 
 func atoiSafe(s string) int {

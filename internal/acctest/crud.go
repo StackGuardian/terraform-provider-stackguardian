@@ -125,6 +125,11 @@ func RunCRUD(t *testing.T, c CRUD) {
 	if c.Delete != nil {
 		steps = append(steps, resource.TestStep{
 			PreConfig: func() {
+				// Fatalf, not a returned error: PreConfig has no error channel
+				// back into the step, and the gone step cannot run against an
+				// object that is still there, so the whole test aborts.
+				// crud-matrix attributes the failure to the gone step from
+				// the "outside Terraform" wording of this message.
 				if err := c.Delete(context.Background(), SGClientWithHeader(header), config.Get().OrgName, updated); err != nil {
 					t.Fatalf("deleting %s outside Terraform: %s", c.Address, err)
 				}
