@@ -7,6 +7,7 @@ import (
 
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
 	sgworkflows "github.com/StackGuardian/sg-sdk-go/workflows"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/apierrors"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/expanders"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -134,6 +135,10 @@ func (r *workflowGitResource) Read(ctx context.Context, req resource.ReadRequest
 
 	readResp, err := r.client.Workflows.ReadWorkflow(ctx, r.org_name, state.Id.ValueString(), state.WorkflowGroupId.ValueString())
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError("Error reading workflow_git", "Error in reading workflow_git API call: "+err.Error())
 		return
 	}
@@ -232,6 +237,10 @@ func (r *workflowGitResource) Delete(ctx context.Context, req resource.DeleteReq
 
 	_, err := r.client.Workflows.DeleteWorkflow(ctx, r.org_name, state.Id.ValueString(), state.WorkflowGroupId.ValueString())
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// Already gone, which is what Delete wants.
+			return
+		}
 		resp.Diagnostics.AddError("Error deleting workflow_git", "Error in deleting workflow_git API call: "+err.Error())
 		return
 	}

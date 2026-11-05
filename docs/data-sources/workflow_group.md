@@ -58,3 +58,14 @@ resource "stackguardian_workflow_git" "example" {
 - `description` (String) A brief description of the workflow group. Must be less than 256 characters.
 - `tags` (List of String) A list of tags associated with the workflow group. A maximum of 10 tags are allowed.
 
+
+
+## Building this with AI
+
+<!-- AI-SKILLS:START -->
+Generating `stackguardian_workflow_group` configuration with an AI assistant? Load the **`stackguardian-workflows`** skill, which covers this resource's arguments and the mistakes it invites.
+
+**Worth knowing either way:** Nesting is literal: `platform/networking` does **not** create `platform`, which must already exist. If a group of the same name exists, the provider adopts it into state rather than failing — so a later `destroy` will delete a group Terraform did not create.
+
+The skills live in [the provider repository](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/.claude/skills) and work with Claude Code, Cursor, Copilot, Windsurf and any agent that reads [`AGENTS.md`](https://github.com/StackGuardian/terraform-provider-stackguardian/blob/main/AGENTS.md).
+<!-- AI-SKILLS:END -->

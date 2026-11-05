@@ -87,20 +87,27 @@ alongside eleven guides:
 | `make install` | Build and install into `~/.terraform.d/plugins` for local use |
 | `make test` | Unit tests |
 | `make test-acc` | Acceptance tests against a real organization |
+| `make test-crud` | Create/update/import/delete check of every resource, as a pass/fail matrix |
 | `make docs-generate` | Regenerate `docs/` from the schemas and templates |
+| `make docs-sync-ai-skills` | Rewrite the "Building this with AI" sections in every page template |
 | `make docs-validate` | Structure and frontmatter checks |
 | `make docs-check` | Fail if `docs/` is out of date — the CI gate |
 | `make docs-validate-examples` | Type-check every documentation example |
 
 ### Documentation workflow
 
-`docs/` is **generated — never edit it by hand.** Content lives in two places:
+`docs/` is **generated — never edit it by hand.** Content lives in three places:
 
 - **Attribute text** comes from `MarkdownDescription` in each `schema.go`, mostly via shared
   constants in [`internal/constants/`](/internal/constants). A data source should reuse the same
   constant as its resource twin so the two cannot drift.
 - **Page prose** lives in [`docs-templates/`](/docs-templates), and embedded `.tf` snippets in
   [`docs-examples/`](/docs-examples).
+- **The "Building this with AI" section** on every page is written by
+  [`scripts/sync-ai-skills-sections`](/scripts/sync-ai-skills-sections), which names the skill an
+  agent should load for that page and the mistakes the page's resource invites. Edit the wording
+  in the script — never the generated section between the `AI-SKILLS` markers — and re-run
+  `make docs-sync-ai-skills`, which also runs as part of `make docs-generate`.
 
 Edit those, then:
 
@@ -115,7 +122,7 @@ make docs-check              # fail if docs/ is stale
 it from a local filesystem mirror, and runs `terraform validate` over every example — the standalone
 files under `docs-examples/` and `docs-guides-assets/`, plus every ` ```terraform ` block embedded
 in page and guide prose. Prose blocks are not uniform, so
-[`scripts/extract-doc-blocks.py`](/scripts/extract-doc-blocks.py) classifies each one and checks it
+[`scripts/extract-doc-blocks`](/scripts/extract-doc-blocks) classifies each one and checks it
 the way it can actually be checked: self-contained snippets are validated, `import {}` blocks have
 their target verified against the schema, and bare attribute fragments have their names looked up.
 That catches unknown resource types, renamed attributes, bad references and type errors before a
@@ -142,6 +149,54 @@ make test-acc TEST=./internal/resource/workflow_git/            # one package
 make test-acc TESTARGS='-run TestAccWorkflowGit_WithVcsConfig'  # one test
 ```
 
+`STACKGUARDIAN_API_URI` is the host only, e.g. `https://testapi.qa.stackguardian.io`. The SDK
+appends `/api/v1` itself, and a doubled `/api/v1/api/v1` path comes back as `403 Unauthorized`
+rather than 404. Use a user API key (`sgu_…`): an organization key (`sgo_…`) gets 403 on roles.
+
+To keep the credentials out of your shell history, put the four variables in a `.env` file at the
+repository root (`KEY=value` lines; `.env` is gitignored) and load it for a single command:
+
+```bash
+(set -a; source .env; set +a; make test-crud)
+```
+
+Write the values unquoted — `KEY=value`, not `KEY="value"`: the Makefile includes `.env` as make
+syntax, so quotes become part of the exported value and break authentication. `source .env`
+strips them; `make` does not.
+
+#### CRUD matrix
+
+`make test-crud` runs one `TestAcc<Resource>_CRUD` test per resource and reports the result as a
+resource × operation table. Every resource goes through the same steps, defined once in
+[`internal/acctest/crud.go`](/internal/acctest/crud.go):
+
+| Step | What is checked |
+| --- | --- |
+| create | Apply, then refresh: the plan must be empty |
+| update | The plan must be an in-place update — not a replace, not a no-op — and apply cleanly |
+| import | Import by ID; the imported state must match what Terraform created |
+| gone | The object is deleted through the API behind Terraform's back; refresh must drop it and plan a recreate |
+| delete | Destroy, then ask the API: the object must really be gone |
+
+```bash
+(set -a; source .env; set +a; make test-crud)                                         # all resources
+(set -a; source .env; set +a; make test-crud TESTARGS='-run TestAccPolicy_CRUD')      # one resource
+```
+
+The whole run takes well under a minute. Results land in `.crud-results/`:
+
+- `matrix.md` — the table, followed by a one-line reason for each failure (the API error, or the
+  attribute diff of a failed import)
+- `matrix.json` — the same, for tooling
+- `go-test.json` — the raw `go test -json` output
+
+The target exits non-zero if any resource fails. When you add a resource, add a
+`resource_crud_test.go` that calls `acctest.RunCRUD`; the existing ones show the pattern.
+
+CI runs the matrix on every pull request to `main`
+([`test_crud.yaml`](/.github/workflows/test_crud.yaml)) and uploads `.crud-results/` as an
+artifact, so a failed run's matrix is downloadable from the run page.
+
 Every identifier the suite creates is generated per run and prefixed `tfacc-`, via
 `acctest.ResourceName`. Static names made the suite order-dependent: a run that failed before its
 destroy step left the name taken, and every later run failed at create with `409 already exists`.
@@ -155,7 +210,9 @@ make test-acc-sweep-apply  # delete it
 ```
 
 The sweep only ever touches names carrying the `tfacc-` prefix, and reports rather than deletes
-unless you ask it to.
+unless you ask it to. It covers workflow groups (with their workflows), connectors, and workflow,
+workflow step and stack templates (with their revisions). Policies, roles and runner groups cannot
+be listed through `sg-sdk-go`, so the report names them as not swept.
 
 ### Running the workflows locally
 
@@ -206,18 +263,19 @@ All workflows gate on `main`:
 ```text
 feature branch  ──PR──▶  main  ──tag v*──▶  release
                      │                 │
-          compatibility gate   acceptance matrix
-           (no credentials)     (hits the API)
+          compatibility gate   acceptance matrix, CRUD matrix
+           (no credentials)          (hit the API)
 ```
 
 A pull request to `main` runs the hermetic compatibility gate first, then the
-expensive acceptance suite that creates real resources.
-Both target `main` only — no `develop` branch is involved.
+expensive acceptance suite and the CRUD matrix, which both create real resources.
+All three target `main` only — no `develop` branch is involved.
 
 | Workflow | Runs on | Needs secrets | What it does |
 | -------- | ------- | ------------- | ------------ |
 | `compat.yaml` | PR and push to `main`; manual | No | Build, `go vet`, unit tests, `govulncheck` vulnerability scan, docs validation, and the Terraform compatibility matrix |
 | `test.yaml` | PR and push to `main`; manual | Yes | acceptance suite across the Terraform matrix |
+| `test_crud.yaml` | PR to `main`; manual | Yes | CRUD matrix: create/update/import/out-of-band delete/destroy per resource, with the result matrix uploaded as an artifact |
 | `release.yaml` | Tag `v*`; manual | Yes | Runs both of the above, then builds and signs the release |
 | `test-api-prd.yaml` | Manual only | Yes | API high-load test against production, using `main` |
 | `test-api-stg.yaml` | Manual only | Yes | API high-load test against staging, using `main` |
@@ -232,9 +290,11 @@ Everything that calls the API shares one StackGuardian organization, and some
 tests use fixed resource names, so overlapping runs collide in ways that look
 like version incompatibilities rather than the race they are. `test.yaml` guards
 against this twice: `max-parallel: 1` keeps its own matrix sequential, and a
-`concurrency: acceptance-tests` group stops two of its runs overlapping. That
-group does not cover `test-api-prd.yaml` or `test-api-stg.yaml` — check the
-Actions tab before triggering a load test by hand.
+`concurrency: acceptance-tests` group stops two of its runs overlapping.
+`test_crud.yaml` joins that group, so the acceptance suite and the CRUD matrix
+never overlap each other either. The group does not cover `test-api-prd.yaml`
+or `test-api-stg.yaml` — check the Actions tab before triggering a load test by
+hand.
 
 ## Contributing
 
