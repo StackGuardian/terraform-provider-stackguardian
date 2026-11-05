@@ -89,19 +89,25 @@ alongside eleven guides:
 | `make test-acc` | Acceptance tests against a real organization |
 | `make test-crud` | Create/update/import/delete check of every resource, as a pass/fail matrix |
 | `make docs-generate` | Regenerate `docs/` from the schemas and templates |
+| `make docs-sync-ai-skills` | Rewrite the "Building this with AI" sections in every page template |
 | `make docs-validate` | Structure and frontmatter checks |
 | `make docs-check` | Fail if `docs/` is out of date — the CI gate |
 | `make docs-validate-examples` | Type-check every documentation example |
 
 ### Documentation workflow
 
-`docs/` is **generated — never edit it by hand.** Content lives in two places:
+`docs/` is **generated — never edit it by hand.** Content lives in three places:
 
 - **Attribute text** comes from `MarkdownDescription` in each `schema.go`, mostly via shared
   constants in [`internal/constants/`](/internal/constants). A data source should reuse the same
   constant as its resource twin so the two cannot drift.
 - **Page prose** lives in [`docs-templates/`](/docs-templates), and embedded `.tf` snippets in
   [`docs-examples/`](/docs-examples).
+- **The "Building this with AI" section** on every page is written by
+  [`scripts/sync-ai-skills-sections`](/scripts/sync-ai-skills-sections), which names the skill an
+  agent should load for that page and the mistakes the page's resource invites. Edit the wording
+  in the script — never the generated section between the `AI-SKILLS` markers — and re-run
+  `make docs-sync-ai-skills`, which also runs as part of `make docs-generate`.
 
 Edit those, then:
 

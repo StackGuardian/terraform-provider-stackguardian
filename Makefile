@@ -88,9 +88,18 @@ test-examples-quickstart:
 test-examples-onboarding:
 	bash docs-guides-assets/onboarding/project-test/test-onboarding.sh $(ARGS)
 
+# Writes the "Building this with AI" section into every page template: which
+# skill to load for that page, and the mistakes its resource invites. The
+# wording lives in scripts/sync-ai-skills-sections rather than in 47 pages, so
+# a correction lands everywhere at once; the script replaces whatever sits
+# between the AI-SKILLS markers, so this is idempotent. Never edit the
+# generated section in a template by hand.
+docs-sync-ai-skills:
+	go run ./scripts/sync-ai-skills-sections
+
 # The banner step is temporary, for as long as the docs revamp is in progress.
 # Delete the line below and re-run to remove the banner from every page.
-docs-generate:
+docs-generate: docs-sync-ai-skills
 	tfplugindocs generate \
 		--provider-name stackguardian --website-source-dir docs-templates
 	bash scripts/inject-docs-banner.sh
