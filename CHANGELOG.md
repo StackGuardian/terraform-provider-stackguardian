@@ -18,6 +18,13 @@ A **Breaking** change can require edits to existing configurations.
 - `golang.org/x/net` updated to v0.62.0, fixing five HTTP/2 vulnerabilities reachable through the provider's plugin server (`GO-2026-6603`, `GO-2026-6610`, `GO-2026-6611`, `GO-2026-6612` and `GO-2026-6617`)
 - CI now runs `govulncheck` on every pull request on Build and unit tests; `make govulncheck` runs the same scan locally
 
+### Fixed
+
+- `stackguardian_stack_template_revision`: importing a revision now sets `parent_template_id` from the import ID (`<template_id>:<revision>`). It was left null, so the first plan after import replaced the revision. A malformed import ID now returns a clear error
+- `stackguardian_workflow_step_template_revision`: same fix — importing now sets `template_id` from the import ID, and a malformed import ID returns a clear error
+- `stackguardian_role_assignment`: on import, when both `role` (deprecated) and `roles` are null in state, keeps `roles` only, avoiding a perpetual diff against any config
+-  When an object is deleted outside Terraform, Read now removes it from state instead of erroring, and Delete succeeds when the object is already gone. Added to `stackguardian_stack_template`, `stackguardian_stack_template_revision`, `stackguardian_workflow_git`, `stackguardian_workflow_template` and `stackguardian_workflow_template_revision`. `stackguardian_workflow_step_template` and `stackguardian_workflow_step_template_revision` already removed missing objects from state on Read but now also treat a `400 "does not exist"` response as not-found (the template APIs return 400 instead of 404 for missing objects)
+
 ## [1.12.6] - 2026-10-29
 
 ### Added
