@@ -3266,8 +3266,7 @@ func workflowsMismatchDetail(required, declared []string, resourceNames map[stri
 // It checks the values the request will carry: workflowsConfig merged with the
 // stack template revision tpl and workflowTemplates, so a bin path or runner
 // inherited from either template counts. A workflow with no runner_constraints
-// anywhere gets the organization's default runner, which the provider can't
-// see, so it must declare a private runner to use terraform_bin_path.
+// anywhere runs on a shared runner, so it fails the check.
 //
 // Workflows whose id is in skip are not checked: ModifyPlan passes the ones
 // whose runner_constraints or terraform_bin_path is unknown in config, and
