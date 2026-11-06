@@ -7,10 +7,15 @@ Versions use the `MAJOR.MINOR.PATCH` format. While the provider is under active 
 breaking changes can ship in any release and are marked **Breaking**.
 
 Entries describe changes that affect provider users: resources, data sources, attributes,
-behavior, documentation and security. Internal refactors, tests and CI changes are left out.
+behavior, documentation and security. Internal refactors are left out; test and CI changes
+are recorded only when they change what users can rely on a release having been checked for.
 A **Breaking** change can require edits to existing configurations.
 
 ## [1.12.7]
+
+### Added
+
+- CI now runs the resource CRUD matrix — create, update, import, out-of-band delete and destroy for every resource — on every pull request to `main` (`test_crud.yaml`), and uploads the resulting resource × operation matrix as an artifact. `make test-crud` runs the same check locally
 
 ### Security
 

@@ -1,0 +1,84 @@
+name: "Resource CRUD matrix"
+
+# Runs `make test-crud` on pull requests to main: create -> update -> import
+# -> (delete outside Terraform) -> destroy for every resource, reported as a
+# resource x operation matrix and uploaded as an artifact.
+#
+# test.yaml runs the full acceptance suite on the support floor and the newest
+# release. This workflow covers a different axis: one full lifecycle per
+# resource, on the newest release only -- its matrix is per operation, not per
+# Terraform version, so a second matrix entry would double the API cost for no
+# extra information. Schema compatibility across the whole version range is
+# compat.yaml's job.
+#
+# Like test.yaml it creates real resources and needs credentials, so it cannot
+# run on fork pull requests. It also joins the acceptance-tests concurrency
+# group: the API-hitting workflows share one StackGuardian organization, and
+# two overlapping runs collide in ways that look like provider bugs.
+
+on:
+  pull_request:
+    branches:
+      - "main"
+    types: [ opened, reopened, synchronize ]
+  workflow_dispatch:
+  workflow_call:
+
+concurrency:
+  group: "acceptance-tests"
+  cancel-in-progress: false
+
+env:
+  # The single authority on which Terraform CLI this workflow tests, used by
+  # the setup step below and by terraform-plugin-testing (which downloads the
+  # same version when TF_ACC_TERRAFORM_VERSION is set). Keep it at the newest
+  # release in constants.SupportedTerraformVersions.
+  TERRAFORM_VERSION: "1.16.4"
+
+jobs:
+
+  crud-matrix:
+    name: "CRUD matrix"
+    runs-on: ubuntu-latest
+    # The suite runs with -timeout=20m; the rest is build and upload time.
+    timeout-minutes: 30
+    env:
+      GOPRIVATE: github.com/StackGuardian/sg-sdk-go
+    steps:
+
+      - name: "Checkout code"
+        uses: actions/checkout@v4
+
+      - name: "Install Go"
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+
+      - name: "Install Terraform ${{ env.TERRAFORM_VERSION }}"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+          terraform_version: "${{ env.TERRAFORM_VERSION }}"
+
+      # The target sets TF_ACC itself; the credentials come in through the
+      # step's env, which the Makefile exports to the test binary. It exits
+      # non-zero if any resource fails the matrix.
+      - name: "Run CRUD matrix"
+        run: make test-crud
+        env:
+          TF_ACC_TERRAFORM_VERSION: "${{ env.TERRAFORM_VERSION }}"
+          STACKGUARDIAN_API_URI: "${{ secrets.SG_PRD_API_URI }}"
+          STACKGUARDIAN_API_KEY: "${{ secrets.SG_PRD_API_KEY }}"
+          STACKGUARDIAN_ORG_NAME: "${{ secrets.SG_PRD_ORG_NAME }}"
+          TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY: "${{ secrets.TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY }}"
+
+      # The matrix is the diagnosis, and the target writes it even when the
+      # run fails (the matrix tool runs after go test regardless of its exit
+      # status) -- so upload on failure too, or the failed job takes the
+      # diagnosis with it.
+      - name: "Upload CRUD matrix"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crud-matrix
+          path: .crud-results/

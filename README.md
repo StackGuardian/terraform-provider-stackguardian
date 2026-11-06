@@ -193,6 +193,10 @@ The whole run takes well under a minute. Results land in `.crud-results/`:
 The target exits non-zero if any resource fails. When you add a resource, add a
 `resource_crud_test.go` that calls `acctest.RunCRUD`; the existing ones show the pattern.
 
+CI runs the matrix on every pull request to `main`
+([`test_crud.yaml`](/.github/workflows/test_crud.yaml)) and uploads `.crud-results/` as an
+artifact, so a failed run's matrix is downloadable from the run page.
+
 Every identifier the suite creates is generated per run and prefixed `tfacc-`, via
 `acctest.ResourceName`. Static names made the suite order-dependent: a run that failed before its
 destroy step left the name taken, and every later run failed at create with `409 already exists`.
@@ -259,18 +263,19 @@ All workflows gate on `main`:
 ```text
 feature branch  ──PR──▶  main  ──tag v*──▶  release
                      │                 │
-          compatibility gate   acceptance matrix
-           (no credentials)     (hits the API)
+          compatibility gate   acceptance matrix, CRUD matrix
+           (no credentials)          (hit the API)
 ```
 
 A pull request to `main` runs the hermetic compatibility gate first, then the
-expensive acceptance suite that creates real resources.
-Both target `main` only — no `develop` branch is involved.
+expensive acceptance suite and the CRUD matrix, which both create real resources.
+All three target `main` only — no `develop` branch is involved.
 
 | Workflow | Runs on | Needs secrets | What it does |
 | -------- | ------- | ------------- | ------------ |
 | `compat.yaml` | PR and push to `main`; manual | No | Build, `go vet`, unit tests, `govulncheck` vulnerability scan, docs validation, and the Terraform compatibility matrix |
 | `test.yaml` | PR and push to `main`; manual | Yes | acceptance suite across the Terraform matrix |
+| `test_crud.yaml` | PR to `main`; manual | Yes | CRUD matrix: create/update/import/out-of-band delete/destroy per resource, with the result matrix uploaded as an artifact |
 | `release.yaml` | Tag `v*`; manual | Yes | Runs both of the above, then builds and signs the release |
 | `test-api-prd.yaml` | Manual only | Yes | API high-load test against production, using `main` |
 | `test-api-stg.yaml` | Manual only | Yes | API high-load test against staging, using `main` |
@@ -285,9 +290,11 @@ Everything that calls the API shares one StackGuardian organization, and some
 tests use fixed resource names, so overlapping runs collide in ways that look
 like version incompatibilities rather than the race they are. `test.yaml` guards
 against this twice: `max-parallel: 1` keeps its own matrix sequential, and a
-`concurrency: acceptance-tests` group stops two of its runs overlapping. That
-group does not cover `test-api-prd.yaml` or `test-api-stg.yaml` — check the
-Actions tab before triggering a load test by hand.
+`concurrency: acceptance-tests` group stops two of its runs overlapping.
+`test_crud.yaml` joins that group, so the acceptance suite and the CRUD matrix
+never overlap each other either. The group does not cover `test-api-prd.yaml`
+or `test-api-stg.yaml` — check the Actions tab before triggering a load test by
+hand.
 
 ## Contributing
 

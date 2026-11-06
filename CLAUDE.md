@@ -46,9 +46,17 @@ STACKGUARDIAN_ORG_NAME=<org>
 appends `/api/v1` itself, and a doubled `/api/v1/api/v1` path comes back as `403 Unauthorized`,
 not 404. Role tests need a user key (`sgu_`); org keys (`sgo_`) get 403 on roles.
 
+These may live in a `.env` file at the repo root (gitignored), loaded with
+`(set -a; source .env; set +a; make …)`. Write the values **unquoted**: the Makefile includes
+`.env` as make syntax, so `KEY="value"` exports the quotes literally and breaks authentication.
+`source .env` strips them; `make` does not.
+
 Every resource has a `TestAcc<Resource>_CRUD` built on `acctest.RunCRUD`: create → in-place
 update → import + verify → (with `Delete`) object deleted outside Terraform → destroy, then
 `CheckDestroy` confirms with the API that the object is gone. Add one for any new resource.
+CI runs this suite on every pull request to `main` (`.github/workflows/test_crud.yaml`, in the
+`acceptance-tests` concurrency group so it never overlaps the acceptance suite) and uploads
+`.crud-results/` as an artifact.
 
 ---
 
