@@ -160,6 +160,10 @@ repository root (`KEY=value` lines; `.env` is gitignored) and load it for a sing
 (set -a; source .env; set +a; make test-crud)
 ```
 
+Write the values unquoted — `KEY=value`, not `KEY="value"`: the Makefile includes `.env` as make
+syntax, so quotes become part of the exported value and break authentication. `source .env`
+strips them; `make` does not.
+
 #### CRUD matrix
 
 `make test-crud` runs one `TestAcc<Resource>_CRUD` test per resource and reports the result as a
