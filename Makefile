@@ -7,6 +7,12 @@ BINARY=terraform-provider-${NAME}
 VERSION=0.0.0-dev
 OS_ARCH=linux_amd64
 
+# Optional local credentials (gitignored). Only the API variables are exported:
+# TF_ACC is left out so `make test` stays a unit-test run; test-acc and
+# test-crud set it themselves.
+-include .env
+export STACKGUARDIAN_API_KEY STACKGUARDIAN_API_URI STACKGUARDIAN_ORG_NAME TEST_AZURE_STORAGE_BACKEND_ACCESS_KEY
+
 default: install
 
 clean: clean-examples
@@ -42,6 +48,16 @@ test:
 test-acc:
 	TF_ACC=1 go test -p=8 -parallel=1 $(TEST_ACC) -v $(TESTARGS) -timeout=15m
 
+# Create -> update -> import -> (delete outside Terraform) -> destroy for every
+# resource, reported as a resource x operation matrix. Same credentials as
+# test-acc. Results land in $(CRUD_OUT)/ (matrix.md, matrix.json, raw go-test.json).
+# Narrow with TESTARGS, e.g. TESTARGS='-run TestAccPolicy_CRUD'.
+CRUD_OUT ?= .crud-results
+test-crud:
+	@mkdir -p $(CRUD_OUT)
+	TF_ACC=1 go test -p=8 -parallel=1 ./internal/resource/... -run '_CRUD$$' -json -count=1 -timeout=20m $(TESTARGS) > $(CRUD_OUT)/go-test.json; \
+		go run ./scripts/crud-matrix $(CRUD_OUT)/go-test.json --markdown $(CRUD_OUT)/matrix.md --json $(CRUD_OUT)/matrix.json
+
 # Terraform CLI compatibility gate. Needs no API credentials: it only makes the
 # CLI load the provider and decode its schema, then validates docs-examples/.
 # Override the CLI under test with TERRAFORM_BIN=/path/to/terraform.
@@ -72,9 +88,18 @@ test-examples-quickstart:
 test-examples-onboarding:
 	bash docs-guides-assets/onboarding/project-test/test-onboarding.sh $(ARGS)
 
+# Writes the "Building this with AI" section into every page template: which
+# skill to load for that page, and the mistakes its resource invites. The
+# wording lives in scripts/sync-ai-skills-sections rather than in 47 pages, so
+# a correction lands everywhere at once; the script replaces whatever sits
+# between the AI-SKILLS markers, so this is idempotent. Never edit the
+# generated section in a template by hand.
+docs-sync-ai-skills:
+	go run ./scripts/sync-ai-skills-sections
+
 # The banner step is temporary, for as long as the docs revamp is in progress.
 # Delete the line below and re-run to remove the banner from every page.
-docs-generate:
+docs-generate: docs-sync-ai-skills
 	tfplugindocs generate \
 		--provider-name stackguardian --website-source-dir docs-templates
 	bash scripts/inject-docs-banner.sh
@@ -90,7 +115,7 @@ docs-check: docs-generate
 
 # Type-checks every documentation example against the provider schema: the files
 # under docs-examples/ and docs-guides-assets/, plus every ```terraform block
-# embedded in page and guide prose (see scripts/extract-doc-blocks.py).
+# embedded in page and guide prose (see scripts/extract-doc-blocks).
 # No credentials and no API calls -- `terraform validate` only.
 docs-validate-examples:
 	bash scripts/validate-examples.sh

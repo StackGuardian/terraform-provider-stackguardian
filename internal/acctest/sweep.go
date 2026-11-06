@@ -5,9 +5,13 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
+	"github.com/StackGuardian/sg-sdk-go/stacktemplaterevisions"
+	"github.com/StackGuardian/sg-sdk-go/workflowsteptemplaterevision"
+	"github.com/StackGuardian/sg-sdk-go/workflowtemplaterevisions"
 )
 
 // Sweeping deletes what an earlier run created and failed to remove.
@@ -120,9 +124,36 @@ func sweepWorkflowGroups(ctx context.Context, client *sgclient.Client, org strin
 			r.note("workflow group", name, nil)
 			continue
 		}
+		// A group that still holds workflows refuses to delete (400 "Workflow
+		// Group not empty"), so remove its workflows first.
+		if err := deleteWorkflowsIn(ctx, client, org, name); err != nil {
+			r.note("workflow group", name, err)
+			continue
+		}
 		_, err := client.WorkflowGroups.DeleteWorkflowGroup(ctx, org, name)
 		r.note("workflow group", name, err)
 	}
+}
+
+// deleteWorkflowsIn deletes every workflow in the workflow group wfGrp.
+func deleteWorkflowsIn(ctx context.Context, client *sgclient.Client, org, wfGrp string) error {
+	resp, err := client.Workflows.ListAllWorkflows(ctx, org, wfGrp, &sgsdkgo.ListAllWorkflowsRequest{})
+	if err != nil {
+		return fmt.Errorf("listing its workflows: %w", err)
+	}
+	for _, wf := range resp.Msg {
+		if wf == nil {
+			continue
+		}
+		id := wf.ResourceName
+		if i := strings.LastIndex(wf.ResourceId, "/"); i >= 0 && i < len(wf.ResourceId)-1 {
+			id = wf.ResourceId[i+1:]
+		}
+		if _, err := client.Workflows.DeleteWorkflow(ctx, org, id, wfGrp); err != nil {
+			return fmt.Errorf("deleting its workflow %s: %w", id, err)
+		}
+	}
+	return nil
 }
 
 func sweepConnectors(ctx context.Context, client *sgclient.Client, org string, r *SweepReport) {
@@ -150,42 +181,121 @@ func sweepConnectors(ctx context.Context, client *sgclient.Client, org string, r
 // Templates are the ones that bit hardest: a leftover template made every later
 // run fail at create with 409 "already exists".
 func sweepTemplates(ctx context.Context, client *sgclient.Client, org string, r *SweepReport) {
-	kinds := []struct {
-		kind     sgsdkgo.ListAllTemplatesRequestTemplateType
-		label    string
-		deleteFn func(name string) error
-	}{
-		{
-			kind:  sgsdkgo.ListAllTemplatesRequestTemplateTypeIac,
+	// The per-type /templatetypes/<type>/templates/listall/ endpoints reject org
+	// API keys with 401, so list the org's own templates and dispatch on the
+	// TemplateType the API returns (sg-sdk-go only exposes it, and
+	// LatestRevision, as extra properties).
+	kinds := templateKinds(ctx, client, org)
+
+	// Read every page before deleting anything: deleting while paging moves
+	// the pagination cursor, and about half the templates were skipped.
+	var templates []*sgsdkgo.Template
+	req := &sgsdkgo.ListAllTemplatesBasedOnOwnerOrgRequest{}
+	for {
+		resp, err := client.Templates.ListAllTemplatesBasedOnOwnerOrg(ctx, org, req)
+		if err != nil {
+			r.Errors = append(r.Errors, fmt.Errorf("list templates: %w", err))
+			return
+		}
+		templates = append(templates, resp.GetMsg()...)
+		next := resp.GetLastevaluatedkey()
+		if next == "" {
+			break
+		}
+		req.Lastevaluatedkey = &next
+	}
+
+	for _, tmpl := range templates {
+		if tmpl == nil || !r.consider(tmpl.TemplateName) {
+			continue
+		}
+		extra := tmpl.GetExtraProperties()
+		typ, _ := extra["TemplateType"].(string)
+		k, ok := kinds[typ]
+		if !ok {
+			r.note(fmt.Sprintf("template (type %q)", typ), tmpl.TemplateName, fmt.Errorf("no sweeper for this template type"))
+			continue
+		}
+		if r.DryRun {
+			r.note(k.label, tmpl.TemplateName, nil)
+			continue
+		}
+		latest, _ := extra["LatestRevision"].(float64)
+		r.note(k.label, tmpl.TemplateName, k.delete(tmpl.TemplateName, int(latest)))
+	}
+}
+
+type templateKind struct {
+	label          string
+	deleteRevision func(revisionID string)
+	deleteTemplate func(name string) error
+}
+
+// delete removes revisions 1..latest of the template, then the template.
+func (k templateKind) delete(name string, latest int) error {
+	for i := 1; i <= latest; i++ {
+		k.deleteRevision(fmt.Sprintf("%s:%d", name, i))
+	}
+	return k.deleteTemplate(name)
+}
+
+// templateKinds maps the API's TemplateType to how to delete such a template.
+func templateKinds(ctx context.Context, client *sgclient.Client, org string) map[string]templateKind {
+	// A template with revisions cannot be deleted, and a published revision
+	// must be deprecated before it can be. Errors from those two steps are
+	// ignored: the revision may never have been published, or may already be
+	// gone. The template delete reports whether it all worked.
+	effective := fmt.Sprintf("%d", time.Now().AddDate(0, 1, 0).Unix())
+	message := "deprecated by the acceptance test sweeper"
+
+	return map[string]templateKind{
+		"IAC": {
 			label: "workflow template",
-			deleteFn: func(name string) error {
+			deleteRevision: func(id string) {
+				_, _ = client.WorkflowTemplatesRevisions.UpdateWorkflowTemplateRevision(ctx, org, id, &workflowtemplaterevisions.UpdateWorkflowTemplateRevisionRequest{
+					Deprecation: sgsdkgo.Optional(workflowtemplaterevisions.Deprecation{EffectiveDate: &effective, Message: &message}),
+				})
+				_ = client.WorkflowTemplatesRevisions.DeleteWorkflowTemplateRevision(ctx, org, id, true)
+			},
+			deleteTemplate: func(name string) error {
 				return client.WorkflowTemplates.DeleteWorkflowTemplate(ctx, org, name)
 			},
 		},
-		{
-			kind:  sgsdkgo.ListAllTemplatesRequestTemplateTypeWorkflowStep,
+		"IAC_GROUP": {
+			label: "stack template",
+			deleteRevision: func(id string) {
+				_, _ = client.StackTemplateRevisions.UpdateStackTemplateRevision(ctx, org, id, &stacktemplaterevisions.UpdateStackTemplateRevisionRequest{
+					Deprecation: sgsdkgo.Optional(stacktemplaterevisions.Deprecation{EffectiveDate: &effective, Message: &message}),
+				})
+				_ = client.StackTemplateRevisions.DeleteStackTemplateRevision(ctx, org, id, true)
+			},
+			deleteTemplate: func(name string) error {
+				return client.StackTemplates.DeleteStackTemplate(ctx, org, name)
+			},
+		},
+		"WORKFLOW_STEP": {
 			label: "workflow step template",
-			deleteFn: func(name string) error {
+			deleteRevision: func(id string) {
+				_, _ = client.WorkflowStepTemplateRevision.UpdateWorkflowStepTemplateRevision(ctx, org, id, &workflowsteptemplaterevision.UpdateWorkflowStepTemplateRevisionModel{
+					Deprecation: sgsdkgo.Optional(workflowsteptemplaterevision.Deprecation{EffectiveDate: &effective, Message: &message}),
+				})
+				_ = client.WorkflowStepTemplateRevision.DeleteWorkflowStepTemplateRevision(ctx, org, id, true)
+			},
+			deleteTemplate: func(name string) error {
 				return client.WorkflowStepTemplate.DeleteWorkflowStepTemplate(ctx, org, name)
 			},
 		},
 	}
+}
 
-	for _, k := range kinds {
-		resp, err := client.Templates.ListAllTemplates(ctx, k.kind, &sgsdkgo.ListAllTemplatesRequest{})
-		if err != nil {
-			r.Errors = append(r.Errors, fmt.Errorf("list %s: %w", k.label, err))
-			continue
-		}
-		for _, tmpl := range resp.GetMsg() {
-			if !r.consider(tmpl.TemplateName) {
-				continue
-			}
-			if r.DryRun {
-				r.note(k.label, tmpl.TemplateName, nil)
-				continue
-			}
-			r.note(k.label, tmpl.TemplateName, k.deleteFn(tmpl.TemplateName))
-		}
+// DeleteTemplate deletes a template of templateType ("IAC", "IAC_GROUP" or
+// "WORKFLOW_STEP") together with its revisions 1..revisions, deprecating each
+// first. Use it in test cleanup: deleting only the template fails while any
+// revision exists, and that failure is easy to miss when the error is dropped.
+func DeleteTemplate(ctx context.Context, client *sgclient.Client, org, templateType, name string, revisions int) error {
+	k, ok := templateKinds(ctx, client, org)[templateType]
+	if !ok {
+		return fmt.Errorf("unknown template type %q", templateType)
 	}
+	return k.delete(name, revisions)
 }
