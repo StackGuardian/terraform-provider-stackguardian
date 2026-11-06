@@ -31,14 +31,16 @@ still inherited (see below) unless you declare it.
 
 ## Inheriting values from the template
 
-`workflows_config.workflows[]` attributes resolve **declaratively and per-attribute**, with
-three precedence layers: your own config wins, then the matching workflow on the stack template
-revision, then that workflow's workflow template revision.
+In `workflows_config.workflows`, you only need to set the attributes you want to change. Each
+workflow uses its templates' values for everything else:
 
-- **Omit an attribute** → its value is **inherited** from the stack template revision, then the
+- **Leave an attribute out** and the workflow uses the value from the stack template revision.
+  If the stack template revision doesn't set it either, the workflow uses the value from its
   workflow template revision.
-- **Declare an attribute** → **your value is used** and the template defaults for that attribute
-  are ignored.
+- **Set an attribute** and the workflow uses your value instead of the templates' values.
+
+You decide this attribute by attribute and workflow by workflow. For example, you can set
+`environment_variables` on one workflow and leave everything else to the templates.
 
 ## Upgrading a template revision
 
@@ -54,19 +56,13 @@ To upgrade, change the revision in `template_group_id` (e.g. `:1` → `:2`):
   for `actions`, *inherit from template*). To **clear** a value, or **exclude** one the template
   sets, declare an **empty value** of the right type: `""` for a string, `[]` for a list, `{}`
   for a map/object. Setting the attribute to `null` does not clear it.
-- **Removing an attribute from config does not clear it.** Terraform cannot distinguish "this
-  attribute was deleted from config" from "this attribute was never set" — both look identical
-  at plan time. If an Optional+Computed attribute already has a value in state (set explicitly,
-  or inherited from a template), simply deleting its declaration leaves the old value in place
-  indefinitely, with no diff shown. To actually clear it, set it to an **explicit empty value** of
-  the right type: `""` for a string, `[]` for a list, `{}` for a map/object.
-- **`terraform_bin_path` needs a private runner.** StackGuardian uses a runner-provided
-  Terraform binary only on a private runner and drops `terraform_config.terraform_bin_path`
-  from any other workflow. A workflow that sets it, in its own configuration or through its
-  templates, must also have `runner_constraints = { type = "private", names = [...] }`, or the
-  plan fails. A workflow with no `runner_constraints` uses the organization's default runner,
-  which the provider can't see, so declare the private runner even when that default is
-  private.
+- **Deleting an attribute from your configuration does not clear its value.** If the stack
+  already has a value for an attribute, because you set it earlier or a template set it,
+  deleting that attribute from your configuration keeps the value on the stack, and
+  `terraform plan` shows no change. Terraform can't tell a deleted attribute from one you never
+  set. To clear the value, set the attribute to an empty value instead of deleting it:
+  `""` for a string, `[]` for a list, `{}` for a map or object. For example, to remove all
+  tags, write `tags = []`.
 
 ## Example Usage
 
@@ -483,7 +479,7 @@ Optional:
 - `pre_plan_hooks` (List of String) Hooks to run before plan.
 - `pre_plan_wf_steps_config` (Attributes List) Workflow steps configuration to run before plan. (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config--pre_plan_wf_steps_config))
 - `run_pre_init_hooks_on_drift` (Boolean) Run pre-init hooks on drift detection.
-- `terraform_bin_path` (Attributes List) Mount points for a Terraform binary provided by the runner. Only works on a private runner: the workflow must have `runner_constraints.type = "private"`, declared here or inherited from its templates, or the plan fails. (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config--terraform_bin_path))
+- `terraform_bin_path` (Attributes List) Mount points for a Terraform binary installed on your own runner, used instead of the version StackGuardian provides. Only private runners support this, so the workflow must run on a private runner, set in `runner_constraints` here or in its templates. Otherwise `terraform plan` fails. (see [below for nested schema](#nestedatt--workflows_config--workflows--terraform_config--terraform_bin_path))
 - `terraform_init_options` (String) Additional options for terraform init.
 - `terraform_plan_options` (String) Additional options for terraform plan.
 - `terraform_version` (String) Version of the engine to run, written bare (e.g. `1.5.7`). <ul><li>OpenTofu — any version.</li><li>Terraform — the open-source releases, `1.5.7` and earlier. A later release is BUSL-licensed and is only available on a workflow step template built on your own runtime image.</li></ul>The workflow step's container ships a set of versions preinstalled and downloads anything else when the workflow runs, provided it exists upstream. Which engine runs is decided by `wf_type`, not by this value.

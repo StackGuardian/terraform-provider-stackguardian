@@ -3,7 +3,7 @@
 page_title: "stackguardian_stack_template_revision Resource - terraform-provider-stackguardian"
 subcategory: "Stacks"
 description: |-
-  Manages a versioned revision of a stackguardian_stack_template — the ordered workflows, inputs and configuration a stack is actually created from.
+  Manages a revision of a stackguardian_stack_template. The stack template names the template and sets who can use it; each revision is one version of its content: the workflows a stack runs, the order they run in, and their inputs and settings. A stack is created from a revision, not from the stack template itself.
 
 ---
 
@@ -13,7 +13,7 @@ description: |-
 ~> **These docs are being actively revamped.** The provider itself is unchanged. If something here is wrong, unclear, or missing, please [open an issue](https://github.com/StackGuardian/terraform-provider-stackguardian/issues/new?template=documentation.yml) — corrections and requests are equally welcome.
 <!-- docs-revamp-banner:end -->
 
-Manages a versioned revision of a `stackguardian_stack_template` — the ordered workflows, inputs and configuration a stack is actually created from.
+Manages a revision of a `stackguardian_stack_template`. The stack template names the template and sets who can use it; each revision is one version of its content: the workflows a stack runs, the order they run in, and their inputs and settings. A stack is created from a revision, not from the stack template itself.
 
 ## Revisions
 

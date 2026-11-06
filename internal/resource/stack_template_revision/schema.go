@@ -587,7 +587,7 @@ var actionOrderAttrs = map[string]schema.Attribute{
 // Schema defines the schema for the resource.
 func (r *stackTemplateRevisionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a versioned revision of a `stackguardian_stack_template` — the ordered workflows, inputs and configuration a stack is actually created from.",
+		MarkdownDescription: "Manages a revision of a `stackguardian_stack_template`. The stack template names the template and sets who can use it; each revision is one version of its content: the workflows a stack runs, the order they run in, and their inputs and settings. A stack is created from a revision, not from the stack template itself.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: constants.StackTemplateRevisionId,

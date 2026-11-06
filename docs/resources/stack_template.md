@@ -21,8 +21,11 @@ A stack template is a container. On its own it has no workflows and nothing can 
 it — the content lives in a [`stackguardian_stack_template_revision`](https://registry.terraform.io/providers/StackGuardian/stackguardian/latest/docs/resources/stack_template_revision),
 and a stack is created from a specific revision.
 
-A minimal setup is therefore two resources: this one, and at least one revision referencing it
-through `template_id`.
+To create a stack, you need at least two resources:
+
+1. A `stackguardian_stack_template`, which names the template and sets who can use it.
+2. A `stackguardian_stack_template_revision`, which defines the workflows and actions. Set its
+   `parent_template_id` to the stack template's `id` to add the revision to that template.
 
 ## Example Usage
 
