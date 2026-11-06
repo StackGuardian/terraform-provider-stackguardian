@@ -6,9 +6,10 @@ import (
 )
 
 // info builds a testInfo the way parse() would have collected it: one output
-// element per go test -json Output event, each carrying its own newline.
-func info(action string, output ...string) *testInfo {
-	return &testInfo{pkg: "resource", action: action, output: output}
+// element per go test -json Output event, each carrying its own newline, and
+// the test package's last path segment as pkg.
+func info(pkg, action string, output ...string) *testInfo {
+	return &testInfo{pkg: pkg, action: action, output: output}
 }
 
 func wantOps(t *testing.T, ops map[string]string, want map[string]string) {
@@ -24,7 +25,7 @@ func wantOps(t *testing.T, ops map[string]string, want map[string]string) {
 // without a "Step 4/4 error" line. The steps before it passed, and the
 // deferred teardown still exercises delete.
 func TestClassifyGonePreConfigFailure(t *testing.T) {
-	c := info("fail",
+	c := info("policy", "fail",
 		"=== RUN   TestAccPolicy_CRUD\n",
 		"    crud.go:142: crud: resource=stackguardian_policy steps=4\n",
 		"    crud.go:129: deleting stackguardian_policy.this outside Terraform: 500 {\"detail\": \"upstream error\"}\n",
@@ -45,7 +46,7 @@ func TestClassifyGonePreConfigFailure(t *testing.T) {
 // The same failure with a teardown that also failed: both gone and delete
 // are reported, with their own reasons.
 func TestClassifyGonePreConfigAndDestroyFailure(t *testing.T) {
-	c := info("fail",
+	c := info("policy", "fail",
 		"    crud.go:142: crud: resource=stackguardian_policy steps=4\n",
 		"    crud.go:129: deleting stackguardian_policy.this outside Terraform: 500 {\"detail\": \"boom\"}\n",
 		"    resource.go:77: Error running post-test destroy, err: could not destroy\n",
@@ -63,7 +64,7 @@ func TestClassifyGonePreConfigAndDestroyFailure(t *testing.T) {
 // carries the failure, and the reason must be the panic line, not the crud:
 // layout log that happens to be the first output line.
 func TestClassifyPanic(t *testing.T) {
-	c := info("fail",
+	c := info("workflow_git", "fail",
 		"=== RUN   TestAccWorkflowGit_CRUD\n",
 		"    crud.go:142: crud: resource=stackguardian_workflow_git steps=4\n",
 		"panic: runtime error: invalid memory address or nil pointer dereference\n",
@@ -81,7 +82,7 @@ func TestClassifyPanic(t *testing.T) {
 
 // A runtime fatal, same shape as a panic for attribution purposes.
 func TestClassifyRuntimeFatal(t *testing.T) {
-	c := info("fail",
+	c := info("stack", "fail",
 		"    crud.go:142: crud: resource=stackguardian_stack steps=4\n",
 		"fatal error: all goroutines are asleep - deadlock!\n",
 	)
@@ -96,7 +97,7 @@ func TestClassifyRuntimeFatal(t *testing.T) {
 // the reason is the first line that is not framework noise, and never the
 // crud: layout log, which says nothing about the failure.
 func TestClassifyCatchAllSkipsLayoutLine(t *testing.T) {
-	c := info("fail",
+	c := info("role", "fail",
 		"=== RUN   TestAccRole_CRUD\n",
 		"    crud.go:142: crud: resource=stackguardian_role steps=4\n",
 		"    acctest.go:24: STACKGUARDIAN_API_KEY must be set for acceptance tests\n",
@@ -113,7 +114,7 @@ func TestClassifyCatchAllSkipsLayoutLine(t *testing.T) {
 // The step-error path is unchanged: step N's operation fails, the ones after
 // it did not run, and the reason comes from the step error line.
 func TestClassifyStepError(t *testing.T) {
-	c := info("fail",
+	c := info("connector", "fail",
 		"    crud.go:142: crud: resource=stackguardian_connector steps=4\n",
 		"    resource.go:99: Step 2/4 error: After applying this step, the plan was not empty: [attribute diff]\n",
 	)
@@ -128,7 +129,7 @@ func TestClassifyStepError(t *testing.T) {
 
 // A post-test destroy failure marks delete and nothing else.
 func TestClassifyPostTestDestroyFailure(t *testing.T) {
-	c := info("fail",
+	c := info("runner_group", "fail",
 		"    crud.go:142: crud: resource=stackguardian_runner_group steps=4\n",
 		"    resource.go:77: Error running post-test destroy, err: could not delete\n",
 	)
@@ -143,7 +144,7 @@ func TestClassifyPostTestDestroyFailure(t *testing.T) {
 
 // A three-step resource has no gone step; a step-3 failure leaves gone n/a.
 func TestClassifyNoGoneStep(t *testing.T) {
-	c := info("fail",
+	c := info("workflow_group", "fail",
 		"    crud.go:142: crud: resource=stackguardian_workflow_group steps=3\n",
 		"    resource.go:99: Step 3/3 error: ImportState error: not found\n",
 	)
@@ -153,17 +154,51 @@ func TestClassifyNoGoneStep(t *testing.T) {
 	})
 }
 
-// A skipped test marks every operation skipped, including gone.
-func TestClassifySkip(t *testing.T) {
-	c := info("skip",
-		"=== RUN   TestAccStack_CRUD\n",
-		"--- SKIP: TestAccStack_CRUD (0.0s) acceptance tests disabled\n",
+// A test that skips inside RunCRUD emits the crud: layout line first, so its
+// row carries the resource name from the line like any other row.
+func TestClassifySkipWithLayoutLine(t *testing.T) {
+	c := info("policy", "skip",
+		"=== RUN   TestAccPolicy_CRUD\n",
+		"    crud.go:142: crud: resource=stackguardian_policy steps=4\n",
+		"--- SKIP: TestAccPolicy_CRUD (0.0s) Acceptance test skipped unless env 'TF_ACC' set\n",
 	)
-	_, ops, reasons := classify(c)
+	resource, ops, reasons := classify(c)
+	if resource != "stackguardian_policy" {
+		t.Errorf("resource = %q, want stackguardian_policy", resource)
+	}
 	wantOps(t, ops, map[string]string{
 		"create": skip, "update": skip, "import": skip, "gone": skip, "delete": skip,
 	})
 	if len(reasons) != 0 {
 		t.Errorf("reasons = %v, want none", reasons)
+	}
+}
+
+// A test that skips before RunCRUD (the fixture-creating CRUD tests) has no
+// layout line; the row falls back to the Terraform type derived from the
+// package directory.
+func TestClassifySkipWithoutLayoutLine(t *testing.T) {
+	c := info("connector", "skip",
+		"=== RUN   TestAccConnector_CRUD\n",
+		"--- SKIP: TestAccConnector_CRUD (0.0s) Acceptance test skipped unless env 'TF_ACC' set\n",
+	)
+	resource, ops, _ := classify(c)
+	if resource != "stackguardian_connector" {
+		t.Errorf("resource = %q, want stackguardian_connector", resource)
+	}
+	wantOps(t, ops, map[string]string{
+		"create": skip, "update": skip, "import": skip, "gone": skip, "delete": skip,
+	})
+}
+
+// role_v4 is the one package directory whose Terraform type is not
+// "stackguardian_" + directory.
+func TestClassifyFallbackRoleV4(t *testing.T) {
+	c := info("role_v4", "skip",
+		"--- SKIP: TestAccRoleV4_CRUD (0.0s) Acceptance test skipped unless env 'TF_ACC' set\n",
+	)
+	resource, _, _ := classify(c)
+	if resource != "stackguardian_rolev4" {
+		t.Errorf("resource = %q, want stackguardian_rolev4", resource)
 	}
 }

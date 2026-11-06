@@ -210,7 +210,7 @@ func classify(t *testInfo) (string, map[string]string, map[string]string) {
 	out := strings.Join(t.output, "")
 	lines := strings.Split(out, "\n")
 
-	resource := t.pkg
+	resource := resourceFromPkg(t.pkg)
 	nSteps := 3
 	if m := layoutRe.FindStringSubmatch(out); m != nil {
 		resource = m[1]
@@ -311,6 +311,20 @@ func atoiSafe(s string) int {
 		n = n*10 + int(c-'0')
 	}
 	return n
+}
+
+// resourceFromPkg derives the Terraform type from the test package directory,
+// for rows with no "crud: resource=…" layout line -- a test that skipped
+// before RunCRUD ran. The CRUD tests that create API fixtures skip before
+// calling RunCRUD (SkipUnlessAcceptance is the first statement of every
+// TestAcc function), so a skipped run reaches this path. The directory names
+// the resource in every package; role_v4 is the one exception, whose Terraform
+// type is stackguardian_rolev4 (see CLAUDE.md).
+func resourceFromPkg(pkg string) string {
+	if pkg == "role_v4" {
+		return "stackguardian_rolev4"
+	}
+	return "stackguardian_" + pkg
 }
 
 func main() {

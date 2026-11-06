@@ -78,7 +78,6 @@ type CRUD struct {
 // RunCRUD runs the standard CRUD cycle for c.
 func RunCRUD(t *testing.T, c CRUD) {
 	t.Helper()
-	SkipUnlessAcceptance(t)
 
 	header := c.Header
 	if header == nil {
@@ -143,8 +142,14 @@ func RunCRUD(t *testing.T, c CRUD) {
 		})
 	}
 
-	// scripts/crud-matrix reads this line to know whether the gone step ran.
+	// scripts/crud-matrix reads this line for the resource name and whether
+	// the gone step exists. Emitted before SkipUnlessAcceptance so a skipped
+	// run still names the resource: without the line, the matrix falls back
+	// to the package directory. (The CRUD tests that create fixtures skip
+	// before calling RunCRUD at all; their rows use that fallback.)
 	t.Logf("crud: resource=%s steps=%d", c.ResourceType, len(steps))
+
+	SkipUnlessAcceptance(t)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { TestAccPreCheck(t) },
