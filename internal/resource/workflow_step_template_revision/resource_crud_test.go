@@ -44,6 +44,7 @@ resource "stackguardian_workflow_step_template_revision" "this" {
 }`
 
 func TestAccWorkflowStepTemplateRevision_CRUD(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateName := acctest.ResourceName("crud-step-template-rev")
 	// Two revisions: the gone step recreates the first one as :2.
 	t.Cleanup(func() {

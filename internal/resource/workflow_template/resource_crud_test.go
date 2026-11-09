@@ -14,6 +14,7 @@ import (
 )
 
 func TestAccWorkflowTemplate_CRUD(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	name := acctest.ResourceName("crud-wf-template")
 	t.Cleanup(func() { deleteWorkflowTemplateFixture(name) })
 

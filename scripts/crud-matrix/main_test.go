@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -200,5 +202,152 @@ func TestClassifyFallbackRoleV4(t *testing.T) {
 	resource, _, _ := classify(c)
 	if resource != "stackguardian_rolev4" {
 		t.Errorf("resource = %q, want stackguardian_rolev4", resource)
+	}
+}
+
+// A test that started but never reported a terminal result. A timeout panics
+// the test binary, and go test reports that at the package level, so the
+// running test gets no fail event of its own. Nothing is known to have passed;
+// create carries the failure and the panic line is the reason.
+func TestClassifyInterruptedRun(t *testing.T) {
+	c := info("workflow_template_revision", "",
+		"=== RUN   TestAccWorkflowTemplateRevision_CRUD\n",
+		"    crud.go:150: crud: resource=stackguardian_workflow_template_revision steps=4\n",
+		"panic: test timed out after 20m0s\n",
+		"\trunning tests:\n",
+		"\t\tTestAccWorkflowTemplateRevision_CRUD (20m0s)\n",
+	)
+	_, ops, reasons := classify(c)
+	wantOps(t, ops, map[string]string{
+		"create": fail, "update": notRun, "import": notRun, "gone": notRun, "delete": notRun,
+	})
+	if got := reasons["create"]; !strings.Contains(got, "panic: test timed out") {
+		t.Errorf("create reason = %q, want the timeout panic line", got)
+	}
+}
+
+// The same interrupted run for a resource without a gone step.
+func TestClassifyInterruptedRunNoGoneStep(t *testing.T) {
+	c := info("workflow_group", "",
+		"    crud.go:150: crud: resource=stackguardian_workflow_group steps=3\n",
+		"panic: test timed out after 20m0s\n",
+	)
+	_, ops, _ := classify(c)
+	wantOps(t, ops, map[string]string{
+		"create": fail, "update": notRun, "import": notRun, "gone": na, "delete": notRun,
+	})
+}
+
+// writeEvents writes one go test -json event per argument to a file and returns
+// its path, so parse() can be exercised with real event shapes.
+func writeEvents(t *testing.T, events ...string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "go-test.json")
+	if err := os.WriteFile(path, []byte(strings.Join(events, "")), 0644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// One passing CRUD test plus another package's build failure: the build
+// failure emits build-output events (keyed by ImportPath, not Package) and a
+// package fail, but no test events at all. It must surface as a package
+// failure with the compile error as its reason, or the matrix would exit 0.
+func TestParsePackageBuildFailure(t *testing.T) {
+	path := writeEvents(t,
+		`{"ImportPath":"example.com/p/internal/resource/bad [example.com/p/internal/resource/bad.test]","Action":"build-output","Output":"# example.com/p/internal/resource/bad [example.com/p/internal/resource/bad.test]\n"}`,
+		"\n",
+		`{"ImportPath":"example.com/p/internal/resource/bad [example.com/p/internal/resource/bad.test]","Action":"build-output","Output":"bad/resource_test.go:42:5: undefined: deleteBadFixture\n"}`,
+		"\n",
+		`{"ImportPath":"example.com/p/internal/resource/bad [example.com/p/internal/resource/bad.test]","Action":"build-fail"}`,
+		"\n",
+		`{"Action":"output","Package":"example.com/p/internal/resource/bad","Output":"FAIL\texample.com/p/internal/resource/bad [build failed]\n"}`,
+		"\n",
+		`{"Action":"fail","Package":"example.com/p/internal/resource/bad","Elapsed":0,"FailedBuild":"example.com/p/internal/resource/bad [example.com/p/internal/resource/bad.test]"}`,
+		"\n",
+		`{"Action":"start","Package":"example.com/p/internal/resource/policy"}`,
+		"\n",
+		`{"Action":"run","Package":"example.com/p/internal/resource/policy","Test":"TestAccPolicy_CRUD"}`,
+		"\n",
+		`{"Action":"output","Package":"example.com/p/internal/resource/policy","Test":"TestAccPolicy_CRUD","Output":"    crud.go:150: crud: resource=stackguardian_policy steps=4\n"}`,
+		"\n",
+		`{"Action":"pass","Package":"example.com/p/internal/resource/policy","Test":"TestAccPolicy_CRUD","Elapsed":12.3}`,
+		"\n",
+		`{"Action":"pass","Package":"example.com/p/internal/resource/policy","Elapsed":12.9}`,
+		"\n",
+	)
+	tests, pkgFails := parse(path)
+	if len(tests) != 1 {
+		t.Fatalf("parse found %d tests, want 1 (the passing CRUD test)", len(tests))
+	}
+	if got := tests["TestAccPolicy_CRUD"]; got == nil || got.action != pass {
+		t.Errorf("TestAccPolicy_CRUD action = %v, want pass", got)
+	}
+	if len(pkgFails) != 1 {
+		t.Fatalf("parse found %d package failures, want 1", len(pkgFails))
+	}
+	pf := pkgFails[0]
+	if pf.pkg != "example.com/p/internal/resource/bad" {
+		t.Errorf("package failure pkg = %q", pf.pkg)
+	}
+	if !strings.Contains(pf.reason, "undefined: deleteBadFixture") {
+		t.Errorf("package failure reason = %q, want the compile error", pf.reason)
+	}
+}
+
+// A timed-out CRUD test: output attributed to the running test, including the
+// panic line, but no test-level terminal event -- only the package fails. The
+// row keeps its (empty) action for classify() to fail, and the package
+// failure is reported too.
+func TestParseTimedOutTest(t *testing.T) {
+	path := writeEvents(t,
+		`{"Action":"run","Package":"example.com/p/internal/resource/slow","Test":"TestAccSlow_CRUD"}`,
+		"\n",
+		`{"Action":"output","Package":"example.com/p/internal/resource/slow","Test":"TestAccSlow_CRUD","Output":"    crud.go:150: crud: resource=stackguardian_slow steps=4\n"}`,
+		"\n",
+		`{"Action":"output","Package":"example.com/p/internal/resource/slow","Test":"TestAccSlow_CRUD","Output":"panic: test timed out after 2s\n"}`,
+		"\n",
+		`{"Action":"output","Package":"example.com/p/internal/resource/slow","Output":"FAIL\texample.com/p/internal/resource/slow\t2.8s\n"}`,
+		"\n",
+		`{"Action":"fail","Package":"example.com/p/internal/resource/slow","Elapsed":2.8}`,
+		"\n",
+	)
+	tests, pkgFails := parse(path)
+	ti, ok := tests["TestAccSlow_CRUD"]
+	if !ok {
+		t.Fatal("parse did not collect TestAccSlow_CRUD")
+	}
+	if ti.action != "" {
+		t.Errorf("action = %q, want empty (no terminal event arrived)", ti.action)
+	}
+	if len(pkgFails) != 1 || pkgFails[0].pkg != "example.com/p/internal/resource/slow" {
+		t.Fatalf("package failures = %v, want the slow package", pkgFails)
+	}
+	if pkgFails[0].reason != "no test reported a result" {
+		t.Errorf("reason = %q, want the fallback wording", pkgFails[0].reason)
+	}
+}
+
+// An ordinary test failure also produces a package fail event, but the
+// package failure must not be reported: the test's own row already covers it.
+func TestParseTestFailureIsNotPackageFailure(t *testing.T) {
+	path := writeEvents(t,
+		`{"Action":"run","Package":"example.com/p/internal/resource/policy","Test":"TestAccPolicy_CRUD"}`,
+		"\n",
+		`{"Action":"output","Package":"example.com/p/internal/resource/policy","Test":"TestAccPolicy_CRUD","Output":"    resource.go:99: Step 1/4 error: Error: 409 conflict\n"}`,
+		"\n",
+		`{"Action":"fail","Package":"example.com/p/internal/resource/policy","Test":"TestAccPolicy_CRUD","Elapsed":3.2}`,
+		"\n",
+		`{"Action":"output","Package":"example.com/p/internal/resource/policy","Output":"FAIL\texample.com/p/internal/resource/policy\t3.2s\n"}`,
+		"\n",
+		`{"Action":"fail","Package":"example.com/p/internal/resource/policy","Elapsed":3.4}`,
+		"\n",
+	)
+	tests, pkgFails := parse(path)
+	if got := tests["TestAccPolicy_CRUD"]; got == nil || got.action != fail {
+		t.Errorf("TestAccPolicy_CRUD action = %v, want fail", got)
+	}
+	if len(pkgFails) != 0 {
+		t.Errorf("package failures = %v, want none (the test row reports it)", pkgFails)
 	}
 }

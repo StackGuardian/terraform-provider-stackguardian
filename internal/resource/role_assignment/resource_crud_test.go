@@ -35,10 +35,14 @@ resource "stackguardian_role_assignment" "this" {
 }`
 
 func TestAccRoleAssignment_CRUD(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	userId := "crud.user@domain.com"
 	roleA := acctest.ResourceName("crud-assign-role-a")
 	roleB := acctest.ResourceName("crud-assign-role-b")
 
+	// A leftover assignment from an earlier run blocks re-inviting the same
+	// user, so clear it first; the cleanup covers a run that fails before
+	// Terraform's own destroy.
 	deleteRoleAssignmentFixture(userId)
 	t.Cleanup(func() {
 		deleteRoleAssignmentFixture(userId)

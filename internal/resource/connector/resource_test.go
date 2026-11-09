@@ -74,6 +74,7 @@ const (
 )
 
 func TestAccConnector(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	connectorName := acctest.ResourceName("aws-rbac-connector")
 	t.Cleanup(func() { deleteConnectorByResourceName(connectorName) })
 
@@ -102,6 +103,7 @@ func TestAccConnector(t *testing.T) {
 }
 
 func TestAccConnectorIncompatibleResourceName(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	// Test if the resource has name that is not compatible with the
 	spacedName := acctest.ResourceNameRaw("aws rbac connector")
 
@@ -154,6 +156,7 @@ func TestAccConnectorIncompatibleResourceName(t *testing.T) {
 }
 
 func TestAccConnectorOptionalId(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	// Test if the resource has name that is not compatible with the
 	connectorID := acctest.ResourceName("aws-rbac-connector2")
 	spacedName := acctest.ResourceNameRaw("aws rbac connector")

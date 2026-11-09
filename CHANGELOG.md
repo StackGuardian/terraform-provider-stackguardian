@@ -25,6 +25,7 @@ A **Breaking** change can require edits to existing configurations.
 
 ### Fixed
 
+- Unit test runs (`make test`, `go test`) no longer perform API calls when `TF_ACC` is unset, even with StackGuardian credentials configured locally: every acceptance test that creates API fixtures or registers fixture-deleting cleanup now skips before any of them run. Previously the tests skipped, but Go still ran their cleanups, issuing real delete requests against the configured organization during an ordinary unit run
 - `stackguardian_stack_template_revision`: importing a revision now sets `parent_template_id` from the import ID (`<template_id>:<revision>`). It was left null, so the first plan after import replaced the revision. A malformed import ID now returns a clear error
 - `stackguardian_workflow_step_template_revision`: same fix — importing now sets `template_id` from the import ID, and a malformed import ID returns a clear error
 - `stackguardian_role_assignment`: on import, when both `role` (deprecated) and `roles` are null in state, keeps `roles` only, avoiding a perpetual diff against any config

@@ -31,6 +31,7 @@ resource "stackguardian_workflow_step_template" "this" {
 }`
 
 func TestAccWorkflowStepTemplate_CRUD(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	name := acctest.ResourceName("crud-step-template")
 	t.Cleanup(func() { deleteWorkflowStepTemplateFixture(name) })
 

@@ -15,6 +15,7 @@ import (
 )
 
 func TestAccRunnerGroup_CRUD(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	name := acctest.ResourceName("crud-runnergroup")
 	t.Cleanup(func() { deleteRunnerGroupFixture(name) })
 

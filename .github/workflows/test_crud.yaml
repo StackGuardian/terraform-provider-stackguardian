@@ -27,6 +27,12 @@ on:
 concurrency:
   group: "acceptance-tests"
   cancel-in-progress: false
+  # Queue rather than replace the pending run: both this workflow and
+  # test.yaml start on every pull request update, and the default single
+  # pending slot means whichever is queued second cancels the other's
+  # pending run -- a required check that never runs. See test.yaml for the
+  # full rationale; keep the two blocks identical.
+  queue: max
 
 env:
   # The single authority on which Terraform CLI this workflow tests, used by
@@ -62,7 +68,7 @@ jobs:
 
       # The target sets TF_ACC itself; the credentials come in through the
       # step's env, which the Makefile exports to the test binary. It exits
-      # non-zero if any resource fails the matrix.
+      # non-zero if go test fails or any resource fails the matrix.
       - name: "Run CRUD matrix"
         run: make test-crud
         env:

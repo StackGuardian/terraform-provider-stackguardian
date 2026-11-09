@@ -14,6 +14,7 @@ import (
 )
 
 func TestAccPolicy_CRUD(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	name := acctest.ResourceName("crud-policy")
 	t.Cleanup(func() { deletePolicyFixture(name) })
 

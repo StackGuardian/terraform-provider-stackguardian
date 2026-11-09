@@ -14,6 +14,7 @@ import (
 )
 
 func TestAccRole_CRUD(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpName := acctest.ResourceName("crud-role-wfgrp")
 	roleName := acctest.ResourceName("crud-role")
 	t.Cleanup(func() {

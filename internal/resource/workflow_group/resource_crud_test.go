@@ -20,6 +20,7 @@ const testAccCRUDConfig = `resource "stackguardian_workflow_group" "this" {
 }`
 
 func TestAccWorkflowGroup_CRUD(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	name := acctest.ResourceName("crud-wfgrp")
 	t.Cleanup(func() { deleteWorkflowGroupFixture(name) })
 

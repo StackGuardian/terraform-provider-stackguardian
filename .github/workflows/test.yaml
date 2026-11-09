@@ -22,9 +22,18 @@ on:
 # use fixed resource names, so two runs must never overlap. Without this, two
 # pull requests racing each other produce collisions that look like version
 # incompatibilities.
+#
+# queue: max matters as much as the group itself. Both this workflow and
+# test_crud.yaml start on every pull request update and share this group. By
+# default a group holds only the single newest pending run: cancel-in-progress:
+# false protects the running run, but the second workflow to be queued would
+# cancel the first one's pending run -- a required check that never runs and
+# blocks the PR. queue: max lets pending runs queue (up to 100) and run one at
+# a time, in first-in-first-out order, instead of cancelling each other.
 concurrency:
   group: "acceptance-tests"
   cancel-in-progress: false
+  queue: max
 
 jobs:
 

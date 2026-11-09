@@ -54,9 +54,11 @@ These may live in a `.env` file at the repo root (gitignored), loaded with
 Every resource has a `TestAcc<Resource>_CRUD` built on `acctest.RunCRUD`: create → in-place
 update → import + verify → (with `Delete`) object deleted outside Terraform → destroy, then
 `CheckDestroy` confirms with the API that the object is gone. Add one for any new resource.
+`SkipUnlessAcceptance(t)` must be the first statement of each: fixtures, API cleanup and
+`t.Cleanup` registration all come after it, and a skipped test still runs its cleanups.
 CI runs this suite on every pull request to `main` (`.github/workflows/test_crud.yaml`, in the
-`acceptance-tests` concurrency group so it never overlaps the acceptance suite) and uploads
-`.crud-results/` as an artifact.
+`acceptance-tests` concurrency group with `queue: max`, so a pending run queues behind the
+acceptance suite instead of cancelling it) and uploads `.crud-results/` as an artifact.
 
 ---
 

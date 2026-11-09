@@ -29,6 +29,7 @@ const testAccCRUDConfig = `resource "stackguardian_connector" "this" {
 }`
 
 func TestAccConnector_CRUD(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	name := acctest.ResourceName("crud-connector")
 	t.Cleanup(func() { deleteConnectorByResourceName(name) })
 

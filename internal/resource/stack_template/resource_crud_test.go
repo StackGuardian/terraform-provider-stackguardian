@@ -13,6 +13,7 @@ import (
 )
 
 func TestAccStackTemplate_CRUD(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	name := acctest.ResourceName("crud-stack-template")
 	t.Cleanup(func() { deleteStackTemplateFixture(name) })
 

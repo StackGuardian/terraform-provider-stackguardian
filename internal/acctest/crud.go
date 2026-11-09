@@ -143,10 +143,14 @@ func RunCRUD(t *testing.T, c CRUD) {
 	}
 
 	// scripts/crud-matrix reads this line for the resource name and whether
-	// the gone step exists. Emitted before SkipUnlessAcceptance so a skipped
-	// run still names the resource: without the line, the matrix falls back
-	// to the package directory. (The CRUD tests that create fixtures skip
-	// before calling RunCRUD at all; their rows use that fallback.)
+	// the gone step exists. Every TestAcc*_CRUD skips before calling RunCRUD
+	// (SkipUnlessAcceptance is the first statement of each, before any API
+	// call or cleanup registration), so in a run without TF_ACC this line
+	// never appears and a skipped row falls back to the package directory in
+	// resourceFromPkg. The SkipUnlessAcceptance below is a safety net for a
+	// future test that forgets the guard: resource.Test itself fails hard
+	// without TF_ACC, and fixtures created before it would already have hit
+	// the API.
 	t.Logf("crud: resource=%s steps=%d", c.ResourceType, len(steps))
 
 	SkipUnlessAcceptance(t)

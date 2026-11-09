@@ -52,11 +52,19 @@ test-acc:
 # resource, reported as a resource x operation matrix. Same credentials as
 # test-acc. Results land in $(CRUD_OUT)/ (matrix.md, matrix.json, raw go-test.json).
 # Narrow with TESTARGS, e.g. TESTARGS='-run TestAccPolicy_CRUD'.
+#
+# The gate fails if either go test or the matrix tool fails. The matrix tool
+# runs even after go test fails, so a failed run still gets its artifacts --
+# but its exit status alone must not decide the gate: it only sees tests that
+# reported a result, so a build failure or a timed-out run would otherwise
+# look green.
 CRUD_OUT ?= .crud-results
 test-crud:
 	@mkdir -p $(CRUD_OUT)
-	TF_ACC=1 go test -p=8 -parallel=1 ./internal/resource/... -run '_CRUD$$' -json -count=1 -timeout=20m $(TESTARGS) > $(CRUD_OUT)/go-test.json; \
-		go run ./scripts/crud-matrix $(CRUD_OUT)/go-test.json --markdown $(CRUD_OUT)/matrix.md --json $(CRUD_OUT)/matrix.json
+	status=0; \
+	TF_ACC=1 go test -p=8 -parallel=1 ./internal/resource/... -run '_CRUD$$' -json -count=1 -timeout=20m $(TESTARGS) > $(CRUD_OUT)/go-test.json || status=$$?; \
+	go run ./scripts/crud-matrix $(CRUD_OUT)/go-test.json --markdown $(CRUD_OUT)/matrix.md --json $(CRUD_OUT)/matrix.json || status=$$?; \
+	exit $$status
 
 # Terraform CLI compatibility gate. Needs no API credentials: it only makes the
 # CLI load the provider and decode its schema, then validates docs-examples/.

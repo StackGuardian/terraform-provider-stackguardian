@@ -4,7 +4,11 @@
 // The step layout is defined in internal/acctest/crud.go (CRUDStep*): a failing
 // "Step N/M" maps to the operation at position N; the steps before it passed
 // and the ones after it did not run. A "post-test destroy" error marks delete
-// as failed. Exits 1 if any CRUD test failed.
+// as failed. Exits 1 if any CRUD test failed, if a package failed without any
+// of its tests reporting a result (a build failure), or if a test ended
+// without a terminal result (an interrupted run, e.g. a timeout: go test
+// reports the timeout at the package level, so the running test never gets a
+// fail event).
 //
 // Two failure shapes bypass the "Step N/M" machinery and are attributed from
 // their own signature lines instead: the gone step's PreConfig t.Fatalf (the
@@ -67,11 +71,17 @@ var symbols = map[string]string{
 }
 
 type testEvent struct {
-	Test    string  `json:"Test"`
-	Package string  `json:"Package"`
-	Action  string  `json:"Action"`
-	Output  string  `json:"Output"`
-	Elapsed float64 `json:"Elapsed"`
+	Test    string `json:"Test"`
+	Package string `json:"Package"`
+	// ImportPath is set instead of Package on build-output events: go test
+	// attributes a compile failure to the test binary it could not build,
+	// not to the package ("pkg [pkg.test]").
+	ImportPath string  `json:"ImportPath"`
+	Action     string  `json:"Action"`
+	Output     string  `json:"Output"`
+	Elapsed    float64 `json:"Elapsed"`
+	// FailedBuild marks a package fail event caused by a build failure.
+	FailedBuild string `json:"FailedBuild"`
 }
 
 type testInfo struct {
@@ -79,6 +89,26 @@ type testInfo struct {
 	output  []string
 	action  string
 	elapsed float64
+}
+
+// pkgFailure is a package that failed without any of its tests reporting a
+// terminal result: a build failure emits build-output events and a package
+// fail but no test events at all, and a run that dies mid-test (a timeout
+// panics the test binary) emits the running test's output but no test-level
+// pass or fail -- only the package gets the fail event.
+type pkgFailure struct {
+	pkg    string
+	reason string
+}
+
+// pkgState accumulates a package's Test-free events, to attribute a
+// package-level failure none of its tests reported.
+type pkgState struct {
+	output []string
+	// terminal records that some test in the package reported a result, so
+	// a package fail event is already covered by that test's row.
+	terminal bool
+	failed   bool
 }
 
 type row struct {
@@ -90,7 +120,21 @@ type row struct {
 	Reasons  map[string]string `json:"reasons"`
 }
 
-func parse(path string) map[string]*testInfo {
+// eventPkg returns the package an event belongs to: the Package field for test
+// and package events, or the ImportPath of build-output events, which carry it
+// instead, in the "pkg [pkg.test]" form -- the bracketed part names the test
+// binary and is stripped.
+func eventPkg(ev testEvent) string {
+	if ev.Package != "" {
+		return ev.Package
+	}
+	if i := strings.Index(ev.ImportPath, " ["); i >= 0 {
+		return ev.ImportPath[:i]
+	}
+	return ev.ImportPath
+}
+
+func parse(path string) (map[string]*testInfo, []pkgFailure) {
 	f, err := os.Open(path)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "error opening %s: %v\n", path, err)
@@ -99,6 +143,20 @@ func parse(path string) map[string]*testInfo {
 	defer f.Close()
 
 	tests := make(map[string]*testInfo)
+	pkgs := make(map[string]*pkgState)
+	pkgStateFor := func(ev testEvent) *pkgState {
+		key := eventPkg(ev)
+		if key == "" {
+			return nil
+		}
+		st, ok := pkgs[key]
+		if !ok {
+			st = &pkgState{}
+			pkgs[key] = st
+		}
+		return st
+	}
+
 	scanner := bufio.NewScanner(f)
 	scanner.Buffer(make([]byte, 0, 1024*1024), 10*1024*1024)
 	for scanner.Scan() {
@@ -106,28 +164,71 @@ func parse(path string) map[string]*testInfo {
 		if err = json.Unmarshal(scanner.Bytes(), &ev); err != nil {
 			continue
 		}
-		name := ev.Test
-		if name == "" || strings.Contains(name, "/") || !strings.HasSuffix(name, "_CRUD") {
+		if ev.Test != "" {
+			name := ev.Test
+			if strings.Contains(name, "/") || !strings.HasSuffix(name, "_CRUD") {
+				continue
+			}
+			t, ok := tests[name]
+			if !ok {
+				pkg := ev.Package
+				if idx := strings.LastIndex(pkg, "/"); idx >= 0 {
+					pkg = pkg[idx+1:]
+				}
+				t = &testInfo{pkg: pkg}
+				tests[name] = t
+			}
+			switch ev.Action {
+			case "output":
+				t.output = append(t.output, ev.Output)
+			case "pass", "fail", "skip":
+				t.action = ev.Action
+				t.elapsed = ev.Elapsed
+				if st := pkgStateFor(ev); st != nil {
+					st.terminal = true
+				}
+			}
 			continue
 		}
-		t, ok := tests[name]
-		if !ok {
-			pkg := ev.Package
-			if idx := strings.LastIndex(pkg, "/"); idx >= 0 {
-				pkg = pkg[idx+1:]
-			}
-			t = &testInfo{pkg: pkg}
-			tests[name] = t
+		// A package-level event: a terminal result, build output, or the
+		// FAIL summary line. Dropped by the test branch above, but a
+		// package can fail with no test to report it.
+		st := pkgStateFor(ev)
+		if st == nil {
+			continue
 		}
 		switch ev.Action {
-		case "output":
-			t.output = append(t.output, ev.Output)
-		case "pass", "fail", "skip":
-			t.action = ev.Action
-			t.elapsed = ev.Elapsed
+		case "output", "build-output":
+			st.output = append(st.output, ev.Output)
+		case "fail", "build-fail":
+			st.failed = true
 		}
 	}
-	return tests
+
+	var pkgFails []pkgFailure
+	for key, st := range pkgs {
+		if st.failed && !st.terminal {
+			pkgFails = append(pkgFails, pkgFailure{pkg: key, reason: packageReason(st.output)})
+		}
+	}
+	sort.Slice(pkgFails, func(i, j int) bool { return pkgFails[i].pkg < pkgFails[j].pkg })
+	return tests, pkgFails
+}
+
+// packageReason extracts the diagnostic from a failed package's own output: a
+// build failure's compile error. The FAIL summary line carries no reason, and
+// a timeout's package output holds nothing but that summary.
+func packageReason(lines []string) string {
+	for _, l := range lines {
+		t := strings.TrimSpace(l)
+		if t == "" || strings.HasPrefix(t, "#") || strings.HasPrefix(t, "FAIL") ||
+			strings.HasPrefix(t, "ok  ") || strings.HasPrefix(t, "PASS") ||
+			strings.HasPrefix(t, "no tests") {
+			continue
+		}
+		return truncate(t, 200)
+	}
+	return "no test reported a result"
 }
 
 // matchIndex returns the index of the first line matching, or -1.
@@ -233,6 +334,24 @@ func classify(t *testInfo) (string, map[string]string, map[string]string) {
 		return resource, opsMap, reasons
 	}
 
+	if t.action == "" {
+		// The test started but never reported a terminal result: an
+		// interrupted run. A timeout, for one, panics the test binary and
+		// go test reports it at the package level, so the running test
+		// gets no fail event of its own. Where it died is unknown, so
+		// nothing is marked passed; create carries the failure and the
+		// reason, like the panic branch below.
+		for _, op := range ops {
+			opsMap[op] = notRun
+		}
+		if nSteps < 4 {
+			opsMap["gone"] = na
+		}
+		reasons["create"] = catchAllReason(lines)
+		opsMap["create"] = fail
+		return resource, opsMap, reasons
+	}
+
 	if m := stepErrRe.FindStringSubmatch(out); m != nil {
 		failedStep := atoiSafe(m[1])
 		opsMap[stepOps[failedStep-1]] = fail
@@ -315,10 +434,10 @@ func atoiSafe(s string) int {
 
 // resourceFromPkg derives the Terraform type from the test package directory,
 // for rows with no "crud: resource=…" layout line -- a test that skipped
-// before RunCRUD ran. The CRUD tests that create API fixtures skip before
-// calling RunCRUD (SkipUnlessAcceptance is the first statement of every
-// TestAcc function), so a skipped run reaches this path. The directory names
-// the resource in every package; role_v4 is the one exception, whose Terraform
+// before RunCRUD ran. SkipUnlessAcceptance is the first statement of every
+// TestAcc*_CRUD test (before any API call or cleanup registration), so a run
+// without TF_ACC reaches this path for every row. The directory names the
+// resource in every package; role_v4 is the one exception, whose Terraform
 // type is stackguardian_rolev4 (see CLAUDE.md).
 func resourceFromPkg(pkg string) string {
 	if pkg == "role_v4" {
@@ -348,8 +467,8 @@ func main() {
 		os.Exit(2)
 	}
 
-	tests := parse(input)
-	if len(tests) == 0 {
+	tests, pkgFails := parse(input)
+	if len(tests) == 0 && len(pkgFails) == 0 {
 		_, _ = fmt.Fprintf(os.Stderr, "no TestAcc*_CRUD results found in %s\n", input)
 		os.Exit(1)
 	}
@@ -369,12 +488,19 @@ func main() {
 	var rows []row
 	for _, e := range entries {
 		resource, opsMap, reasons := classify(e.t)
+		result := e.t.action
+		if result == "" {
+			// classify() reports an interrupted test (no terminal
+			// result) as failed; the row must agree, and the failed
+			// count below keys off this field.
+			result = fail
+		}
 		sec := e.t.elapsed
 		sec = float64(int(sec*10)) / 10
 		rows = append(rows, row{
 			Resource: resource,
 			Test:     e.name,
-			Result:   e.t.action,
+			Result:   result,
 			Seconds:  sec,
 			Ops:      opsMap,
 			Reasons:  reasons,
@@ -414,7 +540,10 @@ func main() {
 	md = append(md, "")
 	md = append(md, fmt.Sprintf("%d/%d resources passed. \u2705 pass \u00b7 \u274c fail \u00b7 \u23ed\ufe0f not run (an earlier step failed) \u00b7 \u2014 not applicable \u00b7 \u26aa skipped", passed, len(rows)))
 	md = append(md, "`gone` = object deleted outside Terraform; refresh must drop it and plan a recreate.")
-	if len(failed) > 0 {
+	if len(pkgFails) > 0 {
+		md = append(md, fmt.Sprintf("%d package(s) failed with no test result (build failure or interrupted run).", len(pkgFails)))
+	}
+	if len(failed) > 0 || len(pkgFails) > 0 {
 		md = append(md, "", "### Failures", "")
 		for _, r := range failed {
 			for _, op := range ops {
@@ -422,6 +551,9 @@ func main() {
 					md = append(md, fmt.Sprintf("- `%s` **%s** (`%s`): %s", r.Resource, op, r.Test, why))
 				}
 			}
+		}
+		for _, pf := range pkgFails {
+			md = append(md, fmt.Sprintf("- package `%s` failed with no test result: %s", pf.pkg, pf.reason))
 		}
 	}
 
@@ -448,7 +580,7 @@ func main() {
 		}
 	}
 
-	if len(failed) > 0 {
+	if len(failed) > 0 || len(pkgFails) > 0 {
 		os.Exit(1)
 	}
 }
