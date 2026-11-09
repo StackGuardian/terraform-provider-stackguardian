@@ -92,6 +92,7 @@ resource "stackguardian_rolev4" "%s" {
 )
 
 func TestAccRole(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	workflowGroupResourceName := acctest.ResourceName("rolev4-example-workflow-group")
 	workflowGroupName := workflowGroupResourceName
 	roleResourceName := acctest.ResourceName("rolev4-example-role")
@@ -120,6 +121,7 @@ func TestAccRole(t *testing.T) {
 }
 
 func TestAccRoleRecreateOnExternalDelete(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	workflowGroupResourceName := acctest.ResourceName("rolev4-example-workflow-group2")
 	workflowGroupName := workflowGroupResourceName
 	roleResourceName := acctest.ResourceName("rolev4-example-role2")
@@ -199,6 +201,7 @@ resource "stackguardian_rolev4" "%s" {
 }
 
 func TestAccRoleV4IncompatibleResourceName(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	// Test if the resource has name that is not compatible with the
 	workflowGroupResourceName := acctest.ResourceName("rolev4-example-workflow-group4")
 	workflowGroupName := workflowGroupResourceName
@@ -228,6 +231,7 @@ func TestAccRoleV4IncompatibleResourceName(t *testing.T) {
 }
 
 func TestAccRoleOptionalId(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	// Test if the resource has name that is not compatible with the
 	roleID := acctest.ResourceName("rolev4-example-role5")
 	roleIDResourceName := acctest.ResourceName("rolev4-example-role5-resource-name")

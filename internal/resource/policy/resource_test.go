@@ -140,6 +140,7 @@ const (
 )
 
 func TestAccPolicy(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	resourceName := acctest.ResourceName("example-policy")
 	policyName := resourceName
 
@@ -163,6 +164,7 @@ func TestAccPolicy(t *testing.T) {
 }
 
 func TestAccPolicyRecreateOnExternalDelete(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	resourceName := acctest.ResourceName("example-policy2")
 	policyName := resourceName
 
@@ -199,6 +201,7 @@ func TestAccPolicyRecreateOnExternalDelete(t *testing.T) {
 }
 
 func TestAccPolicyOptionalId(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	// Test if the resource has name that is not compatible with the
 	policyID := acctest.ResourceName("example-policy3")
 	policyResourceName := acctest.ResourceName("example-policy3-resource-name")

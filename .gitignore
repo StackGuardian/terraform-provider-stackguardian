@@ -62,3 +62,9 @@ dist
 .env
 
 .idea/
+
+# SkillSpector scan reports (make skills-security-scan)
+.skillspector-reports/
+
+# make test-crud output
+.crud-results/

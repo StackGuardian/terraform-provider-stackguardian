@@ -70,6 +70,7 @@ var (
 )
 
 func TestAccRunnerGroupAWSS3(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	runnerGroupResourceName := acctest.ResourceName("example-runner-group")
 	runnerGroupName := runnerGroupResourceName
 
@@ -93,6 +94,7 @@ func TestAccRunnerGroupAWSS3(t *testing.T) {
 }
 
 func TestAccRunnerGroupAzureBlobStorage(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	blobRunnerGroupName := acctest.ResourceName("runnergroup")
 
 	t.Cleanup(func() { deleteRunnerGroupFixture(blobRunnerGroupName) })
@@ -131,6 +133,7 @@ func TestAccRunnerGroupAzureBlobStorage(t *testing.T) {
 }
 
 func TestAccRunnerGroupRecreateOnExternalDelete(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	runnerGroupResourceName := acctest.ResourceName("runner-group2")
 	runnerGroupName := runnerGroupResourceName
 
@@ -167,6 +170,7 @@ func TestAccRunnerGroupRecreateOnExternalDelete(t *testing.T) {
 }
 
 func TestAccConnectorOptionalId(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	// Test if the resource has name that is not compatible with the
 	optionalRunnerGroupID := acctest.ResourceName("example-runner-group3")
 	optionalRunnerGroupName := acctest.ResourceName("runnergroup")

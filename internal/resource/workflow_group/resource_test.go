@@ -39,6 +39,7 @@ const (
 )
 
 func TestAccWorkflowGroup(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	workflowGroupResrouceName := acctest.ResourceName("wfgrp-example-workflow-group")
 	workflowGroupName := workflowGroupResrouceName
 
@@ -62,6 +63,7 @@ func TestAccWorkflowGroup(t *testing.T) {
 }
 
 func TestAccWorkflowGroupRecreateOnExternalDelete(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	workflowGroupResourceName := acctest.ResourceName("wfgrp-example-workflow-group2")
 	workflowGroupName := workflowGroupResourceName
 
@@ -98,6 +100,7 @@ func TestAccWorkflowGroupRecreateOnExternalDelete(t *testing.T) {
 }
 
 func TestAccWorkflowGroupIncompatibleResourceName(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	// Test if the resource has name that is not compatible with the
 	workflowGroupName := acctest.ResourceName("wfgrp-example-workflow-group3")
 	workflowGroupResourceName := "wfgrp example workflow group3"
@@ -122,6 +125,7 @@ func TestAccWorkflowGroupIncompatibleResourceName(t *testing.T) {
 }
 
 func TestAccWorkflowGroupOptionalId(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	wfGrpID := acctest.ResourceName("wfgrp-example-wfgrp4")
 	// The space is the subject here: a resource_name containing one has to
 	// survive the round trip, so it is made unique without being sanitised.
@@ -175,6 +179,7 @@ func TestAccWorkflowGroupOptionalId(t *testing.T) {
 }
 
 func TestAccWorkflowGroupNested_WithIdAndResourceName(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	parentName := acctest.ResourceName("wfgrp-example-workflow-group4")
 	nestedName := acctest.ResourceName("nested-workflow-group")
 
@@ -224,6 +229,7 @@ resource "stackguardian_workflow_group" "nested" {
 }
 
 func TestAccWorkflowGroupNested_WithResourceNameOnly(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	parentName := acctest.ResourceName("wfgrp-example-workflow-group5")
 	nestedName := acctest.ResourceName("nested-workflow-group-2")
 

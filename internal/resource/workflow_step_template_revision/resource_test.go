@@ -91,6 +91,7 @@ resource "stackguardian_workflow_step_template_revision" "test" {
 }
 
 func TestAccWorkflowStepTemplateRevision_Basic(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateName := acctest.ResourceName("provider-test-workflow-step-template1")
 	revisionAlias := "v1"
 
@@ -127,6 +128,7 @@ func TestAccWorkflowStepTemplateRevision_Basic(t *testing.T) {
 }
 
 func TestAccWorkflowStepTemplateRevision_Lifecycle(t *testing.T) {
+	acctest.SkipUnlessAcceptance(t)
 	templateName := acctest.ResourceName("tf-provider-step-template-lifecycle")
 	alias := "v1"
 

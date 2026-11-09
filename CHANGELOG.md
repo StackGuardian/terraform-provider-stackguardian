@@ -7,16 +7,29 @@ Versions use the `MAJOR.MINOR.PATCH` format. While the provider is under active 
 breaking changes can ship in any release and are marked **Breaking**.
 
 Entries describe changes that affect provider users: resources, data sources, attributes,
-behavior, documentation and security. Internal refactors, tests and CI changes are left out.
+behavior, documentation and security. Internal refactors are left out; test and CI changes
+are recorded only when they change what users can rely on a release having been checked for.
 A **Breaking** change can require edits to existing configurations.
 
 ## [1.12.7]
+
+### Added
+
+- CI now runs the resource CRUD matrix — create, update, import, out-of-band delete and destroy for every resource — on every pull request to `main` (`test_crud.yaml`), and uploads the resulting resource × operation matrix as an artifact. `make test-crud` runs the same check locally
 
 ### Security
 
 - Built with Go 1.26.10, which includes the security fixes released since Go 1.26.7
 - `golang.org/x/net` updated to v0.62.0, fixing five HTTP/2 vulnerabilities reachable through the provider's plugin server (`GO-2026-6603`, `GO-2026-6610`, `GO-2026-6611`, `GO-2026-6612` and `GO-2026-6617`)
 - CI now runs `govulncheck` on every pull request on Build and unit tests; `make govulncheck` runs the same scan locally
+
+### Fixed
+
+- Unit test runs (`make test`, `go test`) no longer perform API calls when `TF_ACC` is unset, even with StackGuardian credentials configured locally: every acceptance test that creates API fixtures or registers fixture-deleting cleanup now skips before any of them run. Previously the tests skipped, but Go still ran their cleanups, issuing real delete requests against the configured organization during an ordinary unit run
+- `stackguardian_stack_template_revision`: importing a revision now sets `parent_template_id` from the import ID (`<template_id>:<revision>`). It was left null, so the first plan after import replaced the revision. A malformed import ID now returns a clear error
+- `stackguardian_workflow_step_template_revision`: same fix — importing now sets `template_id` from the import ID, and a malformed import ID returns a clear error
+- `stackguardian_role_assignment`: on import, when both `role` (deprecated) and `roles` are null in state, keeps `roles` only, avoiding a perpetual diff against any config
+- When an object is deleted outside Terraform, Read now removes it from state instead of erroring, and Delete succeeds when the object is already gone. Added to `stackguardian_stack_template`, `stackguardian_stack_template_revision`, `stackguardian_workflow_git`, `stackguardian_workflow_template` and `stackguardian_workflow_template_revision`. `stackguardian_workflow_step_template` and `stackguardian_workflow_step_template_revision` already removed missing objects from state on Read but now also treat a `400 "does not exist"` response as not-found (the template APIs return 400 instead of 404 for missing objects)
 
 ## [1.12.6] - 2026-10-29
 

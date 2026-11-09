@@ -6,6 +6,7 @@ import (
 
 	sgsdkgo "github.com/StackGuardian/sg-sdk-go"
 	sgclient "github.com/StackGuardian/sg-sdk-go/client"
+	"github.com/StackGuardian/terraform-provider-stackguardian/internal/apierrors"
 	"github.com/StackGuardian/terraform-provider-stackguardian/internal/customTypes"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -161,6 +162,10 @@ func (r *workflowTemplateResource) Read(ctx context.Context, req resource.ReadRe
 
 	readResp, err := r.client.WorkflowTemplates.ReadWorkflowTemplate(ctx, r.org_name, templateID)
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError("Error reading workflow template", "Error in reading workflow template API call: "+err.Error())
 		return
 	}
@@ -235,6 +240,10 @@ func (r *workflowTemplateResource) Delete(ctx context.Context, req resource.Dele
 
 	err := r.client.WorkflowTemplates.DeleteWorkflowTemplate(ctx, r.org_name, state.Id.ValueString())
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// Already gone, which is what Delete wants.
+			return
+		}
 		resp.Diagnostics.AddError("Error deleting workflow template", "Error in deleting workflow template API call: "+err.Error())
 		return
 	}

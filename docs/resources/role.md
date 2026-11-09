@@ -110,3 +110,13 @@ import {
 ```bash
 terraform import stackguardian_role.example-role role-name
 ```
+
+## Building this with AI
+
+<!-- AI-SKILLS:START -->
+Generating `stackguardian_role` configuration with an AI assistant? Load the **`stackguardian-access`** skill, which covers this resource's arguments and the mistakes it invites.
+
+**Worth knowing either way:** This resource is **deprecated** in favour of `stackguardian_rolev4`, and moving is not a rename: this one expands permissions as a cartesian product of path values, `rolev4` maps them one to one.
+
+The skills live in [the provider repository](https://github.com/StackGuardian/terraform-provider-stackguardian/tree/main/.claude/skills) and work with Claude Code, Cursor, Copilot, Windsurf and any agent that reads [`AGENTS.md`](https://github.com/StackGuardian/terraform-provider-stackguardian/blob/main/AGENTS.md).
+<!-- AI-SKILLS:END -->

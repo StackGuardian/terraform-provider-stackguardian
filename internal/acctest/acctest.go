@@ -32,10 +32,14 @@ func TestAccPreCheck(t *testing.T) {
 }
 
 func SGClient() *sgclient.Client {
-	client := sgclient.NewClient(
+	return SGClientWithHeader(http.Header{})
+}
+
+// SGClientWithHeader is SGClient plus extra request headers, e.g. TemplateHeader().
+func SGClientWithHeader(header http.Header) *sgclient.Client {
+	return sgclient.NewClient(
 		sgoption.WithBaseURL(config.Get().ApiUri),
 		sgoption.WithApiKey(config.Get().FormatApiKey()),
+		sgoption.WithHTTPHeader(header),
 	)
-
-	return client
 }
